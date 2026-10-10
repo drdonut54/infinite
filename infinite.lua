@@ -1,4 +1,4 @@
--- NeverYield v1.12.2 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.13.1 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.12.2" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.13.1" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -5420,6 +5420,11 @@ CMDs[#CMDs + 1] = {NAME = 'hud / statsdisplay', DESC = 'Shows FPS, speed and pos
 CMDs[#CMDs + 1] = {NAME = 'unhud', DESC = 'Hides the stats display'}
 CMDs[#CMDs + 1] = {NAME = 'calc / math [expression]', DESC = 'Calculator, e.g. calc (5+3)*2'}
 CMDs[#CMDs + 1] = {NAME = 'randomplayer / pickplayer', DESC = 'Picks a random player in the server'}
+CMDs[#CMDs + 1] = {NAME = '--- MIDAS & DIAMOND RUSH ---', DESC = ''}
+CMDs[#CMDs + 1] = {NAME = 'midas / goldtouch', DESC = 'Everything you touch (and walk on) turns to gold, with sparkles. Only you see it'}
+CMDs[#CMDs + 1] = {NAME = 'unmidas', DESC = 'Turns everything back to normal'}
+CMDs[#CMDs + 1] = {NAME = 'diamond / diamondrush [seconds]', DESC = 'Mini-game: diamonds rain from the sky, collect them before time runs out (pink = 3, golden = 10). Music, popups and a saved best score'}
+CMDs[#CMDs + 1] = {NAME = 'undiamond', DESC = 'Stops a Diamond Rush round'}
 CMDs[#CMDs + 1] = {NAME = '--- STATS TRACKER ---', DESC = ''}
 CMDs[#CMDs + 1] = {NAME = 'stats / mystats [tab]', DESC = '(Also a button in Settings) Your lifetime stats across every game: kills, deaths, K/D, streaks, playtime, games, chat, people, commands. Tabs: overview, combat, games, chat, people, commands'}
 CMDs[#CMDs + 1] = {NAME = 'killcount / kd', DESC = 'Quick kills and deaths for this server and all time'}
@@ -13703,21 +13708,52 @@ end
 -- so turning effects off in any order always ends with the original lighting.
 WackyState.light = {orig = {}, users = {}, restoring = {}}
 
-WackyState.lightStopRestore = function()
+WackyState.lightStopRestore = function(props)
 	local L = WackyState.light
+	local wanted
+	if props then
+		wanted = {}
+		local touches = false
+		for _, prop in ipairs(props) do
+			wanted[prop] = true
+			if L.restoring[prop] ~= nil then
+				touches = true
+			end
+		end
+		if not touches then return end
+	end
 	if L.tween then
 		pcall(function() L.tween:Cancel() end)
 		L.tween = nil
 	end
+	local remaining = math.max(0, (L.tweenEnd or 0) - tick())
+	local rest = {}
 	for prop, value in pairs(L.restoring) do
-		pcall(function() Lighting[prop] = value end)
+		if wanted and not wanted[prop] and remaining > 0.05 then
+			rest[prop] = value
+		else
+			pcall(function() Lighting[prop] = value end)
+		end
 	end
 	L.restoring = {}
+	if next(rest) then
+		L.restoring = rest
+		local tween = TweenService:Create(Lighting, TweenInfo.new(remaining, Enum.EasingStyle.Sine), rest)
+		L.tween = tween
+		L.tweenEnd = tick() + remaining
+		tween.Completed:Connect(function()
+			if L.tween == tween then
+				L.tween = nil
+				L.restoring = {}
+			end
+		end)
+		tween:Play()
+	end
 end
 
 WackyState.lightClaim = function(owner, props)
 	local L = WackyState.light
-	WackyState.lightStopRestore()
+	WackyState.lightStopRestore(props)
 	for _, prop in ipairs(props) do
 		local users = L.users[prop]
 		if not users then
@@ -13754,6 +13790,7 @@ WackyState.lightRelease = function(owner, fadeTime)
 		L.restoring = free
 		local tween = TweenService:Create(Lighting, TweenInfo.new(fadeTime, Enum.EasingStyle.Sine), free)
 		L.tween = tween
+		L.tweenEnd = tick() + fadeTime
 		tween.Completed:Connect(function()
 			if L.tween == tween then
 				L.tween = nil
@@ -17867,7 +17904,7 @@ WackyState.startSnowCover = function(speaker, fullTime)
 		end
 	end
 
-	local stepIds = {9125965076, 9125965053}
+	local stepIds = {9125965076, 9125965053, 9125965330, 9125965296, 9125965499, 9125965260, 9119316414, 9119310905}
 	WackyState.connect("snowcover", RunService.Heartbeat:Connect(function()
 		local now = tick()
 		local char = speaker.Character
@@ -17960,7 +17997,17 @@ WackyState.startSnowCover = function(speaker, fullTime)
 					if #cover.prints > 160 then
 						pcall(function() table.remove(cover.prints, 1):Destroy() end)
 					end
-					WackyState.sound(stepIds[math.random(1, #stepIds)], nil, 0.18 * WackyState.weatherVolume, false, 0.9 + math.random() * 0.3)
+					-- one crunch per stride (not per footprint), random clip / pitch / volume
+					if now >= (cover.nextStep or 0) then
+						local speed = (root.AssemblyLinearVelocity * Vector3.new(1, 0, 1)).Magnitude
+						cover.nextStep = now + (speed > 28 and 0.3 or 0.48) + math.random() * 0.18
+						local id = stepIds[math.random(1, #stepIds)]
+						if id == cover.lastStep then
+							id = stepIds[(table.find(stepIds, id) % #stepIds) + 1]
+						end
+						cover.lastStep = id
+						WackyState.sound(id, nil, (0.12 + math.random() * 0.08) * WackyState.weatherVolume, false, 0.85 + math.random() * 0.25)
+					end
 				end
 			end
 		end
@@ -18921,6 +18968,548 @@ addcmd('end',{'theend','blackholeleave'},function(args, speaker)
 end)
 -- ================== END THE END ==================
 
+-- ==================== MIDAS & DIAMOND RUSH ====================
+WackyState.midasGold = Color3.fromRGB(255, 196, 48)
+WackyState.gemSounds = {9114619224, 9114618734, 9114618921, 9114619221} -- ProSoundEffects glass tinks
+WackyState.sparkleTexture = "rbxasset://textures/particles/sparkles_main.dds"
+
+WackyState.burst = function(parent, colorA, colorB, amount, speed)
+	local e = Instance.new("ParticleEmitter")
+	e.Name = randomString()
+	e.Texture = WackyState.sparkleTexture
+	e.Rate = 0
+	e.Speed = NumberRange.new(speed * 0.5, speed)
+	e.SpreadAngle = Vector2.new(180, 180)
+	e.Lifetime = NumberRange.new(0.4, 0.8)
+	e.LightEmission = 1
+	e.Size = NumberSequence.new(0.5, 0)
+	e.Color = ColorSequence.new(colorA, colorB)
+	e.Parent = parent
+	e:Emit(amount)
+	return e
+end
+
+-- Midas: everything you touch (and the floor you walk on) turns to gold, only on your screen
+addcmd('midas',{'goldtouch','midastouch'},function(args, speaker)
+	WackyState.midas = WackyState.midas or {saved = {}, conns = {}}
+	local m = WackyState.midas
+	if m.active then
+		notify('Midas', 'You already have the golden touch. Use unmidas to stop.')
+		return
+	end
+	m.active = true
+	local lastSound = 0
+	local function gild(part, point)
+		if not m.active or not part:IsA("BasePart") or part:IsA("Terrain") or m.saved[part] then return end
+		if part.Transparency >= 0.95 or part:GetAttribute("NYFx") then return end
+		local char = speaker.Character
+		if char and part:IsDescendantOf(char) then return end
+		local data = {part.Color, part.Material, part.Reflectance}
+		pcall(function()
+			if part:IsA("UnionOperation") then
+				data[4] = part.UsePartColor
+				part.UsePartColor = true
+			elseif part:IsA("MeshPart") then
+				data[5] = part.TextureID
+				part.TextureID = ""
+			end
+		end)
+		m.saved[part] = data
+		part.Material = Enum.Material.Foil
+		data[6] = TweenService:Create(part, TweenInfo.new(0.35, Enum.EasingStyle.Quad), {Color = WackyState.midasGold, Reflectance = math.max(part.Reflectance, 0.2)})
+		data[6]:Play()
+		local at = Instance.new("Attachment")
+		at.Name = randomString()
+		at.Parent = part
+		pcall(function() at.WorldPosition = point or part.Position end)
+		WackyState.burst(at, Color3.fromRGB(255, 240, 160), WackyState.midasGold, 14, 9)
+		Services.Debris:AddItem(at, 1.2)
+		if tick() - lastSound > 0.07 then
+			lastSound = tick()
+			WackyState.sound(WackyState.pick(WackyState.gemSounds), nil, 0.35, false, 0.66 + math.random() * 0.16)
+		end
+	end
+	local function clearConns()
+		for _, c in ipairs(m.conns) do
+			pcall(function() c:Disconnect() end)
+		end
+		m.conns = {}
+	end
+	m.clearConns = clearConns
+	local function hookChar(char)
+		clearConns()
+		WackyState.clear("midas")
+		local function hookPart(p)
+			if p:IsA("BasePart") then
+				table.insert(m.conns, p.Touched:Connect(function(hit)
+					gild(hit, p.Position)
+				end))
+			end
+		end
+		for _, p in ipairs(char:GetDescendants()) do
+			hookPart(p)
+		end
+		table.insert(m.conns, char.DescendantAdded:Connect(hookPart))
+		-- golden sparkles around your hands
+		for _, name in ipairs({"RightHand", "LeftHand", "Right Arm", "Left Arm"}) do
+			local hand = char:FindFirstChild(name)
+			if hand then
+				local glow = WackyState.track("midas", Instance.new("ParticleEmitter"))
+				glow.Name = randomString()
+				glow.Texture = WackyState.sparkleTexture
+				glow.Rate = 12
+				glow.Speed = NumberRange.new(0.5, 1.5)
+				glow.SpreadAngle = Vector2.new(180, 180)
+				glow.Lifetime = NumberRange.new(0.6, 1)
+				glow.LightEmission = 1
+				glow.Size = NumberSequence.new(0.35, 0)
+				glow.Color = ColorSequence.new(Color3.fromRGB(255, 235, 150), WackyState.midasGold)
+				glow.Parent = hand
+			end
+		end
+	end
+	if speaker.Character then
+		hookChar(speaker.Character)
+	end
+	WackyState.connect("midasSpawn", speaker.CharacterAdded:Connect(function(char)
+		char:WaitForChild("HumanoidRootPart", 10)
+		if m.active then
+			hookChar(char)
+		end
+	end))
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	local lastFloor = 0
+	WackyState.connect("midasFloor", RunService.Heartbeat:Connect(function()
+		if tick() - lastFloor < 0.12 then return end
+		lastFloor = tick()
+		local char = speaker.Character
+		local root = getRoot(char)
+		if not root then return end
+		params.FilterDescendantsInstances = {char}
+		local hit = workspace:Raycast(root.Position, Vector3.new(0, -8, 0), params)
+		if hit and hit.Instance then
+			gild(hit.Instance, hit.Position)
+		end
+	end))
+	notify('Midas', 'Everything you touch turns to gold! Use unmidas to turn it all back.')
+end)
+
+addcmd('unmidas',{'nomidas','ungoldtouch'},function(args, speaker)
+	local m = WackyState.midas
+	if not m then return end
+	m.active = false
+	if m.clearConns then m.clearConns() end
+	WackyState.disconnect("midasSpawn")
+	WackyState.disconnect("midasFloor")
+	WackyState.clear("midas")
+	local count = 0
+	for part, data in pairs(m.saved) do
+		pcall(function()
+			if data[6] then data[6]:Cancel() end
+			part.Color, part.Material, part.Reflectance = data[1], data[2], data[3]
+			if data[4] ~= nil then part.UsePartColor = data[4] end
+			if data[5] ~= nil then part.TextureID = data[5] end
+		end)
+		count = count + 1
+	end
+	m.saved = {}
+	if count > 0 then
+		notify('Midas', count .. ' things turned back to normal.')
+	end
+end)
+
+-- Diamond Rush: diamonds rain from the sky, collect as many as you can before time runs out
+WackyState.diamondMusic = {9048374150, 111760324494890, 130511819535092, 123057834140134} -- APM / DistroKid official Roblox music
+WackyState.diamondSting = 1837770099
+WackyState.diamondBeep = 9113400139
+WackyState.diamondWhoosh = 9120710054
+WackyState.diamondTypes = {
+	{name = "Diamond", value = 1, color = Color3.fromRGB(165, 235, 255), glow = Color3.fromRGB(120, 220, 255), chance = 0.85, scale = 1},
+	{name = "Pink Diamond", value = 3, color = Color3.fromRGB(255, 150, 225), glow = Color3.fromRGB(255, 120, 210), chance = 0.12, scale = 1.15},
+	{name = "Golden Diamond", value = 10, color = Color3.fromRGB(255, 210, 80), glow = Color3.fromRGB(255, 190, 60), chance = 0.03, scale = 1.35},
+}
+
+-- a cut diamond made of stacked glass cylinders: wide girdle, stepped crown with a flat top, stepped point below
+WackyState.makeDiamond = function(kind)
+	local s = kind.scale
+	local model = Instance.new("Model")
+	model.Name = randomString()
+	local hitbox = Instance.new("Part")
+	hitbox.Name = randomString()
+	hitbox.Size = Vector3.new(2, 2.4, 2) * s
+	hitbox.Transparency = 1
+	hitbox.CanCollide = true
+	hitbox.CanQuery = false
+	hitbox.CanTouch = false
+	hitbox.CustomPhysicalProperties = PhysicalProperties.new(0.7, 0.5, 0.45)
+	hitbox:SetAttribute("NYFx", true)
+	hitbox.Parent = model
+	model.PrimaryPart = hitbox
+	local layers = {
+		{2.0, 0.16, 0.45},
+		{1.75, 0.22, 0.64}, {1.4, 0.2, 0.85}, {1.05, 0.12, 1.01},
+		{1.8, 0.26, 0.24}, {1.45, 0.26, -0.02}, {1.1, 0.26, -0.28}, {0.75, 0.26, -0.54}, {0.42, 0.26, -0.8}, {0.16, 0.2, -1.03},
+	}
+	for _, l in ipairs(layers) do
+		local p = Instance.new("Part")
+		p.Name = randomString()
+		p.Shape = Enum.PartType.Cylinder
+		p.Size = Vector3.new(l[2], l[1], l[1]) * s
+		p.Material = Enum.Material.Glass
+		p.Color = kind.color
+		p.Transparency = 0.12
+		p.Reflectance = 0.3
+		p.CanCollide = false
+		p.CanQuery = false
+		p.CanTouch = false
+		p.Massless = true
+		p.CastShadow = false
+		p:SetAttribute("NYFx", true)
+		p.CFrame = hitbox.CFrame * CFrame.new(0, l[3] * s, 0) * CFrame.Angles(0, 0, math.pi / 2)
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0 = hitbox
+		weld.Part1 = p
+		weld.Parent = p
+		p.Parent = model
+	end
+	local core = Instance.new("Part")
+	core.Name = randomString()
+	core.Shape = Enum.PartType.Ball
+	core.Size = Vector3.new(0.6, 0.6, 0.6) * s
+	core.Material = Enum.Material.Neon
+	core.Color = kind.glow
+	core.CanCollide = false
+	core.CanQuery = false
+	core.CanTouch = false
+	core.Massless = true
+	core:SetAttribute("NYFx", true)
+	core.CFrame = hitbox.CFrame * CFrame.new(0, 0.3 * s, 0)
+	local coreWeld = Instance.new("WeldConstraint")
+	coreWeld.Part0 = hitbox
+	coreWeld.Part1 = core
+	coreWeld.Parent = core
+	core.Parent = model
+	local light = Instance.new("PointLight")
+	light.Color = kind.glow
+	light.Range = 10 * s
+	light.Brightness = 1.5
+	light.Parent = hitbox
+	local sparkle = Instance.new("ParticleEmitter")
+	sparkle.Texture = WackyState.sparkleTexture
+	sparkle.Rate = 4
+	sparkle.Speed = NumberRange.new(1, 2)
+	sparkle.SpreadAngle = Vector2.new(180, 180)
+	sparkle.Lifetime = NumberRange.new(0.5, 0.9)
+	sparkle.LightEmission = 1
+	sparkle.Size = NumberSequence.new(0.45 * s, 0)
+	sparkle.Color = ColorSequence.new(Color3.new(1, 1, 1), kind.glow)
+	sparkle.Parent = hitbox
+	return model, hitbox
+end
+
+WackyState.diamondPick = function()
+	local roll = math.random()
+	local total = 0
+	for _, kind in ipairs(WackyState.diamondTypes) do
+		total = total + kind.chance
+		if roll <= total then
+			return kind
+		end
+	end
+	return WackyState.diamondTypes[1]
+end
+
+-- rounded popup card on the overlay
+WackyState.diamondCard = function(width, height)
+	local card = Instance.new("Frame")
+	card.Name = randomString()
+	card.AnchorPoint = Vector2.new(0.5, 0.5)
+	card.Position = UDim2.new(0.5, 0, 0.45, 0)
+	card.Size = UDim2.new(0, width, 0, height)
+	card.BackgroundColor3 = Color3.fromRGB(14, 18, 40)
+	card.BackgroundTransparency = 0.05
+	card.BorderSizePixel = 0
+	card.ZIndex = 60
+	NeverYieldPortal.corner(card, UDim.new(0, 18))
+	local stroke, strokeGradient = NeverYieldPortal.stroke(card, 3, 0)
+	strokeGradient.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(120, 220, 255)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 150, 225)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 220, 255)),
+	})
+	local scale = Instance.new("UIScale")
+	scale.Scale = 0.3
+	scale.Parent = card
+	card.Parent = WackyState.overlay()
+	TweenService:Create(scale, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+	task.spawn(function()
+		while card.Parent do
+			strokeGradient.Rotation = (tick() * 120) % 360
+			RunService.RenderStepped:Wait()
+		end
+	end)
+	return card, scale
+end
+
+WackyState.diamondText = function(parent, text, y, height, size, font, color)
+	local l = Instance.new("TextLabel")
+	l.Name = randomString()
+	l.BackgroundTransparency = 1
+	l.Position = UDim2.new(0, 16, 0, y)
+	l.Size = UDim2.new(1, -32, 0, height)
+	l.Font = font or Enum.Font.GothamBold
+	l.TextSize = size
+	l.TextWrapped = true
+	l.Text = text
+	l.TextColor3 = color or Color3.new(1, 1, 1)
+	l.ZIndex = 61
+	l.Parent = parent
+	return l
+end
+
+WackyState.diamondStop = function(showResults)
+	local g = WackyState.diamondGame
+	if not g or g.stopped then return end
+	g.stopped = true
+	WackyState.disconnect("diamondRush")
+	if g.music then
+		TweenService:Create(g.music, TweenInfo.new(1.5), {Volume = 0}):Play()
+		Services.Debris:AddItem(g.music, 1.6)
+	end
+	for _, d in ipairs(g.diamonds) do
+		pcall(function()
+			d.hitbox.Anchored = true
+			for _, p in ipairs(d.model:GetDescendants()) do
+				if p:IsA("BasePart") and p.Transparency < 1 then
+					TweenService:Create(p, TweenInfo.new(0.6), {Transparency = 1}):Play()
+				end
+			end
+			Services.Debris:AddItem(d.model, 0.7)
+		end)
+	end
+	g.diamonds = {}
+	pcall(function() g.hud:Destroy() end)
+	pcall(function() g.intro:Destroy() end)
+	if not showResults then
+		WackyState.diamondGame = nil
+		return
+	end
+	-- save the best score with your other stats
+	local best, newBest = g.score, false
+	pcall(function()
+		local data = NeverYieldStats.data
+		data.minigames = type(data.minigames) == "table" and data.minigames or {}
+		local mg = data.minigames
+		mg.diamondRounds = (mg.diamondRounds or 0) + 1
+		mg.diamondTotal = (mg.diamondTotal or 0) + g.score
+		if g.score > (mg.diamondBest or 0) then
+			mg.diamondBest = g.score
+			newBest = g.score > 0
+		end
+		best = mg.diamondBest
+		NeverYieldStats.dirty = true
+	end)
+	WackyState.sound(WackyState.diamondSting, nil, 0.6)
+	local card, scale = WackyState.diamondCard(380, 250)
+	WackyState.diamondText(card, "TIME'S UP!", 14, 44, 38, Enum.Font.FredokaOne, Color3.fromRGB(190, 240, 255))
+	WackyState.diamondText(card, "\u{1F48E} " .. g.score .. " points", 64, 40, 30, Enum.Font.FredokaOne)
+	WackyState.diamondText(card, g.counts[1] .. " diamonds  |  " .. g.counts[2] .. " pink  |  " .. g.counts[3] .. " golden", 106, 22, 15, Enum.Font.Gotham, Color3.fromRGB(210, 220, 255))
+	WackyState.diamondText(card, newBest and "NEW BEST!" or ("Best: " .. best), 136, 30, newBest and 24 or 18, Enum.Font.FredokaOne, newBest and Color3.fromRGB(255, 215, 90) or Color3.fromRGB(200, 200, 230))
+	local close = Instance.new("TextButton")
+	close.Name = randomString()
+	close.AnchorPoint = Vector2.new(0.5, 0)
+	close.Position = UDim2.new(0.5, 0, 0, 186)
+	close.Size = UDim2.new(0, 160, 0, 40)
+	close.BackgroundColor3 = Color3.fromRGB(70, 150, 230)
+	close.Font = Enum.Font.FredokaOne
+	close.TextSize = 22
+	close.Text = "Nice!"
+	close.TextColor3 = Color3.new(1, 1, 1)
+	close.ZIndex = 62
+	NeverYieldPortal.corner(close, UDim.new(0, 12))
+	close.Parent = card
+	local function closeCard()
+		if not card.Parent then return end
+		TweenService:Create(scale, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Scale = 0}):Play()
+		Services.Debris:AddItem(card, 0.3)
+	end
+	close.MouseButton1Click:Connect(closeCard)
+	task.delay(10, closeCard)
+	WackyState.diamondGame = nil
+end
+
+addcmd('diamond',{'diamondrush','diamonds'},function(args, speaker)
+	if WackyState.diamondGame then
+		notify('Diamond Rush', 'A round is already running! Use undiamond to stop it.')
+		return
+	end
+	local duration = math.clamp(math.floor(WackyState.num(args[1], 60)), 15, 300)
+	local best = 0
+	pcall(function() best = (NeverYieldStats.data.minigames or {}).diamondBest or 0 end)
+	local g = {score = 0, counts = {0, 0, 0}, diamonds = {}, duration = duration}
+	WackyState.diamondGame = g
+
+	-- intro popup
+	WackyState.sound(WackyState.diamondWhoosh, nil, 0.6)
+	local intro, introScale = WackyState.diamondCard(420, 250)
+	g.intro = intro
+	local title = WackyState.diamondText(intro, "DIAMOND RUSH", 14, 50, 44, Enum.Font.FredokaOne)
+	local titleGradient = Instance.new("UIGradient")
+	titleGradient.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(140, 230, 255)), ColorSequenceKeypoint.new(0.5, Color3.new(1, 1, 1)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 160, 230)),
+	})
+	titleGradient.Parent = title
+	WackyState.diamondText(intro, "Diamonds are raining from the sky!\nWalk into them to collect them.", 70, 44, 17, Enum.Font.GothamBold)
+	WackyState.diamondText(intro, "\u{1F48E} Diamond = 1     Pink = 3     Golden = 10", 122, 24, 16, Enum.Font.Gotham, Color3.fromRGB(200, 230, 255))
+	WackyState.diamondText(intro, "You have " .. duration .. " seconds.   Best: " .. best, 150, 24, 16, Enum.Font.Gotham, Color3.fromRGB(200, 230, 255))
+	local count = WackyState.diamondText(intro, "Get ready...", 186, 44, 34, Enum.Font.FredokaOne, Color3.fromRGB(255, 220, 120))
+
+	task.spawn(function()
+		task.wait(2.5)
+		for i = 3, 1, -1 do
+			if g.stopped then return end
+			count.Text = tostring(i)
+			WackyState.sound(WackyState.diamondBeep, nil, 0.5, false, 0.9)
+			task.wait(1)
+		end
+		if g.stopped then return end
+		count.Text = "GO!"
+		WackyState.sound(WackyState.diamondBeep, nil, 0.6, false, 1.4)
+		task.wait(0.4)
+		TweenService:Create(introScale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Scale = 0}):Play()
+		Services.Debris:AddItem(intro, 0.35)
+
+		-- music
+		local music = WackyState.sound(WackyState.pick(WackyState.diamondMusic), nil, 0, true)
+		TweenService:Create(music, TweenInfo.new(1.5), {Volume = 0.35}):Play()
+		g.music = music
+
+		-- HUD
+		local hud = Instance.new("Frame")
+		hud.Name = randomString()
+		hud.AnchorPoint = Vector2.new(0.5, 0)
+		hud.Position = UDim2.new(0.5, 0, 0, 70)
+		hud.Size = UDim2.new(0, 300, 0, 70)
+		hud.BackgroundColor3 = Color3.fromRGB(14, 18, 40)
+		hud.BackgroundTransparency = 0.15
+		hud.BorderSizePixel = 0
+		hud.ZIndex = 55
+		NeverYieldPortal.corner(hud, UDim.new(0, 14))
+		NeverYieldPortal.stroke(hud, 2, 0.2)
+		hud.Parent = WackyState.overlay()
+		g.hud = hud
+		local scoreLabel = WackyState.diamondText(hud, "\u{1F48E} 0", 6, 40, 32, Enum.Font.FredokaOne)
+		scoreLabel.TextXAlignment = Enum.TextXAlignment.Left
+		scoreLabel.ZIndex = 56
+		local timeLabel = WackyState.diamondText(hud, "", 6, 40, 32, Enum.Font.FredokaOne)
+		timeLabel.TextXAlignment = Enum.TextXAlignment.Right
+		timeLabel.ZIndex = 56
+		local bestLabel = WackyState.diamondText(hud, "Best: " .. best, 46, 18, 14, Enum.Font.Gotham, Color3.fromRGB(200, 220, 255))
+		bestLabel.ZIndex = 56
+		local scoreScale = Instance.new("UIScale")
+		scoreScale.Parent = scoreLabel
+
+		local start = tick()
+		local nextSpawn, lastBeep = 0, -1
+		WackyState.connect("diamondRush", RunService.Heartbeat:Connect(function()
+			local now = tick()
+			local left = g.duration - (now - start)
+			if left <= 0 then
+				WackyState.diamondStop(true)
+				return
+			end
+			local secs = math.ceil(left)
+			timeLabel.Text = string.format("%d:%02d", math.floor(secs / 60), secs % 60)
+			if secs <= 10 then
+				timeLabel.TextColor3 = Color3.fromRGB(255, 110, 110)
+				if secs ~= lastBeep then
+					lastBeep = secs
+					WackyState.sound(WackyState.diamondBeep, nil, 0.35, false, 1.2)
+				end
+			end
+			local root = getRoot(speaker.Character)
+			if not root then return end
+
+			-- spawn: faster and faster as time runs out
+			if now >= nextSpawn and #g.diamonds < 70 then
+				nextSpawn = now + 0.32 - 0.17 * math.clamp((now - start) / g.duration, 0, 1)
+				local kind = WackyState.diamondPick()
+				local model, hitbox = WackyState.makeDiamond(kind)
+				local angle, dist = math.random() * math.pi * 2, 8 + math.random() * 50
+				hitbox.CFrame = CFrame.new(root.Position + Vector3.new(math.cos(angle) * dist, 65 + math.random() * 25, math.sin(angle) * dist))
+					* CFrame.Angles(math.random() * 6.28, math.random() * 6.28, math.random() * 6.28)
+				model.Parent = workspace
+				hitbox.AssemblyAngularVelocity = Vector3.new(math.random(-6, 6), math.random(-6, 6), math.random(-6, 6))
+				table.insert(g.diamonds, {model = model, hitbox = hitbox, kind = kind, born = now, seed = math.random() * 10})
+			end
+
+			-- collect, land, spin
+			for i = #g.diamonds, 1, -1 do
+				local d = g.diamonds[i]
+				local hitbox = d.hitbox
+				if not hitbox.Parent or now - d.born > 30 or hitbox.Position.Y < workspace.FallenPartsDestroyHeight + 20 then
+					pcall(function() d.model:Destroy() end)
+					table.remove(g.diamonds, i)
+				elseif (hitbox.Position - root.Position).Magnitude < 4.5 * d.kind.scale then
+					g.score = g.score + d.kind.value
+					local index = table.find(WackyState.diamondTypes, d.kind) or 1
+					g.counts[index] = g.counts[index] + 1
+					scoreLabel.Text = "\u{1F48E} " .. g.score
+					scoreScale.Scale = 1.3
+					TweenService:Create(scoreScale, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+					WackyState.sound(WackyState.pick(WackyState.gemSounds), nil, d.kind.value >= 10 and 0.9 or 0.55, false, (d.kind.value >= 10 and 0.8 or 1.05) + math.random() * 0.25)
+					-- sparkle burst and a floating "+points"
+					local fx = WackyState.endPart and WackyState.endPart(workspace) or Instance.new("Part")
+					fx.Anchored, fx.CanCollide, fx.Transparency = true, false, 1
+					fx.Position = hitbox.Position
+					fx.Parent = workspace
+					WackyState.burst(fx, Color3.new(1, 1, 1), d.kind.glow, d.kind.value >= 10 and 40 or 18, 14)
+					local tag = Instance.new("BillboardGui")
+					tag.Size = UDim2.new(0, 120, 0, 40)
+					tag.AlwaysOnTop = true
+					tag.StudsOffset = Vector3.new(0, 2, 0)
+					tag.Parent = fx
+					local plus = Instance.new("TextLabel")
+					plus.BackgroundTransparency = 1
+					plus.Size = UDim2.new(1, 0, 1, 0)
+					plus.Font = Enum.Font.FredokaOne
+					plus.TextScaled = true
+					plus.Text = "+" .. d.kind.value
+					plus.TextColor3 = d.kind.glow
+					plus.TextStrokeTransparency = 0.2
+					plus.Parent = tag
+					TweenService:Create(tag, TweenInfo.new(0.8), {StudsOffset = Vector3.new(0, 6, 0)}):Play()
+					TweenService:Create(plus, TweenInfo.new(0.8), {TextTransparency = 1, TextStrokeTransparency = 1}):Play()
+					Services.Debris:AddItem(fx, 0.9)
+					pcall(function() d.model:Destroy() end)
+					table.remove(g.diamonds, i)
+				elseif d.landed then
+					local t = now + d.seed
+					hitbox.CFrame = d.rest * CFrame.new(0, math.sin(t * 3) * 0.3, 0) * CFrame.Angles(0, t * 2, 0)
+				elseif now - d.born > 0.8 and hitbox.AssemblyLinearVelocity.Magnitude < 2 then
+					-- landed: stand upright and hover-spin so it's easy to see
+					d.landed = true
+					hitbox.Anchored = true
+					d.rest = CFrame.new(hitbox.Position + Vector3.new(0, 1.2 * d.kind.scale, 0))
+				end
+			end
+		end))
+	end)
+end)
+
+addcmd('undiamond',{'stopdiamond','nodiamond'},function(args, speaker)
+	if WackyState.diamondGame then
+		WackyState.diamondStop(false)
+		notify('Diamond Rush', 'Round stopped.')
+	end
+end)
+
+table.insert(WackyState.chaosList, 'midas')
+table.insert(WackyState.undoList, 'unmidas')
+table.insert(WackyState.undoList, 'undiamond')
+-- ================== END MIDAS & DIAMOND RUSH ==================
+
 -- ==================== NEVERYIELD STATS ====================
 -- Lifetime stats saved in the executor workspace (NeverYield_stats.json), so they carry across every game.
 -- Kills come from the game's leaderboard (Kills, KOs, Eliminations...) and from Roblox "creator" damage
@@ -18951,7 +19540,7 @@ NeverYieldStats.load = function()
 				data = decoded
 			elseif type(raw) == "string" and raw ~= "" then
 				-- keep a copy of a damaged file instead of silently losing it
-				writefile("NeverYield_stats_broken.json", raw, true)
+				writefile("NeverYield_stats_broken_" .. os.date("%Y%m%d_%H%M%S") .. ".json", raw, true)
 			end
 		end
 	end)
@@ -19006,10 +19595,15 @@ NeverYieldStats.save = function()
 	pcall(NeverYieldStats.trim)
 	local ok, encoded = pcall(function() return HttpService:JSONEncode(NeverYieldStats.data) end)
 	if ok and encoded then
-		writefile(NeverYieldStats.file, encoded, true)
-		NeverYieldStats.dirty = false
+		local wrote = false
+		pcall(function()
+			wrote = writefile ~= nil and writefile(NeverYieldStats.file, encoded, true) == true
+		end)
 		NeverYieldStats.lastSave = os.clock()
-		return true
+		if wrote then
+			NeverYieldStats.dirty = false
+			return true
+		end
 	end
 	return false
 end
@@ -19864,6 +20458,15 @@ addcmd('statsreset',{},function(args, speaker)
 	end)
 	NeverYieldStats.data = NeverYieldStats.blank()
 	NeverYieldStats.data.totals.sessions = 1
+	local s = NeverYieldStats.session
+	s.tagKills, s.myDeaths, s.countedKills, s.countedDeaths, s.streak, s.npcKills = 0, 0, 0, 0, 0, 0
+	s.messages, s.jumps, s.distance, s.playtime, s.commands = 0, 0, 0, 0, 0
+	s.lastKiller, s.seen, s.spawnTime = nil, {}, os.clock()
+	for _, kind in pairs(s.board) do
+		for _, entry in pairs(kind) do
+			entry.gained = 0
+		end
+	end
 	NeverYieldStats.game().visits = 1
 	NeverYieldStats.save()
 	if NeverYieldStats.render then
