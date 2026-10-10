@@ -1,4 +1,4 @@
--- NeverYield v6.4.2 - edited by kas
+-- NeverYield v1.11.3 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,6 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
+NeverYieldVersion = "1.11.3" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -400,7 +401,7 @@ Title.Size = UDim2.new(0, 250, 0, 20)
 Title.Font = Enum.Font.SourceSans
 Title.TextSize = 18
 Title.RichText = true
-Title.Text = "NeverYield v" .. currentVersion .. ' <font size="13" color="#C9A6FF">edited by kas</font>'
+Title.Text = "NeverYield v" .. NeverYieldVersion .. ' <font size="13" color="#C9A6FF">edited by kas</font>'
 
 do
 	local emoji = ({
@@ -514,7 +515,7 @@ SettingsHolder.BorderSizePixel = 0
 SettingsHolder.Size = UDim2.new(1,0,1,0)
 SettingsHolder.ScrollBarImageColor3 = Color3.fromRGB(86, 50, 160)
 SettingsHolder.BottomImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
-SettingsHolder.CanvasSize = UDim2.new(0, 0, 0, 235)
+SettingsHolder.CanvasSize = UDim2.new(0, 0, 0, 265)
 SettingsHolder.MidImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
 SettingsHolder.ScrollBarThickness = 8
 SettingsHolder.TopImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
@@ -596,14 +597,35 @@ ColorsButton.Size = UDim2.new(1, -10, 0, 25)
 ColorsButton.Name = "Colors"
 ColorsButton.Parent = SettingsHolder
 
+StatsButton = makeSettingsButton("Stats", "")
+StatsButton.Position = UDim2.new(0, 5, 0, 85)
+StatsButton.Size = UDim2.new(1, -10, 0, 25)
+StatsButton.Name = "Stats"
+StatsButton.Parent = SettingsHolder
+do
+	-- no stats icon in IY's asset pack, so show an emoji in the icon spot
+	local icon = StatsButton:FindFirstChild("Icon")
+	if icon then icon.Visible = false end
+	local emoji = Instance.new("TextLabel")
+	emoji.Name = "Emoji"
+	emoji.BackgroundTransparency = 1
+	emoji.Position = UDim2.new(0, 4, 0, 4)
+	emoji.Size = UDim2.new(0, 18, 0, 18)
+	emoji.Font = Enum.Font.SourceSans
+	emoji.TextScaled = true
+	emoji.Text = "\u{1F4CA}"
+	emoji.ZIndex = 10
+	emoji.Parent = StatsButton
+end
+
 Keybinds = makeSettingsButton("Edit Keybinds",getcustomasset("infiniteyield/assets/editkeybinds.png"))
-Keybinds.Position = UDim2.new(0, 5, 0, 85)
+Keybinds.Position = UDim2.new(0, 5, 0, 115)
 Keybinds.Size = UDim2.new(1, -10, 0, 25)
 Keybinds.Name = "Keybinds"
 Keybinds.Parent = SettingsHolder
 
 Aliases = makeSettingsButton("Edit Aliases",getcustomasset("infiniteyield/assets/editaliases.png"))
-Aliases.Position = UDim2.new(0, 5, 0, 115)
+Aliases.Position = UDim2.new(0, 5, 0, 145)
 Aliases.Size = UDim2.new(1, -10, 0, 25)
 Aliases.Name = "Aliases"
 Aliases.Parent = SettingsHolder
@@ -647,19 +669,19 @@ On.TextColor3 = Color3.new(0, 0, 0)
 On.ZIndex = 10
 
 Positions = makeSettingsButton("Edit/Goto Waypoints",getcustomasset("infiniteyield/assets/editwaypoints.png"))
-Positions.Position = UDim2.new(0, 5, 0, 145)
+Positions.Position = UDim2.new(0, 5, 0, 175)
 Positions.Size = UDim2.new(1, -10, 0, 25)
 Positions.Name = "Waypoints"
 Positions.Parent = SettingsHolder
 
 EventBind = makeSettingsButton("Edit Event Binds",getcustomasset("infiniteyield/assets/bindsandplugins.png"),759)
-EventBind.Position = UDim2.new(0, 5, 0, 205)
+EventBind.Position = UDim2.new(0, 5, 0, 235)
 EventBind.Size = UDim2.new(1, -10, 0, 25)
 EventBind.Name = "EventBinds"
 EventBind.Parent = SettingsHolder
 
 Plugins = makeSettingsButton("Manage Plugins",getcustomasset("infiniteyield/assets/bindsandplugins.png"),743)
-Plugins.Position = UDim2.new(0, 5, 0, 175)
+Plugins.Position = UDim2.new(0, 5, 0, 205)
 Plugins.Size = UDim2.new(1, -10, 0, 25)
 Plugins.Name = "Plugins"
 Plugins.Parent = SettingsHolder
@@ -4203,6 +4225,14 @@ ColorsButton.MouseButton1Click:Connect(function()
 	end
 end)
 
+StatsButton.MouseButton1Click:Connect(function()
+	local ok, err = pcall(function() NeverYieldStats.open() end)
+	if not ok then
+		pcall(function() NeverYieldStats.close() end)
+		notify('Stats', 'Could not open: ' .. tostring(err))
+	end
+end)
+
 
 SettingsButton.MouseButton1Click:Connect(function()
 	if SettingsOpen == false then SettingsOpen = true
@@ -5390,7 +5420,7 @@ CMDs[#CMDs + 1] = {NAME = 'unhud', DESC = 'Hides the stats display'}
 CMDs[#CMDs + 1] = {NAME = 'calc / math [expression]', DESC = 'Calculator, e.g. calc (5+3)*2'}
 CMDs[#CMDs + 1] = {NAME = 'randomplayer / pickplayer', DESC = 'Picks a random player in the server'}
 CMDs[#CMDs + 1] = {NAME = '--- STATS TRACKER ---', DESC = ''}
-CMDs[#CMDs + 1] = {NAME = 'stats / mystats [tab]', DESC = 'Your lifetime stats across every game: kills, deaths, K/D, streaks, playtime, games, chat, people, commands. Tabs: overview, combat, games, chat, people, commands'}
+CMDs[#CMDs + 1] = {NAME = 'stats / mystats [tab]', DESC = '(Also a button in Settings) Your lifetime stats across every game: kills, deaths, K/D, streaks, playtime, games, chat, people, commands. Tabs: overview, combat, games, chat, people, commands'}
 CMDs[#CMDs + 1] = {NAME = 'killcount / kd', DESC = 'Quick kills and deaths for this server and all time'}
 CMDs[#CMDs + 1] = {NAME = 'mychats / chatsearch [text]', DESC = 'Opens your saved chat history (add text to search it)'}
 CMDs[#CMDs + 1] = {NAME = 'chatlogging [on/off]', DESC = 'Also save other players\' messages (on by default)'}
@@ -14941,7 +14971,7 @@ addcmd('unspacemode',{'unspace'},function(args, speaker)
 end)
 
 addcmd('neveryield',{'about','ny'},function(args, speaker)
-	notify('NeverYield v' .. currentVersion, 'Edited by kas. ' .. #cmds .. ' commands loaded. Type wacky for the fun stuff.', 8)
+	notify('NeverYield v' .. NeverYieldVersion, 'Edited by kas (Infinite Yield v' .. currentVersion .. ' base). ' .. #cmds .. ' commands loaded. Type wacky for the fun stuff.', 8)
 end)
 
 table.insert(WackyState.chaosList, 'spacemode')
