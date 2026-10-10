@@ -5,6 +5,7 @@ Versions before 1.11.3 were reconstructed from the Desktop `.bakN` backups (one 
 
 | Version | Date | Commands | Change |
 |---|---|---|---|
+| 1.24.3 | 10-10 | 634 | Pet Hub previews (My Pets cards, detail page, hatch popup) show pets from the front instead of their backs |
 | 1.24.2 | 10-10 | 634 | Agartha fireplace rebuilt: real recessed firebox, hearth, grate, logs on embers, Fire + flame/spark particles, crackle sound |
 | 1.24.1 | 10-10 | 634 | Pet tails fixed: fox, dragon, cat and dog tail segments were tilted the wrong way and floated off the body; now one connected curve |
 | 1.24.0 | 10-10 | 634 | 92 new achievements in every category (bronze to mythic) with 33 new trophy designs, all placeable in your room; new Secrets tab (hidden until unlocked); Completionist no longer needs secrets |

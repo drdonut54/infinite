@@ -1,4 +1,4 @@
--- NeverYield v1.24.2 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.24.3 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.24.2" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.24.3" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -27738,7 +27738,7 @@ NeverYieldPets.preview = function(parent, pet, pos, size, spin)
 	vp.Parent = parent
 	local model = pet and NeverYieldPets.build(pet, 1)
 	if model then
-		model:PivotTo(CFrame.new(0, 0, 0) * CFrame.Angles(0, math.rad(200), 0))
+		model:PivotTo(CFrame.new(0, 0, 0) * CFrame.Angles(0, math.rad(-20), 0))
 		model.Parent = vp
 	end
 	local cam = Instance.new("Camera")
@@ -27920,7 +27920,7 @@ NeverYieldPets.open = function(tab)
 		local t = tick()
 		strokeGradient.Rotation = (t * 90) % 360
 		for _, m in ipairs(ui.spinners) do
-			if m.Parent then m:PivotTo(CFrame.Angles(0, math.rad(200) + t * 0.8, 0)) end
+			if m.Parent then m:PivotTo(CFrame.Angles(0, math.rad(-20) + t * 0.8, 0)) end
 		end
 		if t - lastLive > 1 then
 			lastLive = t
@@ -28505,7 +28505,7 @@ NeverYieldPets.hatchPopup = function(egg, pet, newSpecies)
 		petVp.ZIndex = 71
 		task.spawn(function()
 			while petVp.Parent do
-				if petModel then petModel:PivotTo(CFrame.Angles(0, math.rad(200) + tick() * 0.9, 0)) end
+				if petModel then petModel:PivotTo(CFrame.Angles(0, math.rad(-20) + tick() * 0.9, 0)) end
 				RunService.RenderStepped:Wait()
 			end
 		end)
