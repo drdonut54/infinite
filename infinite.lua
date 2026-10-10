@@ -5395,7 +5395,7 @@ CMDs[#CMDs + 1] = {NAME = 'killcount / kd', DESC = 'Quick kills and deaths for t
 CMDs[#CMDs + 1] = {NAME = 'mychats / chatsearch [text]', DESC = 'Opens your saved chat history (add text to search it)'}
 CMDs[#CMDs + 1] = {NAME = 'chatlogging [on/off]', DESC = 'Also save other players\' messages (on by default)'}
 CMDs[#CMDs + 1] = {NAME = 'statsexport / copystats', DESC = 'Copies a stats summary to your clipboard'}
-CMDs[#CMDs + 1] = {NAME = 'statssave', DESC = 'Saves your stats now (they also save every 20 seconds and before teleports)'}
+CMDs[#CMDs + 1] = {NAME = 'statssave', DESC = 'Saves your stats now (they also save every minute and before teleports)'}
 CMDs[#CMDs + 1] = {NAME = 'statsreset confirm', DESC = 'Starts your stats over (a backup file is kept)'}
 -- wait()
 
@@ -18844,8 +18844,9 @@ end
 NeverYieldStats.watchHumanoid = function(hum)
 	if NeverYieldStats.watched[hum] then return end
 	NeverYieldStats.watched[hum] = true
+	local owner = NeverYieldStats
 	hum.Died:Connect(function()
-		if NeverYieldStats.stopped then return end
+		if owner.stopped or NeverYieldStats ~= owner then return end
 		local model = hum.Parent
 		local lp = Players.LocalPlayer
 		local plr = model and Players:GetPlayerFromCharacter(model)
@@ -18864,12 +18865,13 @@ NeverYieldStats.watchMe = function(char)
 	s.spawnTime = os.clock()
 	local hum = char:FindFirstChildOfClass("Humanoid") or char:WaitForChild("Humanoid", 10)
 	if not hum then return end
+	local owner = NeverYieldStats
 	hum.Died:Connect(function()
-		if NeverYieldStats.stopped then return end
+		if owner.stopped or NeverYieldStats ~= owner then return end
 		NeverYieldStats.addMyDeath(NeverYieldStats.tagOwner(char, hum))
 	end)
 	hum.StateChanged:Connect(function(_, new)
-		if NeverYieldStats.stopped or new ~= Enum.HumanoidStateType.Jumping then return end
+		if owner.stopped or NeverYieldStats ~= owner or new ~= Enum.HumanoidStateType.Jumping then return end
 		local data = NeverYieldStats.data
 		data.totals.jumps = data.totals.jumps + 1
 		s.jumps = s.jumps + 1
@@ -18900,8 +18902,9 @@ NeverYieldStats.watchBoard = function()
 		if not kind or s.board[kind][stat] then return end
 		local entry = {last = stat.Value, gained = 0, hooked = os.clock()}
 		s.board[kind][stat] = entry
+		local owner = NeverYieldStats
 		stat.Changed:Connect(function(value)
-			if NeverYieldStats.stopped or type(value) ~= "number" then return end
+			if owner.stopped or NeverYieldStats ~= owner or type(value) ~= "number" then return end
 			local gain = value - entry.last
 			entry.last = value
 			if gain > 0 and gain <= 3 and os.clock() - entry.hooked > 10 then
@@ -19434,12 +19437,13 @@ NeverYieldStats.start = function()
 		end
 	end))
 
+	local owner = NeverYieldStats
 	task.spawn(function()
-		while not NeverYieldStats.stopped do
+		while not owner.stopped and NeverYieldStats == owner do
 			task.wait(5)
-			if NeverYieldStats.stopped then break end
+			if owner.stopped or NeverYieldStats ~= owner then break end
 			pcall(NeverYieldStats.tick)
-			if NeverYieldStats.dirty and os.clock() - NeverYieldStats.lastSave > 20 then
+			if NeverYieldStats.dirty and os.clock() - NeverYieldStats.lastSave > 60 then
 				pcall(NeverYieldStats.save)
 			end
 			if NeverYieldStats.render then
