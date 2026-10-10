@@ -5,6 +5,11 @@ Versions before 1.11.3 were reconstructed from the Desktop `.bakN` backups (one 
 
 | Version | Date | Commands | Change |
 |---|---|---|---|
+| 1.19.0 | 10-10 | 629 | New `clown`: a growing crowd of part-built clowns chases you with creepy circus music; caught = HONK, you die, then server hop |
+| 1.18.0 | 10-10 | 627 | New `portal`: sling-ring style see-through gateway to Agartha (floating island with cottage, yard, waterfall, view, peaceful music); old portal replay is now `reopen` |
+| 1.17.1 | 10-10 | 625 | Moon rebuilt to look like the Zelda moon (sockets, bulging eyes, brows, hooked nose, clenched teeth); masked imp rebuilt (straw hat, poncho, spiky heart mask) |
+| 1.17.0 | 10-10 | 625 | Theme outlines: 16 animated panel outlines (thunder, inferno, aura, frost, code, glitch, rainbow...), Theme Studio Outlines tab, theme-matched defaults, `outline` command |
+| 1.16.0 | 10-10 | 624 | Pet Hub v2: chibi models with faces, 21 species (incl. mythic Phoenix), 9 eggs, potions, instant hatch, toy ball, 10 hats, slot/storage/incubator upgrades, shop sub-tabs |
 | 1.15.1 | 10-10 | 624 | Breakdance is a real looping routine (toprock, windmill, headspin, freeze); lean pivots at the feet; headstand on the head; moonwalk slides its legs; crabwalk crab pose; blink stops at walls; dash is a real burst |
 | 1.15.0 | 10-10 | 624 | New `moon`: angry-faced moon falls with a masked imp, countdown, quakes, impact fireball, then shop to a new server (`moon` alias moved off moongravity) |
 | 1.14.1 | 10-10 | 623 | Horror 2.0: pitch-black fog, The Watcher hunts you (moves only when unseen), flashlight flicker, heartbeat/whispers/static, jumpscare that kills you (`horror safe` = no dying) |

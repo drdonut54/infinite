@@ -1,4 +1,4 @@
--- NeverYield v1.15.1 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.19.0 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.15.1" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.19.0" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -1022,7 +1022,7 @@ NeverYieldPortal.conn = RunService.RenderStepped:Connect(function()
 			spark.Visible = visible
 		end
 		spark.Position = UDim2.new(xs, x + px, ys, y + py)
-		spark.BackgroundTransparency = math.clamp(0.2 + math.sin(t * 6 + i) * 0.2 + NeverYieldPortal.fade, 0, 1)
+		spark.BackgroundTransparency = NeverYieldPortal.hideSparks and 1 or math.clamp(0.2 + math.sin(t * 6 + i) * 0.2 + NeverYieldPortal.fade, 0, 1)
 	end
 end)
 
@@ -5304,6 +5304,10 @@ CMDs[#CMDs + 1] = {NAME = 'weathervolume [0-3]', DESC = 'Changes how loud the we
 CMDs[#CMDs + 1] = {NAME = 'skipweather / nexttrack', DESC = 'Weather sounds change by themselves every few minutes (plus owls, wolves, thunder, chimes...); this skips to another track now'}
 CMDs[#CMDs + 1] = {NAME = 'fuckoff / unloadny', DESC = 'Completely unloads NeverYield: turns everything off and removes the GUI'}
 CMDs[#CMDs + 1] = {NAME = 'END / theend', DESC = 'A black hole (only you see it) swallows the map and you, then takes you to a new server'}
+CMDs[#CMDs + 1] = {NAME = 'portal / agartha', DESC = 'Opens a sparking see-through gateway to Agartha, a peaceful floating island with a cottage and yard. Walk through it (only you see it)'}
+CMDs[#CMDs + 1] = {NAME = 'unportal', DESC = 'Closes the Agartha portal (brings you back if you are inside)'}
+CMDs[#CMDs + 1] = {NAME = 'clown / circus', DESC = 'Clowns keep appearing and chase you, more and faster over time. If one catches you, you die and get server hopped (only you see them)'}
+CMDs[#CMDs + 1] = {NAME = 'unclown', DESC = 'Sends the clowns away (before they catch you)'}
 CMDs[#CMDs + 1] = {NAME = 'moon / moonfall', DESC = 'An angry-faced moon falls on the map while a masked imp giggles at you; countdown, quakes, impact, then shop to a new server (only you see it)'}
 CMDs[#CMDs + 1] = {NAME = 'unweather / clearskies', DESC = 'Clears the weather'}
 CMDs[#CMDs + 1] = {NAME = 'confetti [amount]', DESC = 'Explodes confetti around you'}
@@ -5365,9 +5369,10 @@ CMDs[#CMDs + 1] = {NAME = 'themes / themestudio', DESC = 'Opens the animated The
 CMDs[#CMDs + 1] = {NAME = 'theme [name]', DESC = 'Cosmic: auto, space, nebula, galaxy, void, cosmic, classic. Vibes: ocean, sunset, matrix, sakura, candy, lava, arctic, forest, midnight, vaporwave, royal, toxic. Holidays: christmas, halloween, newyear, lunarnewyear, valentines, stpatricks, easter, fourthofjuly, thanksgiving, hanukkah, diwali. Memes: doge, stonks, sus, nyan, thisisfine, cheems, noob, vibecat, moai, trollge, skull, funnyaward'}
 CMDs[#CMDs + 1] = {NAME = 'autotheme / holidaytheme', DESC = 'Automatically wear the holiday theme for today'}
 CMDs[#CMDs + 1] = {NAME = 'themedebug', DESC = 'Shows what the Theme Studio drew (for fixing display problems)'}
+CMDs[#CMDs + 1] = {NAME = 'outline [name]', DESC = 'Animated panel outline (also Theme Studio > Outlines): auto, portal, lightning, fire, aura, smoke, frost, hearts, bubbles, leaves, petals, matrix, glitch, rainbow, sparkle, none'}
 CMDs[#CMDs + 1] = {NAME = 'spacemode / space', DESC = 'Purple space lighting, floating stars and low gravity'}
 CMDs[#CMDs + 1] = {NAME = 'unspacemode / unspace', DESC = 'Comes back down to Earth'}
-CMDs[#CMDs + 1] = {NAME = 'portal / reopen', DESC = 'Replays the NeverYield portal opening animation'}
+CMDs[#CMDs + 1] = {NAME = 'reopen', DESC = 'Replays the NeverYield portal opening animation'}
 CMDs[#CMDs + 1] = {NAME = '', DESC = ''}
 CMDs[#CMDs + 1] = {NAME = '--- LIMBS ---', DESC = 'Works on R6 and R15 (R15 also bends elbows/knees). Effects stack! Optional [speed] multiplier'}
 CMDs[#CMDs + 1] = {NAME = 'flail [speed]', DESC = 'Arms, legs and head flail around randomly'}
@@ -5444,7 +5449,7 @@ CMDs[#CMDs + 1] = {NAME = 'unmidas', DESC = 'Turns everything back to normal'}
 CMDs[#CMDs + 1] = {NAME = 'diamond / diamondrush [seconds]', DESC = 'Mini-game: diamonds rain from the sky, collect them before time runs out (pink = 3, golden = 10). Music, popups and a saved best score'}
 CMDs[#CMDs + 1] = {NAME = 'undiamond', DESC = 'Stops a Diamond Rush round'}
 CMDs[#CMDs + 1] = {NAME = '--- PET HUB ---', DESC = ''}
-CMDs[#CMDs + 1] = {NAME = 'pets / pethub / pet [tab]', DESC = 'Opens the Pet Hub (also in Settings): hatch eggs, collect 10 species and 11 skins, feed, level up (to 50), rename and breed pets. Tabs: pets, eggs, shop, breed, index'}
+CMDs[#CMDs + 1] = {NAME = 'pets / pethub / pet [tab]', DESC = 'Opens the Pet Hub (also in Settings): 9 eggs, 21 species, 11 skins, 10 hats, potions, food, levels to 50, breeding, upgrades. Tabs: pets, eggs, shop, breed, index'}
 CMDs[#CMDs + 1] = {NAME = 'unpet', DESC = 'Sends all following pets back to the Pet Hub'}
 CMDs[#CMDs + 1] = {NAME = 'feedpets / feedall', DESC = 'Feeds your following pets with the cheapest food you have'}
 CMDs[#CMDs + 1] = {NAME = 'petcoins', DESC = 'Shows your pet coins (pets find coins, walking with pets, daily reward, Diamond Rush)'}
@@ -14954,7 +14959,7 @@ table.insert(WackyState.chaosList, 'spacemode')
 table.insert(WackyState.undoList, 'unspacemode')
 -- ================== END NEVERYIELD COMMANDS ==================
 
-addcmd('portal',{'reopen'},function(args, speaker)
+addcmd('reopen',{'reopenui'},function(args, speaker)
 	task.spawn(NeverYieldPortal.open)
 end)
 
@@ -16487,6 +16492,9 @@ NeverYieldTheme.apply = function(id, save)
 	if NeverYieldTheme.refreshStudio then
 		pcall(NeverYieldTheme.refreshStudio)
 	end
+	if NeverYieldOutline then
+		pcall(NeverYieldOutline.resolve)
+	end
 	return true, theme
 end
 
@@ -16666,10 +16674,10 @@ NeverYieldTheme.openStudio = function(page)
 	local tabs = {}
 	local currentTab = "cosmic"
 	local showTab
-	for k, info in ipairs({{"cosmic", "Cosmic"}, {"vibes", "Vibes"}, {"holidays", "Holidays"}, {"memes", "Memes"}, {"custom", "Custom Colors"}}) do
+	for k, info in ipairs({{"cosmic", "Cosmic"}, {"vibes", "Vibes"}, {"holidays", "Holidays"}, {"memes", "Memes"}, {"custom", "Custom"}, {"outlines", "Outlines"}}) do
 		local tab = Instance.new("TextButton")
-		tab.Position = UDim2.new(0.5, -262 + (k - 1) * 106, 0, 70)
-		tab.Size = UDim2.new(0, 100, 0, 28)
+		tab.Position = UDim2.new(0.5, -270 + (k - 1) * 91, 0, 70)
+		tab.Size = UDim2.new(0, 86, 0, 28)
 		tab.AutoButtonColor = false
 		tab.BorderSizePixel = 0
 		tab.Font = Enum.Font.GothamBold
@@ -16729,6 +16737,14 @@ NeverYieldTheme.openStudio = function(page)
 	customPage.Visible = false
 	customPage.ZIndex = 21
 	customPage.Parent = studio
+
+	local outlinePage = Instance.new("Frame")
+	outlinePage.BackgroundTransparency = 1
+	outlinePage.Position = grid.Position
+	outlinePage.Size = grid.Size
+	outlinePage.Visible = false
+	outlinePage.ZIndex = 21
+	outlinePage.Parent = studio
 
 	local reset = Instance.new("TextButton")
 	reset.Position = UDim2.new(0, 4, 0, 104)
@@ -16872,7 +16888,7 @@ NeverYieldTheme.openStudio = function(page)
 			updateColors(color, slots[selectedSlot].tbl)
 			NeverYieldTheme.selected = "custom"
 			NeverYieldTheme.active = nil
-			pcall(NeverYieldTheme.applyCustomRim)
+			pcall(NeverYieldTheme.applyCustomRim); pcall(function() NeverYieldOutline.resolve() end)
 			pcall(function() writefile("NeverYield_theme.txt", "custom", true) end)
 			pcall(updatesaves)
 			if NeverYieldTheme.refreshStudio then
@@ -17087,8 +17103,16 @@ NeverYieldTheme.openStudio = function(page)
 	TweenService:Create(scale, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
 	TweenService:Create(studio, TweenInfo.new(0.45, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Rotation = 0}):Play()
 	showTab = function(id)
+		outlinePage.Visible = false
 		if id == "custom" then
 			showPage(true)
+		elseif id == "outlines" then
+			showPage(false)
+			currentTab = "outlines"
+			grid.Visible = false
+			outlinePage.Visible = true
+			NeverYieldOutline.populate(outlinePage, footer)
+			footer.Text = "<b>Outlines</b>  -  animated effects around the panel. Match Theme picks one that fits your theme."
 		else
 			currentTab = id
 			for _, entry in ipairs(cardIntro) do
@@ -17105,7 +17129,7 @@ NeverYieldTheme.openStudio = function(page)
 	elseif sel ~= "auto" and NeverYieldTheme.byId[sel] then
 		startTab = NeverYieldTheme.groupOf(NeverYieldTheme.byId[sel])
 	end
-	showTab(startTab)
+	showTab(page == "outlines" and "outlines" or startTab)
 	for i, entry in ipairs(cardIntro) do
 		task.delay(0.1 + i * 0.03, function()
 			if entry.card.Parent then
@@ -17168,12 +17192,555 @@ task.spawn(function()
 	end)
 	if saved == "custom" then
 		NeverYieldTheme.selected = "custom"
-		pcall(NeverYieldTheme.applyCustomRim)
+		pcall(NeverYieldTheme.applyCustomRim); pcall(function() NeverYieldOutline.resolve() end)
 	elseif not NeverYieldTheme.apply(saved, false) then
 		NeverYieldTheme.apply("auto", false)
 	end
 end)
 -- ================== END NEVERYIELD THEME STUDIO ==================
+
+-- ==================== NEVERYIELD OUTLINES ====================
+-- Animated effects around the main panel's border (Theme Studio > Outlines). "auto" picks the outline
+-- that fits the current theme. Effects stay on the border or outside it so the command list stays readable.
+NeverYieldOutline = {file = "NeverYield_outline.txt", mode = "auto", current = "portal", items = {}, pad = 46, acc = 0}
+
+NeverYieldOutline.list = {
+	{id = "auto", name = "Match Theme", icon = "\u{1F3A8}", desc = "Uses the outline that fits the current theme."},
+	{id = "portal", name = "Portal", icon = "\u{1F300}", desc = "The classic NeverYield sparks orbiting the rim."},
+	{id = "lightning", name = "Thunder", icon = "\u{26A1}", desc = "Electric bolts crackling and jumping around the edges."},
+	{id = "fire", name = "Inferno", icon = "\u{1F525}", desc = "Flames licking up the top and sides, with rising embers."},
+	{id = "aura", name = "Aura", icon = "\u{2728}", desc = "A glowing power-up aura swirling off the edges."},
+	{id = "smoke", name = "Shadow", icon = "\u{1F311}", desc = "Dark smoke curling off the panel."},
+	{id = "frost", name = "Frost", icon = "\u{1F9CA}", desc = "Ice crystals forming on the rim while snow falls."},
+	{id = "hearts", name = "Love", icon = "\u{1F496}", desc = "Hearts floating up the sides."},
+	{id = "bubbles", name = "Bubbles", icon = "\u{1F4A7}", desc = "Bubbles rising up the sides."},
+	{id = "leaves", name = "Autumn", icon = "\u{1F342}", desc = "Autumn leaves drifting down."},
+	{id = "petals", name = "Blossom", icon = "\u{1F338}", desc = "Cherry blossoms drifting down."},
+	{id = "matrix", name = "Code", icon = "\u{1F4BB}", desc = "Green code raining down the sides."},
+	{id = "glitch", name = "Glitch", icon = "\u{1F4FA}", desc = "RGB split glitches and scanline slices."},
+	{id = "rainbow", name = "Rainbow", icon = "\u{1F308}", desc = "A racing rainbow rim with comet trails."},
+	{id = "sparkle", name = "Sparkle", icon = "\u{1F31F}", desc = "Stars twinkling all around the rim."},
+	{id = "none", name = "Clean", icon = "\u{2B1C}", desc = "Just the rim, no effects."},
+}
+NeverYieldOutline.byId = {}
+for _, o in ipairs(NeverYieldOutline.list) do
+	NeverYieldOutline.byId[o.id] = o
+end
+
+NeverYieldOutline.themeDefaults = {
+	space = "portal", nebula = "aura", galaxy = "sparkle", void = "smoke", cosmic = "sparkle", classic = "none",
+	christmas = "frost", halloween = "smoke", newyear = "sparkle", lunarnewyear = "fire", valentines = "hearts", stpatricks = "rainbow",
+	easter = "petals", fourthofjuly = "lightning", thanksgiving = "leaves", hanukkah = "sparkle", diwali = "fire",
+	ocean = "bubbles", sunset = "aura", matrix = "matrix", sakura = "petals", candy = "hearts", lava = "fire", arctic = "frost",
+	forest = "leaves", midnight = "sparkle", vaporwave = "glitch", royal = "sparkle", toxic = "aura",
+	doge = "sparkle", stonks = "lightning", sus = "glitch", nyan = "rainbow", thisisfine = "fire", cheems = "hearts", noob = "portal",
+	vibecat = "hearts", moai = "smoke", trollge = "glitch", skull = "smoke", funnyaward = "sparkle",
+}
+
+-- colours of the current theme's rim (or your custom colours)
+NeverYieldOutline.colors = function()
+	local theme = NeverYieldTheme.active
+	local out = {}
+	if theme and theme.rim then
+		for _, c in ipairs(theme.rim) do
+			table.insert(out, Color3.fromRGB(c[1], c[2], c[3]))
+		end
+	else
+		out = {currentShade3, currentScroll or currentShade3, currentText1}
+	end
+	return out
+end
+
+-- a point on the panel border: x, y (pixels from the panel's top-left), outward normal, edge
+NeverYieldOutline.edge = function(t, w, h)
+	local d = (t % 1) * 2 * (w + h)
+	if d < w then return d, 0, 0, -1, "top" end
+	d = d - w
+	if d < h then return w, d, 1, 0, "right" end
+	d = d - h
+	if d < w then return w - d, h, 0, 1, "bottom" end
+	d = d - w
+	return 0, h - d, -1, 0, "left"
+end
+
+-- a point on the outside margins only (sides, or above the top)
+NeverYieldOutline.margin = function(w, h, includeTop)
+	local pad = NeverYieldOutline.pad
+	local roll = math.random()
+	if includeTop and roll < 0.3 then
+		return -pad * 0.3 + math.random() * (w + pad * 0.6), -math.random() * pad * 0.8
+	end
+	local left = math.random() < 0.5
+	return left and (-4 - math.random() * (pad - 10)) or (w + 4 + math.random() * (pad - 10)), math.random() * h
+end
+
+NeverYieldOutline.ensure = function()
+	if NeverYieldOutline.frame and NeverYieldOutline.frame.Parent then return NeverYieldOutline.frame end
+	local f = Instance.new("Frame")
+	f.Name = randomString()
+	f.BackgroundTransparency = 1
+	f.BorderSizePixel = 0
+	f.ZIndex = 9
+	f.Parent = ScaledHolder
+	NeverYieldOutline.frame = f
+	return f
+end
+
+NeverYieldOutline.clear = function()
+	for _, item in ipairs(NeverYieldOutline.items) do
+		pcall(function() item.obj:Destroy() end)
+	end
+	NeverYieldOutline.items = {}
+end
+
+-- generic particle: a circle, square, text or ring that moves, grows/shrinks and fades
+NeverYieldOutline.add = function(kind, p)
+	local frame = NeverYieldOutline.ensure()
+	local obj
+	if kind == "text" then
+		obj = Instance.new("TextLabel")
+		obj.BackgroundTransparency = 1
+		obj.TextScaled = true
+		obj.Font = p.font or Enum.Font.GothamBold
+		obj.Text = p.text
+		obj.TextColor3 = p.color or Color3.new(1, 1, 1)
+	else
+		obj = Instance.new("Frame")
+		obj.BorderSizePixel = 0
+		obj.BackgroundColor3 = p.color or Color3.new(1, 1, 1)
+		if kind == "circle" or kind == "ring" then
+			local c = Instance.new("UICorner")
+			c.CornerRadius = UDim.new(0.5, 0)
+			c.Parent = obj
+		end
+		if kind == "ring" then
+			obj.BackgroundTransparency = 0.85
+			local s = Instance.new("UIStroke")
+			s.Color = Color3.new(1, 1, 1)
+			s.Thickness = 1.5
+			s.Parent = obj
+			p.stroke = s
+		end
+		if p.gradient then
+			local g = Instance.new("UIGradient")
+			g.Color = p.gradient
+			g.Rotation = p.gradientRotation or -90
+			g.Parent = obj
+		end
+	end
+	obj.Name = randomString()
+	obj.AnchorPoint = Vector2.new(0.5, 0.5)
+	obj.Rotation = p.rot or 0
+	obj.ZIndex = p.z or 9
+	obj.Parent = frame
+	p.obj, p.kind, p.born = obj, kind, tick()
+	p.vx, p.vy, p.ax, p.ay = p.vx or 0, p.vy or 0, p.ax or 0, p.ay or 0
+	p.seed = math.random() * 10
+	table.insert(NeverYieldOutline.items, p)
+	return p
+end
+
+NeverYieldOutline.update = function(item, now, dt)
+	local age = now - item.born
+	local p = age / item.life
+	if p >= 1 then return false end
+	item.vx = item.vx + item.ax * dt
+	item.vy = item.vy + item.ay * dt
+	item.x = item.x + item.vx * dt
+	item.y = item.y + item.vy * dt
+	local sx = item.sway and math.sin(age * (item.swayFreq or 6) + item.seed) * item.sway or 0
+	local size
+	if item.twinkle then
+		size = item.size1 * math.sin(p * math.pi)
+	else
+		size = item.size0 + (item.size1 - item.size0) * p
+	end
+	local alpha
+	if p < 0.15 then
+		alpha = 1 + (item.tr0 - 1) * (p / 0.15)
+	else
+		alpha = item.tr0 + (item.tr1 - item.tr0) * ((p - 0.15) / 0.85)
+	end
+	local obj = item.obj
+	local pad = NeverYieldOutline.pad
+	obj.Position = UDim2.new(0, pad + item.x + sx, 0, pad + item.y)
+	if item.w then
+		obj.Size = UDim2.new(0, item.w, 0, item.h)
+	else
+		obj.Size = UDim2.new(0, size, 0, size)
+	end
+	if item.rotSpeed then obj.Rotation = obj.Rotation + item.rotSpeed * dt end
+	if item.color1 then
+		local c = item.color:Lerp(item.color1, p)
+		if item.kind == "text" then obj.TextColor3 = c else obj.BackgroundColor3 = c end
+	end
+	if item.kind == "text" then
+		obj.TextTransparency = alpha
+	elseif item.kind == "ring" then
+		item.stroke.Transparency = alpha
+		obj.BackgroundTransparency = math.max(alpha, 0.85)
+	else
+		obj.BackgroundTransparency = alpha
+	end
+	return true
+end
+
+-- lightning bolt: jagged glowing segments that hug the border, sometimes branching outwards
+NeverYieldOutline.bolt = function(w, h, colors)
+	local frame = NeverYieldOutline.ensure()
+	local pad = NeverYieldOutline.pad
+	local holder = Instance.new("Frame")
+	holder.Name = randomString()
+	holder.BackgroundTransparency = 1
+	holder.Size = UDim2.new(1, 0, 1, 0)
+	holder.ZIndex = 11
+	holder.Parent = frame
+	local glowColor = colors[math.random(1, #colors)]:Lerp(Color3.fromRGB(150, 200, 255), 0.5)
+	local segments = {}
+	local function line(x1, y1, x2, y2, thick, color, z, tr)
+		local dx, dy = x2 - x1, y2 - y1
+		local s = Instance.new("Frame")
+		s.BorderSizePixel = 0
+		s.AnchorPoint = Vector2.new(0.5, 0.5)
+		s.Position = UDim2.new(0, pad + (x1 + x2) / 2, 0, pad + (y1 + y2) / 2)
+		s.Size = UDim2.new(0, math.sqrt(dx * dx + dy * dy) + thick * 0.6, 0, thick)
+		s.Rotation = math.deg(math.atan2(dy, dx))
+		s.BackgroundColor3 = color
+		s.BackgroundTransparency = tr
+		s.ZIndex = z
+		s.Parent = holder
+		table.insert(segments, {obj = s, tr = tr})
+	end
+	local function zigzag(points)
+		for i = 1, #points - 1 do
+			local a, b = points[i], points[i + 1]
+			line(a[1], a[2], b[1], b[2], 7, glowColor, 11, 0.6)
+			line(a[1], a[2], b[1], b[2], 2, Color3.fromRGB(235, 245, 255), 12, 0)
+		end
+	end
+	local t0, len, n = math.random(), 0.03 + math.random() * 0.06, math.random(5, 8)
+	local points = {}
+	for i = 0, n do
+		local x, y, nx, ny = NeverYieldOutline.edge(t0 + len * i / n, w, h)
+		local off = (i == 0 or i == n) and 0 or (math.random() * 16 - 6)
+		table.insert(points, {x + nx * off, y + ny * off, nx, ny})
+	end
+	zigzag(points)
+	if math.random() < 0.3 then
+		local mid = points[math.floor(#points / 2) + 1]
+		local branch = {{mid[1], mid[2]}}
+		local x, y = mid[1], mid[2]
+		for _ = 1, 3 do
+			x = x + mid[3] * (8 + math.random() * 10) + (math.random() - 0.5) * 14
+			y = y + mid[4] * (8 + math.random() * 10) + (math.random() - 0.5) * 14
+			table.insert(branch, {x, y})
+		end
+		zigzag(branch)
+	end
+	table.insert(NeverYieldOutline.items, {obj = holder, kind = "bolt", born = tick(), life = 0.12 + math.random() * 0.18, segments = segments})
+end
+
+NeverYieldOutline.spawners = {
+	lightning = {rate = 9, spawn = function(w, h, c) NeverYieldOutline.bolt(w, h, c) end},
+	fire = {rate = 60, spawn = function(w, h, c)
+		local roll = math.random()
+		local x, y, nx, ny
+		if roll < 0.45 then
+			x, y, nx, ny = math.random() * w, -2, 0, -1
+		elseif roll < 0.95 then
+			local left = roll < 0.7
+			x, y, nx, ny = left and -3 or w + 3, math.random() * h, left and -1 or 1, 0
+		else
+			x, y, nx, ny = math.random() * w, h + 3, 0, 1
+		end
+		NeverYieldOutline.add("circle", {x = x, y = y, vx = nx * (6 + math.random() * 10), vy = -(55 + math.random() * 45), sway = 4, swayFreq = 9,
+			size0 = 12 + math.random() * 12, size1 = 2, tr0 = 0.1, tr1 = 1, life = 0.5 + math.random() * 0.4, z = 10,
+			color = Color3.new(1, 1, 1), gradient = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 245, 160)),
+				ColorSequenceKeypoint.new(0.45, Color3.fromRGB(255, 150, 40)), ColorSequenceKeypoint.new(1, Color3.fromRGB(210, 40, 20))})})
+		if math.random() < 0.2 then
+			NeverYieldOutline.add("circle", {x = x, y = y, vx = nx * 12, vy = -(90 + math.random() * 60), sway = 7, swayFreq = 5,
+				size0 = 3, size1 = 1.5, tr0 = 0, tr1 = 1, life = 0.8 + math.random() * 0.6, z = 11, color = Color3.fromRGB(255, 210, 90)})
+		end
+	end},
+	aura = {rate = 22, spawn = function(w, h, c)
+		local x, y, nx, ny = NeverYieldOutline.edge(math.random(), w, h)
+		local swirl = math.random() < 0.5 and 1 or -1
+		if math.random() < 0.6 then
+			NeverYieldOutline.add("circle", {x = x + nx * 4, y = y + ny * 4, vx = nx * 12 - ny * 14 * swirl, vy = ny * 12 + nx * 14 * swirl - 6,
+				size0 = 18 + math.random() * 14, size1 = 48 + math.random() * 30, tr0 = 0.78, tr1 = 1, life = 1.4 + math.random(), z = 9,
+				color = c[math.random(1, #c)]})
+		else
+			NeverYieldOutline.add("circle", {x = x + nx * 6, y = y + ny * 6, vx = nx * (20 + math.random() * 25), vy = ny * (20 + math.random() * 25) - 10,
+				size0 = 4, size1 = 1, tr0 = 0.05, tr1 = 1, life = 0.8 + math.random() * 0.6, z = 11,
+				color = math.random() < 0.5 and Color3.new(1, 1, 1) or c[math.random(1, #c)]})
+		end
+	end},
+	smoke = {rate = 14, spawn = function(w, h, c)
+		local x, y, nx, ny = NeverYieldOutline.edge(math.random(), w, h)
+		NeverYieldOutline.add("circle", {x = x + nx * 3, y = y + ny * 3, vx = nx * 10, vy = ny * 10 - 16, sway = 6, swayFreq = 2,
+			size0 = 16 + math.random() * 12, size1 = 46 + math.random() * 26, tr0 = 0.6, tr1 = 1, life = 1.6 + math.random() * 1.2, z = 9,
+			color = Color3.fromRGB(20, 12, 30):Lerp(c[1], 0.25)})
+	end},
+	frost = {rate = 12, spawn = function(w, h, c)
+		if math.random() < 0.55 then
+			local x, y, nx, ny = NeverYieldOutline.edge(math.random(), w, h)
+			NeverYieldOutline.add("square", {x = x + nx * 2, y = y + ny * 2, rot = 45, size0 = 2, size1 = 9 + math.random() * 8, tr0 = 0.15, tr1 = 1,
+				life = 1.6 + math.random(), z = 11, color = Color3.fromRGB(225, 242, 255)})
+		else
+			local x, y = NeverYieldOutline.margin(w, h, true)
+			NeverYieldOutline.add("circle", {x = x, y = y, vy = 25 + math.random() * 15, sway = 6, swayFreq = 2, size0 = 3 + math.random() * 2,
+				size1 = 3, tr0 = 0.1, tr1 = 1, life = 2 + math.random(), z = 11, color = Color3.new(1, 1, 1)})
+		end
+	end},
+	hearts = {rate = 5, spawn = function(w, h, c)
+		local x, y = NeverYieldOutline.margin(w, h, false)
+		NeverYieldOutline.add("text", {x = x, y = y, text = WackyState.pick({"\u{1F496}", "\u{1F495}", "\u{1F497}"}), vy = -(30 + math.random() * 20),
+			sway = 5, swayFreq = 3, size0 = 14 + math.random() * 8, size1 = 18, tr0 = 0.05, tr1 = 1, life = 1.8 + math.random() * 0.8, z = 11})
+	end},
+	bubbles = {rate = 7, spawn = function(w, h, c)
+		local x, y = NeverYieldOutline.margin(w, h, false)
+		NeverYieldOutline.add("ring", {x = x, y = y + 20, vy = -(28 + math.random() * 20), sway = 5, swayFreq = 4, size0 = 6 + math.random() * 10,
+			size1 = 14, tr0 = 0.25, tr1 = 1, life = 2 + math.random(), z = 11, color = Color3.fromRGB(190, 230, 255)})
+	end},
+	leaves = {rate = 4, spawn = function(w, h, c)
+		local x = math.random() < 0.5 and (-6 - math.random() * 34) or (w + 6 + math.random() * 34)
+		NeverYieldOutline.add("text", {x = x, y = -20 + math.random() * h * 0.3, text = WackyState.pick({"\u{1F342}", "\u{1F341}", "\u{1F343}"}),
+			vy = 22 + math.random() * 14, sway = 10, swayFreq = 2, rot = math.random(0, 360), rotSpeed = math.random(-90, 90),
+			size0 = 14 + math.random() * 6, size1 = 16, tr0 = 0.05, tr1 = 1, life = 3 + math.random(), z = 11})
+	end},
+	petals = {rate = 5, spawn = function(w, h, c)
+		local x = math.random() < 0.5 and (-6 - math.random() * 34) or (w + 6 + math.random() * 34)
+		NeverYieldOutline.add("text", {x = x, y = -20 + math.random() * h * 0.3, text = "\u{1F338}", vy = 20 + math.random() * 14, sway = 12, swayFreq = 2,
+			rot = math.random(0, 360), rotSpeed = math.random(-120, 120), size0 = 12 + math.random() * 6, size1 = 14, tr0 = 0.05, tr1 = 1, life = 3 + math.random(), z = 11})
+	end},
+	matrix = {rate = 14, spawn = function(w, h, c)
+		local x = math.random() < 0.5 and (-8 - math.random() * 30) or (w + 8 + math.random() * 30)
+		NeverYieldOutline.add("text", {x = x, y = -10 + math.random() * 20, text = WackyState.pick({"0", "1", "0", "1", "N", "Y", "7", "#"}), font = Enum.Font.Code,
+			vy = 70 + math.random() * 40, size0 = 12, size1 = 12, tr0 = 0.05, tr1 = 1, life = 1.6 + math.random(), z = 11,
+			color = Color3.fromRGB(200, 255, 210), color1 = Color3.fromRGB(40, 220, 90)})
+	end},
+	glitch = {rate = 7, spawn = function(w, h, c)
+		if math.random() < 0.6 then
+			local item = NeverYieldOutline.add("ring", {x = w / 2 + math.random(-8, 8), y = h / 2 + math.random(-6, 6), w = w + 4, h = h + 4,
+				size0 = 0, size1 = 0, tr0 = 0.2, tr1 = 1, life = 0.08 + math.random() * 0.1, z = 11})
+			item.obj:FindFirstChildOfClass("UICorner"):Destroy()
+			item.stroke.Color = math.random() < 0.5 and Color3.fromRGB(0, 255, 255) or Color3.fromRGB(255, 0, 200)
+			item.stroke.Thickness = 2
+		else
+			local width = w * (0.2 + math.random() * 0.6)
+			NeverYieldOutline.add("square", {x = math.random() * w, y = math.random() * h, w = width, h = math.random(2, 5),
+				size0 = 0, size1 = 0, tr0 = 0.35, tr1 = 1, life = 0.1, z = 11, color = WackyState.pick({Color3.fromRGB(0, 255, 255), Color3.fromRGB(255, 0, 200), Color3.new(1, 1, 1)})})
+		end
+	end},
+	rainbow = {rate = 45, spawn = function(w, h, c)
+		local t = tick()
+		for k = 0, 2 do
+			local x, y = NeverYieldOutline.edge(t * 0.22 + k / 3, w, h)
+			NeverYieldOutline.add("circle", {x = x, y = y, size0 = 7, size1 = 0, tr0 = 0.05, tr1 = 1, life = 0.45, z = 11,
+				color = Color3.fromHSV((t * 0.5 + k / 3) % 1, 0.85, 1)})
+		end
+	end},
+	sparkle = {rate = 16, spawn = function(w, h, c)
+		local x, y, nx, ny = NeverYieldOutline.edge(math.random(), w, h)
+		local out = math.random() * 14 - 2
+		NeverYieldOutline.add("square", {x = x + nx * out, y = y + ny * out, rot = 45, twinkle = true, size0 = 0, size1 = 5 + math.random() * 5,
+			tr0 = 0, tr1 = 0.3, life = 0.6 + math.random() * 0.6, z = 11, color = math.random() < 0.5 and Color3.new(1, 1, 1) or c[math.random(1, #c)]})
+	end},
+}
+
+NeverYieldOutline.restoreRim = function()
+	pcall(function()
+		local theme = NeverYieldTheme.active
+		if theme then
+			local seq = NeverYieldTheme.sequence(theme)
+			NeverYieldPortal.rimGradient.Color = theme.candy and NeverYieldTheme.candy() or seq
+		elseif NeverYieldTheme.selected == "custom" then
+			NeverYieldTheme.applyCustomRim()
+		end
+	end)
+end
+
+-- pick the effect: mode can be "auto" (theme default) or a specific outline
+NeverYieldOutline.resolve = function()
+	local id = NeverYieldOutline.mode
+	if id == "auto" then
+		local theme = NeverYieldTheme.active
+		id = theme and NeverYieldOutline.themeDefaults[theme.id] or "aura"
+	end
+	local previous = NeverYieldOutline.current
+	NeverYieldOutline.current = NeverYieldOutline.byId[id] and id or "portal"
+	if previous ~= NeverYieldOutline.current then
+		NeverYieldOutline.clear()
+		if previous == "rainbow" then NeverYieldOutline.restoreRim() end
+	end
+	NeverYieldPortal.hideSparks = NeverYieldOutline.current ~= "portal"
+end
+
+NeverYieldOutline.set = function(id, save)
+	if not NeverYieldOutline.byId[id] then return false end
+	NeverYieldOutline.mode = id
+	NeverYieldOutline.resolve()
+	if save then
+		pcall(function() writefile(NeverYieldOutline.file, id, true) end)
+	end
+	return true
+end
+
+NeverYieldOutline.step = function(dt)
+	if Holder.Parent == nil then
+		WackyState.disconnect("outlines")
+		NeverYieldOutline.clear()
+		return
+	end
+	local frame = NeverYieldOutline.ensure()
+	local pad = NeverYieldOutline.pad
+	local w, h = Holder.Size.X.Offset, Holder.Size.Y.Offset
+	local visible = Holder.Visible and NeverYieldPortal.scale > 0.95
+	frame.Visible = visible
+	frame.Position = UDim2.new(Holder.Position.X.Scale, Holder.Position.X.Offset - pad, Holder.Position.Y.Scale, Holder.Position.Y.Offset - pad)
+	frame.Size = UDim2.new(0, w + pad * 2, 0, h + pad * 2)
+	local now = tick()
+	-- rim treatments
+	local current = NeverYieldOutline.current
+	if current == "rainbow" then
+		local keys = {}
+		for i = 0, 6 do
+			table.insert(keys, ColorSequenceKeypoint.new(i / 6, Color3.fromHSV(((i / 6) + now * 0.3) % 1, 0.85, 1)))
+		end
+		NeverYieldPortal.rimGradient.Color = ColorSequence.new(keys)
+	elseif current == "lightning" then
+		NeverYieldPortal.rim.Thickness = 2.5 + (math.random() < 0.15 and math.random() * 2 or 0)
+	elseif current == "fire" then
+		NeverYieldPortal.rim.Thickness = 2.5 + math.noise(now * 4, 0.3) * 1.2
+	end
+	-- spawn
+	local spawner = visible and NeverYieldOutline.spawners[current]
+	if spawner then
+		NeverYieldOutline.acc = NeverYieldOutline.acc + dt * spawner.rate
+		local colors = NeverYieldOutline.colors()
+		local n = 0
+		while NeverYieldOutline.acc >= 1 and n < 6 and #NeverYieldOutline.items < 140 do
+			NeverYieldOutline.acc = NeverYieldOutline.acc - 1
+			n = n + 1
+			pcall(spawner.spawn, w, h, colors)
+		end
+		if NeverYieldOutline.acc > 3 then NeverYieldOutline.acc = 0 end
+	end
+	-- update
+	for i = #NeverYieldOutline.items, 1, -1 do
+		local item = NeverYieldOutline.items[i]
+		local alive
+		if item.kind == "bolt" then
+			local p = (now - item.born) / item.life
+			alive = p < 1
+			if alive then
+				for _, s in ipairs(item.segments) do
+					s.obj.BackgroundTransparency = s.tr + (1 - s.tr) * p
+				end
+			end
+		else
+			local ok, res = pcall(NeverYieldOutline.update, item, now, dt)
+			alive = ok and res
+		end
+		if not alive then
+			pcall(function() item.obj:Destroy() end)
+			table.remove(NeverYieldOutline.items, i)
+		end
+	end
+end
+
+-- Theme Studio "Outlines" page
+NeverYieldOutline.populate = function(page, footer)
+	for _, c in ipairs(page:GetChildren()) do c:Destroy() end
+	for i, o in ipairs(NeverYieldOutline.list) do
+		local col, row = (i - 1) % 6, math.floor((i - 1) / 6)
+		local card = Instance.new("TextButton")
+		card.Name = randomString()
+		card.Text = ""
+		card.AutoButtonColor = true
+		card.Position = UDim2.new(0, 4 + col * 90, 0, 2 + row * 76)
+		card.Size = UDim2.new(0, 84, 0, 70)
+		card.BackgroundColor3 = currentShade2
+		card.BorderSizePixel = 0
+		card.ZIndex = 21
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(0, 12)
+		corner.Parent = card
+		local selected = NeverYieldOutline.mode == o.id
+		local stroke = Instance.new("UIStroke")
+		stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		stroke.Color = selected and Color3.fromRGB(120, 255, 160) or currentShade3
+		stroke.Thickness = selected and 3 or 1.5
+		stroke.Parent = card
+		card.Parent = page
+		local icon = Instance.new("TextLabel")
+		icon.BackgroundTransparency = 1
+		icon.Position = UDim2.new(0, 0, 0, 6)
+		icon.Size = UDim2.new(1, 0, 0, 34)
+		icon.TextScaled = true
+		icon.Text = o.icon
+		icon.ZIndex = 22
+		icon.Parent = card
+		local name = Instance.new("TextLabel")
+		name.BackgroundTransparency = 1
+		name.Position = UDim2.new(0, 2, 0, 44)
+		name.Size = UDim2.new(1, -4, 0, 18)
+		name.Font = Enum.Font.GothamBold
+		name.TextSize = 11
+		name.Text = o.name .. ((o.id == "auto" and NeverYieldOutline.mode == "auto") and (" (" .. (NeverYieldOutline.byId[NeverYieldOutline.current] or {name = "?"}).name .. ")") or "")
+		name.TextTruncate = Enum.TextTruncate.AtEnd
+		name.TextColor3 = currentText1
+		name.ZIndex = 22
+		name.Parent = card
+		card.MouseEnter:Connect(function()
+			footer.Text = "Outline: <b>" .. o.icon .. " " .. o.name .. "</b>  -  " .. o.desc
+		end)
+		card.MouseButton1Click:Connect(function()
+			NeverYieldOutline.set(o.id, true)
+			NeverYieldOutline.populate(page, footer)
+			footer.Text = "<b>" .. o.icon .. " " .. o.name .. "</b> outline on. Saved."
+		end)
+	end
+end
+
+addcmd('outline',{'outlines','border'},function(args, speaker)
+	local choice = args[1] and args[1]:lower()
+	if choice then
+		for _, o in ipairs(NeverYieldOutline.list) do
+			if o.id == choice or o.name:lower():gsub("%s", "") == choice then
+				NeverYieldOutline.set(o.id, true)
+				notify('Outline', o.icon .. ' ' .. o.name .. ' outline on.')
+				return
+			end
+		end
+		local ids = {}
+		for _, o in ipairs(NeverYieldOutline.list) do table.insert(ids, o.id) end
+		notify('Outline', 'Unknown outline. Try: ' .. table.concat(ids, ', '), 10)
+		return
+	end
+	pcall(NeverYieldTheme.openStudio, "outlines")
+end)
+
+-- start: load the saved choice and run the effects
+task.spawn(function()
+	task.wait(0.1)
+	pcall(function()
+		if isfile and isfile(NeverYieldOutline.file) then
+			local saved = (readfile(NeverYieldOutline.file) or ""):gsub("%s", "")
+			if NeverYieldOutline.byId[saved] then NeverYieldOutline.mode = saved end
+		end
+	end)
+	NeverYieldOutline.resolve()
+	WackyState.connect("outlines", RunService.RenderStepped:Connect(function(dt)
+		local ok, err = pcall(NeverYieldOutline.step, dt)
+		if not ok and not NeverYieldOutline.warned then
+			NeverYieldOutline.warned = true
+			warn("[NeverYield outlines] " .. tostring(err))
+		end
+	end))
+end)
+-- ================== END NEVERYIELD OUTLINES ==================
+
 
 -- ==================== WEATHER 2.0 ====================
 -- Sound IDs are ProSoundEffects library audio (public domain on Roblox), checked against the public asset API.
@@ -19101,75 +19668,150 @@ end
 WackyState.makeMoon = function(R)
 	local model, root = WackyState.moonRoot()
 	local piece = WackyState.moonPiece
-	local skin = Color3.fromRGB(196, 182, 150)
-	piece(model, root, Vector3.new(2, 2, 2) * R, CFrame.new(), skin, Enum.Material.Slate, "Ball")
-	-- craters everywhere except the face
-	for _ = 1, 16 do
+	local surf = WackyState.moonSurface
+	local slate = Enum.Material.Slate
+	local skin = Color3.fromRGB(184, 168, 136)
+	local dark = Color3.fromRGB(112, 96, 76)
+	local deep = Color3.fromRGB(70, 56, 44)
+	local ridge = Color3.fromRGB(170, 152, 120)
+	local tooth = Color3.fromRGB(232, 222, 186)
+	-- a feature on the surface: x/y across the face, w/h/d its size (fractions of R), lift above the surface, roll in degrees
+	local function bump(x, y, w, h, d, color, lift, roll, material, shape)
+		return piece(model, root, Vector3.new(w, h, d) * R, surf(R, x, y, lift or 1) * CFrame.Angles(0, 0, math.rad(roll or 0)), color, material or slate, shape or "Ellipsoid")
+	end
+	piece(model, root, Vector3.new(2, 2, 2) * R, CFrame.new(), skin, slate, "Ball")
+	-- craters and lumps all over (the face keeps its own wrinkles)
+	for _ = 1, 26 do
 		local d
 		repeat
 			d = Vector3.new(math.random() * 2 - 1, math.random() * 2 - 1, math.random() * 2 - 1)
-		until d.Magnitude > 0.2 and d.Unit.Z > -0.5
+		until d.Magnitude > 0.2 and d.Unit.Z > -0.45
 		d = d.Unit
-		local w = R * (0.18 + math.random() * 0.3)
+		local w = R * (0.12 + math.random() * 0.32)
 		local pos = d * R * 0.985
-		piece(model, root, Vector3.new(w, w, w * 0.22), CFrame.lookAt(pos, pos * 2), Color3.fromRGB(150, 138, 112), Enum.Material.Slate, "Ellipsoid")
+		piece(model, root, Vector3.new(w, w, w * 0.22), CFrame.lookAt(pos, pos * 2), Color3.fromRGB(150, 136, 110), slate, "Ellipsoid")
+		local rim = d * R * 0.995
+		piece(model, root, Vector3.new(w * 1.15, w * 1.15, w * 0.12), CFrame.lookAt(rim, rim * 2), ridge, slate, "Ellipsoid")
 	end
-	local surf = WackyState.moonSurface
-	-- glaring eyes
 	for _, side in ipairs({-1, 1}) do
-		local x = 0.36 * side
-		piece(model, root, Vector3.new(0.4, 0.32, 0.12) * R, surf(R, x, 0.2, 0.99), Color3.fromRGB(250, 232, 170), Enum.Material.SmoothPlastic, "Ellipsoid")
-		piece(model, root, Vector3.new(0.21, 0.21, 0.1) * R, surf(R, x - 0.04 * side, 0.19, 1.005), Color3.fromRGB(255, 140, 20), Enum.Material.Neon, "Ellipsoid")
-		piece(model, root, Vector3.new(0.08, 0.08, 0.06) * R, surf(R, x - 0.07 * side, 0.19, 1.012), Color3.fromRGB(10, 5, 5), Enum.Material.SmoothPlastic, "Ellipsoid")
-		-- angry brow, inner end down
-		piece(model, root, Vector3.new(0.46, 0.08, 0.1) * R, surf(R, x, 0.43, 1.0) * CFrame.Angles(0, 0, math.rad(22 * side)), Color3.fromRGB(120, 100, 75), Enum.Material.Slate, "Block")
-		-- deep shadows under the eyes
-		piece(model, root, Vector3.new(0.36, 0.1, 0.08) * R, surf(R, x, 0.02, 0.995), Color3.fromRGB(140, 120, 95), Enum.Material.Slate, "Ellipsoid")
+		local x = 0.34 * side
+		-- sunken eye socket, then the bulging eyeball
+		bump(x, 0.16, 0.46, 0.36, 0.12, deep, 0.975)
+		bump(x, 0.16, 0.4, 0.31, 0.16, Color3.fromRGB(244, 222, 150), 0.99, 0, Enum.Material.SmoothPlastic)
+		bump(x - 0.03 * side, 0.15, 0.24, 0.24, 0.1, Color3.fromRGB(200, 90, 20), 1.012, 0, Enum.Material.SmoothPlastic)
+		bump(x - 0.03 * side, 0.15, 0.19, 0.19, 0.1, Color3.fromRGB(255, 180, 40), 1.018, 0, Enum.Material.Neon)
+		bump(x - 0.04 * side, 0.15, 0.07, 0.1, 0.08, Color3.fromRGB(15, 8, 5), 1.026, 0, Enum.Material.SmoothPlastic)
+		bump(x - 0.07 * side, 0.2, 0.05, 0.04, 0.05, Color3.fromRGB(255, 250, 230), 1.03, 0, Enum.Material.Neon)
+		-- squinting upper lid and heavy bag underneath
+		bump(x + 0.02 * side, 0.29, 0.46, 0.13, 0.16, ridge, 1.005, 14 * side)
+		bump(x, 0.01, 0.42, 0.1, 0.14, ridge, 1.0, -6 * side)
+		bump(x, -0.05, 0.36, 0.06, 0.08, dark, 0.998, -8 * side)
+		-- thick angry brow made of overlapping chunks, inner end lower
+		for i = 0, 2 do
+			local bx = (0.18 + i * 0.13) * side
+			local by = 0.38 + i * 0.05
+			bump(bx, by, 0.2, 0.13, 0.2, ridge, 1.01, 22 * side)
+		end
+		bump(0.34 * side, 0.47, 0.44, 0.05, 0.08, dark, 1.0, 22 * side)
+		-- cheek bulge and wrinkle
+		bump(0.46 * side, -0.2, 0.28, 0.26, 0.16, ridge, 0.995)
+		bump(0.4 * side, -0.33, 0.05, 0.24, 0.06, dark, 1.0, -25 * side)
+		-- nose wings and nostrils
+		bump(0.08 * side, -0.16, 0.12, 0.1, 0.12, ridge, 1.04)
+		bump(0.05 * side, -0.19, 0.05, 0.035, 0.05, deep, 1.085)
 	end
-	-- big nose
-	piece(model, root, Vector3.new(0.18, 0.34, 0.26) * R, surf(R, 0, -0.04, 1.0), Color3.fromRGB(185, 170, 138), Enum.Material.Slate, "Ellipsoid")
-	-- grimace full of teeth
-	piece(model, root, Vector3.new(0.78, 0.22, 0.1) * R, surf(R, 0, -0.42, 0.995), Color3.fromRGB(40, 18, 12), Enum.Material.SmoothPlastic, "Ellipsoid")
-	for i = 0, 8 do
-		local x = -0.32 + i * 0.08
-		piece(model, root, Vector3.new(0.065, 0.09, 0.07) * R, surf(R, x, -0.355, 1.004), Color3.fromRGB(240, 232, 205), Enum.Material.SmoothPlastic, "Block")
-		piece(model, root, Vector3.new(0.065, 0.09, 0.07) * R, surf(R, x + 0.04, -0.485, 1.004), Color3.fromRGB(240, 232, 205), Enum.Material.SmoothPlastic, "Block")
+	-- furrows between the brows
+	bump(-0.03, 0.36, 0.025, 0.16, 0.04, dark, 1.0, -8)
+	bump(0.03, 0.36, 0.025, 0.16, 0.04, dark, 1.0, 8)
+	-- big hooked nose: bridge, then the bulb hanging over the mouth
+	bump(0, 0.12, 0.13, 0.34, 0.2, ridge, 1.01)
+	bump(0, -0.1, 0.19, 0.2, 0.26, skin, 1.03)
+	-- grimace: dark mouth, two rows of clenched teeth following a frown, lips pulled back, chin
+	bump(0, -0.44, 0.84, 0.24, 0.1, deep, 0.99)
+	for i = -4, 4 do
+		local x = i * 0.085
+		local frown = 0.25 * x * x
+		local wobble = ((i % 2 == 0) and 0.008 or -0.006)
+		bump(x, -0.385 - frown + wobble, 0.075, 0.095, 0.09, tooth, 1.005, i * 2, Enum.Material.SmoothPlastic, "Block")
+		bump(x + 0.042, -0.49 - frown - wobble, 0.075, 0.09, 0.09, tooth, 1.003, -i * 2, Enum.Material.SmoothPlastic, "Block")
 	end
+	for i = -2, 2 do
+		local x = i * 0.17
+		local frown = 0.25 * x * x
+		bump(x, -0.32 - frown, 0.22, 0.06, 0.12, ridge, 1.01, i * 9)
+		bump(x, -0.57 - frown, 0.22, 0.06, 0.12, ridge, 1.005, -i * 9)
+	end
+	bump(0, -0.7, 0.34, 0.14, 0.14, ridge, 0.99)
 	return model, root
 end
 
--- the masked imp: small cloaked figure with a spiky heart-shaped mask and glowing eyes
+-- the masked imp: straw hat, ragged poncho, wooden limbs and a big spiky heart-shaped mask
 WackyState.makeImp = function()
 	local model, root = WackyState.moonRoot()
 	local piece = WackyState.moonPiece
-	local cloth, skin, hat = Color3.fromRGB(110, 70, 45), Color3.fromRGB(150, 110, 70), Color3.fromRGB(125, 85, 50)
-	piece(model, root, Vector3.new(1.2, 1.6, 0.9), CFrame.new(0, 0, 0), cloth, Enum.Material.Fabric, "Ellipsoid")
-	piece(model, root, Vector3.new(0.25, 1.1, 0.25), CFrame.new(-0.3, -1.2, 0), skin, nil, "Block")
-	piece(model, root, Vector3.new(0.25, 1.1, 0.25), CFrame.new(0.3, -1.2, 0), skin, nil, "Block")
-	piece(model, root, Vector3.new(0.22, 1.0, 0.22), CFrame.new(-0.75, 0.1, 0) * CFrame.Angles(0, 0, math.rad(-35)), skin, nil, "Block")
-	piece(model, root, Vector3.new(0.22, 1.0, 0.22), CFrame.new(0.75, 0.1, 0) * CFrame.Angles(0, 0, math.rad(35)), skin, nil, "Block")
-	piece(model, root, Vector3.new(0.9, 0.9, 0.9), CFrame.new(0, 1.05, 0), skin, nil, "Ball")
-	-- pointy hat: brim + stacked rings getting smaller
-	piece(model, root, Vector3.new(1.7, 0.18, 1.7), CFrame.new(0, 1.45, 0), hat, Enum.Material.Fabric, "Ellipsoid")
-	for i = 1, 5 do
-		local w = 0.95 - i * 0.16
-		piece(model, root, Vector3.new(w, 0.22, w), CFrame.new(0, 1.5 + i * 0.2, 0.05 * i), hat, Enum.Material.Fabric, "Ellipsoid")
+	local fabric = Enum.Material.Fabric
+	local wood = Color3.fromRGB(105, 70, 40)
+	local cloth = Color3.fromRGB(150, 105, 60)
+	local trim = Color3.fromRGB(190, 60, 40)
+	local straw = Color3.fromRGB(205, 160, 85)
+	local function p(size, cf, color, material, shape)
+		return piece(model, root, size, cf, color, material, shape)
 	end
-	-- heart-shaped mask in front of the face
-	local maskColor, trim = Color3.fromRGB(150, 40, 120), Color3.fromRGB(240, 200, 80)
-	piece(model, root, Vector3.new(0.75, 0.9, 0.16), CFrame.new(-0.28, 1.15, -0.55) * CFrame.Angles(0, 0, math.rad(25)), maskColor, nil, "Ellipsoid")
-	piece(model, root, Vector3.new(0.75, 0.9, 0.16), CFrame.new(0.28, 1.15, -0.55) * CFrame.Angles(0, 0, math.rad(-25)), maskColor, nil, "Ellipsoid")
-	piece(model, root, Vector3.new(0.55, 0.55, 0.15), CFrame.new(0, 0.78, -0.55) * CFrame.Angles(0, 0, math.rad(45)), maskColor, nil, "Block")
-	for _, side in ipairs({-1, 1}) do
-		piece(model, root, Vector3.new(0.34, 0.34, 0.08), CFrame.new(0.27 * side, 1.18, -0.65), trim, Enum.Material.Neon, "Ellipsoid")
-		piece(model, root, Vector3.new(0.2, 0.2, 0.06), CFrame.new(0.27 * side, 1.18, -0.69), Color3.fromRGB(120, 230, 60), Enum.Material.Neon, "Ellipsoid")
-		piece(model, root, Vector3.new(0.07, 0.07, 0.04), CFrame.new(0.27 * side, 1.18, -0.72), Color3.new(0, 0, 0), nil, "Ellipsoid")
-	end
-	-- spikes around the mask
+	-- poncho: layered, widening downwards, with a red trim and ragged flaps
+	p(Vector3.new(1.0, 0.7, 0.8), CFrame.new(0, 0.55, 0), cloth, fabric, "Ellipsoid")
+	p(Vector3.new(1.35, 0.6, 1.1), CFrame.new(0, 0.15, 0), cloth, fabric, "Ellipsoid")
+	p(Vector3.new(1.6, 0.45, 1.3), CFrame.new(0, -0.2, 0), cloth, fabric, "Ellipsoid")
+	p(Vector3.new(1.65, 0.12, 1.35), CFrame.new(0, -0.38, 0), trim, fabric, "Ellipsoid")
 	for i = 0, 7 do
-		local a = math.rad(-150 + i * (300 / 7))
-		local x, y = math.cos(a) * 0.72, math.sin(a) * 0.62 + 1.0
-		piece(model, root, Vector3.new(0.08, 0.32, 0.16), CFrame.new(x, y, -0.55) * CFrame.Angles(0, 0, a - math.pi / 2), trim, nil, "Wedge")
+		local a = i / 8 * math.pi * 2
+		p(Vector3.new(0.3, 0.32, 0.08), CFrame.new(math.cos(a) * 0.72, -0.5, math.sin(a) * 0.6) * CFrame.Angles(0, -a + math.pi / 2, 0), cloth, fabric, "Wedge")
+	end
+	-- thin wooden arms raised out, little hands
+	for _, side in ipairs({-1, 1}) do
+		p(Vector3.new(0.16, 0.75, 0.16), CFrame.new(0.65 * side, 0.55, 0) * CFrame.Angles(0, 0, math.rad(-55 * side)), wood, nil, "Block")
+		p(Vector3.new(0.14, 0.6, 0.14), CFrame.new(1.05 * side, 0.95, -0.1) * CFrame.Angles(math.rad(-20), 0, math.rad(-15 * side)), wood, nil, "Block")
+		p(Vector3.new(0.22, 0.22, 0.22), CFrame.new(1.15 * side, 1.25, -0.15), wood, nil, "Ball")
+		p(Vector3.new(0.14, 0.9, 0.14), CFrame.new(0.25 * side, -0.95, 0), wood, nil, "Block")
+		p(Vector3.new(0.2, 0.06, 0.2), CFrame.new(0.25 * side, -0.75, 0), trim, fabric, "Block")
+		p(Vector3.new(0.18, 0.16, 0.42), CFrame.new(0.25 * side, -1.42, -0.12), Color3.fromRGB(70, 45, 30), nil, "Wedge")
+	end
+	p(Vector3.new(0.85, 0.85, 0.85), CFrame.new(0, 1.15, 0.05), wood, nil, "Ball")
+	-- straw hat: wide brim, tall bent cone, a band
+	p(Vector3.new(2.0, 0.12, 2.0), CFrame.new(0, 1.55, 0.05), straw, fabric, "Ellipsoid")
+	for i = 1, 7 do
+		local w = 1.05 - i * 0.13
+		p(Vector3.new(w, 0.24, w), CFrame.new(0, 1.6 + i * 0.2, 0.06 * i * i * 0.12) * CFrame.Angles(math.rad(-i * 3), 0, 0), straw, fabric, "Ellipsoid")
+	end
+	p(Vector3.new(1.0, 0.1, 1.0), CFrame.new(0, 1.72, 0.06), Color3.fromRGB(120, 60, 40), fabric, "Ellipsoid")
+	-- the mask: thick heart, ringed eyes, spikes all around, patterned trim
+	local mask = CFrame.new(0, 1.15, -0.5) * CFrame.Angles(math.rad(-6), 0, math.rad(4))
+	local base = Color3.fromRGB(130, 30, 110)
+	local spikeColor = Color3.fromRGB(235, 205, 120)
+	local function m(size, offset, color, material, shape)
+		return p(size, mask * offset, color, material, shape)
+	end
+	m(Vector3.new(0.8, 0.95, 0.2), CFrame.new(-0.3, 0.12, 0) * CFrame.Angles(0, 0, math.rad(28)), base, nil, "Ellipsoid")
+	m(Vector3.new(0.8, 0.95, 0.2), CFrame.new(0.3, 0.12, 0) * CFrame.Angles(0, 0, math.rad(-28)), base, nil, "Ellipsoid")
+	m(Vector3.new(0.62, 0.62, 0.18), CFrame.new(0, -0.32, 0) * CFrame.Angles(0, 0, math.rad(45)), base, nil, "Block")
+	m(Vector3.new(0.9, 0.12, 0.08), CFrame.new(0, -0.05, -0.1), Color3.fromRGB(230, 90, 40), nil, "Ellipsoid")
+	for i = -3, 3 do
+		m(Vector3.new(0.08, 0.1, 0.05), CFrame.new(i * 0.1, -0.16, -0.11) * CFrame.Angles(0, 0, math.rad(45)), (i % 2 == 0) and Color3.fromRGB(120, 230, 70) or Color3.fromRGB(255, 210, 60), nil, "Block")
+	end
+	for _, side in ipairs({-1, 1}) do
+		m(Vector3.new(0.4, 0.4, 0.06), CFrame.new(0.27 * side, 0.18, -0.1), Color3.fromRGB(255, 205, 60), Enum.Material.Neon, "Ellipsoid")
+		m(Vector3.new(0.28, 0.28, 0.06), CFrame.new(0.27 * side, 0.18, -0.12), Color3.fromRGB(140, 230, 60), Enum.Material.Neon, "Ellipsoid")
+		m(Vector3.new(0.17, 0.17, 0.06), CFrame.new(0.27 * side, 0.18, -0.14), Color3.fromRGB(255, 120, 30), Enum.Material.Neon, "Ellipsoid")
+		m(Vector3.new(0.07, 0.07, 0.05), CFrame.new(0.27 * side, 0.18, -0.16), Color3.new(0, 0, 0), nil, "Ellipsoid")
+	end
+	for i = 0, 11 do
+		local a = math.rad(-160 + i * (320 / 11))
+		local long = i % 2 == 0
+		local r = long and 0.78 or 0.7
+		local x, y = math.cos(a) * r * 0.95, math.sin(a) * r * 0.85 + 0.1
+		m(Vector3.new(0.08, long and 0.42 or 0.26, 0.16), CFrame.new(x, y, 0.02) * CFrame.Angles(0, 0, a - math.pi / 2), spikeColor, nil, "Wedge")
+	end
+	for _, side in ipairs({-1, 1}) do
+		m(Vector3.new(0.1, 0.55, 0.18), CFrame.new(0.55 * side, 0.62, 0.02) * CFrame.Angles(0, 0, math.rad(-25 * side)), spikeColor, nil, "Wedge")
 	end
 	local glow = Instance.new("PointLight")
 	glow.Color = Color3.fromRGB(200, 255, 120)
@@ -19945,6 +20587,844 @@ addcmd('unhorror',{'unspookymode','unhunt'},function(args, speaker)
 	WackyState.lightRelease("horror", 2)
 end)
 -- ================== END HORROR 2.0 ==================
+
+-- ==================== AGARTHA PORTAL ====================
+-- "portal" spins open a sling-ring style gateway (flat, see-through) to Agartha: a small floating island
+-- with a cottage, a yard and a peaceful view, built from parts far above the map. Walk through to go
+-- there; the portal in Agartha brings you back. Everything is client-side.
+NeverYieldAgartha = {
+	music = {111013044669280, 91781617219749, 128660783280547, 134071496659126}, -- DistroKid official Roblox music
+	birds = 9119383684, sparks = 9119380767, whoosh = 9119468100,
+	radius = 6,
+}
+
+NeverYieldAgartha.part = function(parent, size, cf, color, material, shape, props)
+	local p
+	if shape == "Wedge" then
+		p = Instance.new("WedgePart")
+	else
+		p = Instance.new("Part")
+		if shape == "Ball" then p.Shape = Enum.PartType.Ball end
+		if shape == "Cylinder" then p.Shape = Enum.PartType.Cylinder end
+	end
+	p.Name = randomString()
+	p.Anchored = true
+	p.Size = size
+	p.CFrame = cf
+	p.Color = color
+	p.Material = material or Enum.Material.SmoothPlastic
+	p.TopSurface = Enum.SurfaceType.Smooth
+	p.BottomSurface = Enum.SurfaceType.Smooth
+	p:SetAttribute("NYFx", true)
+	if shape == "Ellipsoid" then
+		local mesh = Instance.new("SpecialMesh")
+		mesh.MeshType = Enum.MeshType.Sphere
+		mesh.Parent = p
+	end
+	for k, v in pairs(props or {}) do
+		p[k] = v
+	end
+	p.Parent = parent
+	return p
+end
+
+-- build the island; O = the point on the grass in the middle of the island
+NeverYieldAgartha.build = function(O)
+	local folder = Instance.new("Model")
+	folder.Name = randomString()
+	local P = NeverYieldAgartha.part
+	local M = Enum.Material
+	local function at(x, y, z) return CFrame.new(O + Vector3.new(x, y, z)) end
+	local up = CFrame.Angles(0, 0, math.pi / 2) -- turns a cylinder upright
+	local rng = Random.new(7)
+
+	-- island: grass top, layered earth and rock underneath, stones around the rim
+	P(folder, Vector3.new(8, 170, 170), at(0, -4, 0) * up, Color3.fromRGB(100, 190, 85), M.Grass, "Cylinder")
+	P(folder, Vector3.new(160, 30, 160), at(0, -18, 0), Color3.fromRGB(120, 85, 55), M.Ground, "Ellipsoid", {CanCollide = false})
+	P(folder, Vector3.new(120, 40, 120), at(0, -38, 0), Color3.fromRGB(105, 75, 50), M.Ground, "Ellipsoid", {CanCollide = false})
+	P(folder, Vector3.new(70, 50, 70), at(0, -62, 0), Color3.fromRGB(110, 105, 100), M.Slate, "Ellipsoid", {CanCollide = false})
+	P(folder, Vector3.new(26, 40, 26), at(4, -90, -6), Color3.fromRGB(110, 105, 100), M.Slate, "Ellipsoid", {CanCollide = false})
+	for i = 1, 22 do
+		local a = i / 22 * math.pi * 2
+		local s = rng:NextNumber(5, 10)
+		P(folder, Vector3.new(s * 1.4, s, s * 1.2), at(math.cos(a) * 83, -1, math.sin(a) * 83) * CFrame.Angles(0, a, 0),
+			Color3.fromRGB(140, 135, 125):Lerp(Color3.fromRGB(110, 120, 100), rng:NextNumber()), M.Slate, "Ellipsoid")
+	end
+
+	-- cottage (front faces -Z, towards the gate)
+	local hz = 38
+	local wall = Color3.fromRGB(240, 228, 196)
+	local woodDark = Color3.fromRGB(110, 70, 45)
+	local roof = Color3.fromRGB(165, 70, 55)
+	P(folder, Vector3.new(34, 1.6, 28), at(0, 0.8, hz), Color3.fromRGB(150, 145, 140), M.Cobblestone)
+	-- walls (front wall has a door gap)
+	P(folder, Vector3.new(1, 12, 26), at(-15.5, 7.6, hz), wall, M.WoodPlanks)
+	P(folder, Vector3.new(1, 12, 26), at(15.5, 7.6, hz), wall, M.WoodPlanks)
+	P(folder, Vector3.new(32, 12, 1), at(0, 7.6, hz + 12.5), wall, M.WoodPlanks)
+	P(folder, Vector3.new(12, 12, 1), at(-10, 7.6, hz - 12.5), wall, M.WoodPlanks)
+	P(folder, Vector3.new(12, 12, 1), at(10, 7.6, hz - 12.5), wall, M.WoodPlanks)
+	P(folder, Vector3.new(8, 3.5, 1), at(0, 11.85, hz - 12.5), wall, M.WoodPlanks)
+	-- corner beams
+	for _, x in ipairs({-15.5, 15.5}) do
+		for _, z in ipairs({hz - 12.5, hz + 12.5}) do
+			P(folder, Vector3.new(1.4, 12.2, 1.4), at(x, 7.7, z), woodDark, M.Wood)
+		end
+	end
+	P(folder, Vector3.new(33, 1, 1.4), at(0, 13.4, hz - 12.5), woodDark, M.Wood)
+	-- door with a knob and a warm lamp above it
+	P(folder, Vector3.new(7.6, 9.8, 0.6), at(0, 6.5, hz - 12.6), Color3.fromRGB(130, 80, 50), M.Wood)
+	P(folder, Vector3.new(0.6, 0.6, 0.6), at(2.8, 6.4, hz - 13.0), Color3.fromRGB(230, 190, 70), M.Foil, "Ball")
+	local lamp = P(folder, Vector3.new(1, 1.3, 1), at(0, 12.2, hz - 13.6), Color3.fromRGB(255, 210, 120), M.Neon, "Ellipsoid")
+	local lampLight = Instance.new("PointLight")
+	lampLight.Color = Color3.fromRGB(255, 190, 110)
+	lampLight.Range = 16
+	lampLight.Brightness = 1.4
+	lampLight.Parent = lamp
+	-- glowing windows with frames and flower boxes
+	for _, x in ipairs({-9.5, 9.5}) do
+		P(folder, Vector3.new(5.2, 4.2, 0.3), at(x, 8, hz - 13.05), Color3.fromRGB(255, 225, 150), M.Neon, nil, {Transparency = 0.15})
+		P(folder, Vector3.new(5.8, 0.4, 0.5), at(x, 10.2, hz - 13.1), woodDark, M.Wood)
+		P(folder, Vector3.new(5.8, 0.4, 0.5), at(x, 5.8, hz - 13.1), woodDark, M.Wood)
+		P(folder, Vector3.new(0.35, 4.6, 0.5), at(x, 8, hz - 13.15), woodDark, M.Wood)
+		P(folder, Vector3.new(5.8, 0.35, 0.5), at(x, 8, hz - 13.15), woodDark, M.Wood)
+		P(folder, Vector3.new(6, 1.2, 1.4), at(x, 5.2, hz - 13.6), woodDark, M.WoodPlanks)
+		for i = 0, 6 do
+			P(folder, Vector3.new(0.8, 0.8, 0.8), at(x - 2.5 + i * 0.83, 6.1, hz - 13.6), ({Color3.fromRGB(255, 90, 120), Color3.fromRGB(255, 200, 60), Color3.fromRGB(180, 110, 255)})[i % 3 + 1], M.SmoothPlastic, "Ball")
+		end
+	end
+	for _, z in ipairs({hz - 4, hz + 4}) do
+		for _, x in ipairs({-16.05, 16.05}) do
+			P(folder, Vector3.new(0.3, 4, 4), at(x, 8, z), Color3.fromRGB(255, 225, 150), M.Neon, nil, {Transparency = 0.15})
+		end
+	end
+	-- roof: two slopes, gable wedges, ridge beam, chimney with smoke
+	local pitch = math.rad(38)
+	P(folder, Vector3.new(36, 1, 18.6), at(0, 18.6, hz - 7.2) * CFrame.Angles(-pitch, 0, 0), roof, M.Slate)
+	P(folder, Vector3.new(36, 1, 18.6), at(0, 18.6, hz + 7.2) * CFrame.Angles(pitch, 0, 0), roof, M.Slate)
+	P(folder, Vector3.new(36.4, 1.2, 1.2), at(0, 24.2, hz), woodDark, M.Wood)
+	for _, x in ipairs({-15.5, 15.5}) do
+		P(folder, Vector3.new(1, 10, 13), at(x, 18.6, hz - 6.5), wall, M.WoodPlanks, "Wedge")
+		P(folder, Vector3.new(1, 10, 13), at(x, 18.6, hz + 6.5) * CFrame.Angles(0, math.pi, 0), wall, M.WoodPlanks, "Wedge")
+	end
+	local chimney = P(folder, Vector3.new(3.5, 9, 3.5), at(9, 23, hz + 5), Color3.fromRGB(150, 80, 65), M.Brick)
+	local smoke = Instance.new("ParticleEmitter")
+	smoke.Texture = "rbxasset://textures/particles/smoke_main.dds"
+	smoke.Rate = 5
+	smoke.Speed = NumberRange.new(2, 3)
+	smoke.Lifetime = NumberRange.new(4, 6)
+	smoke.Size = NumberSequence.new(1.5, 5)
+	smoke.Transparency = NumberSequence.new(0.5, 1)
+	smoke.Acceleration = Vector3.new(1, 0.5, 0)
+	smoke.Color = ColorSequence.new(Color3.fromRGB(235, 235, 240))
+	smoke.EmissionDirection = Enum.NormalId.Top
+	smoke.Parent = chimney
+	-- porch: deck, posts, little roof, steps
+	P(folder, Vector3.new(14, 0.6, 6), at(0, 1.9, hz - 15.5), Color3.fromRGB(160, 115, 75), M.WoodPlanks)
+	for _, x in ipairs({-6.5, 6.5}) do
+		P(folder, Vector3.new(0.7, 8, 0.7), at(x, 6, hz - 18), woodDark, M.Wood)
+	end
+	P(folder, Vector3.new(15, 0.6, 7), at(0, 10.4, hz - 16) * CFrame.Angles(math.rad(-12), 0, 0), roof, M.Slate)
+	P(folder, Vector3.new(6, 0.8, 2), at(0, 1.2, hz - 19.2), Color3.fromRGB(150, 145, 140), M.Cobblestone)
+	P(folder, Vector3.new(6, 0.8, 2), at(0, 0.4, hz - 21), Color3.fromRGB(150, 145, 140), M.Cobblestone)
+
+	-- picket fence around the yard with a gap at the front
+	local fence = Color3.fromRGB(250, 250, 245)
+	local x0, x1, z0, z1 = -36, 36, 6, 68
+	local function fenceLine(ax, az, bx, bz, gapFrom, gapTo)
+		local length = math.sqrt((bx - ax) ^ 2 + (bz - az) ^ 2)
+		local n = math.floor(length / 3)
+		for i = 0, n do
+			local t = i / n
+			local x, z = ax + (bx - ax) * t, az + (bz - az) * t
+			if not (gapFrom and x > gapFrom and x < gapTo) then
+				P(folder, Vector3.new(0.5, 3.4, 0.5), at(x, 1.7, z), fence, M.SmoothPlastic)
+				P(folder, Vector3.new(0.55, 0.55, 0.55), at(x, 3.55, z) * CFrame.Angles(0, math.rad(45), 0), fence, M.SmoothPlastic, "Ball")
+			end
+		end
+		local yaw = math.atan2(bx - ax, bz - az)
+		for _, y in ipairs({1.2, 2.6}) do
+			if gapFrom then
+				P(folder, Vector3.new(0.3, 0.35, gapFrom - ax), at((ax + gapFrom) / 2, y, az) * CFrame.Angles(0, yaw, 0), fence, M.SmoothPlastic)
+				P(folder, Vector3.new(0.3, 0.35, bx - gapTo), at((gapTo + bx) / 2, y, az) * CFrame.Angles(0, yaw, 0), fence, M.SmoothPlastic)
+			else
+				P(folder, Vector3.new(0.3, 0.35, length), at((ax + bx) / 2, y, (az + bz) / 2) * CFrame.Angles(0, yaw, 0), fence, M.SmoothPlastic)
+			end
+		end
+	end
+	fenceLine(x0, z0, x1, z0, -4, 4)
+	fenceLine(x0, z1, x1, z1)
+	fenceLine(x0, z0, x0, z1)
+	fenceLine(x1, z0, x1, z1)
+
+	-- stepping-stone path from the gate to the porch
+	for i = 0, 9 do
+		local z = -40 + i * 5.2
+		P(folder, Vector3.new(0.4, 3.4, 3.4), at(rng:NextNumber(-0.8, 0.8), 0.2, z) * up, Color3.fromRGB(175, 170, 160), M.Slate, "Cylinder")
+	end
+
+	-- trees
+	local function tree(x, z, h, leaf, blossom)
+		P(folder, Vector3.new(h, 1.6, 1.6), at(x, h / 2, z) * up, Color3.fromRGB(110, 75, 45), M.Wood, "Cylinder")
+		P(folder, Vector3.new(0.9, h * 0.4, 0.9), at(x + 1.2, h * 0.75, z) * CFrame.Angles(0, 0, math.rad(-40)), Color3.fromRGB(110, 75, 45), M.Wood)
+		for i = 1, 5 do
+			local a = i / 5 * math.pi * 2
+			local s = rng:NextNumber(6, 9)
+			P(folder, Vector3.new(s, s * 0.85, s), at(x + math.cos(a) * 2.6, h + rng:NextNumber(-1, 2), z + math.sin(a) * 2.6), leaf:Lerp(Color3.new(1, 1, 1), rng:NextNumber() * 0.15),
+				blossom and M.SmoothPlastic or M.Grass, "Ellipsoid")
+		end
+		P(folder, Vector3.new(8, 7, 8), at(x, h + 3, z), leaf, blossom and M.SmoothPlastic or M.Grass, "Ellipsoid")
+		if blossom then
+			local petals = Instance.new("ParticleEmitter")
+			petals.Texture = "rbxassetid://242109931"
+			petals.Rate = 4
+			petals.Speed = NumberRange.new(0.5, 1)
+			petals.Lifetime = NumberRange.new(5, 7)
+			petals.Size = NumberSequence.new(0.35)
+			petals.Acceleration = Vector3.new(0.6, -1.2, 0.3)
+			petals.RotSpeed = NumberRange.new(-90, 90)
+			petals.Color = ColorSequence.new(Color3.fromRGB(255, 190, 220))
+			petals.Parent = folder:GetChildren()[#folder:GetChildren()]
+		end
+	end
+	tree(-26, 20, 14, Color3.fromRGB(80, 170, 70))
+	tree(27, 58, 16, Color3.fromRGB(70, 160, 75))
+	tree(-28, 60, 13, Color3.fromRGB(255, 175, 210), true)
+	tree(55, -30, 18, Color3.fromRGB(90, 175, 80))
+	tree(-55, -20, 15, Color3.fromRGB(85, 165, 70))
+	tree(-50, 40, 12, Color3.fromRGB(255, 185, 215), true)
+
+	-- flower beds along the fence
+	local flowerColors = {Color3.fromRGB(255, 90, 120), Color3.fromRGB(255, 205, 60), Color3.fromRGB(180, 110, 255), Color3.fromRGB(255, 255, 255), Color3.fromRGB(255, 140, 60)}
+	for _, bed in ipairs({{-24, 10}, {24, 10}, {-32, 40}, {32, 30}}) do
+		P(folder, Vector3.new(10, 0.6, 4), at(bed[1], 0.3, bed[2]), Color3.fromRGB(95, 65, 45), M.Ground)
+		for i = 1, 14 do
+			local fx, fz = bed[1] + rng:NextNumber(-4.3, 4.3), bed[2] + rng:NextNumber(-1.5, 1.5)
+			P(folder, Vector3.new(0.2, 1.2, 0.2), at(fx, 1.1, fz), Color3.fromRGB(70, 150, 60), M.SmoothPlastic)
+			P(folder, Vector3.new(0.75, 0.6, 0.75), at(fx, 1.85, fz), flowerColors[rng:NextInteger(1, #flowerColors)], M.SmoothPlastic, "Ellipsoid")
+		end
+	end
+
+	-- pond with rocks and lily pads, a bench beside it
+	P(folder, Vector3.new(0.6, 18, 18), at(22, 0.05, -18) * up, Color3.fromRGB(80, 160, 220), M.Glass, "Cylinder", {Transparency = 0.25, Reflectance = 0.25})
+	for i = 1, 12 do
+		local a = i / 12 * math.pi * 2
+		P(folder, Vector3.new(2.6, 1.4, 2), at(22 + math.cos(a) * 9.4, 0.4, -18 + math.sin(a) * 9.4) * CFrame.Angles(0, a, 0), Color3.fromRGB(150, 145, 135), M.Slate, "Ellipsoid")
+	end
+	for _, lp in ipairs({{19, -16}, {25, -21}, {23, -14}}) do
+		P(folder, Vector3.new(0.2, 2.4, 2.4), at(lp[1], 0.4, lp[2]) * up, Color3.fromRGB(90, 170, 70), M.SmoothPlastic, "Cylinder")
+	end
+	P(folder, Vector3.new(7, 0.5, 2), at(8, 2, -26), Color3.fromRGB(160, 115, 75), M.WoodPlanks)
+	P(folder, Vector3.new(7, 2, 0.5), at(8, 3, -26.9), Color3.fromRGB(160, 115, 75), M.WoodPlanks)
+	for _, x in ipairs({5, 11}) do
+		P(folder, Vector3.new(0.5, 2, 1.8), at(x, 1, -26), woodDark, M.Wood)
+	end
+
+	-- waterfall pouring off the edge
+	P(folder, Vector3.new(8, 2, 1), at(0, -2, 84), Color3.fromRGB(150, 210, 255), M.Glass, nil, {Transparency = 0.3})
+	local fall = P(folder, Vector3.new(7, 90, 1.5), at(0, -46, 86), Color3.fromRGB(170, 220, 255), M.Neon, nil, {Transparency = 0.45, CanCollide = false})
+	local mist = Instance.new("ParticleEmitter")
+	mist.Texture = "rbxasset://textures/particles/smoke_main.dds"
+	mist.Rate = 18
+	mist.Speed = NumberRange.new(4, 8)
+	mist.Lifetime = NumberRange.new(2, 3)
+	mist.Size = NumberSequence.new(3, 8)
+	mist.Transparency = NumberSequence.new(0.6, 1)
+	mist.EmissionDirection = Enum.NormalId.Bottom
+	mist.Color = ColorSequence.new(Color3.fromRGB(230, 245, 255))
+	mist.Parent = fall
+
+	-- the view: floating islands, glowing crystals, clouds and lanterns drifting up
+	for i, d in ipairs({{-260, 40, 160, 40}, {230, 80, 260, 30}, {300, -30, -150, 50}, {-220, 120, -260, 26}, {60, 160, -380, 34}}) do
+		local c = O + Vector3.new(d[1], d[2], d[3])
+		P(folder, Vector3.new(6, d[4] * 2, d[4] * 2), CFrame.new(c) * up, Color3.fromRGB(105, 185, 90), M.Grass, "Cylinder", {CanCollide = false})
+		P(folder, Vector3.new(d[4] * 1.8, d[4] * 1.4, d[4] * 1.8), CFrame.new(c - Vector3.new(0, d[4] * 0.6, 0)), Color3.fromRGB(115, 85, 60), M.Ground, "Ellipsoid", {CanCollide = false})
+		for k = 1, 3 do
+			local tx, tz = rng:NextNumber(-d[4] * 0.5, d[4] * 0.5), rng:NextNumber(-d[4] * 0.5, d[4] * 0.5)
+			P(folder, Vector3.new(10, 1.4, 1.4), CFrame.new(c + Vector3.new(tx, 5, tz)) * up, Color3.fromRGB(110, 75, 45), M.Wood, "Cylinder", {CanCollide = false})
+			P(folder, Vector3.new(9, 8, 9), CFrame.new(c + Vector3.new(tx, 12, tz)), (i % 2 == 0) and Color3.fromRGB(255, 180, 215) or Color3.fromRGB(85, 170, 75), M.Grass, "Ellipsoid", {CanCollide = false})
+		end
+		if i == 3 then
+			for k = 1, 6 do
+				local h = rng:NextNumber(14, 30)
+				P(folder, Vector3.new(4, h, 4), CFrame.new(c + Vector3.new(rng:NextNumber(-15, 15), h / 2 + 2, rng:NextNumber(-15, 15))) * CFrame.Angles(rng:NextNumber(-0.3, 0.3), rng:NextNumber(0, 6), rng:NextNumber(-0.3, 0.3)),
+					(k % 2 == 0) and Color3.fromRGB(120, 230, 255) or Color3.fromRGB(200, 140, 255), M.Neon, nil, {CanCollide = false, Transparency = 0.15})
+			end
+		end
+	end
+	for i = 1, 14 do
+		local a = i / 14 * math.pi * 2
+		local r = rng:NextNumber(150, 320)
+		P(folder, Vector3.new(rng:NextNumber(60, 120), rng:NextNumber(16, 28), rng:NextNumber(40, 80)), at(math.cos(a) * r, rng:NextNumber(-90, -40), math.sin(a) * r),
+			Color3.fromRGB(255, 250, 252), M.SmoothPlastic, "Ellipsoid", {CanCollide = false, Transparency = 0.25})
+	end
+	local lanternPart = P(folder, Vector3.new(400, 1, 400), at(0, -30, 0), Color3.new(1, 1, 1), M.SmoothPlastic, nil, {Transparency = 1, CanCollide = false})
+	local lanterns = Instance.new("ParticleEmitter")
+	lanterns.Texture = "rbxasset://textures/particles/forcefield_glow_main.dds"
+	lanterns.Rate = 6
+	lanterns.Speed = NumberRange.new(2, 4)
+	lanterns.Lifetime = NumberRange.new(14, 18)
+	lanterns.Size = NumberSequence.new(1.6)
+	lanterns.LightEmission = 1
+	lanterns.EmissionDirection = Enum.NormalId.Top
+	lanterns.Color = ColorSequence.new(Color3.fromRGB(255, 200, 120), Color3.fromRGB(255, 150, 90))
+	lanterns.Parent = lanternPart
+	return folder
+end
+
+-- the sling-ring doorway: spinning sparks, a ring of light and a see-through window (SurfaceGui + ViewportFrame)
+NeverYieldAgartha.makeGate = function(cf, worldModel, skyTop, skyBottom, face)
+	local gate = {cf = cf, radius = 0.2, atts = {}, emitters = {}}
+	local ring = Instance.new("Part")
+	ring.Name = randomString()
+	ring.Anchored, ring.CanCollide, ring.CanQuery, ring.CanTouch, ring.Transparency = true, false, false, false, 1
+	ring.Size = Vector3.new(1, 1, 1)
+	ring.CFrame = cf
+	ring:SetAttribute("NYFx", true)
+	ring.Parent = workspace
+	gate.ring = ring
+	local n = 32
+	for i = 1, n do
+		local a = Instance.new("Attachment")
+		a.Parent = ring
+		gate.atts[i] = a
+	end
+	for i = 1, n do
+		local b = Instance.new("Beam")
+		b.Attachment0 = gate.atts[i]
+		b.Attachment1 = gate.atts[i % n + 1]
+		b.FaceCamera = true
+		b.Width0, b.Width1 = 0.45, 0.45
+		b.LightEmission = 1
+		b.LightInfluence = 0
+		b.Color = ColorSequence.new(Color3.fromRGB(255, 200, 80), Color3.fromRGB(255, 120, 30))
+		b.Transparency = NumberSequence.new(0.1)
+		b.Parent = ring
+		if i % 2 == 0 then
+			local e = Instance.new("ParticleEmitter")
+			e.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+			e.Rate = 30
+			e.Speed = NumberRange.new(6, 12)
+			e.SpreadAngle = Vector2.new(12, 12)
+			e.Lifetime = NumberRange.new(0.25, 0.55)
+			e.LightEmission = 1
+			e.LightInfluence = 0
+			e.Size = NumberSequence.new(0.28, 0)
+			e.Acceleration = Vector3.new(0, -14, 0)
+			e.Color = ColorSequence.new(Color3.fromRGB(255, 230, 140), Color3.fromRGB(255, 120, 30))
+			e.EmissionDirection = Enum.NormalId.Top
+			e.Parent = gate.atts[i]
+			table.insert(gate.emitters, e)
+		end
+	end
+	-- the window
+	local pane = Instance.new("Part")
+	pane.Name = randomString()
+	pane.Anchored, pane.CanCollide, pane.CanQuery, pane.CanTouch, pane.Transparency = true, false, false, false, 1
+	pane.Size = Vector3.new(0.4, 0.4, 0.05)
+	pane.CFrame = cf
+	pane:SetAttribute("NYFx", true)
+	pane.Parent = workspace
+	gate.pane = pane
+	local gui = Instance.new("SurfaceGui")
+	gui.Face = face or Enum.NormalId.Front
+	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	gui.PixelsPerStud = 40
+	gui.LightInfluence = 0
+	gui.Parent = pane
+	local canvas = Instance.new("CanvasGroup")
+	canvas.Size = UDim2.new(1, 0, 1, 0)
+	canvas.BackgroundColor3 = skyTop
+	canvas.BorderSizePixel = 0
+	canvas.Parent = gui
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0.5, 0)
+	corner.Parent = canvas
+	local sky = Instance.new("UIGradient")
+	sky.Rotation = 90
+	sky.Color = ColorSequence.new(skyTop, skyBottom)
+	sky.Parent = canvas
+	local vp = Instance.new("ViewportFrame")
+	vp.Size = UDim2.new(1, 0, 1, 0)
+	vp.BackgroundTransparency = 1
+	vp.Ambient = Color3.fromRGB(200, 190, 180)
+	vp.LightColor = Color3.fromRGB(255, 240, 220)
+	vp.LightDirection = Vector3.new(-0.5, -1, 0.4)
+	vp.Parent = canvas
+	local cam = Instance.new("Camera")
+	cam.Parent = vp
+	vp.CurrentCamera = cam
+	gate.cam = cam
+	if worldModel then
+		worldModel.Parent = vp
+	end
+	local edge = Instance.new("UIStroke")
+	edge.Color = Color3.fromRGB(255, 170, 60)
+	edge.Thickness = 6
+	edge.Transparency = 0.2
+	edge.Parent = canvas
+	-- crackling sparks
+	local s = WackyState.sound(NeverYieldAgartha.sparks, ring, 0.5, true, 1.1)
+	s.RollOffMaxDistance = 80
+	gate.sound = s
+	return gate
+end
+
+NeverYieldAgartha.layoutGate = function(gate, t)
+	local r = gate.radius
+	gate.ring.CFrame = gate.cf * CFrame.Angles(0, 0, t * 3)
+	local n = #gate.atts
+	for i, a in ipairs(gate.atts) do
+		local ang = i / n * math.pi * 2
+		local wob = 1 + math.sin(t * 9 + i * 1.7) * 0.03
+		local pos = Vector3.new(math.cos(ang) * r * wob, math.sin(ang) * r * wob, 0)
+		a.CFrame = CFrame.fromMatrix(pos, Vector3.new(math.cos(ang), math.sin(ang), 0), Vector3.new(-math.sin(ang), math.cos(ang), 0))
+	end
+	gate.pane.Size = Vector3.new(math.max(0.2, r * 1.9), math.max(0.2, r * 1.9), 0.05)
+end
+
+NeverYieldAgartha.destroyGate = function(gate)
+	if not gate then return end
+	pcall(function() gate.ring:Destroy() end)
+	pcall(function() gate.pane:Destroy() end)
+end
+
+-- a frozen copy of what is around a spot (for the window back home)
+NeverYieldAgartha.snapshot = function(center, radius, limit)
+	local model = Instance.new("Model")
+	local count = 0
+	local chars = {}
+	for _, plr in ipairs(Players:GetPlayers()) do
+		if plr.Character then chars[plr.Character] = true end
+	end
+	for _, inst in ipairs(workspace:GetDescendants()) do
+		if count >= limit then break end
+		if inst:IsA("BasePart") and not inst:IsA("Terrain") and inst.Transparency < 0.95 and not inst:GetAttribute("NYFx") and (inst.Position - center).Magnitude < radius then
+			local owned, anc = false, inst.Parent
+			while anc and anc ~= workspace do
+				if chars[anc] then owned = true break end
+				anc = anc.Parent
+			end
+			if not owned then
+				local ok, copy = pcall(function() return inst:Clone() end)
+				if ok and copy then
+					for _, d in ipairs(copy:GetChildren()) do
+						if not (d:IsA("SpecialMesh") or d:IsA("Decal") or d:IsA("Texture")) then d:Destroy() end
+					end
+					copy.Anchored = true
+					copy.Parent = model
+					count = count + 1
+				end
+			end
+		end
+	end
+	return model
+end
+
+NeverYieldAgartha.close = function()
+	local A = NeverYieldAgartha
+	local s = A.state
+	if not s then return end
+	if s.inside then
+		local root = getRoot(Players.LocalPlayer.Character)
+		if root then root.CFrame = s.homeGate.cf * CFrame.new(0, 0, -6) * CFrame.Angles(0, math.pi, 0) end
+		A.leaveMood(s)
+	end
+	A.state = nil
+	WackyState.disconnect("agartha")
+	A.destroyGate(s.homeGate)
+	A.destroyGate(s.awayGate)
+	pcall(function() s.land:Destroy() end)
+	pcall(function() s.music:Destroy() end)
+	pcall(function() s.birds:Destroy() end)
+end
+
+NeverYieldAgartha.enterMood = function(s)
+	s.inside = true
+	WackyState.lightClaim("agartha", {"ClockTime", "Brightness", "Ambient", "OutdoorAmbient", "ExposureCompensation"})
+	Lighting.ClockTime, Lighting.Brightness = 16.4, 2.4
+	Lighting.Ambient, Lighting.OutdoorAmbient = Color3.fromRGB(150, 130, 120), Color3.fromRGB(170, 150, 140)
+	Lighting.ExposureCompensation = 0.1
+	local atmosphere = Instance.new("Atmosphere")
+	atmosphere.Density, atmosphere.Offset, atmosphere.Glare, atmosphere.Haze = 0.3, 0.2, 0.3, 1.4
+	atmosphere.Color, atmosphere.Decay = Color3.fromRGB(255, 225, 235), Color3.fromRGB(170, 195, 255)
+	WackyState.envSet("Atmosphere", atmosphere)
+	local cc = WackyState.track("agartha", Instance.new("ColorCorrectionEffect"))
+	cc.Saturation, cc.TintColor = 0.15, Color3.fromRGB(255, 245, 235)
+	cc.Parent = Lighting
+	local rays = WackyState.track("agartha", Instance.new("SunRaysEffect"))
+	rays.Intensity, rays.Spread = 0.12, 0.6
+	rays.Parent = Lighting
+	TweenService:Create(s.music, TweenInfo.new(3), {Volume = 0.45}):Play()
+	TweenService:Create(s.birds, TweenInfo.new(3), {Volume = 0.35}):Play()
+end
+
+NeverYieldAgartha.leaveMood = function(s)
+	s.inside = false
+	WackyState.clear("agartha")
+	WackyState.envRestore("Atmosphere")
+	WackyState.lightRelease("agartha", 1.5)
+	TweenService:Create(s.music, TweenInfo.new(2), {Volume = 0.05}):Play()
+	TweenService:Create(s.birds, TweenInfo.new(2), {Volume = 0}):Play()
+end
+
+NeverYieldAgartha.travel = function(fromGate, toGate, root)
+	-- keep your offset and facing relative to the doorway, like walking through a real door
+	local relative = fromGate.cf:ToObjectSpace(root.CFrame)
+	root.CFrame = toGate.cf:ToWorldSpace(relative) * CFrame.new(0, 0, -2)
+	WackyState.sound(NeverYieldAgartha.whoosh, nil, 0.7, false, 0.9)
+	local screen = WackyState.overlay()
+	local flash = Instance.new("Frame")
+	flash.Size = UDim2.new(1, 0, 1, 0)
+	flash.BackgroundColor3 = Color3.fromRGB(255, 200, 120)
+	flash.BackgroundTransparency = 0.3
+	flash.BorderSizePixel = 0
+	flash.ZIndex = 60
+	flash.Parent = screen
+	TweenService:Create(flash, TweenInfo.new(0.6), {BackgroundTransparency = 1}):Play()
+	Services.Debris:AddItem(flash, 0.7)
+end
+
+addcmd('portal',{'agartha','gateway'},function(args, speaker)
+	local A = NeverYieldAgartha
+	if A.state then
+		notify('Portal', 'A portal is already open. Use unportal to close it.')
+		return
+	end
+	local root = getRoot(speaker.Character)
+	if not root then return end
+	local camera = workspace.CurrentCamera
+	local look = camera.CFrame.LookVector * Vector3.new(1, 0, 1)
+	if look.Magnitude < 0.1 then look = root.CFrame.LookVector * Vector3.new(1, 0, 1) end
+	look = look.Unit
+	-- the doorway stands 10 studs in front of you; its front (-Z) faces you
+	local gatePos = root.Position + look * 10 + Vector3.new(0, 1.5, 0)
+	local homeCF = CFrame.lookAt(gatePos, gatePos - look)
+	-- Agartha: far away and high up; its doorway looks into the yard
+	local O = root.Position + Vector3.new(6000, 1600, 0)
+	local awayPos = O + Vector3.new(0, 4.5, -46)
+	local awayCF = CFrame.lookAt(awayPos, awayPos - Vector3.new(0, 0, 1))
+	local land = A.build(O)
+	land.Parent = workspace
+	local view = land:Clone()
+	for _, d in ipairs(view:GetDescendants()) do
+		if d:IsA("ParticleEmitter") or d:IsA("Light") then d:Destroy() end
+	end
+	local homeView = A.snapshot(root.Position, 140, 450)
+	local s = {land = land}
+	s.homeGate = A.makeGate(homeCF, view, Color3.fromRGB(130, 190, 255), Color3.fromRGB(255, 205, 170))
+	s.awayGate = A.makeGate(awayCF, homeView, Color3.fromRGB(150, 180, 220), Color3.fromRGB(200, 210, 230), Enum.NormalId.Back)
+	s.music = WackyState.sound(WackyState.pick(A.music), nil, 0, true)
+	s.birds = WackyState.sound(A.birds, nil, 0, true)
+	TweenService:Create(s.music, TweenInfo.new(2), {Volume = 0.05}):Play()
+	A.state = s
+	WackyState.sound(A.whoosh, nil, 0.8, false, 0.7)
+	local start = tick()
+	local lastSide = {}
+	WackyState.connect("agartha", RunService.RenderStepped:Connect(function()
+		local t = tick() - start
+		-- the ring spins open with a little overshoot
+		local p = math.clamp(t / 1.3, 0, 1)
+		local radius = A.radius * (1 + 2.70158 * (p - 1) ^ 3 + 1.70158 * (p - 1) ^ 2)
+		for _, gate in ipairs({s.homeGate, s.awayGate}) do
+			gate.radius = math.max(0.2, radius)
+			A.layoutGate(gate, t)
+		end
+		-- windows: a virtual camera on the other side mirrors yours
+		local cam = workspace.CurrentCamera
+		for _, pair in ipairs({{s.homeGate, s.awayGate}, {s.awayGate, s.homeGate}}) do
+			local gate, other = pair[1], pair[2]
+			gate.cam.FieldOfView = cam.FieldOfView
+			gate.cam.CFrame = other.cf:ToWorldSpace(gate.cf:ToObjectSpace(cam.CFrame))
+		end
+		-- walking through
+		local r = getRoot(speaker.Character)
+		if not r or p < 1 then return end
+		for key, pair in pairs({home = {s.homeGate, s.awayGate}, away = {s.awayGate, s.homeGate}}) do
+			local gate, other = pair[1], pair[2]
+			local rel = gate.cf:PointToObjectSpace(r.Position)
+			local side = rel.Z >= 0
+			-- in through the home door from its front, back out through the Agartha door from the yard side
+			local wanted = (key == "home") and side or (key == "away" and not side)
+			if lastSide[key] ~= nil and side ~= lastSide[key] and wanted and math.sqrt(rel.X * rel.X + rel.Y * rel.Y) < A.radius then
+				A.travel(gate, other, r)
+				if key == "home" then A.enterMood(s) else A.leaveMood(s) end
+				lastSide = {}
+				return
+			end
+			lastSide[key] = side
+		end
+	end))
+	notify('Portal', 'A gateway to Agartha is open. Walk through it! (unportal closes it)', 8)
+end)
+
+addcmd('unportal',{'closeportal','unagartha'},function(args, speaker)
+	NeverYieldAgartha.close()
+end)
+
+table.insert(WackyState.undoList, 'unportal')
+-- ================== END AGARTHA PORTAL ==================
+
+-- ==================== CLOWNS ====================
+-- "clown": clowns keep appearing around you and chase you, more and faster over time. When one
+-- catches you, you die and get server hopped. Only on your screen.
+NeverYieldClowns = {
+	music = {81890241259637, 122263324184602, 125773734041692}, -- DistroKid official Roblox music
+	honks = {9116942696, 9114824238},
+	laughs = {9114011965, 9114011832, 9113787508},
+	suits = {{255, 60, 80}, {60, 140, 255}, {255, 200, 40}, {150, 70, 220}, {40, 200, 120}},
+	hair = {{255, 120, 30}, {60, 220, 90}, {255, 60, 160}, {80, 160, 255}},
+}
+
+NeverYieldClowns.make = function()
+	local C = NeverYieldClowns
+	local model = Instance.new("Model")
+	model.Name = randomString()
+	local root = Instance.new("Part")
+	root.Name = randomString()
+	root.Size = Vector3.new(1, 1, 1)
+	root.Transparency = 1
+	root.Anchored = true
+	root.CanCollide, root.CanQuery, root.CanTouch = false, false, false
+	root:SetAttribute("NYFx", true)
+	root.Parent = model
+	model.PrimaryPart = root
+	local suit = Color3.fromRGB(unpack(C.suits[math.random(1, #C.suits)]))
+	local suit2 = Color3.fromRGB(unpack(C.suits[math.random(1, #C.suits)]))
+	local hair = Color3.fromRGB(unpack(C.hair[math.random(1, #C.hair)]))
+	local white, red, black = Color3.fromRGB(250, 248, 245), Color3.fromRGB(230, 30, 40), Color3.fromRGB(15, 12, 15)
+	local function add(shape, size, pos, color, rot, material)
+		local p
+		if shape == "Wedge" then
+			p = Instance.new("WedgePart")
+		else
+			p = Instance.new("Part")
+			if shape == "Ball" then p.Shape = Enum.PartType.Ball end
+		end
+		p.Name = randomString()
+		p.Size = size
+		p.Color = color
+		p.Material = material or Enum.Material.SmoothPlastic
+		p.CanCollide, p.CanQuery, p.CanTouch, p.Massless, p.CastShadow = false, false, false, true, false
+		p.TopSurface, p.BottomSurface = Enum.SurfaceType.Smooth, Enum.SurfaceType.Smooth
+		p:SetAttribute("NYFx", true)
+		if shape == "Ellipsoid" then
+			local mesh = Instance.new("SpecialMesh")
+			mesh.MeshType = Enum.MeshType.Sphere
+			mesh.Parent = p
+		end
+		local cf = CFrame.new(pos)
+		if rot then cf = cf * CFrame.Angles(math.rad(rot[1]), math.rad(rot[2]), math.rad(rot[3])) end
+		p.CFrame = root.CFrame * cf
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0, weld.Part1 = root, p
+		weld.Parent = p
+		p.Parent = model
+		return p
+	end
+	-- giant shoes and legs
+	for _, side in ipairs({-1, 1}) do
+		add("Ellipsoid", Vector3.new(1.1, 0.7, 2.2), Vector3.new(0.6 * side, 0.35, -0.4), red)
+		add("Block", Vector3.new(0.55, 1.8, 0.55), Vector3.new(0.55 * side, 1.5, 0), suit2)
+	end
+	-- baggy polka-dot suit with pompom buttons
+	add("Ellipsoid", Vector3.new(2.3, 2.6, 1.8), Vector3.new(0, 3.3, 0), suit, nil, Enum.Material.Fabric)
+	for i = 1, 8 do
+		local a = math.random() * math.pi * 1.4 - math.pi * 0.7
+		local y = 2.5 + math.random() * 1.8
+		add("Ball", Vector3.new(0.32, 0.32, 0.32), Vector3.new(math.sin(a) * 1.05, y, -math.cos(a) * 0.82), white)
+	end
+	for i = 0, 2 do
+		add("Ball", Vector3.new(0.4, 0.4, 0.4), Vector3.new(0, 2.9 + i * 0.5, -0.92), hair)
+	end
+	-- arms reaching forward with white gloves
+	for _, side in ipairs({-1, 1}) do
+		add("Ellipsoid", Vector3.new(0.6, 0.6, 2.2), Vector3.new(1.25 * side, 3.9, -0.9), suit, {10, 10 * side, 0}, Enum.Material.Fabric)
+		add("Ball", Vector3.new(0.75, 0.75, 0.75), Vector3.new(1.35 * side, 3.75, -2.0), white)
+	end
+	-- ruffled collar
+	for i = 1, 12 do
+		local a = i / 12 * math.pi * 2
+		add("Ball", Vector3.new(0.55, 0.55, 0.55), Vector3.new(math.cos(a) * 0.85, 4.65, math.sin(a) * 0.7), (i % 2 == 0) and white or suit2)
+	end
+	-- head: white face, red nose, painted eyes, huge grin
+	add("Ball", Vector3.new(1.9, 1.9, 1.9), Vector3.new(0, 5.6, 0), white)
+	add("Ball", Vector3.new(0.55, 0.55, 0.55), Vector3.new(0, 5.55, -0.98), red, nil, Enum.Material.Neon)
+	for _, side in ipairs({-1, 1}) do
+		add("Block", Vector3.new(0.45, 0.7, 0.06), Vector3.new(0.42 * side, 5.95, -0.83), Color3.fromRGB(60, 120, 255), {0, 0, 45})
+		add("Ellipsoid", Vector3.new(0.3, 0.38, 0.12), Vector3.new(0.42 * side, 5.95, -0.88), black)
+		add("Ball", Vector3.new(0.1, 0.1, 0.1), Vector3.new(0.45 * side, 6.02, -0.94), Color3.new(1, 1, 1), nil, Enum.Material.Neon)
+	end
+	add("Ellipsoid", Vector3.new(1.3, 0.45, 0.2), Vector3.new(0, 5.05, -0.8), red, {0, 0, 0})
+	add("Ellipsoid", Vector3.new(1.05, 0.22, 0.12), Vector3.new(0, 5.02, -0.88), black)
+	for i = -2, 2 do
+		add("Block", Vector3.new(0.14, 0.12, 0.06), Vector3.new(i * 0.17, 5.1, -0.92), white)
+	end
+	-- rainbow afro and a tiny hat
+	for _, side in ipairs({-1, 1}) do
+		for i = 0, 2 do
+			add("Ball", Vector3.new(0.9, 0.9, 0.9), Vector3.new((1.0 + i * 0.15) * side, 5.9 - i * 0.35, 0.1 + i * 0.15), hair, nil, Enum.Material.Fabric)
+		end
+	end
+	add("Ellipsoid", Vector3.new(1.1, 0.12, 1.1), Vector3.new(0, 6.55, 0.05), black)
+	add("Block", Vector3.new(0.6, 0.6, 0.6), Vector3.new(0, 6.9, 0.05), black)
+	add("Ball", Vector3.new(0.3, 0.3, 0.3), Vector3.new(0, 7.3, 0.05), red)
+	return model, root
+end
+
+NeverYieldClowns.stop = function()
+	local s = NeverYieldClowns.state
+	if not s then return end
+	NeverYieldClowns.state = nil
+	WackyState.disconnect("clowns")
+	for _, c in ipairs(s.clowns) do
+		pcall(function() c.model:Destroy() end)
+	end
+	pcall(function()
+		TweenService:Create(s.music, TweenInfo.new(1.5), {Volume = 0}):Play()
+		Services.Debris:AddItem(s.music, 1.6)
+	end)
+	pcall(function() s.cc:Destroy() end)
+end
+
+NeverYieldClowns.caught = function(speaker, s)
+	local C = NeverYieldClowns
+	s.caught = true
+	for _, id in ipairs(C.honks) do
+		WackyState.sound(id, nil, 1, false, 0.8 + math.random() * 0.3)
+	end
+	WackyState.sound(C.laughs[1], nil, 1, false, 0.7)
+	WackyState.sound(C.laughs[3], nil, 1, false, 0.75)
+	local screen = WackyState.overlay()
+	local red = Instance.new("Frame")
+	red.Size = UDim2.new(1, 0, 1, 0)
+	red.BackgroundColor3 = Color3.fromRGB(160, 0, 20)
+	red.BackgroundTransparency = 0.2
+	red.BorderSizePixel = 0
+	red.ZIndex = 80
+	red.Parent = screen
+	local honk = Instance.new("TextLabel")
+	honk.AnchorPoint = Vector2.new(0.5, 0.5)
+	honk.Position = UDim2.new(0.5, 0, 0.45, 0)
+	honk.Size = UDim2.new(0.9, 0, 0.22, 0)
+	honk.BackgroundTransparency = 1
+	honk.Font = WackyState.horrorFont and WackyState.horrorFont() or Enum.Font.FredokaOne
+	honk.TextScaled = true
+	honk.Text = "HONK HONK"
+	honk.TextColor3 = Color3.new(1, 1, 1)
+	honk.TextStrokeTransparency = 0
+	honk.ZIndex = 81
+	honk.Parent = screen
+	for _ = 1, 30 do
+		honk.Position = UDim2.new(0.5, math.random(-14, 14), 0.45, math.random(-14, 14))
+		honk.Rotation = math.random(-6, 6)
+		RunService.RenderStepped:Wait()
+	end
+	pcall(function()
+		local hum = speaker.Character and speaker.Character:FindFirstChildOfClass("Humanoid")
+		if hum then hum.Health = 0 end
+	end)
+	task.wait(2)
+	honk.Text = "the circus never ends..."
+	honk.Size = UDim2.new(0.7, 0, 0.1, 0)
+	TweenService:Create(red, TweenInfo.new(1), {BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0}):Play()
+	task.wait(2.5)
+	C.stop()
+	local hop = findCmd("shop") or findCmd("serverhop")
+	if hop then pcall(hop.FUNC, {}, speaker) end
+	task.wait(12)
+	honk.Text = "no other circus found... rejoining"
+	local rj = findCmd("rejoin")
+	if rj then pcall(rj.FUNC, {}, speaker) end
+	task.wait(15)
+	pcall(function() red:Destroy() end)
+	pcall(function() honk:Destroy() end)
+	notify('Clowns', 'Teleport failed, so you are still in this server.', 8)
+end
+
+addcmd('clown',{'clowns','circus'},function(args, speaker)
+	local C = NeverYieldClowns
+	if C.state then
+		notify('Clowns', 'The clowns are already coming. Use unclown to send them away.')
+		return
+	end
+	local s = {clowns = {}, start = tick(), nextSpawn = tick() + 1.5}
+	C.state = s
+	s.music = WackyState.sound(WackyState.pick(C.music), nil, 0, true)
+	TweenService:Create(s.music, TweenInfo.new(2), {Volume = 0.5}):Play()
+	s.cc = Instance.new("ColorCorrectionEffect")
+	s.cc.Name = randomString()
+	s.cc.Saturation = 0.25
+	s.cc.Contrast = 0.15
+	s.cc.Parent = Lighting
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	local function ground(x, z, fromY)
+		local hit = workspace:Raycast(Vector3.new(x, fromY + 20, z), Vector3.new(0, -80, 0), params)
+		return hit and hit.Position.Y or (fromY - 3)
+	end
+	WackyState.connect("clowns", RunService.Heartbeat:Connect(function(dt)
+		local now = tick()
+		local root = getRoot(speaker.Character)
+		if not root or s.caught then return end
+		local filter = {speaker.Character}
+		for _, c in ipairs(s.clowns) do table.insert(filter, c.model) end
+		params.FilterDescendantsInstances = filter
+		local elapsed = now - s.start
+		-- more clowns, more often
+		if now >= s.nextSpawn and #s.clowns < 30 then
+			s.nextSpawn = now + math.max(1.1, 3.2 - elapsed * 0.04)
+			for _ = 1, (elapsed > 40 and 2 or 1) do
+				local a = math.random() * math.pi * 2
+				local d = 45 + math.random() * 25
+				local x, z = root.Position.X + math.cos(a) * d, root.Position.Z + math.sin(a) * d
+				local model = C.make()
+				local pos = Vector3.new(x, ground(x, z, root.Position.Y), z)
+				model:PivotTo(CFrame.new(pos))
+				model.Parent = workspace
+				table.insert(s.clowns, {model = model, pos = pos, speed = 11 + math.random() * 4, seed = math.random() * 10, nextLaugh = now + math.random() * 6})
+				local laugh = WackyState.sound(WackyState.pick(C.laughs), model.PrimaryPart, 0.8, false, 0.75 + math.random() * 0.3)
+				laugh.RollOffMaxDistance = 120
+			end
+		end
+		-- chase
+		for _, c in ipairs(s.clowns) do
+			local flat = Vector3.new(root.Position.X - c.pos.X, 0, root.Position.Z - c.pos.Z)
+			local dist = flat.Magnitude
+			local speed = math.min(24, c.speed + elapsed * 0.08)
+			if dist > 0.1 then
+				local step = math.min(dist, speed * dt)
+				local nx, nz = c.pos.X + flat.Unit.X * step, c.pos.Z + flat.Unit.Z * step
+				c.pos = Vector3.new(nx, ground(nx, nz, root.Position.Y), nz)
+			end
+			local t = now * 9 + c.seed
+			local bob = math.abs(math.sin(t)) * 0.6
+			local face = Vector3.new(root.Position.X, c.pos.Y, root.Position.Z)
+			if (face - c.pos).Magnitude > 0.1 then
+				c.model:PivotTo(CFrame.lookAt(c.pos, face) * CFrame.new(0, bob, 0) * CFrame.Angles(0, 0, math.sin(t) * 0.12))
+			end
+			if now > c.nextLaugh and dist < 50 then
+				c.nextLaugh = now + 5 + math.random() * 8
+				local id = math.random() < 0.3 and WackyState.pick(C.honks) or WackyState.pick(C.laughs)
+				local snd = WackyState.sound(id, c.model.PrimaryPart, 0.7, false, 0.8 + math.random() * 0.3)
+				snd.RollOffMaxDistance = 90
+			end
+			if dist < 3.2 and not s.caught then
+				task.spawn(C.caught, speaker, s)
+				return
+			end
+		end
+	end))
+	notify('Clowns', 'Do you hear that music? RUN. (unclown to stop)', 8)
+end)
+
+addcmd('unclown',{'unclowns','nocircus'},function(args, speaker)
+	local s = NeverYieldClowns.state
+	if s and s.caught then return end
+	NeverYieldClowns.stop()
+end)
+
+table.insert(WackyState.undoList, 'unclown')
+-- ================== END CLOWNS ==================
 
 -- ==================== MIDAS & DIAMOND RUSH ====================
 WackyState.midasGold = Color3.fromRGB(255, 196, 48)
@@ -21461,10 +22941,10 @@ pcall(NeverYieldStats.start)
 -- ================== END NEVERYIELD STATS ==================
 
 -- ==================== NEVERYIELD PETS ====================
--- Pet Hub: collect, hatch, feed, level up, reskin and breed pets. Saved in NeverYield_pets.json
--- (executor workspace), only you see the pets. Pets are part models built from code, so they
--- need no uploaded assets.
-NeverYieldPets = {file = "NeverYield_pets.json", dirty = false, lastSave = 0, spawned = {}, maxPets = 60}
+-- Pet Hub: collect, hatch, feed, level up, reskin, dress up and breed pets. Saved in NeverYield_pets.json
+-- (executor workspace), only you see the pets. Pets are chibi part models built from code (no uploaded
+-- assets): species parts + a generated face (glossy eyes with highlights, blush, mouth) + optional hat.
+NeverYieldPets = {file = "NeverYield_pets.json", dirty = false, lastSave = 0, spawned = {}}
 
 NeverYieldPets.rarities = {
 	{id = "common", name = "Common", color = Color3.fromRGB(205, 205, 215), sell = 15},
@@ -21479,86 +22959,250 @@ for i, r in ipairs(NeverYieldPets.rarities) do
 	NeverYieldPets.rarityIndex[r.id] = i
 end
 
--- part = {shape, size, position, rotation (degrees), role}. Front of a pet is -Z.
--- shapes: Ball, Block, Ellipsoid (block + sphere mesh), Wedge. roles: main, accent, eye, light, fixed (keeps its colour)
+-- part = {shape, size, position, rotation (degrees), role, fixed colour}. Front of a pet is -Z.
+-- shapes: Ball, Block, Ellipsoid (block + sphere mesh), Wedge, Cylinder (axis = X).
+-- roles: main, accent (follow the skin), light (neon), fixed (own colour), fixedneon, glass (see-through white)
+-- face = {y, z (front of head), gap (half distance between eyes), e (eye size), blush, mouth = smile|w|o|none, style}
+-- hat = {y, z, s}: where hats sit (top of the head) and how big they are
 NeverYieldPets.species = {
-	{id = "blocky", name = "Blocky", rarity = "common", main = {120, 200, 255}, accent = {255, 255, 255}, parts = {
+	{id = "blocky", name = "Blocky", rarity = "common", main = {120, 200, 255}, accent = {255, 255, 255},
+		face = {y = 0.15, z = -0.8, gap = 0.34, e = 0.3, blush = true, mouth = "smile"}, hat = {y = 0.8, z = 0, s = 1.2}, parts = {
 		{"Block", {1.6, 1.6, 1.6}, {0, 0, 0}, nil, "main"},
-		{"Ball", {0.3, 0.3, 0.3}, {-0.35, 0.2, -0.8}, nil, "eye"}, {"Ball", {0.3, 0.3, 0.3}, {0.35, 0.2, -0.8}, nil, "eye"},
-		{"Block", {0.5, 0.08, 0.05}, {0, -0.25, -0.81}, nil, "eye"},
+		{"Block", {1.66, 0.12, 1.66}, {0, -0.55, 0}, nil, "accent"},
+		{"Block", {0.38, 0.25, 0.45}, {-0.45, -0.92, -0.3}, nil, "main"}, {"Block", {0.38, 0.25, 0.45}, {0.45, -0.92, -0.3}, nil, "main"},
+		{"Block", {0.38, 0.25, 0.45}, {-0.45, -0.92, 0.35}, nil, "main"}, {"Block", {0.38, 0.25, 0.45}, {0.45, -0.92, 0.35}, nil, "main"},
 	}},
-	{id = "slime", name = "Slime", rarity = "common", main = {110, 230, 120}, accent = {200, 255, 200}, glass = 0.25, parts = {
+	{id = "slime", name = "Slime", rarity = "common", main = {110, 230, 120}, accent = {200, 255, 200}, glass = 0.25,
+		face = {y = 0.0, z = -0.92, gap = 0.36, e = 0.3, blush = true, mouth = "w"}, hat = {y = 0.68, z = 0, s = 1.1}, parts = {
 		{"Ellipsoid", {2.0, 1.4, 2.0}, {0, -0.1, 0}, nil, "main"},
-		{"Ellipsoid", {0.9, 0.5, 0.9}, {0, 0.45, 0}, nil, "accent"},
-		{"Ball", {0.3, 0.3, 0.3}, {-0.35, 0.2, -0.85}, nil, "eye"}, {"Ball", {0.3, 0.3, 0.3}, {0.35, 0.2, -0.85}, nil, "eye"},
+		{"Ellipsoid", {1.1, 0.6, 1.1}, {0, 0.35, 0.05}, nil, "accent"},
+		{"Ellipsoid", {0.45, 0.25, 0.3}, {-0.45, 0.42, -0.55}, {0, 0, 20}, "glass"},
+		{"Ellipsoid", {0.5, 0.35, 0.5}, {0.65, -0.65, 0.5}, nil, "main"},
 	}},
-	{id = "bunny", name = "Bunny", rarity = "common", main = {245, 240, 235}, accent = {255, 170, 200}, parts = {
-		{"Ellipsoid", {1.4, 1.3, 1.5}, {0, -0.3, 0}, nil, "main"},
-		{"Ball", {1.1, 1.1, 1.1}, {0, 0.55, -0.4}, nil, "main"},
-		{"Ellipsoid", {0.28, 0.95, 0.16}, {-0.25, 1.4, -0.4}, {0, 0, 8}, "main"}, {"Ellipsoid", {0.28, 0.95, 0.16}, {0.25, 1.4, -0.4}, {0, 0, -8}, "main"},
-		{"Ellipsoid", {0.14, 0.6, 0.05}, {-0.25, 1.4, -0.49}, {0, 0, 8}, "accent"}, {"Ellipsoid", {0.14, 0.6, 0.05}, {0.25, 1.4, -0.49}, {0, 0, -8}, "accent"},
-		{"Ball", {0.45, 0.45, 0.45}, {0, -0.25, 0.8}, nil, "accent"},
-		{"Ball", {0.18, 0.18, 0.18}, {-0.22, 0.65, -0.92}, nil, "eye"}, {"Ball", {0.18, 0.18, 0.18}, {0.22, 0.65, -0.92}, nil, "eye"},
+	{id = "bunny", name = "Bunny", rarity = "common", main = {245, 240, 235}, accent = {255, 170, 200},
+		face = {y = 0.5, z = -0.74, gap = 0.27, e = 0.24, blush = true, mouth = "w"}, hat = {y = 1.05, z = -0.1, s = 1}, parts = {
+		{"Ellipsoid", {1.25, 1.05, 1.3}, {0, -0.5, 0.15}, nil, "main"},
+		{"Ball", {1.35, 1.35, 1.35}, {0, 0.42, -0.1}, nil, "main"},
+		{"Ellipsoid", {0.3, 1.0, 0.18}, {-0.28, 1.45, 0}, {0, 0, 10}, "main"}, {"Ellipsoid", {0.3, 1.0, 0.18}, {0.28, 1.45, 0}, {0, 0, -10}, "main"},
+		{"Ellipsoid", {0.16, 0.68, 0.06}, {-0.28, 1.45, -0.09}, {0, 0, 10}, "accent"}, {"Ellipsoid", {0.16, 0.68, 0.06}, {0.28, 1.45, -0.09}, {0, 0, -10}, "accent"},
+		{"Ellipsoid", {0.5, 0.35, 0.3}, {0, 0.2, -0.7}, nil, "main"},
+		{"Ball", {0.12, 0.12, 0.12}, {0, 0.3, -0.84}, nil, "fixed", {255, 140, 170}},
+		{"Ball", {0.45, 0.45, 0.45}, {0, -0.45, 0.8}, nil, "main"},
+		{"Ellipsoid", {0.38, 0.22, 0.5}, {-0.3, -1.0, -0.25}, nil, "main"}, {"Ellipsoid", {0.38, 0.22, 0.5}, {0.3, -1.0, -0.25}, nil, "main"},
+		{"Ellipsoid", {0.3, 0.3, 0.3}, {-0.5, -0.55, -0.35}, nil, "main"}, {"Ellipsoid", {0.3, 0.3, 0.3}, {0.5, -0.55, -0.35}, nil, "main"},
 	}},
-	{id = "cat", name = "Cat", rarity = "uncommon", main = {255, 170, 90}, accent = {255, 240, 220}, parts = {
-		{"Ellipsoid", {1.2, 1.0, 1.7}, {0, -0.35, 0.1}, nil, "main"},
-		{"Ball", {1.1, 1.1, 1.1}, {0, 0.4, -0.6}, nil, "main"},
-		{"Wedge", {0.3, 0.42, 0.35}, {-0.3, 1.02, -0.55}, {0, 90, 0}, "main"}, {"Wedge", {0.3, 0.42, 0.35}, {0.3, 1.02, -0.55}, {0, -90, 0}, "main"},
-		{"Ellipsoid", {0.55, 0.4, 0.3}, {0, 0.25, -1.08}, nil, "accent"},
-		{"Ellipsoid", {0.18, 0.95, 0.18}, {0, 0.15, 1.0}, {-30, 0, 0}, "main"},
-		{"Ball", {0.2, 0.2, 0.2}, {-0.24, 0.5, -1.1}, nil, "eye"}, {"Ball", {0.2, 0.2, 0.2}, {0.24, 0.5, -1.1}, nil, "eye"},
+	{id = "hamster", name = "Hamster", rarity = "common", main = {235, 170, 100}, accent = {255, 240, 220},
+		face = {y = 0.3, z = -0.78, gap = 0.28, e = 0.22, blush = true, mouth = "w"}, hat = {y = 0.75, z = 0, s = 1}, parts = {
+		{"Ellipsoid", {1.65, 1.45, 1.65}, {0, -0.1, 0}, nil, "main"},
+		{"Ellipsoid", {1.1, 0.95, 0.45}, {0, -0.25, -0.62}, nil, "accent"},
+		{"Ellipsoid", {0.5, 0.38, 0.35}, {-0.42, 0.05, -0.6}, nil, "accent"}, {"Ellipsoid", {0.5, 0.38, 0.35}, {0.42, 0.05, -0.6}, nil, "accent"},
+		{"Ball", {0.38, 0.38, 0.38}, {-0.48, 0.62, -0.05}, nil, "main"}, {"Ball", {0.38, 0.38, 0.38}, {0.48, 0.62, -0.05}, nil, "main"},
+		{"Ball", {0.22, 0.22, 0.22}, {-0.48, 0.64, -0.14}, nil, "fixed", {255, 160, 180}}, {"Ball", {0.22, 0.22, 0.22}, {0.48, 0.64, -0.14}, nil, "fixed", {255, 160, 180}},
+		{"Ball", {0.12, 0.12, 0.12}, {0, 0.15, -0.86}, nil, "fixed", {255, 130, 160}},
+		{"Ellipsoid", {0.3, 0.2, 0.35}, {-0.38, -0.82, -0.35}, nil, "fixed", {255, 180, 190}}, {"Ellipsoid", {0.3, 0.2, 0.35}, {0.38, -0.82, -0.35}, nil, "fixed", {255, 180, 190}},
+		{"Ellipsoid", {0.22, 0.28, 0.2}, {-0.3, -0.3, -0.85}, nil, "fixed", {255, 180, 190}}, {"Ellipsoid", {0.22, 0.28, 0.2}, {0.3, -0.3, -0.85}, nil, "fixed", {255, 180, 190}},
 	}},
-	{id = "dog", name = "Dog", rarity = "uncommon", main = {200, 150, 100}, accent = {120, 80, 50}, parts = {
-		{"Ellipsoid", {1.3, 1.1, 1.8}, {0, -0.35, 0.1}, nil, "main"},
-		{"Ball", {1.15, 1.15, 1.15}, {0, 0.45, -0.65}, nil, "main"},
-		{"Ellipsoid", {0.55, 0.42, 0.55}, {0, 0.3, -1.2}, nil, "main"},
-		{"Ball", {0.2, 0.2, 0.2}, {0, 0.42, -1.48}, nil, "eye"},
-		{"Ellipsoid", {0.25, 0.75, 0.42}, {-0.58, 0.35, -0.6}, {0, 0, 15}, "accent"}, {"Ellipsoid", {0.25, 0.75, 0.42}, {0.58, 0.35, -0.6}, {0, 0, -15}, "accent"},
-		{"Ellipsoid", {0.18, 0.7, 0.18}, {0, 0.1, 1.05}, {-40, 0, 0}, "accent"},
-		{"Ball", {0.2, 0.2, 0.2}, {-0.25, 0.6, -1.15}, nil, "eye"}, {"Ball", {0.2, 0.2, 0.2}, {0.25, 0.6, -1.15}, nil, "eye"},
+	{id = "duck", name = "Duck", rarity = "common", main = {255, 225, 80}, accent = {255, 245, 180},
+		face = {y = 0.65, z = -0.78, gap = 0.26, e = 0.2, blush = true, mouth = "none"}, hat = {y = 1.08, z = -0.3, s = 0.9}, parts = {
+		{"Ellipsoid", {1.3, 1.1, 1.55}, {0, -0.45, 0.1}, nil, "main"},
+		{"Ball", {1.1, 1.1, 1.1}, {0, 0.55, -0.3}, nil, "main"},
+		{"Ellipsoid", {0.6, 0.16, 0.55}, {0, 0.44, -0.9}, nil, "fixed", {255, 150, 40}},
+		{"Ellipsoid", {0.5, 0.12, 0.45}, {0, 0.34, -0.86}, nil, "fixed", {240, 120, 30}},
+		{"Ellipsoid", {0.25, 0.7, 0.95}, {-0.68, -0.35, 0.15}, {10, 0, 10}, "accent"}, {"Ellipsoid", {0.25, 0.7, 0.95}, {0.68, -0.35, 0.15}, {10, 0, -10}, "accent"},
+		{"Ellipsoid", {0.4, 0.35, 0.3}, {0, -0.15, 0.85}, {-30, 0, 0}, "main"},
+		{"Ellipsoid", {0.2, 0.3, 0.1}, {0, 1.12, -0.35}, {-20, 0, 0}, "main"},
+		{"Ellipsoid", {0.45, 0.1, 0.55}, {-0.3, -1.02, -0.2}, nil, "fixed", {255, 150, 40}}, {"Ellipsoid", {0.45, 0.1, 0.55}, {0.3, -1.02, -0.2}, nil, "fixed", {255, 150, 40}},
 	}},
-	{id = "penguin", name = "Penguin", rarity = "uncommon", main = {35, 40, 55}, accent = {250, 250, 255}, parts = {
-		{"Ellipsoid", {1.4, 1.8, 1.3}, {0, 0, 0}, nil, "main"},
-		{"Ellipsoid", {1.0, 1.35, 0.4}, {0, -0.12, -0.5}, nil, "accent"},
-		{"Ellipsoid", {0.38, 0.16, 0.42}, {0, 0.42, -0.75}, nil, "fixed", {255, 170, 40}},
-		{"Ellipsoid", {0.2, 1.0, 0.6}, {-0.75, 0, 0}, {0, 0, 15}, "main"}, {"Ellipsoid", {0.2, 1.0, 0.6}, {0.75, 0, 0}, {0, 0, -15}, "main"},
-		{"Ball", {0.2, 0.2, 0.2}, {-0.25, 0.62, -0.6}, nil, "eye"}, {"Ball", {0.2, 0.2, 0.2}, {0.25, 0.62, -0.6}, nil, "eye"},
+	{id = "cat", name = "Cat", rarity = "uncommon", main = {255, 170, 90}, accent = {255, 240, 220},
+		face = {y = 0.52, z = -0.74, gap = 0.29, e = 0.25, blush = true, mouth = "w"}, hat = {y = 1.05, z = -0.1, s = 1}, parts = {
+		{"Ellipsoid", {1.2, 1.0, 1.45}, {0, -0.5, 0.2}, nil, "main"},
+		{"Ball", {1.35, 1.35, 1.35}, {0, 0.42, -0.1}, nil, "main"},
+		{"Wedge", {0.34, 0.5, 0.4}, {-0.36, 1.12, -0.05}, {0, 90, 0}, "main"}, {"Wedge", {0.34, 0.5, 0.4}, {0.36, 1.12, -0.05}, {0, -90, 0}, "main"},
+		{"Wedge", {0.2, 0.3, 0.24}, {-0.36, 1.06, -0.12}, {0, 90, 0}, "fixed", {255, 170, 190}}, {"Wedge", {0.2, 0.3, 0.24}, {0.36, 1.06, -0.12}, {0, -90, 0}, "fixed", {255, 170, 190}},
+		{"Ellipsoid", {0.6, 0.38, 0.3}, {0, 0.22, -0.72}, nil, "accent"},
+		{"Ball", {0.12, 0.12, 0.12}, {0, 0.36, -0.87}, nil, "fixed", {255, 130, 160}},
+		{"Ellipsoid", {0.18, 0.55, 0.18}, {0, -0.25, 0.95}, {-35, 0, 0}, "main"},
+		{"Ellipsoid", {0.18, 0.55, 0.18}, {0, 0.2, 1.15}, {-5, 0, 0}, "main"},
+		{"Ellipsoid", {0.2, 0.3, 0.2}, {0, 0.55, 1.12}, {20, 0, 0}, "accent"},
+		{"Ellipsoid", {0.32, 0.22, 0.42}, {-0.3, -1.0, -0.25}, nil, "accent"}, {"Ellipsoid", {0.32, 0.22, 0.42}, {0.3, -1.0, -0.25}, nil, "accent"},
+		{"Ellipsoid", {0.32, 0.22, 0.42}, {-0.3, -1.0, 0.55}, nil, "main"}, {"Ellipsoid", {0.32, 0.22, 0.42}, {0.3, -1.0, 0.55}, nil, "main"},
 	}},
-	{id = "ghost", name = "Ghost", rarity = "rare", main = {240, 245, 255}, accent = {200, 210, 255}, glass = 0.3, parts = {
-		{"Ball", {1.5, 1.5, 1.5}, {0, 0.3, 0}, nil, "main"},
-		{"Ellipsoid", {1.45, 1.5, 1.45}, {0, -0.35, 0}, nil, "main"},
-		{"Ellipsoid", {0.5, 0.5, 0.5}, {0, -1.05, 0.1}, nil, "accent"},
-		{"Ellipsoid", {0.26, 0.42, 0.1}, {-0.3, 0.42, -0.72}, nil, "eye"}, {"Ellipsoid", {0.26, 0.42, 0.1}, {0.3, 0.42, -0.72}, nil, "eye"},
-		{"Ellipsoid", {0.3, 0.22, 0.1}, {0, 0.05, -0.74}, nil, "eye"},
+	{id = "dog", name = "Dog", rarity = "uncommon", main = {205, 155, 105}, accent = {120, 80, 50},
+		face = {y = 0.55, z = -0.74, gap = 0.3, e = 0.25, blush = true, mouth = "smile"}, hat = {y = 1.08, z = -0.1, s = 1}, parts = {
+		{"Ellipsoid", {1.3, 1.05, 1.55}, {0, -0.5, 0.2}, nil, "main"},
+		{"Ball", {1.38, 1.38, 1.38}, {0, 0.42, -0.1}, nil, "main"},
+		{"Ellipsoid", {0.68, 0.45, 0.42}, {0, 0.18, -0.72}, nil, "fixed", {245, 225, 200}},
+		{"Ellipsoid", {0.24, 0.18, 0.16}, {0, 0.36, -0.94}, nil, "fixed", {30, 25, 25}},
+		{"Ellipsoid", {0.2, 0.12, 0.2}, {0.08, -0.02, -0.86}, {20, 0, 0}, "fixed", {255, 120, 140}},
+		{"Ellipsoid", {0.3, 0.8, 0.5}, {-0.7, 0.35, -0.05}, {0, 0, 18}, "accent"}, {"Ellipsoid", {0.3, 0.8, 0.5}, {0.7, 0.35, -0.05}, {0, 0, -18}, "accent"},
+		{"Ellipsoid", {0.2, 0.6, 0.2}, {0, -0.15, 1.0}, {-50, 0, 0}, "main"},
+		{"Ellipsoid", {0.34, 0.24, 0.44}, {-0.32, -1.0, -0.25}, nil, "main"}, {"Ellipsoid", {0.34, 0.24, 0.44}, {0.32, -1.0, -0.25}, nil, "main"},
+		{"Ellipsoid", {0.34, 0.24, 0.44}, {-0.32, -1.0, 0.6}, nil, "main"}, {"Ellipsoid", {0.34, 0.24, 0.44}, {0.32, -1.0, 0.6}, nil, "main"},
 	}},
-	{id = "robot", name = "Robot", rarity = "rare", main = {170, 180, 195}, accent = {80, 90, 110}, parts = {
-		{"Block", {1.4, 1.2, 1.0}, {0, -0.35, 0}, nil, "main"},
-		{"Block", {1.1, 0.9, 0.9}, {0, 0.72, 0}, nil, "main"},
-		{"Block", {0.9, 0.25, 0.06}, {0, 0.78, -0.47}, nil, "light"},
-		{"Block", {0.9, 0.5, 0.06}, {0, -0.3, -0.52}, nil, "accent"},
-		{"Block", {0.08, 0.5, 0.08}, {0, 1.4, 0}, nil, "accent"},
-		{"Ball", {0.28, 0.28, 0.28}, {0, 1.72, 0}, nil, "light"},
-		{"Block", {0.25, 0.8, 0.25}, {-0.85, -0.35, 0}, nil, "accent"}, {"Block", {0.25, 0.8, 0.25}, {0.85, -0.35, 0}, nil, "accent"},
+	{id = "penguin", name = "Penguin", rarity = "uncommon", main = {35, 40, 55}, accent = {250, 250, 255},
+		face = {y = 0.55, z = -0.66, gap = 0.27, e = 0.22, blush = true, mouth = "none"}, hat = {y = 0.95, z = 0, s = 1}, parts = {
+		{"Ellipsoid", {1.5, 1.95, 1.4}, {0, 0, 0}, nil, "main"},
+		{"Ellipsoid", {1.05, 1.45, 0.45}, {0, -0.15, -0.52}, nil, "accent"},
+		{"Ellipsoid", {0.95, 0.5, 0.3}, {0, 0.5, -0.5}, nil, "accent"},
+		{"Ellipsoid", {0.4, 0.16, 0.42}, {0, 0.36, -0.78}, nil, "fixed", {255, 170, 40}},
+		{"Ellipsoid", {0.2, 1.0, 0.6}, {-0.78, -0.05, 0}, {0, 0, 18}, "main"}, {"Ellipsoid", {0.2, 1.0, 0.6}, {0.78, -0.05, 0}, {0, 0, -18}, "main"},
+		{"Ellipsoid", {0.42, 0.12, 0.55}, {-0.3, -1.0, -0.25}, nil, "fixed", {255, 170, 40}}, {"Ellipsoid", {0.42, 0.12, 0.55}, {0.3, -1.0, -0.25}, nil, "fixed", {255, 170, 40}},
 	}},
-	{id = "fox", name = "Fox", rarity = "epic", main = {255, 120, 40}, accent = {255, 250, 245}, parts = {
-		{"Ellipsoid", {1.2, 1.0, 1.7}, {0, -0.35, 0.1}, nil, "main"},
-		{"Ball", {1.05, 1.05, 1.05}, {0, 0.4, -0.6}, nil, "main"},
-		{"Ellipsoid", {0.5, 0.36, 0.6}, {0, 0.25, -1.12}, nil, "accent"},
-		{"Wedge", {0.3, 0.55, 0.4}, {-0.3, 1.05, -0.55}, {0, 90, 0}, "main"}, {"Wedge", {0.3, 0.55, 0.4}, {0.3, 1.05, -0.55}, {0, -90, 0}, "main"},
-		{"Ellipsoid", {0.55, 0.55, 1.4}, {0, 0.1, 1.15}, {25, 0, 0}, "main"},
-		{"Ellipsoid", {0.42, 0.42, 0.5}, {0, 0.38, 1.75}, {25, 0, 0}, "accent"},
-		{"Ball", {0.16, 0.16, 0.16}, {0, 0.32, -1.42}, nil, "eye"},
-		{"Ball", {0.19, 0.19, 0.19}, {-0.23, 0.52, -1.08}, nil, "eye"}, {"Ball", {0.19, 0.19, 0.19}, {0.23, 0.52, -1.08}, nil, "eye"},
+	{id = "frog", name = "Frog", rarity = "uncommon", main = {90, 200, 90}, accent = {220, 250, 180},
+		face = {y = 0.62, z = -0.48, gap = 0.42, e = 0.27, blush = true, mouth = "none"}, hat = {y = 0.55, z = 0, s = 1.1}, parts = {
+		{"Ellipsoid", {1.7, 1.05, 1.5}, {0, -0.3, 0}, nil, "main"},
+		{"Ellipsoid", {1.3, 0.6, 0.5}, {0, -0.45, -0.55}, nil, "accent"},
+		{"Ball", {0.62, 0.62, 0.62}, {-0.42, 0.4, -0.25}, nil, "main"}, {"Ball", {0.62, 0.62, 0.62}, {0.42, 0.4, -0.25}, nil, "main"},
+		{"Ellipsoid", {0.9, 0.08, 0.1}, {0, -0.12, -0.72}, nil, "fixed", {60, 30, 30}},
+		{"Ellipsoid", {0.45, 0.2, 0.75}, {-0.65, -0.75, 0.25}, nil, "main"}, {"Ellipsoid", {0.45, 0.2, 0.75}, {0.65, -0.75, 0.25}, nil, "main"},
+		{"Ellipsoid", {0.32, 0.12, 0.42}, {-0.45, -0.82, -0.45}, nil, "main"}, {"Ellipsoid", {0.32, 0.12, 0.42}, {0.45, -0.82, -0.45}, nil, "main"},
 	}},
-	{id = "dragon", name = "Dragon", rarity = "legendary", main = {90, 200, 120}, accent = {255, 210, 90}, parts = {
-		{"Ellipsoid", {1.4, 1.2, 1.9}, {0, -0.25, 0.1}, nil, "main"},
-		{"Ellipsoid", {1.0, 0.9, 1.2}, {0, 0.6, -0.8}, nil, "main"},
-		{"Ellipsoid", {0.6, 0.45, 0.6}, {0, 0.45, -1.4}, nil, "main"},
-		{"Wedge", {0.15, 0.45, 0.3}, {-0.25, 1.15, -0.6}, nil, "accent"}, {"Wedge", {0.15, 0.45, 0.3}, {0.25, 1.15, -0.6}, nil, "accent"},
-		{"Wedge", {0.1, 1.0, 1.4}, {-0.95, 0.45, 0.2}, {0, 0, 35}, "accent"}, {"Wedge", {0.1, 1.0, 1.4}, {0.95, 0.45, 0.2}, {0, 0, -35}, "accent"},
-		{"Ellipsoid", {0.35, 0.35, 1.3}, {0, -0.25, 1.4}, {15, 0, 0}, "main"},
-		{"Ellipsoid", {0.6, 0.35, 0.9}, {0, -0.45, -0.1}, nil, "accent"},
-		{"Ball", {0.2, 0.2, 0.2}, {-0.25, 0.78, -1.32}, nil, "light"}, {"Ball", {0.2, 0.2, 0.2}, {0.25, 0.78, -1.32}, nil, "light"},
+	{id = "bee", name = "Bee", rarity = "uncommon", main = {255, 210, 50}, accent = {35, 30, 30},
+		face = {y = 0.32, z = -1.2, gap = 0.2, e = 0.17, blush = true, mouth = "smile"}, hat = {y = 0.78, z = -0.75, s = 0.8}, parts = {
+		{"Ellipsoid", {1.3, 1.2, 1.5}, {0, -0.1, 0.2}, nil, "main"},
+		{"Ellipsoid", {1.34, 1.24, 0.28}, {0, -0.1, 0.15}, nil, "accent"},
+		{"Ellipsoid", {1.18, 1.1, 0.28}, {0, -0.1, 0.55}, nil, "accent"},
+		{"Ball", {1.0, 1.0, 1.0}, {0, 0.25, -0.72}, nil, "main"},
+		{"Block", {0.05, 0.5, 0.05}, {-0.22, 0.85, -0.85}, {-20, 0, 15}, "accent"}, {"Block", {0.05, 0.5, 0.05}, {0.22, 0.85, -0.85}, {-20, 0, -15}, "accent"},
+		{"Ball", {0.14, 0.14, 0.14}, {-0.3, 1.08, -0.94}, nil, "accent"}, {"Ball", {0.14, 0.14, 0.14}, {0.3, 1.08, -0.94}, nil, "accent"},
+		{"Ellipsoid", {0.12, 0.85, 0.6}, {-0.45, 0.7, 0.3}, {15, 0, 30}, "glass"}, {"Ellipsoid", {0.12, 0.85, 0.6}, {0.45, 0.7, 0.3}, {15, 0, -30}, "glass"},
+		{"Wedge", {0.12, 0.3, 0.3}, {0, -0.15, 1.05}, {-90, 0, 0}, "accent"},
+	}},
+	{id = "ghost", name = "Ghost", rarity = "rare", main = {240, 245, 255}, accent = {200, 210, 255}, glass = 0.3,
+		face = {y = 0.4, z = -0.74, gap = 0.3, e = 0.3, blush = true, mouth = "o"}, hat = {y = 1.05, z = 0, s = 1.1}, parts = {
+		{"Ball", {1.55, 1.55, 1.55}, {0, 0.3, 0}, nil, "main"},
+		{"Ellipsoid", {1.5, 1.4, 1.5}, {0, -0.35, 0}, nil, "main"},
+		{"Ellipsoid", {0.5, 0.55, 0.5}, {-0.45, -1.0, 0.1}, nil, "main"}, {"Ellipsoid", {0.5, 0.55, 0.5}, {0.45, -1.0, 0.1}, nil, "main"},
+		{"Ellipsoid", {0.5, 0.6, 0.5}, {0, -1.05, -0.3}, nil, "main"}, {"Ellipsoid", {0.5, 0.6, 0.5}, {0, -1.0, 0.5}, nil, "main"},
+		{"Ellipsoid", {0.28, 0.6, 0.28}, {-0.85, -0.1, -0.1}, {0, 0, 35}, "main"}, {"Ellipsoid", {0.28, 0.6, 0.28}, {0.85, -0.1, -0.1}, {0, 0, -35}, "main"},
+	}},
+	{id = "robot", name = "Robot", rarity = "rare", main = {175, 185, 200}, accent = {80, 90, 110},
+		face = {y = 0.78, z = -0.5, gap = 0.22, e = 0.24, blush = true, mouth = "smile", style = "robot"}, hat = {y = 1.2, z = 0, s = 1}, parts = {
+		{"Block", {1.3, 1.1, 1.0}, {0, -0.4, 0}, nil, "main"},
+		{"Block", {1.2, 1.0, 1.0}, {0, 0.72, 0}, nil, "main"},
+		{"Block", {0.98, 0.62, 0.06}, {0, 0.75, -0.5}, nil, "fixed", {20, 25, 35}},
+		{"Block", {0.8, 0.45, 0.06}, {0, -0.35, -0.52}, nil, "accent"},
+		{"Ball", {0.14, 0.14, 0.14}, {-0.2, -0.3, -0.56}, nil, "light"}, {"Ball", {0.14, 0.14, 0.14}, {0.2, -0.3, -0.56}, nil, "fixedneon", {255, 80, 80}},
+		{"Block", {0.08, 0.45, 0.08}, {0, 1.4, 0}, nil, "accent"},
+		{"Ball", {0.28, 0.28, 0.28}, {0, 1.7, 0}, nil, "light"},
+		{"Cylinder", {0.1, 0.4, 0.4}, {-0.65, 0.72, 0}, nil, "accent"}, {"Cylinder", {0.1, 0.4, 0.4}, {0.65, 0.72, 0}, nil, "accent"},
+		{"Block", {0.22, 0.7, 0.22}, {-0.8, -0.4, 0}, {0, 0, 10}, "accent"}, {"Block", {0.22, 0.7, 0.22}, {0.8, -0.4, 0}, {0, 0, -10}, "accent"},
+		{"Ball", {0.3, 0.3, 0.3}, {-0.86, -0.8, 0}, nil, "main"}, {"Ball", {0.3, 0.3, 0.3}, {0.86, -0.8, 0}, nil, "main"},
+		{"Cylinder", {0.3, 0.45, 0.45}, {-0.38, -1.0, 0}, nil, "accent"}, {"Cylinder", {0.3, 0.45, 0.45}, {0.38, -1.0, 0}, nil, "accent"},
+	}},
+	{id = "panda", name = "Panda", rarity = "rare", main = {245, 245, 245}, accent = {30, 30, 35},
+		face = {y = 0.5, z = -0.76, gap = 0.3, e = 0.24, blush = true, mouth = "w"}, hat = {y = 1.08, z = -0.1, s = 1}, parts = {
+		{"Ellipsoid", {1.4, 1.2, 1.4}, {0, -0.45, 0.15}, nil, "main"},
+		{"Ball", {1.42, 1.42, 1.42}, {0, 0.42, -0.1}, nil, "main"},
+		{"Ball", {0.42, 0.42, 0.42}, {-0.5, 1.0, -0.05}, nil, "accent"}, {"Ball", {0.42, 0.42, 0.42}, {0.5, 1.0, -0.05}, nil, "accent"},
+		{"Ellipsoid", {0.42, 0.52, 0.25}, {-0.3, 0.46, -0.66}, {0, 0, -25}, "accent"}, {"Ellipsoid", {0.42, 0.52, 0.25}, {0.3, 0.46, -0.66}, {0, 0, 25}, "accent"},
+		{"Ellipsoid", {0.5, 0.32, 0.25}, {0, 0.18, -0.74}, nil, "main"},
+		{"Ellipsoid", {0.2, 0.14, 0.12}, {0, 0.28, -0.86}, nil, "accent"},
+		{"Ellipsoid", {0.36, 0.6, 0.36}, {-0.62, -0.35, -0.3}, {20, 0, 20}, "accent"}, {"Ellipsoid", {0.36, 0.6, 0.36}, {0.62, -0.35, -0.3}, {20, 0, -20}, "accent"},
+		{"Ellipsoid", {0.4, 0.3, 0.5}, {-0.35, -1.0, -0.15}, nil, "accent"}, {"Ellipsoid", {0.4, 0.3, 0.5}, {0.35, -1.0, -0.15}, nil, "accent"},
+		{"Ball", {0.3, 0.3, 0.3}, {0, -0.4, 0.82}, nil, "main"},
+	}},
+	{id = "owl", name = "Owl", rarity = "rare", main = {150, 105, 70}, accent = {240, 220, 190},
+		face = {y = 0.45, z = -0.7, gap = 0.3, e = 0.3, blush = true, mouth = "none"}, hat = {y = 1.0, z = 0, s = 1}, parts = {
+		{"Ellipsoid", {1.45, 1.75, 1.35}, {0, 0, 0}, nil, "main"},
+		{"Ellipsoid", {1.0, 1.0, 0.4}, {0, -0.3, -0.52}, nil, "accent"},
+		{"Ellipsoid", {0.6, 0.6, 0.12}, {-0.3, 0.45, -0.62}, nil, "fixed", {255, 245, 225}}, {"Ellipsoid", {0.6, 0.6, 0.12}, {0.3, 0.45, -0.62}, nil, "fixed", {255, 245, 225}},
+		{"Ellipsoid", {0.18, 0.25, 0.18}, {0, 0.18, -0.76}, {20, 0, 0}, "fixed", {255, 170, 40}},
+		{"Wedge", {0.16, 0.42, 0.3}, {-0.45, 0.95, -0.1}, {0, 90, -15}, "main"}, {"Wedge", {0.16, 0.42, 0.3}, {0.45, 0.95, -0.1}, {0, -90, 15}, "main"},
+		{"Ellipsoid", {0.25, 1.1, 0.7}, {-0.75, -0.05, 0.1}, {0, 0, 12}, "main"}, {"Ellipsoid", {0.25, 1.1, 0.7}, {0.75, -0.05, 0.1}, {0, 0, -12}, "main"},
+		{"Ellipsoid", {0.3, 0.12, 0.35}, {-0.28, -0.9, -0.3}, nil, "fixed", {255, 170, 40}}, {"Ellipsoid", {0.3, 0.12, 0.35}, {0.28, -0.9, -0.3}, nil, "fixed", {255, 170, 40}},
+	}},
+	{id = "octopus", name = "Octopus", rarity = "rare", main = {255, 120, 150}, accent = {255, 200, 215},
+		face = {y = 0.15, z = -0.78, gap = 0.3, e = 0.27, blush = true, mouth = "o"}, hat = {y = 1.05, z = 0, s = 1.1}, parts = {
+		{"Ellipsoid", {1.65, 1.6, 1.65}, {0, 0.25, 0}, nil, "main"},
+		{"Ellipsoid", {0.35, 0.22, 0.2}, {-0.5, 0.6, -0.6}, nil, "accent"}, {"Ellipsoid", {0.25, 0.16, 0.15}, {0.45, 0.75, -0.55}, nil, "accent"},
+		{"Ellipsoid", {0.3, 0.8, 0.3}, {-0.62, -0.6, -0.35}, {-15, 0, -25}, "main"}, {"Ellipsoid", {0.3, 0.8, 0.3}, {0.62, -0.6, -0.35}, {-15, 0, 25}, "main"},
+		{"Ellipsoid", {0.3, 0.8, 0.3}, {-0.72, -0.6, 0.25}, {15, 0, -30}, "main"}, {"Ellipsoid", {0.3, 0.8, 0.3}, {0.72, -0.6, 0.25}, {15, 0, 30}, "main"},
+		{"Ellipsoid", {0.3, 0.8, 0.3}, {-0.25, -0.7, 0.62}, {30, 0, -10}, "main"}, {"Ellipsoid", {0.3, 0.8, 0.3}, {0.25, -0.7, 0.62}, {30, 0, 10}, "main"},
+		{"Ball", {0.3, 0.3, 0.3}, {-0.85, -1.0, -0.45}, nil, "accent"}, {"Ball", {0.3, 0.3, 0.3}, {0.85, -1.0, -0.45}, nil, "accent"},
+	}},
+	{id = "fox", name = "Fox", rarity = "epic", main = {255, 125, 45}, accent = {255, 250, 245},
+		face = {y = 0.52, z = -0.72, gap = 0.29, e = 0.25, blush = true, mouth = "w"}, hat = {y = 1.05, z = -0.1, s = 1}, parts = {
+		{"Ellipsoid", {1.2, 1.0, 1.45}, {0, -0.5, 0.2}, nil, "main"},
+		{"Ellipsoid", {0.8, 0.7, 0.5}, {0, -0.45, -0.38}, nil, "accent"},
+		{"Ball", {1.32, 1.32, 1.32}, {0, 0.42, -0.1}, nil, "main"},
+		{"Ellipsoid", {0.62, 0.38, 0.4}, {0, 0.2, -0.72}, nil, "accent"},
+		{"Ball", {0.13, 0.13, 0.13}, {0, 0.3, -0.92}, nil, "fixed", {30, 25, 25}},
+		{"Wedge", {0.36, 0.62, 0.45}, {-0.38, 1.18, -0.05}, {0, 90, 0}, "main"}, {"Wedge", {0.36, 0.62, 0.45}, {0.38, 1.18, -0.05}, {0, -90, 0}, "main"},
+		{"Wedge", {0.2, 0.36, 0.26}, {-0.38, 1.1, -0.13}, {0, 90, 0}, "fixed", {40, 30, 30}}, {"Wedge", {0.2, 0.36, 0.26}, {0.38, 1.1, -0.13}, {0, -90, 0}, "fixed", {40, 30, 30}},
+		{"Ellipsoid", {0.5, 0.5, 0.9}, {0, -0.25, 0.95}, {30, 0, 0}, "main"},
+		{"Ellipsoid", {0.6, 0.6, 0.9}, {0, 0.15, 1.45}, {5, 0, 0}, "main"},
+		{"Ellipsoid", {0.48, 0.48, 0.55}, {0, 0.45, 1.85}, {-20, 0, 0}, "accent"},
+		{"Ellipsoid", {0.3, 0.22, 0.42}, {-0.28, -1.0, -0.2}, nil, "fixed", {50, 35, 30}}, {"Ellipsoid", {0.3, 0.22, 0.42}, {0.28, -1.0, -0.2}, nil, "fixed", {50, 35, 30}},
+		{"Ellipsoid", {0.3, 0.22, 0.42}, {-0.28, -1.0, 0.55}, nil, "fixed", {50, 35, 30}}, {"Ellipsoid", {0.3, 0.22, 0.42}, {0.28, -1.0, 0.55}, nil, "fixed", {50, 35, 30}},
+	}},
+	{id = "axolotl", name = "Axolotl", rarity = "epic", main = {255, 170, 200}, accent = {255, 90, 150},
+		face = {y = 0.25, z = -1.08, gap = 0.38, e = 0.2, blush = true, mouth = "smile"}, hat = {y = 0.75, z = -0.55, s = 1}, parts = {
+		{"Ellipsoid", {1.3, 0.9, 1.9}, {0, -0.35, 0.3}, nil, "main"},
+		{"Ellipsoid", {1.45, 1.05, 1.15}, {0, 0.15, -0.55}, nil, "main"},
+		{"Ellipsoid", {0.12, 0.5, 0.15}, {-0.8, 0.45, -0.45}, {0, 0, 50}, "accent"}, {"Ellipsoid", {0.12, 0.5, 0.15}, {0.8, 0.45, -0.45}, {0, 0, -50}, "accent"},
+		{"Ellipsoid", {0.12, 0.5, 0.15}, {-0.85, 0.2, -0.45}, {0, 0, 75}, "accent"}, {"Ellipsoid", {0.12, 0.5, 0.15}, {0.85, 0.2, -0.45}, {0, 0, -75}, "accent"},
+		{"Ellipsoid", {0.12, 0.45, 0.15}, {-0.8, -0.05, -0.45}, {0, 0, 105}, "accent"}, {"Ellipsoid", {0.12, 0.45, 0.15}, {0.8, -0.05, -0.45}, {0, 0, -105}, "accent"},
+		{"Ellipsoid", {0.14, 0.75, 1.3}, {0, -0.1, 1.5}, {10, 0, 0}, "accent"},
+		{"Ellipsoid", {0.25, 0.2, 0.45}, {-0.55, -0.75, -0.2}, nil, "main"}, {"Ellipsoid", {0.25, 0.2, 0.45}, {0.55, -0.75, -0.2}, nil, "main"},
+		{"Ellipsoid", {0.25, 0.2, 0.45}, {-0.55, -0.75, 0.75}, nil, "main"}, {"Ellipsoid", {0.25, 0.2, 0.45}, {0.55, -0.75, 0.75}, nil, "main"},
+	}},
+	{id = "shark", name = "Shark", rarity = "epic", main = {120, 145, 175}, accent = {245, 245, 250},
+		face = {y = 0.25, z = -0.98, gap = 0.36, e = 0.18, blush = true, mouth = "none"}, hat = {y = 0.68, z = -0.5, s = 1}, parts = {
+		{"Ellipsoid", {1.3, 1.2, 2.5}, {0, 0, 0.2}, nil, "main"},
+		{"Ellipsoid", {1.0, 0.6, 1.9}, {0, -0.3, 0.05}, nil, "accent"},
+		{"Wedge", {0.14, 0.75, 0.75}, {0, 0.8, 0.35}, nil, "main"},
+		{"Wedge", {0.12, 0.45, 0.6}, {-0.7, -0.3, -0.05}, {0, 0, 70}, "main"}, {"Wedge", {0.12, 0.45, 0.6}, {0.7, -0.3, -0.05}, {0, 0, -70}, "main"},
+		{"Wedge", {0.12, 0.6, 0.5}, {0, 0.35, 1.6}, {0, 180, 0}, "main"}, {"Wedge", {0.12, 0.5, 0.45}, {0, -0.2, 1.6}, {180, 180, 0}, "main"},
+		{"Ellipsoid", {0.65, 0.12, 0.1}, {0, -0.1, -0.98}, nil, "fixed", {60, 30, 35}},
+		{"Wedge", {0.08, 0.12, 0.08}, {-0.15, -0.06, -1.0}, {180, 0, 0}, "fixed", {255, 255, 255}}, {"Wedge", {0.08, 0.12, 0.08}, {0.15, -0.06, -1.0}, {180, 0, 0}, "fixed", {255, 255, 255}},
+		{"Wedge", {0.08, 0.12, 0.08}, {0, -0.06, -1.02}, {180, 0, 0}, "fixed", {255, 255, 255}},
+	}},
+	{id = "dragon", name = "Dragon", rarity = "legendary", main = {90, 200, 120}, accent = {255, 210, 90},
+		face = {y = 0.62, z = -0.78, gap = 0.3, e = 0.25, blush = true, mouth = "smile"}, hat = {y = 1.1, z = -0.2, s = 1}, parts = {
+		{"Ellipsoid", {1.35, 1.15, 1.6}, {0, -0.4, 0.25}, nil, "main"},
+		{"Ellipsoid", {0.9, 0.8, 0.5}, {0, -0.42, -0.35}, nil, "accent"},
+		{"Ball", {1.35, 1.35, 1.35}, {0, 0.5, -0.15}, nil, "main"},
+		{"Ellipsoid", {0.75, 0.5, 0.6}, {0, 0.25, -0.75}, nil, "main"},
+		{"Ball", {0.1, 0.1, 0.1}, {-0.15, 0.38, -1.05}, nil, "fixed", {40, 60, 40}}, {"Ball", {0.1, 0.1, 0.1}, {0.15, 0.38, -1.05}, nil, "fixed", {40, 60, 40}},
+		{"Ellipsoid", {0.16, 0.5, 0.16}, {-0.32, 1.25, 0}, {-30, 0, 15}, "accent"}, {"Ellipsoid", {0.16, 0.5, 0.16}, {0.32, 1.25, 0}, {-30, 0, -15}, "accent"},
+		{"Wedge", {0.08, 1.0, 1.1}, {-0.95, 0.35, 0.35}, {0, 0, 40}, "accent"}, {"Wedge", {0.08, 1.0, 1.1}, {0.95, 0.35, 0.35}, {0, 0, -40}, "accent"},
+		{"Block", {0.1, 0.1, 1.2}, {-0.75, 0.65, 0.35}, {0, 0, 40}, "main"}, {"Block", {0.1, 0.1, 1.2}, {0.75, 0.65, 0.35}, {0, 0, -40}, "main"},
+		{"Wedge", {0.1, 0.3, 0.3}, {0, 0.25, 0.4}, nil, "accent"}, {"Wedge", {0.1, 0.25, 0.25}, {0, 0.1, 0.8}, nil, "accent"},
+		{"Ellipsoid", {0.38, 0.38, 0.9}, {0, -0.5, 1.15}, {20, 0, 0}, "main"},
+		{"Ellipsoid", {0.28, 0.28, 0.7}, {0, -0.25, 1.7}, {-15, 0, 0}, "main"},
+		{"Wedge", {0.1, 0.35, 0.35}, {0, -0.08, 2.05}, nil, "accent"},
+		{"Ellipsoid", {0.34, 0.24, 0.44}, {-0.32, -1.0, -0.15}, nil, "main"}, {"Ellipsoid", {0.34, 0.24, 0.44}, {0.32, -1.0, -0.15}, nil, "main"},
+		{"Ellipsoid", {0.34, 0.24, 0.44}, {-0.32, -1.0, 0.65}, nil, "main"}, {"Ellipsoid", {0.34, 0.24, 0.44}, {0.32, -1.0, 0.65}, nil, "main"},
+	}},
+	{id = "unicorn", name = "Unicorn", rarity = "legendary", main = {250, 248, 255}, accent = {200, 140, 255},
+		face = {y = 0.75, z = -0.8, gap = 0.27, e = 0.22, blush = true, mouth = "smile"}, hat = {y = 1.25, z = -0.3, s = 0.9}, parts = {
+		{"Ellipsoid", {1.3, 1.05, 1.75}, {0, -0.35, 0.25}, nil, "main"},
+		{"Ellipsoid", {1.05, 1.1, 1.1}, {0, 0.65, -0.35}, nil, "main"},
+		{"Ellipsoid", {0.65, 0.55, 0.55}, {0, 0.45, -0.8}, nil, "main"},
+		{"Ellipsoid", {0.22, 0.22, 0.22}, {0, 1.2, -0.62}, nil, "fixed", {255, 215, 90}},
+		{"Ellipsoid", {0.16, 0.3, 0.16}, {0, 1.4, -0.66}, {-15, 0, 0}, "fixed", {255, 215, 90}},
+		{"Ellipsoid", {0.1, 0.28, 0.1}, {0, 1.62, -0.72}, {-15, 0, 0}, "fixedneon", {255, 230, 140}},
+		{"Wedge", {0.14, 0.32, 0.25}, {-0.3, 1.18, -0.25}, {0, 90, 0}, "main"}, {"Wedge", {0.14, 0.32, 0.25}, {0.3, 1.18, -0.25}, {0, -90, 0}, "main"},
+		{"Ellipsoid", {0.3, 0.45, 0.35}, {0, 1.05, -0.05}, nil, "accent"}, {"Ellipsoid", {0.3, 0.45, 0.4}, {0, 0.75, 0.25}, nil, "fixed", {120, 200, 255}},
+		{"Ellipsoid", {0.3, 0.4, 0.4}, {0, 0.4, 0.45}, nil, "fixed", {255, 170, 220}},
+		{"Ellipsoid", {0.32, 0.7, 0.35}, {0, -0.2, 1.15}, {-40, 0, 0}, "accent"}, {"Ellipsoid", {0.28, 0.6, 0.3}, {0, -0.55, 1.35}, {-10, 0, 0}, "fixed", {120, 200, 255}},
+		{"Ellipsoid", {0.26, 0.7, 0.26}, {-0.35, -0.95, -0.25}, nil, "main"}, {"Ellipsoid", {0.26, 0.7, 0.26}, {0.35, -0.95, -0.25}, nil, "main"},
+		{"Ellipsoid", {0.26, 0.7, 0.26}, {-0.35, -0.95, 0.75}, nil, "main"}, {"Ellipsoid", {0.26, 0.7, 0.26}, {0.35, -0.95, 0.75}, nil, "main"},
+	}},
+	{id = "phoenix", name = "Phoenix", rarity = "mythic", main = {255, 110, 40}, accent = {255, 220, 80}, fx = "fire",
+		face = {y = 0.62, z = -0.68, gap = 0.24, e = 0.21, blush = true, mouth = "none"}, hat = {y = 1.05, z = -0.2, s = 0.9}, parts = {
+		{"Ellipsoid", {1.2, 1.35, 1.4}, {0, -0.2, 0.15}, nil, "main"},
+		{"Ellipsoid", {0.8, 0.9, 0.4}, {0, -0.3, -0.45}, nil, "accent"},
+		{"Ball", {1.05, 1.05, 1.05}, {0, 0.6, -0.2}, nil, "main"},
+		{"Ellipsoid", {0.3, 0.2, 0.4}, {0, 0.48, -0.78}, {15, 0, 0}, "fixed", {255, 210, 60}},
+		{"Ellipsoid", {0.12, 0.55, 0.2}, {0, 1.25, -0.1}, {-25, 0, 0}, "fixedneon", {255, 200, 60}},
+		{"Ellipsoid", {0.1, 0.5, 0.18}, {-0.18, 1.18, 0}, {-30, 0, 20}, "fixedneon", {255, 120, 40}}, {"Ellipsoid", {0.1, 0.5, 0.18}, {0.18, 1.18, 0}, {-30, 0, -20}, "fixedneon", {255, 120, 40}},
+		{"Ellipsoid", {0.15, 1.1, 0.5}, {-0.8, 0.25, 0.1}, {0, 0, 45}, "accent"}, {"Ellipsoid", {0.15, 1.1, 0.5}, {0.8, 0.25, 0.1}, {0, 0, -45}, "accent"},
+		{"Ellipsoid", {0.12, 0.9, 0.4}, {-1.0, 0.0, 0.25}, {0, 0, 70}, "fixedneon", {255, 140, 40}}, {"Ellipsoid", {0.12, 0.9, 0.4}, {1.0, 0.0, 0.25}, {0, 0, -70}, "fixedneon", {255, 140, 40}},
+		{"Ellipsoid", {0.18, 0.18, 1.3}, {0, -0.3, 1.2}, {25, 0, 0}, "accent"},
+		{"Ellipsoid", {0.14, 0.14, 1.2}, {-0.25, -0.35, 1.15}, {25, -15, 0}, "fixedneon", {255, 90, 40}}, {"Ellipsoid", {0.14, 0.14, 1.2}, {0.25, -0.35, 1.15}, {25, 15, 0}, "fixedneon", {255, 90, 40}},
+		{"Ellipsoid", {0.25, 0.1, 0.35}, {-0.25, -0.95, -0.15}, nil, "fixed", {255, 210, 60}}, {"Ellipsoid", {0.25, 0.1, 0.35}, {0.25, -0.95, -0.15}, nil, "fixed", {255, 210, 60}},
 	}},
 }
 NeverYieldPets.speciesById = {}
@@ -21584,6 +23228,50 @@ for _, s in ipairs(NeverYieldPets.skins) do
 	NeverYieldPets.skinById[s.id] = s
 end
 
+-- hats: parts relative to the species' hat spot (or its face for glasses), scaled by species hat.s
+NeverYieldPets.hats = {
+	{id = "party", name = "Party Hat", price = 150, rarity = "common", parts = {
+		{"Ellipsoid", {0.7, 0.22, 0.7}, {0, 0.05, 0}, nil, "fixed", {255, 90, 160}}, {"Ellipsoid", {0.55, 0.25, 0.55}, {0, 0.25, 0}, nil, "fixed", {90, 200, 255}},
+		{"Ellipsoid", {0.4, 0.25, 0.4}, {0, 0.45, 0}, nil, "fixed", {255, 220, 80}}, {"Ellipsoid", {0.26, 0.25, 0.26}, {0, 0.63, 0}, nil, "fixed", {255, 90, 160}},
+		{"Ball", {0.2, 0.2, 0.2}, {0, 0.8, 0}, nil, "fixedneon", {255, 255, 255}}}},
+	{id = "bow", name = "Bow", price = 200, rarity = "common", parts = {
+		{"Ellipsoid", {0.36, 0.3, 0.14}, {-0.2, 0.1, -0.1}, {0, 0, 20}, "fixed", {255, 110, 170}}, {"Ellipsoid", {0.36, 0.3, 0.14}, {0.2, 0.1, -0.1}, {0, 0, -20}, "fixed", {255, 110, 170}},
+		{"Ball", {0.15, 0.15, 0.15}, {0, 0.1, -0.12}, nil, "fixed", {230, 70, 140}}}},
+	{id = "flower", name = "Flower", price = 250, rarity = "common", parts = {
+		{"Ball", {0.18, 0.18, 0.18}, {0.32, 0.05, -0.05}, nil, "fixed", {255, 220, 60}},
+		{"Ellipsoid", {0.22, 0.08, 0.16}, {0.47, 0.05, -0.05}, nil, "fixed", {255, 255, 255}}, {"Ellipsoid", {0.22, 0.08, 0.16}, {0.17, 0.05, -0.05}, nil, "fixed", {255, 255, 255}},
+		{"Ellipsoid", {0.16, 0.08, 0.22}, {0.32, 0.05, 0.1}, nil, "fixed", {255, 255, 255}}, {"Ellipsoid", {0.16, 0.08, 0.22}, {0.32, 0.05, -0.2}, nil, "fixed", {255, 255, 255}}}},
+	{id = "beanie", name = "Beanie", price = 300, rarity = "rare", parts = {
+		{"Ellipsoid", {0.88, 0.55, 0.88}, {0, 0.05, 0}, nil, "fixed", {90, 160, 255}}, {"Ellipsoid", {0.92, 0.16, 0.92}, {0, -0.13, 0}, nil, "fixed", {245, 245, 250}},
+		{"Ball", {0.26, 0.26, 0.26}, {0, 0.35, 0}, nil, "fixed", {245, 245, 250}}}},
+	{id = "sunglasses", name = "Sunglasses", price = 400, rarity = "rare", face = true},
+	{id = "tophat", name = "Top Hat", price = 600, rarity = "epic", parts = {
+		{"Ellipsoid", {1.0, 0.08, 1.0}, {0, 0.02, 0}, nil, "fixed", {25, 25, 30}},
+		{"Cylinder", {0.62, 0.62, 0.62}, {0, 0.34, 0}, {0, 0, 90}, "fixed", {25, 25, 30}},
+		{"Cylinder", {0.12, 0.645, 0.645}, {0, 0.12, 0}, {0, 0, 90}, "fixed", {200, 30, 40}}}},
+	{id = "viking", name = "Viking Helmet", price = 700, rarity = "epic", parts = {
+		{"Ellipsoid", {0.88, 0.58, 0.88}, {0, 0.02, 0}, nil, "metal", {160, 165, 175}},
+		{"Ellipsoid", {0.92, 0.12, 0.92}, {0, -0.15, 0}, nil, "fixed", {200, 160, 60}},
+		{"Ellipsoid", {0.14, 0.45, 0.14}, {-0.45, 0.22, 0}, {0, 0, 35}, "fixed", {245, 235, 210}}, {"Ellipsoid", {0.14, 0.45, 0.14}, {0.45, 0.22, 0}, {0, 0, -35}, "fixed", {245, 235, 210}}}},
+	{id = "witch", name = "Witch Hat", price = 800, rarity = "epic", parts = {
+		{"Ellipsoid", {1.15, 0.06, 1.15}, {0, 0.02, 0}, nil, "fixed", {80, 40, 120}},
+		{"Ellipsoid", {0.6, 0.3, 0.6}, {0, 0.18, 0}, nil, "fixed", {80, 40, 120}}, {"Ellipsoid", {0.42, 0.3, 0.42}, {0, 0.4, 0.04}, nil, "fixed", {80, 40, 120}},
+		{"Ellipsoid", {0.26, 0.3, 0.26}, {0, 0.62, 0.1}, nil, "fixed", {80, 40, 120}}, {"Ellipsoid", {0.12, 0.25, 0.12}, {0, 0.8, 0.2}, {30, 0, 0}, "fixed", {80, 40, 120}},
+		{"Ellipsoid", {0.62, 0.08, 0.62}, {0, 0.1, 0}, nil, "fixed", {150, 255, 120}}}},
+	{id = "halo", name = "Halo", price = 1200, rarity = "legendary", ring = true},
+	{id = "crown", name = "Crown", price = 1500, rarity = "legendary", parts = {
+		{"Ellipsoid", {0.78, 0.24, 0.78}, {0, 0.08, 0}, nil, "gold", {255, 200, 50}},
+		{"Ellipsoid", {0.12, 0.34, 0.12}, {0, 0.3, -0.33}, nil, "gold", {255, 200, 50}}, {"Ellipsoid", {0.12, 0.34, 0.12}, {0.31, 0.3, -0.1}, nil, "gold", {255, 200, 50}},
+		{"Ellipsoid", {0.12, 0.34, 0.12}, {-0.31, 0.3, -0.1}, nil, "gold", {255, 200, 50}}, {"Ellipsoid", {0.12, 0.34, 0.12}, {0.19, 0.3, 0.27}, nil, "gold", {255, 200, 50}},
+		{"Ellipsoid", {0.12, 0.34, 0.12}, {-0.19, 0.3, 0.27}, nil, "gold", {255, 200, 50}},
+		{"Ball", {0.12, 0.12, 0.12}, {0, 0.1, -0.4}, nil, "fixedneon", {255, 60, 80}}, {"Ball", {0.1, 0.1, 0.1}, {0.3, 0.1, -0.26}, nil, "fixedneon", {80, 160, 255}},
+		{"Ball", {0.1, 0.1, 0.1}, {-0.3, 0.1, -0.26}, nil, "fixedneon", {80, 255, 140}}}},
+}
+NeverYieldPets.hatById = {}
+for _, h in ipairs(NeverYieldPets.hats) do
+	NeverYieldPets.hatById[h.id] = h
+end
+
 NeverYieldPets.foods = {
 	{id = "berry", name = "Berry", icon = "\u{1F353}", hunger = 15, happy = 5, xp = 5, price = 10},
 	{id = "cookie", name = "Cookie", icon = "\u{1F36A}", hunger = 25, happy = 15, xp = 12, price = 25},
@@ -21596,13 +23284,32 @@ for _, f in ipairs(NeverYieldPets.foods) do
 	NeverYieldPets.foodById[f.id] = f
 end
 
+NeverYieldPets.potions = {
+	{id = "xp", name = "XP Potion", icon = "\u{1F9EA}", desc = "2x pet XP for 10 min", price = 300},
+	{id = "coins", name = "Coin Potion", icon = "\u{1F4B0}", desc = "2x pet coins for 10 min", price = 400},
+	{id = "luck", name = "Luck Potion", icon = "\u{1F340}", desc = "rarer hatches + 3x shiny for 10 min", price = 600},
+}
+
+-- eggs: either rarity weights (species/skins) or a pool of species ids; skinPool / fixedSkin are optional
 NeverYieldPets.eggs = {
-	{id = "basic", name = "Basic Egg", price = 100, hatch = 15, color = {235, 225, 200}, spots = {180, 150, 110},
+	{id = "basic", name = "Basic Egg", price = 100, hatch = 15, color = {235, 225, 200}, spots = {180, 150, 110}, desc = "mostly common",
 		species = {common = 70, uncommon = 25, rare = 5}, skins = {common = 85, rare = 13, epic = 2}, shiny = 0.01},
-	{id = "fancy", name = "Fancy Egg", price = 400, hatch = 30, color = {150, 200, 255}, spots = {255, 150, 220},
+	{id = "forest", name = "Forest Egg", price = 250, hatch = 20, color = {120, 190, 100}, spots = {90, 60, 40}, desc = "woodland critters",
+		pool = {bunny = 25, hamster = 20, cat = 18, dog = 15, frog = 10, owl = 8, fox = 4}, skins = {common = 80, rare = 16, epic = 4}, shiny = 0.015},
+	{id = "ocean", name = "Ocean Egg", price = 350, hatch = 25, color = {80, 170, 230}, spots = {255, 255, 255}, desc = "splashy friends",
+		pool = {duck = 28, penguin = 22, frog = 15, octopus = 15, axolotl = 10, shark = 10}, skins = {common = 75, rare = 20, epic = 5}, shiny = 0.015},
+	{id = "fancy", name = "Fancy Egg", price = 400, hatch = 30, color = {150, 200, 255}, spots = {255, 150, 220}, desc = "rare to legendary",
 		species = {common = 30, uncommon = 40, rare = 22, epic = 7, legendary = 1}, skins = {common = 60, rare = 28, epic = 10, legendary = 2}, shiny = 0.02},
-	{id = "mythic", name = "Mythic Egg", price = 1500, hatch = 60, color = {60, 30, 110}, spots = {255, 200, 80},
-		species = {uncommon = 20, rare = 40, epic = 28, legendary = 12}, skins = {common = 30, rare = 35, epic = 25, legendary = 8, mythic = 2}, shiny = 0.05},
+	{id = "spooky", name = "Spooky Egg", price = 600, hatch = 30, color = {60, 40, 70}, spots = {255, 140, 40}, desc = "ghosts and shadows",
+		pool = {ghost = 35, cat = 20, owl = 20, fox = 12, bee = 13}, skinPool = {classic = 40, shadow = 25, midnight = 20, toxic = 15}, shiny = 0.03},
+	{id = "galaxy", name = "Galaxy Egg", price = 1200, hatch = 45, color = {40, 25, 100}, spots = {255, 120, 230}, desc = "space legends",
+		pool = {robot = 35, ghost = 20, dragon = 20, unicorn = 18, phoenix = 2, octopus = 5}, skinPool = {classic = 40, midnight = 25, galaxy = 15, diamond = 20}, shiny = 0.04},
+	{id = "mythic", name = "Mythic Egg", price = 1500, hatch = 60, color = {60, 30, 110}, spots = {255, 200, 80}, desc = "epic + legendary",
+		species = {uncommon = 20, rare = 40, epic = 28, legendary = 11, mythic = 1}, skins = {common = 30, rare = 35, epic = 25, legendary = 8, mythic = 2}, shiny = 0.05},
+	{id = "golden", name = "Golden Egg", price = 2500, hatch = 45, color = {255, 200, 50}, spots = {255, 240, 160}, gold = true, desc = "always a gold skin",
+		species = {common = 25, uncommon = 30, rare = 25, epic = 14, legendary = 5, mythic = 1}, fixedSkin = "gold", shiny = 0.05},
+	{id = "rainbow", name = "Rainbow Egg", price = 5000, hatch = 60, color = {255, 120, 200}, spots = {120, 220, 255}, desc = "phoenix chance!",
+		species = {rare = 35, epic = 35, legendary = 24, mythic = 6}, skinPool = {rainbow = 25, galaxy = 25, gold = 20, diamond = 15, lava = 15}, shiny = 0.08},
 }
 NeverYieldPets.eggById = {}
 for _, e in ipairs(NeverYieldPets.eggs) do
@@ -21625,15 +23332,21 @@ for _, t in ipairs(NeverYieldPets.traits) do
 end
 
 NeverYieldPets.petNames = {"Nugget", "Pebble", "Mochi", "Biscuit", "Sprout", "Pixel", "Noodle", "Waffles", "Bean", "Comet", "Pudding",
-	"Ziggy", "Pickle", "Muffin", "Taco", "Boba", "Clover", "Sir Fluff", "Captain Oof", "Gizmo", "Toast", "Jellybean", "Sushi", "Marshmallow"}
-NeverYieldPets.slots = {{count = 4, price = 1000}, {count = 5, price = 3000}}
+	"Ziggy", "Pickle", "Muffin", "Taco", "Boba", "Clover", "Sir Fluff", "Captain Oof", "Gizmo", "Toast", "Jellybean", "Sushi", "Marshmallow",
+	"Peanut", "Bubbles", "Sparky", "Maple", "Dumpling", "Ember", "Pancake", "Kiwi"}
+NeverYieldPets.slots = {{count = 4, price = 1000}, {count = 5, price = 3000}, {count = 6, price = 8000}}
+NeverYieldPets.storages = {{count = 90, price = 2000}, {count = 120, price = 5000}}
+NeverYieldPets.incubatorPrice = 3000
+NeverYieldPets.instantPrice = 150
+NeverYieldPets.ballPrice = 80
 NeverYieldPets.coinSound = 9114619224
 NeverYieldPets.heart = "rbxassetid://249529864"
 
 -- ---------- data ----------
 NeverYieldPets.blank = function()
-	return {version = 1, coins = 200, nextId = 1, pets = {}, equipped = {}, food = {berry = 3, cookie = 1}, eggs = {},
-		skins = {classic = true}, discovered = {}, slots = 3, lastDecay = os.time(), lastDaily = "", streak = 0,
+	return {version = 2, coins = 200, nextId = 1, pets = {}, equipped = {}, food = {berry = 3, cookie = 1}, eggs = {},
+		skins = {classic = true}, hats = {}, items = {instant = 0}, boosts = {}, discovered = {}, slots = 3, storage = 60, incubator = false,
+		lastDecay = os.time(), lastDaily = "", streak = 0,
 		stats = {hatched = 0, bred = 0, fed = 0, coinsEarned = 0, released = 0}, created = os.time()}
 end
 
@@ -21661,8 +23374,8 @@ NeverYieldPets.load = function()
 	for k, v in pairs(blank.stats) do
 		if type(data.stats[k]) ~= "number" then data.stats[k] = v end
 	end
+	if type(data.items.instant) ~= "number" then data.items.instant = 0 end
 	data.skins.classic = true
-	-- JSON turns the equipped id list into numbers or strings; keep them as strings
 	local eq = {}
 	for _, id in ipairs(data.equipped) do
 		if data.pets[tostring(id)] then table.insert(eq, tostring(id)) end
@@ -21686,6 +23399,10 @@ NeverYieldPets.save = function()
 	return wrote
 end
 
+NeverYieldPets.boosted = function(kind)
+	return (NeverYieldPets.data.boosts[kind] or 0) > os.time()
+end
+
 NeverYieldPets.addCoins = function(amount, reason)
 	local data = NeverYieldPets.data
 	if not data or amount == 0 then return end
@@ -21695,7 +23412,16 @@ NeverYieldPets.addCoins = function(amount, reason)
 		data.stats.coinsEarned = data.stats.coinsEarned + amount
 	end
 	NeverYieldPets.dirty = true
-	if NeverYieldPets.refresh then pcall(NeverYieldPets.refresh) end
+	if NeverYieldPets.refreshHeader then pcall(NeverYieldPets.refreshHeader) end
+end
+
+NeverYieldPets.spend = function(price)
+	if NeverYieldPets.data.coins < price then
+		notify('Pets', 'Not enough coins (' .. NeverYieldStats.num(price) .. ' needed).')
+		return false
+	end
+	NeverYieldPets.addCoins(-price)
+	return true
 end
 
 NeverYieldPets.xpNeeded = function(level)
@@ -21710,7 +23436,6 @@ NeverYieldPets.hasTrait = function(pet, id)
 end
 
 NeverYieldPets.rarityOf = function(pet)
-	-- a pet's rarity is the best of its species and its skin (shiny bumps it one step)
 	local s = NeverYieldPets.speciesById[pet.species]
 	local k = NeverYieldPets.skinById[pet.skin] or NeverYieldPets.skins[1]
 	local i = math.max(NeverYieldPets.rarityIndex[s and s.rarity or "common"] or 1, NeverYieldPets.rarityIndex[k.rarity] or 1)
@@ -21718,18 +23443,30 @@ NeverYieldPets.rarityOf = function(pet)
 	return NeverYieldPets.rarities[i]
 end
 
-NeverYieldPets.weighted = function(weights)
-	local total = 0
-	for _, w in pairs(weights) do total = total + w end
+-- weighted pick over table keys (keys sorted so it is deterministic)
+NeverYieldPets.weightedKey = function(weights)
+	local keys, total = {}, 0
+	for k, w in pairs(weights) do
+		table.insert(keys, k)
+		total = total + w
+	end
+	table.sort(keys)
 	local roll = math.random() * total
-	local keys = {}
-	for k in pairs(weights) do table.insert(keys, k) end
-	table.sort(keys, function(a, b) return (NeverYieldPets.rarityIndex[a] or 0) < (NeverYieldPets.rarityIndex[b] or 0) end)
 	for _, k in ipairs(keys) do
 		roll = roll - weights[k]
 		if roll <= 0 then return k end
 	end
 	return keys[#keys]
+end
+
+-- luck potion makes rarer results more likely
+NeverYieldPets.luckWeights = function(weights, rarityOfKey)
+	if not NeverYieldPets.boosted("luck") then return weights end
+	local out = {}
+	for k, w in pairs(weights) do
+		out[k] = w * (1 + 0.6 * ((rarityOfKey(k) or 1) - 1))
+	end
+	return out
 end
 
 NeverYieldPets.pickOf = function(list, rarity)
@@ -21773,6 +23510,13 @@ NeverYieldPets.petCount = function()
 	return n
 end
 
+NeverYieldPets.isEquipped = function(id)
+	for _, e in ipairs(NeverYieldPets.data.equipped) do
+		if e == id then return true end
+	end
+	return false
+end
+
 NeverYieldPets.sortedPets = function()
 	local list = {}
 	for _, pet in pairs(NeverYieldPets.data.pets) do
@@ -21789,14 +23533,6 @@ NeverYieldPets.sortedPets = function()
 	return list
 end
 
-NeverYieldPets.isEquipped = function(id)
-	for _, e in ipairs(NeverYieldPets.data.equipped) do
-		if e == id then return true end
-	end
-	return false
-end
-
--- hunger and happiness drain over real time (also while you're offline, up to a day)
 NeverYieldPets.decay = function()
 	local data = NeverYieldPets.data
 	local now = os.time()
@@ -21816,6 +23552,7 @@ end
 NeverYieldPets.giveXp = function(pet, amount)
 	if pet.level >= 50 then return false end
 	if NeverYieldPets.hasTrait(pet, "glutton") then amount = amount * 1.3 end
+	if NeverYieldPets.boosted("xp") then amount = amount * 2 end
 	if (pet.hunger or 0) < 20 then amount = amount * 0.5 end
 	pet.xp = pet.xp + amount
 	local leveled = false
@@ -21858,45 +23595,71 @@ NeverYieldPets.feed = function(pet, foodId)
 	return true
 end
 
+NeverYieldPets.hatchTime = function(seconds)
+	return math.ceil(seconds * (NeverYieldPets.data.incubator and 0.5 or 1))
+end
+
 NeverYieldPets.buyEgg = function(eggId)
 	local data = NeverYieldPets.data
 	local egg = NeverYieldPets.eggById[eggId]
-	if data.coins < egg.price then
-		notify('Pets', 'Not enough coins for a ' .. egg.name .. ' (' .. egg.price .. ').')
-		return false
-	end
 	if #data.eggs >= 8 then
 		notify('Pets', 'Your egg nest is full (8). Hatch some first!')
 		return false
 	end
-	NeverYieldPets.addCoins(-egg.price)
-	table.insert(data.eggs, {kind = eggId, ready = os.time() + egg.hatch})
-	notify('Pets', 'Bought a ' .. egg.name .. '! It hatches in ' .. egg.hatch .. ' seconds (Eggs tab).')
+	if not NeverYieldPets.spend(egg.price) then return false end
+	local wait = NeverYieldPets.hatchTime(egg.hatch)
+	table.insert(data.eggs, {kind = eggId, ready = os.time() + wait})
+	notify('Pets', 'Bought a ' .. egg.name .. '! It hatches in ' .. wait .. ' seconds (Eggs tab).')
 	return true
 end
 
--- what comes out of an egg (shop egg or bred egg)
 NeverYieldPets.rollEgg = function(egg)
 	if egg.bred then
 		return egg.species, egg.skin, egg.shiny, egg.traits, egg.gen, egg.parents
 	end
 	local def = NeverYieldPets.eggById[egg.kind] or NeverYieldPets.eggs[1]
-	local species = NeverYieldPets.pickOf(NeverYieldPets.species, NeverYieldPets.weighted(def.species)).id
-	local skin = NeverYieldPets.pickOf(NeverYieldPets.skins, NeverYieldPets.weighted(def.skins)).id
-	return species, skin, math.random() < def.shiny, nil, 1, {}
+	local ri = NeverYieldPets.rarityIndex
+	local species
+	if def.pool then
+		species = NeverYieldPets.weightedKey(NeverYieldPets.luckWeights(def.pool, function(id)
+			local s = NeverYieldPets.speciesById[id]
+			return s and ri[s.rarity]
+		end))
+	else
+		local rarity = NeverYieldPets.weightedKey(NeverYieldPets.luckWeights(def.species, function(r) return ri[r] end))
+		species = NeverYieldPets.pickOf(NeverYieldPets.species, rarity).id
+	end
+	local skin
+	if def.fixedSkin then
+		skin = def.fixedSkin
+	elseif def.skinPool then
+		skin = NeverYieldPets.weightedKey(NeverYieldPets.luckWeights(def.skinPool, function(id)
+			local k = NeverYieldPets.skinById[id]
+			return k and ri[k.rarity]
+		end))
+	else
+		local rarity = NeverYieldPets.weightedKey(NeverYieldPets.luckWeights(def.skins, function(r) return ri[r] end))
+		skin = NeverYieldPets.pickOf(NeverYieldPets.skins, rarity).id
+	end
+	local shinyChance = def.shiny * (NeverYieldPets.boosted("luck") and 3 or 1)
+	return species, skin, math.random() < shinyChance, nil, 1, {}
 end
 
-NeverYieldPets.hatch = function(index)
+NeverYieldPets.hatch = function(index, instant)
 	local data = NeverYieldPets.data
 	local egg = data.eggs[index]
 	if not egg then return end
-	if os.time() < egg.ready then
+	if os.time() < egg.ready and not instant then
 		notify('Pets', 'Not ready yet! ' .. (egg.ready - os.time()) .. ' seconds left.')
 		return
 	end
-	if NeverYieldPets.petCount() >= NeverYieldPets.maxPets then
-		notify('Pets', 'Your pet storage is full (' .. NeverYieldPets.maxPets .. '). Release a pet first.')
+	if NeverYieldPets.petCount() >= data.storage then
+		notify('Pets', 'Your pet storage is full (' .. data.storage .. '). Release a pet or buy more storage.')
 		return
+	end
+	if instant and os.time() < egg.ready then
+		if data.items.instant <= 0 then return end
+		data.items.instant = data.items.instant - 1
 	end
 	table.remove(data.eggs, index)
 	local species, skin, shiny, traits, gen, parents = NeverYieldPets.rollEgg(egg)
@@ -21911,7 +23674,6 @@ NeverYieldPets.hatch = function(index)
 	if NeverYieldPets.refresh then pcall(NeverYieldPets.refresh) end
 end
 
--- Breeding: species from either parent (sometimes a surprise), skin from either parent with a mutation chance
 NeverYieldPets.breedCost = 100
 NeverYieldPets.canBreed = function(pet)
 	return pet and pet.level >= 5 and os.time() >= (pet.breedReady or 0)
@@ -21927,15 +23689,11 @@ NeverYieldPets.breed = function(a, b)
 		notify('Pets', 'Both pets need to be level 5+ and rested.')
 		return false
 	end
-	if data.coins < NeverYieldPets.breedCost then
-		notify('Pets', 'Breeding costs ' .. NeverYieldPets.breedCost .. ' coins.')
-		return false
-	end
 	if #data.eggs >= 8 then
 		notify('Pets', 'Your egg nest is full (8). Hatch some first!')
 		return false
 	end
-	NeverYieldPets.addCoins(-NeverYieldPets.breedCost)
+	if not NeverYieldPets.spend(NeverYieldPets.breedCost) then return false end
 	local roll = math.random()
 	local species
 	if roll < 0.45 then
@@ -21943,7 +23701,6 @@ NeverYieldPets.breed = function(a, b)
 	elseif roll < 0.9 then
 		species = b.species
 	else
-		-- surprise: a species at least as rare as the rarer parent
 		local best = math.max(NeverYieldPets.rarityIndex[NeverYieldPets.speciesById[a.species].rarity], NeverYieldPets.rarityIndex[NeverYieldPets.speciesById[b.species].rarity])
 		local pool = {}
 		for _, s in ipairs(NeverYieldPets.species) do
@@ -21954,10 +23711,9 @@ NeverYieldPets.breed = function(a, b)
 	local skin = math.random() < 0.5 and a.skin or b.skin
 	local gen = math.max(a.gen or 1, b.gen or 1) + 1
 	if math.random() < 0.15 + math.min(0.15, gen * 0.01) then
-		local weights = {common = 40, rare = 35, epic = 18, legendary = 6, mythic = 1}
-		skin = NeverYieldPets.pickOf(NeverYieldPets.skins, NeverYieldPets.weighted(weights)).id
+		skin = NeverYieldPets.pickOf(NeverYieldPets.skins, NeverYieldPets.weightedKey({common = 40, rare = 35, epic = 18, legendary = 6, mythic = 1})).id
 	end
-	local shiny = math.random() < ((a.shiny or b.shiny) and 0.1 or 0.02)
+	local shiny = math.random() < ((a.shiny or b.shiny) and 0.1 or 0.02) * (NeverYieldPets.boosted("luck") and 3 or 1)
 	local traits = {}
 	for _, parent in ipairs({a, b}) do
 		local list = parent.traits or {}
@@ -21974,11 +23730,11 @@ NeverYieldPets.breed = function(a, b)
 	if table.find(traits, "tiny") and table.find(traits, "giant") then table.remove(traits, table.find(traits, "giant")) end
 	local now = os.time()
 	a.breedReady, b.breedReady = now + 300, now + 300
-	table.insert(data.eggs, {kind = "bred", bred = true, ready = now + 120, species = species, skin = skin, shiny = shiny, traits = traits,
+	table.insert(data.eggs, {kind = "bred", bred = true, ready = now + NeverYieldPets.hatchTime(120), species = species, skin = skin, shiny = shiny, traits = traits,
 		gen = gen, parents = {a.name, b.name}})
 	data.stats.bred = data.stats.bred + 1
 	NeverYieldPets.dirty = true
-	notify('Pets', a.name .. ' and ' .. b.name .. ' made an egg! It hatches in 2 minutes (Eggs tab).')
+	notify('Pets', a.name .. ' and ' .. b.name .. ' made an egg! Check the Eggs tab.')
 	return true
 end
 
@@ -22003,9 +23759,8 @@ NeverYieldPets.build = function(pet, scale)
 	root:SetAttribute("NYFx", true)
 	root.Parent = model
 	model.PrimaryPart = root
-	local roles = {main = {}, accent = {}, eye = {}, light = {}}
-	for _, spec in ipairs(species.parts) do
-		local shape, size, pos, rot, role, fixed = spec[1], spec[2], spec[3], spec[4], spec[5], spec[6]
+	local roles = {main = {}, accent = {}}
+	local function add(shape, size, pos, rot, role, fixed)
 		local p
 		if shape == "Wedge" then
 			p = Instance.new("WedgePart")
@@ -22013,6 +23768,8 @@ NeverYieldPets.build = function(pet, scale)
 			p = Instance.new("Part")
 			if shape == "Ball" then
 				p.Shape = Enum.PartType.Ball
+			elseif shape == "Cylinder" then
+				p.Shape = Enum.PartType.Cylinder
 			end
 		end
 		p.Name = randomString()
@@ -22036,12 +23793,30 @@ NeverYieldPets.build = function(pet, scale)
 			cf = cf * CFrame.Angles(math.rad(rot[1]), math.rad(rot[2]), math.rad(rot[3]))
 		end
 		p.CFrame = root.CFrame * cf
-		-- colours and materials from the skin
-		if role == "fixed" then
+		if role == "fixed" or role == "fixedneon" or role == "metal" or role == "gold" then
 			p.Color = NeverYieldPets.colorOf(fixed)
+			if role == "fixedneon" then p.Material = Enum.Material.Neon end
+			if role == "metal" then p.Material = Enum.Material.Metal end
+			if role == "gold" then
+				p.Material = Enum.Material.Foil
+				p.Reflectance = 0.2
+			end
 		elseif role == "eye" then
-			p.Color = skin.eye and NeverYieldPets.colorOf(skin.eye) or Color3.fromRGB(20, 20, 25)
+			p.Color = skin.eye and NeverYieldPets.colorOf(skin.eye) or Color3.fromRGB(25, 20, 30)
+			p.Reflectance = 0.15
 			if skin.eyeNeon then p.Material = Enum.Material.Neon end
+		elseif role == "shine" then
+			p.Color = Color3.new(1, 1, 1)
+			p.Material = Enum.Material.Neon
+		elseif role == "blush" then
+			p.Color = Color3.fromRGB(255, 140, 170)
+			p.Transparency = 0.35
+		elseif role == "mouth" then
+			p.Color = Color3.fromRGB(70, 30, 35)
+		elseif role == "glass" then
+			p.Color = Color3.fromRGB(235, 245, 255)
+			p.Material = Enum.Material.Glass
+			p.Transparency = 0.45
 		elseif role == "light" then
 			p.Color = skin.accent and NeverYieldPets.colorOf(skin.accent) or Color3.fromRGB(90, 230, 255)
 			p.Material = Enum.Material.Neon
@@ -22061,14 +23836,65 @@ NeverYieldPets.build = function(pet, scale)
 			if skin.material == "Glass" or skin.material == "Foil" then
 				p.Reflectance = 0.2
 			end
+			if roles[role] then table.insert(roles[role], p) end
 		end
-		if roles[role] then table.insert(roles[role], p) end
 		p.Anchored = false
 		local weld = Instance.new("WeldConstraint")
 		weld.Part0 = root
 		weld.Part1 = p
 		weld.Parent = p
 		p.Parent = model
+		return p
+	end
+	for _, spec in ipairs(species.parts) do
+		add(spec[1], spec[2], spec[3], spec[4], spec[5], spec[6])
+	end
+	-- face: glossy eyes with a highlight, blush and a mouth
+	local f = species.face
+	if f then
+		local e, gap = f.e, f.gap
+		for _, side in ipairs({-1, 1}) do
+			local x = side * gap
+			if f.style == "robot" then
+				add("Block", {e * 1.1, e * 0.75, 0.06}, {x, f.y, f.z - 0.02}, nil, "light")
+			else
+				add("Ellipsoid", {e * 0.85, e, e * 0.5}, {x, f.y, f.z}, nil, "eye")
+				add("Ball", {e * 0.34, e * 0.34, e * 0.34}, {x + e * 0.16, f.y + e * 0.22, f.z - e * 0.2}, nil, "shine")
+				add("Ball", {e * 0.16, e * 0.16, e * 0.16}, {x - e * 0.14, f.y - e * 0.2, f.z - e * 0.2}, nil, "shine")
+			end
+			if f.blush then
+				add("Ellipsoid", {e * 0.95, e * 0.45, e * 0.2}, {side * (gap + e * 0.75), f.y - e * 0.95, f.z + e * 0.3}, nil, "blush")
+			end
+		end
+		if f.mouth == "smile" then
+			add("Ellipsoid", {e * 0.8, e * 0.3, e * 0.2}, {0, f.y - e * 1.15, f.z + e * 0.08}, nil, "mouth")
+		elseif f.mouth == "w" then
+			add("Ellipsoid", {e * 0.5, e * 0.16, e * 0.15}, {-e * 0.2, f.y - e * 1.1, f.z + e * 0.08}, {0, 0, -25}, "mouth")
+			add("Ellipsoid", {e * 0.5, e * 0.16, e * 0.15}, {e * 0.2, f.y - e * 1.1, f.z + e * 0.08}, {0, 0, 25}, "mouth")
+		elseif f.mouth == "o" then
+			add("Ellipsoid", {e * 0.45, e * 0.5, e * 0.2}, {0, f.y - e * 1.2, f.z + e * 0.08}, nil, "mouth")
+		end
+	end
+	-- hat
+	local hat = pet.hat and NeverYieldPets.hatById[pet.hat]
+	local h = species.hat
+	if hat and h then
+		if hat.face and f then
+			for _, side in ipairs({-1, 1}) do
+				add("Ellipsoid", {f.e * 1.5, f.e * 1.1, 0.06}, {side * f.gap, f.y, f.z - f.e * 0.3}, nil, "fixed", {15, 15, 20})
+			end
+			add("Block", {f.gap * 0.9, f.e * 0.12, 0.05}, {0, f.y + f.e * 0.2, f.z - f.e * 0.3}, nil, "fixed", {15, 15, 20})
+		elseif hat.ring then
+			for i = 1, 12 do
+				local a = i / 12 * math.pi * 2
+				add("Ball", {0.12 * h.s, 0.12 * h.s, 0.12 * h.s}, {math.cos(a) * 0.38 * h.s, h.y + 0.35 * h.s, h.z + math.sin(a) * 0.38 * h.s}, nil, "fixedneon", {255, 235, 120})
+			end
+		else
+			for _, spec in ipairs(hat.parts or {}) do
+				local sz, ps = spec[2], spec[3]
+				add(spec[1], {sz[1] * h.s, sz[2] * h.s, sz[3] * h.s}, {ps[1] * h.s, h.y + ps[2] * h.s, h.z + ps[3] * h.s}, spec[4], spec[5], spec[6])
+			end
+		end
 	end
 	if pet.shiny or NeverYieldPets.hasTrait(pet, "sparkly") or skin.animated then
 		local sparkle = Instance.new("ParticleEmitter")
@@ -22081,6 +23907,24 @@ NeverYieldPets.build = function(pet, scale)
 		sparkle.Size = NumberSequence.new(0.35 * scale, 0)
 		sparkle.Color = pet.shiny and ColorSequence.new(Color3.fromRGB(255, 250, 200), Color3.fromRGB(255, 200, 80)) or ColorSequence.new(Color3.new(1, 1, 1))
 		sparkle.Parent = root
+	end
+	if species.fx == "fire" then
+		local fire = Instance.new("ParticleEmitter")
+		fire.Texture = "rbxasset://textures/particles/fire_main.dds"
+		fire.Rate = 18
+		fire.Speed = NumberRange.new(1, 2)
+		fire.SpreadAngle = Vector2.new(25, 25)
+		fire.Lifetime = NumberRange.new(0.4, 0.8)
+		fire.LightEmission = 1
+		fire.Size = NumberSequence.new(0.7 * scale, 0)
+		fire.Acceleration = Vector3.new(0, 4, 0)
+		fire.Color = ColorSequence.new(Color3.fromRGB(255, 220, 90), Color3.fromRGB(255, 80, 30))
+		fire.Parent = root
+		local glow = Instance.new("PointLight")
+		glow.Color = Color3.fromRGB(255, 150, 60)
+		glow.Range = 8
+		glow.Brightness = 1
+		glow.Parent = root
 	end
 	return model, root, roles, skin
 end
@@ -22101,7 +23945,7 @@ NeverYieldPets.spawn = function(pet)
 	local tag = Instance.new("BillboardGui")
 	tag.Name = randomString()
 	tag.Size = UDim2.new(0, 160, 0, 44)
-	tag.StudsOffset = Vector3.new(0, 1.9 * scale, 0)
+	tag.StudsOffset = Vector3.new(0, 2.1 * scale, 0)
 	tag.MaxDistance = 70
 	tag.LightInfluence = 0
 	tag.Parent = root
@@ -22133,8 +23977,7 @@ NeverYieldPets.spawn = function(pet)
 	mood.TextScaled = true
 	mood.Text = ""
 	mood.Parent = tag
-	local char = Players.LocalPlayer.Character
-	local hrp = getRoot(char)
+	local hrp = getRoot(Players.LocalPlayer.Character)
 	model:PivotTo(hrp and hrp.CFrame * CFrame.new(0, 0, 4) or CFrame.new(0, 50, 0))
 	model.Parent = workspace
 	NeverYieldPets.spawned[pet.id] = {pet = pet, model = model, root = root, roles = roles, skin = skin, scale = scale, name = nameLabel,
@@ -22147,6 +23990,13 @@ NeverYieldPets.despawn = function(id)
 	if s then
 		pcall(function() s.model:Destroy() end)
 		NeverYieldPets.spawned[id] = nil
+	end
+end
+
+NeverYieldPets.respawn = function(pet)
+	if NeverYieldPets.spawned[pet.id] then
+		NeverYieldPets.despawn(pet.id)
+		NeverYieldPets.spawn(pet)
 	end
 end
 
@@ -22199,7 +24049,6 @@ NeverYieldPets.effect = function(pet, kind)
 	Services.Debris:AddItem(e, 2)
 end
 
--- floating "+12" over a pet that found coins
 NeverYieldPets.popText = function(root, text, color)
 	local tag = Instance.new("BillboardGui")
 	tag.Size = UDim2.new(0, 100, 0, 30)
@@ -22220,8 +24069,7 @@ NeverYieldPets.popText = function(root, text, color)
 	Services.Debris:AddItem(tag, 1.1)
 end
 
--- formation slots behind you
-NeverYieldPets.offsets = {Vector3.new(-3.2, 0, 3), Vector3.new(3.2, 0, 3), Vector3.new(0, 0, 5), Vector3.new(-5.5, 0, 5.5), Vector3.new(5.5, 0, 5.5)}
+NeverYieldPets.offsets = {Vector3.new(-3.2, 0, 3), Vector3.new(3.2, 0, 3), Vector3.new(0, 0, 5), Vector3.new(-5.5, 0, 5.5), Vector3.new(5.5, 0, 5.5), Vector3.new(0, 0, 7.5)}
 
 NeverYieldPets.step = function(dt)
 	local data = NeverYieldPets.data
@@ -22231,13 +24079,14 @@ NeverYieldPets.step = function(dt)
 	local t = tick()
 	local moving = hum and hum.MoveDirection.Magnitude > 0.1
 	local yaw = hrp and CFrame.new(hrp.Position) * CFrame.Angles(0, select(2, hrp.CFrame:ToEulerAnglesYXZ()), 0)
+	local coinBoost = NeverYieldPets.boosted("coins") and 2 or 1
 	for index, id in ipairs(data.equipped) do
 		local s = NeverYieldPets.spawned[id]
 		local pet = data.pets[id]
 		if s and pet and s.model.Parent and hrp then
 			local offset = NeverYieldPets.offsets[index] or Vector3.new(0, 0, 4 + index)
 			local target = (yaw * CFrame.new(offset)).Position
-			local floatY = hrp.Position.Y - (hum and hum.HipHeight or 2) * 0.6 + 0.4 * s.scale
+			local floatY = hrp.Position.Y - (hum and hum.HipHeight or 2) * 0.6 + 0.45 * s.scale
 			local bounce = NeverYieldPets.hasTrait(pet, "bouncy") and 0.6 or 0.25
 			local hop = moving and math.abs(math.sin(t * 9 + s.seed)) * bounce * 1.6 or math.sin(t * 2 + s.seed) * bounce * 0.5
 			local speed = NeverYieldPets.hasTrait(pet, "speedy") and 0.2 or 0.13
@@ -22252,8 +24101,9 @@ NeverYieldPets.step = function(dt)
 			local face = hrp.CFrame.LookVector * Vector3.new(1, 0, 1)
 			if travel > 0.02 then face = (nextPos - current) * Vector3.new(1, 0, 1) end
 			if face.Magnitude < 0.01 then face = Vector3.new(0, 0, -1) end
-			local cf = CFrame.lookAt(nextPos, nextPos + face.Unit) * CFrame.new(0, hop, 0)
-			-- tricks
+			-- a little waddle while walking, a slow breathing squash while idle
+			local waddle = moving and math.sin(t * 9 + s.seed) * 0.08 or 0
+			local cf = CFrame.lookAt(nextPos, nextPos + face.Unit) * CFrame.new(0, hop, 0) * CFrame.Angles(0, 0, waddle)
 			if s.trick then
 				local p = (t - s.trickStart) / 0.7
 				if p >= 1 then
@@ -22273,7 +24123,6 @@ NeverYieldPets.step = function(dt)
 				end
 			end
 			s.root.CFrame = cf
-			-- animated skins
 			if s.skin.animated == "rainbow" then
 				local c = Color3.fromHSV((t * 0.25 + s.seed) % 1, 0.75, 1)
 				for _, p in ipairs(s.roles.main) do p.Color = c end
@@ -22282,24 +24131,22 @@ NeverYieldPets.step = function(dt)
 				local c = Color3.fromHSV(0.7 + math.sin(t * 0.6 + s.seed) * 0.08, 0.8, 0.45)
 				for _, p in ipairs(s.roles.main) do p.Color = c end
 			end
-			-- tag
 			s.name.Text = pet.name .. "  Lv " .. pet.level .. (pet.shiny and " *" or "")
 			s.bar.Size = UDim2.new(math.clamp(pet.hunger / 100, 0, 1), 0, 1, 0)
 			s.bar.BackgroundColor3 = pet.hunger < 20 and Color3.fromRGB(255, 80, 80) or Color3.fromRGB(255, 170, 70)
 			s.mood.Text = pet.hunger < 20 and "\u{1F356}" or (pet.happy > 80 and "\u{1F496}" or "")
-			-- walking: xp and coins
 			if s.walked >= 12 then
 				local steps = math.floor(s.walked / 12)
 				s.walked = s.walked - steps * 12
 				NeverYieldPets.giveXp(pet, steps)
-				NeverYieldPets.walkCoins = (NeverYieldPets.walkCoins or 0) + steps * (NeverYieldPets.hasTrait(pet, "speedy") and 1.25 or 1)
+				NeverYieldPets.walkCoins = (NeverYieldPets.walkCoins or 0) + steps * (NeverYieldPets.hasTrait(pet, "speedy") and 1.25 or 1) * coinBoost
 			end
-			-- finding coins
 			if t > s.nextCoin then
 				s.nextCoin = t + 40 + math.random() * 40
 				if (pet.hunger or 0) >= 20 then
 					local coins = math.random(4, 10) + pet.level
 					if NeverYieldPets.hasTrait(pet, "lucky") then coins = math.floor(coins * 1.5) end
+					coins = coins * coinBoost
 					NeverYieldPets.addCoins(coins)
 					NeverYieldPets.popText(s.root, "+" .. coins .. " \u{1F4B0}", Color3.fromRGB(255, 215, 80))
 					WackyState.sound(NeverYieldPets.coinSound, nil, 0.35, false, 1.3 + math.random() * 0.2)
@@ -22319,6 +24166,7 @@ end
 -- ---------- UI ----------
 NeverYieldPets.ui = {}
 NeverYieldPets.tabs = {{"pets", "My Pets"}, {"eggs", "Eggs"}, {"shop", "Shop"}, {"breed", "Breed"}, {"index", "Index"}}
+NeverYieldPets.shopTabs = {{"eggs", "Eggs"}, {"items", "Items"}, {"skins", "Skins"}, {"hats", "Hats"}, {"upgrades", "Upgrades"}}
 
 NeverYieldPets.label = function(parent, props)
 	local l = Instance.new("TextLabel")
@@ -22359,6 +24207,25 @@ NeverYieldPets.button = function(parent, text, pos, size, color, onClick)
 	return b
 end
 
+NeverYieldPets.card = function(parent, pos, size, strokeColor)
+	local card = Instance.new("Frame")
+	card.Name = randomString()
+	card.Position = pos
+	card.Size = size
+	card.BackgroundColor3 = Color3.fromRGB(38, 32, 70)
+	card.BorderSizePixel = 0
+	card.ZIndex = 21
+	NeverYieldPortal.corner(card, UDim.new(0, 12))
+	if strokeColor then
+		local stroke = Instance.new("UIStroke")
+		stroke.Color = strokeColor
+		stroke.Thickness = 1.5
+		stroke.Parent = card
+	end
+	card.Parent = parent
+	return card
+end
+
 NeverYieldPets.bar = function(parent, pos, size, fraction, color, text)
 	local back = Instance.new("Frame")
 	back.Position = pos
@@ -22379,14 +24246,13 @@ NeverYieldPets.bar = function(parent, pos, size, fraction, color, text)
 	return back
 end
 
--- 3D preview of a pet (or an egg) inside the UI
 NeverYieldPets.preview = function(parent, pet, pos, size, spin)
 	local vp = Instance.new("ViewportFrame")
 	vp.Name = randomString()
 	vp.Position = pos
 	vp.Size = size
 	vp.BackgroundTransparency = 1
-	vp.Ambient = Color3.fromRGB(170, 170, 190)
+	vp.Ambient = Color3.fromRGB(175, 175, 195)
 	vp.LightColor = Color3.new(1, 1, 1)
 	vp.LightDirection = Vector3.new(-1, -1.5, 1)
 	vp.ZIndex = 22
@@ -22398,7 +24264,7 @@ NeverYieldPets.preview = function(parent, pet, pos, size, spin)
 	end
 	local cam = Instance.new("Camera")
 	cam.FieldOfView = 40
-	cam.CFrame = CFrame.lookAt(Vector3.new(0, 1.6, -6.2), Vector3.new(0, 0.1, 0))
+	cam.CFrame = CFrame.lookAt(Vector3.new(0, 1.6, -6.4), Vector3.new(0, 0.15, 0))
 	cam.Parent = vp
 	vp.CurrentCamera = cam
 	if spin and model then
@@ -22412,28 +24278,28 @@ NeverYieldPets.eggPreview = function(parent, eggDef, pos, size)
 	vp.Position = pos
 	vp.Size = size
 	vp.BackgroundTransparency = 1
-	vp.Ambient = Color3.fromRGB(170, 170, 190)
+	vp.Ambient = Color3.fromRGB(175, 175, 195)
 	vp.LightDirection = Vector3.new(-1, -1.5, 1)
 	vp.ZIndex = 22
 	vp.Parent = parent
 	local egg = Instance.new("Part")
 	egg.Size = Vector3.new(1.6, 2.1, 1.6)
 	egg.Color = NeverYieldPets.colorOf(eggDef.color)
-	egg.Material = Enum.Material.SmoothPlastic
+	egg.Material = eggDef.gold and Enum.Material.Foil or Enum.Material.SmoothPlastic
+	egg.Reflectance = eggDef.gold and 0.3 or 0
 	egg.CFrame = CFrame.new(0, 0, 0)
 	local mesh = Instance.new("SpecialMesh")
 	mesh.MeshType = Enum.MeshType.Sphere
 	mesh.Parent = egg
 	egg.Parent = vp
-	for i = 1, 5 do
+	for i = 1, 6 do
 		local spot = Instance.new("Part")
 		spot.Size = Vector3.new(0.35, 0.35, 0.12)
 		spot.Color = NeverYieldPets.colorOf(eggDef.spots)
 		local m2 = Instance.new("SpecialMesh")
 		m2.MeshType = Enum.MeshType.Sphere
 		m2.Parent = spot
-		local a = i * 1.25
-		spot.CFrame = CFrame.Angles(0, a, 0) * CFrame.new(0, (i % 3 - 1) * 0.45, -0.78)
+		spot.CFrame = CFrame.Angles(0, i * 1.05, 0) * CFrame.new(0, (i % 3 - 1) * 0.45, -0.78)
 		spot.Parent = vp
 	end
 	local cam = Instance.new("Camera")
@@ -22450,6 +24316,7 @@ NeverYieldPets.close = function()
 	if NeverYieldPets.ui.screen then pcall(function() NeverYieldPets.ui.screen:Destroy() end) end
 	NeverYieldPets.ui = {}
 	NeverYieldPets.refresh = nil
+	NeverYieldPets.refreshHeader = nil
 end
 
 NeverYieldPets.open = function(tab)
@@ -22466,7 +24333,7 @@ NeverYieldPets.open = function(tab)
 	NeverYieldPets.close()
 	pcall(NeverYieldPets.decay)
 	local ui = NeverYieldPets.ui
-	ui.tab, ui.page, ui.spinners = tab or "pets", 1, {}
+	ui.tab, ui.page, ui.spinners, ui.shopTab = tab or "pets", 1, {}, "eggs"
 	local screen = Instance.new("ScreenGui")
 	screen.Name = randomString()
 	screen.ResetOnSpawn = false
@@ -22481,7 +24348,7 @@ NeverYieldPets.open = function(tab)
 	panel.Name = randomString()
 	panel.AnchorPoint = Vector2.new(0.5, 0.5)
 	panel.Position = UDim2.new(0.5, 0, 0.5, 0)
-	panel.Size = UDim2.new(0, 680, 0, 460)
+	panel.Size = UDim2.new(0, 680, 0, 470)
 	panel.BackgroundColor3 = Color3.fromRGB(22, 18, 44)
 	panel.BorderSizePixel = 0
 	panel.Active = true
@@ -22497,12 +24364,14 @@ NeverYieldPets.open = function(tab)
 	scale.Parent = panel
 	panel.Parent = screen
 	ui.panel = panel
-	local title = NeverYieldPets.label(panel, {Position = UDim2.new(0, 20, 0, 10), Size = UDim2.new(0, 260, 0, 40), Font = Enum.Font.FredokaOne,
+	local title = NeverYieldPets.label(panel, {Position = UDim2.new(0, 20, 0, 10), Size = UDim2.new(0, 220, 0, 40), Font = Enum.Font.FredokaOne,
 		TextSize = 34, Text = "\u{1F43E} PET HUB", TextXAlignment = Enum.TextXAlignment.Left, Active = true})
 	local titleGradient = Instance.new("UIGradient")
 	titleGradient.Color = ColorSequence.new(Color3.fromRGB(255, 210, 120), Color3.fromRGB(255, 140, 210))
 	titleGradient.Parent = title
-	ui.coins = NeverYieldPets.label(panel, {Position = UDim2.new(1, -300, 0, 14), Size = UDim2.new(0, 200, 0, 32), Font = Enum.Font.FredokaOne,
+	ui.boosts = NeverYieldPets.label(panel, {Position = UDim2.new(0, 240, 0, 16), Size = UDim2.new(0, 180, 0, 30), TextSize = 11,
+		TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(150, 255, 170)})
+	ui.coins = NeverYieldPets.label(panel, {Position = UDim2.new(1, -260, 0, 14), Size = UDim2.new(0, 200, 0, 32), Font = Enum.Font.FredokaOne,
 		TextSize = 24, TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = Color3.fromRGB(255, 215, 90)})
 	NeverYieldPets.button(panel, "X", UDim2.new(1, -46, 0, 14), UDim2.new(0, 32, 0, 32), Color3.fromRGB(150, 50, 80), NeverYieldPets.close)
 	ui.tabButtons = {}
@@ -22519,9 +24388,20 @@ NeverYieldPets.open = function(tab)
 	ui.body.ZIndex = 21
 	ui.body.Parent = panel
 
-	NeverYieldPets.refresh = function()
+	NeverYieldPets.refreshHeader = function()
 		local data = NeverYieldPets.data
 		ui.coins.Text = "\u{1F4B0} " .. NeverYieldStats.num(data.coins)
+		local active = {}
+		for _, p in ipairs(NeverYieldPets.potions) do
+			local left = (data.boosts[p.id] or 0) - os.time()
+			if left > 0 then
+				table.insert(active, p.icon .. " " .. p.name:gsub(" Potion", "") .. " " .. string.format("%d:%02d", math.floor(left / 60), left % 60))
+			end
+		end
+		ui.boosts.Text = table.concat(active, "   ")
+	end
+	NeverYieldPets.refresh = function()
+		NeverYieldPets.refreshHeader()
 		for id, b in pairs(ui.tabButtons) do
 			b.BackgroundColor3 = id == ui.tab and Color3.fromRGB(255, 140, 90) or Color3.fromRGB(60, 50, 110)
 		end
@@ -22563,10 +24443,13 @@ NeverYieldPets.open = function(tab)
 		for _, m in ipairs(ui.spinners) do
 			if m.Parent then m:PivotTo(CFrame.Angles(0, math.rad(200) + t * 0.8, 0)) end
 		end
-		-- egg timers tick down live
-		if ui.tab == "eggs" and t - lastLive > 1 then
+		if t - lastLive > 1 then
 			lastLive = t
-			NeverYieldPets.refresh()
+			if ui.tab == "eggs" then
+				NeverYieldPets.refresh()
+			else
+				NeverYieldPets.refreshHeader()
+			end
 		end
 	end))
 	TweenService:Create(scale, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
@@ -22592,7 +24475,7 @@ NeverYieldPets.pages.pets = function(body, ui)
 	local data = NeverYieldPets.data
 	local list = NeverYieldPets.sortedPets()
 	NeverYieldPets.label(body, {Size = UDim2.new(1, 0, 0, 20), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(210, 200, 255),
-		Text = #list .. "/" .. NeverYieldPets.maxPets .. " pets  |  " .. #data.equipped .. "/" .. data.slots .. " following  |  click a pet for details"})
+		Text = #list .. "/" .. data.storage .. " pets  |  " .. #data.equipped .. "/" .. data.slots .. " following  |  click a pet for details"})
 	if #list == 0 then
 		NeverYieldPets.label(body, {Position = UDim2.new(0, 0, 0, 120), Size = UDim2.new(1, 0, 0, 40), TextSize = 18,
 			Text = "No pets yet! Buy an egg in the Shop, then hatch it in the Eggs tab."})
@@ -22610,8 +24493,8 @@ NeverYieldPets.pages.pets = function(body, ui)
 		card.Name = randomString()
 		card.Text = ""
 		card.AutoButtonColor = true
-		card.Position = UDim2.new(0, col * 108, 0, 26 + row * 148)
-		card.Size = UDim2.new(0, 100, 0, 140)
+		card.Position = UDim2.new(0, col * 108, 0, 26 + row * 150)
+		card.Size = UDim2.new(0, 100, 0, 142)
 		card.BackgroundColor3 = Color3.fromRGB(38, 32, 70)
 		card.BorderSizePixel = 0
 		card.ZIndex = 21
@@ -22622,11 +24505,11 @@ NeverYieldPets.pages.pets = function(body, ui)
 		stroke.Thickness = NeverYieldPets.isEquipped(pet.id) and 3 or 1.5
 		stroke.Parent = card
 		card.Parent = body
-		NeverYieldPets.preview(card, pet, UDim2.new(0, 4, 0, 4), UDim2.new(1, -8, 0, 84), false)
-		NeverYieldPets.label(card, {Position = UDim2.new(0, 4, 0, 88), Size = UDim2.new(1, -8, 0, 18), Text = pet.name, TextTruncate = Enum.TextTruncate.AtEnd})
-		NeverYieldPets.label(card, {Position = UDim2.new(0, 4, 0, 106), Size = UDim2.new(1, -8, 0, 14), TextSize = 11, TextColor3 = rarity.color,
+		NeverYieldPets.preview(card, pet, UDim2.new(0, 4, 0, 4), UDim2.new(1, -8, 0, 86), false)
+		NeverYieldPets.label(card, {Position = UDim2.new(0, 4, 0, 90), Size = UDim2.new(1, -8, 0, 18), Text = pet.name, TextTruncate = Enum.TextTruncate.AtEnd})
+		NeverYieldPets.label(card, {Position = UDim2.new(0, 4, 0, 108), Size = UDim2.new(1, -8, 0, 14), TextSize = 11, TextColor3 = rarity.color,
 			Text = "Lv " .. pet.level .. " " .. (pet.shiny and "Shiny " or "") .. rarity.name})
-		NeverYieldPets.bar(card, UDim2.new(0, 10, 0, 123), UDim2.new(1, -20, 0, 10), pet.hunger / 100, pet.hunger < 20 and Color3.fromRGB(255, 80, 80) or Color3.fromRGB(255, 170, 70), "")
+		NeverYieldPets.bar(card, UDim2.new(0, 10, 0, 125), UDim2.new(1, -20, 0, 10), pet.hunger / 100, pet.hunger < 20 and Color3.fromRGB(255, 80, 80) or Color3.fromRGB(255, 170, 70), "")
 		if NeverYieldPets.isEquipped(pet.id) then
 			NeverYieldPets.label(card, {Position = UDim2.new(1, -26, 0, 4), Size = UDim2.new(0, 22, 0, 22), TextScaled = true, Text = "\u{1F43E}"})
 		end
@@ -22635,7 +24518,7 @@ NeverYieldPets.pages.pets = function(body, ui)
 			NeverYieldPets.refresh()
 		end)
 	end
-	NeverYieldPets.pager(body, ui, pages, 324)
+	NeverYieldPets.pager(body, ui, pages, 328)
 end
 
 NeverYieldPets.pages.detail = function(body, ui)
@@ -22653,40 +24536,34 @@ NeverYieldPets.pages.detail = function(body, ui)
 		ui.detail = nil
 		NeverYieldPets.refresh()
 	end)
-	local stage = Instance.new("Frame")
-	stage.Position = UDim2.new(0, 0, 0, 34)
-	stage.Size = UDim2.new(0, 240, 0, 240)
-	stage.BackgroundColor3 = Color3.fromRGB(38, 32, 70)
-	stage.BorderSizePixel = 0
-	stage.ZIndex = 21
-	NeverYieldPortal.corner(stage, UDim.new(0, 16))
-	local stroke = Instance.new("UIStroke")
-	stroke.Color = rarity.color
-	stroke.Thickness = 2
-	stroke.Parent = stage
-	stage.Parent = body
+	local stage = NeverYieldPets.card(body, UDim2.new(0, 0, 0, 32), UDim2.new(0, 240, 0, 230), rarity.color)
 	NeverYieldPets.preview(stage, pet, UDim2.new(0, 0, 0, 0), UDim2.new(1, 0, 1, 0), true)
-	-- skin picker under the preview
-	local owned = {}
+	-- skin + hat pickers under the preview
+	local ownedSkins, ownedHats = {}, {"none"}
 	for _, s in ipairs(NeverYieldPets.skins) do
-		if data.skins[s.id] then table.insert(owned, s.id) end
+		if data.skins[s.id] then table.insert(ownedSkins, s.id) end
 	end
-	local function cycleSkin(dir)
-		local i = table.find(owned, pet.skin) or 1
-		pet.skin = owned[((i - 1 + dir) % #owned) + 1]
+	for _, h in ipairs(NeverYieldPets.hats) do
+		if data.hats[h.id] then table.insert(ownedHats, h.id) end
+	end
+	local function cycle(list, field, dir, none)
+		local current = pet[field] or none
+		local i = table.find(list, current) or 1
+		local value = list[((i - 1 + dir) % #list) + 1]
+		pet[field] = (value ~= "none") and value or nil
 		NeverYieldPets.dirty = true
-		if NeverYieldPets.spawned[pet.id] then
-			NeverYieldPets.despawn(pet.id)
-			NeverYieldPets.spawn(pet)
-		end
+		NeverYieldPets.respawn(pet)
 		NeverYieldPets.refresh()
 	end
-	NeverYieldPets.button(body, "<", UDim2.new(0, 0, 0, 282), UDim2.new(0, 36, 0, 28), nil, function() cycleSkin(-1) end)
-	NeverYieldPets.label(body, {Position = UDim2.new(0, 40, 0, 282), Size = UDim2.new(0, 160, 0, 28), TextSize = 14,
-		Text = "Skin: " .. skin.name .. " (" .. #owned .. " owned)"})
-	NeverYieldPets.button(body, ">", UDim2.new(0, 204, 0, 282), UDim2.new(0, 36, 0, 28), nil, function() cycleSkin(1) end)
+	local hatDef = pet.hat and NeverYieldPets.hatById[pet.hat]
+	NeverYieldPets.button(body, "<", UDim2.new(0, 0, 0, 268), UDim2.new(0, 36, 0, 26), nil, function() cycle(ownedSkins, "skin", -1, "classic") end)
+	NeverYieldPets.label(body, {Position = UDim2.new(0, 40, 0, 268), Size = UDim2.new(0, 160, 0, 26), TextSize = 13, Text = "Skin: " .. skin.name .. " (" .. #ownedSkins .. ")"})
+	NeverYieldPets.button(body, ">", UDim2.new(0, 204, 0, 268), UDim2.new(0, 36, 0, 26), nil, function() cycle(ownedSkins, "skin", 1, "classic") end)
+	NeverYieldPets.button(body, "<", UDim2.new(0, 0, 0, 300), UDim2.new(0, 36, 0, 26), nil, function() cycle(ownedHats, "hat", -1, "none") end)
+	NeverYieldPets.label(body, {Position = UDim2.new(0, 40, 0, 300), Size = UDim2.new(0, 160, 0, 26), TextSize = 13,
+		Text = "Hat: " .. (hatDef and hatDef.name or "none") .. " (" .. (#ownedHats - 1) .. ")"})
+	NeverYieldPets.button(body, ">", UDim2.new(0, 204, 0, 300), UDim2.new(0, 36, 0, 26), nil, function() cycle(ownedHats, "hat", 1, "none") end)
 
-	-- info column
 	local x = 256
 	local nameBox = Instance.new("TextBox")
 	nameBox.Position = UDim2.new(0, x, 0, 0)
@@ -22732,14 +24609,12 @@ NeverYieldPets.pages.detail = function(body, ui)
 	NeverYieldPets.bar(body, UDim2.new(0, x, 0, 148), UDim2.new(0, 390, 0, 20), pet.hunger / 100, pet.hunger < 20 and Color3.fromRGB(255, 80, 80) or Color3.fromRGB(255, 170, 70),
 		"Hunger " .. math.floor(pet.hunger) .. "%")
 	NeverYieldPets.bar(body, UDim2.new(0, x, 0, 174), UDim2.new(0, 390, 0, 20), pet.happy / 100, Color3.fromRGB(255, 120, 200), "Happiness " .. math.floor(pet.happy) .. "%")
-	-- food row
 	NeverYieldPets.label(body, {Position = UDim2.new(0, x, 0, 202), Size = UDim2.new(0, 200, 0, 18), TextXAlignment = Enum.TextXAlignment.Left, Text = "Feed:"})
 	for i, food in ipairs(NeverYieldPets.foods) do
 		NeverYieldPets.button(body, food.icon .. " " .. (data.food[food.id] or 0), UDim2.new(0, x + (i - 1) * 78, 0, 222), UDim2.new(0, 72, 0, 34), Color3.fromRGB(90, 60, 40), function()
 			if NeverYieldPets.feed(pet, food.id) then NeverYieldPets.refresh() end
 		end)
 	end
-	-- actions
 	local equipped = NeverYieldPets.isEquipped(pet.id)
 	NeverYieldPets.button(body, equipped and "Unequip" or "Equip", UDim2.new(0, x, 0, 270), UDim2.new(0, 124, 0, 38), equipped and Color3.fromRGB(120, 80, 60) or Color3.fromRGB(60, 160, 90), function()
 		NeverYieldPets.equip(pet.id)
@@ -22776,135 +24651,205 @@ NeverYieldPets.pages.detail = function(body, ui)
 	end)
 end
 
+NeverYieldPets.eggDefOf = function(egg)
+	if egg.bred then
+		return {name = "Bred Egg", color = {255, 230, 240}, spots = {255, 140, 200}}
+	end
+	return NeverYieldPets.eggById[egg.kind] or NeverYieldPets.eggs[1]
+end
+
 NeverYieldPets.pages.eggs = function(body, ui)
 	local data = NeverYieldPets.data
 	NeverYieldPets.label(body, {Size = UDim2.new(1, 0, 0, 20), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(210, 200, 255),
-		Text = #data.eggs .. "/8 eggs in your nest. Buy eggs in the Shop or breed pets."})
+		Text = #data.eggs .. "/8 eggs in your nest  |  Instant Hatch: " .. data.items.instant .. (data.incubator and "  |  Incubator: 2x faster" or "")})
 	if #data.eggs == 0 then
-		NeverYieldPets.label(body, {Position = UDim2.new(0, 0, 0, 120), Size = UDim2.new(1, 0, 0, 40), TextSize = 18, Text = "Your nest is empty."})
+		NeverYieldPets.label(body, {Position = UDim2.new(0, 0, 0, 120), Size = UDim2.new(1, 0, 0, 40), TextSize = 18, Text = "Your nest is empty. Buy eggs in the Shop or breed pets."})
 		return
 	end
 	for i, egg in ipairs(data.eggs) do
 		local col, row = (i - 1) % 4, math.floor((i - 1) / 4)
-		local def = egg.bred and {name = "Bred Egg", color = {255, 230, 240}, spots = {255, 140, 200}} or NeverYieldPets.eggById[egg.kind] or NeverYieldPets.eggs[1]
-		local card = Instance.new("Frame")
-		card.Position = UDim2.new(0, col * 162, 0, 28 + row * 160)
-		card.Size = UDim2.new(0, 154, 0, 152)
-		card.BackgroundColor3 = Color3.fromRGB(38, 32, 70)
-		card.BorderSizePixel = 0
-		card.ZIndex = 21
-		NeverYieldPortal.corner(card, UDim.new(0, 12))
-		card.Parent = body
+		local def = NeverYieldPets.eggDefOf(egg)
+		local card = NeverYieldPets.card(body, UDim2.new(0, col * 162, 0, 28 + row * 160), UDim2.new(0, 154, 0, 152))
 		NeverYieldPets.eggPreview(card, def, UDim2.new(0, 27, 0, 4), UDim2.new(0, 100, 0, 70))
-		NeverYieldPets.label(card, {Position = UDim2.new(0, 4, 0, 76), Size = UDim2.new(1, -8, 0, 18), Text = def.name ..
-			(egg.bred and egg.parents and #egg.parents == 2 and "" or "")})
+		NeverYieldPets.label(card, {Position = UDim2.new(0, 4, 0, 76), Size = UDim2.new(1, -8, 0, 18), Text = def.name})
 		local left = egg.ready - os.time()
 		if left > 0 then
-			NeverYieldPets.label(card, {Position = UDim2.new(0, 4, 0, 96), Size = UDim2.new(1, -8, 0, 18), TextColor3 = Color3.fromRGB(200, 200, 230),
+			NeverYieldPets.label(card, {Position = UDim2.new(0, 4, 0, 94), Size = UDim2.new(1, -8, 0, 16), TextColor3 = Color3.fromRGB(200, 200, 230),
 				Text = string.format("Hatching in %d:%02d", math.floor(left / 60), left % 60)})
-		end
-		NeverYieldPets.button(card, left > 0 and "Wait..." or "Hatch!", UDim2.new(0, 14, 0, 116), UDim2.new(1, -28, 0, 30),
-			left > 0 and Color3.fromRGB(70, 65, 100) or Color3.fromRGB(255, 150, 60), function()
+			if data.items.instant > 0 then
+				NeverYieldPets.button(card, "Instant Hatch", UDim2.new(0, 14, 0, 114), UDim2.new(1, -28, 0, 30), Color3.fromRGB(150, 90, 220), function()
+					NeverYieldPets.hatch(i, true)
+				end)
+			else
+				NeverYieldPets.button(card, "Wait...", UDim2.new(0, 14, 0, 114), UDim2.new(1, -28, 0, 30), Color3.fromRGB(70, 65, 100))
+			end
+		else
+			NeverYieldPets.button(card, "Hatch!", UDim2.new(0, 14, 0, 114), UDim2.new(1, -28, 0, 30), Color3.fromRGB(255, 150, 60), function()
 				NeverYieldPets.hatch(i)
 			end)
+		end
 	end
 end
 
-NeverYieldPets.pages.shop = function(body, ui)
-	local data = NeverYieldPets.data
-	NeverYieldPets.label(body, {Size = UDim2.new(1, 0, 0, 20), TextXAlignment = Enum.TextXAlignment.Left, Text = "EGGS"})
+NeverYieldPets.shopPages = {}
+
+NeverYieldPets.shopPages.eggs = function(body, ui, data)
 	for i, egg in ipairs(NeverYieldPets.eggs) do
-		local card = Instance.new("Frame")
-		card.Position = UDim2.new(0, (i - 1) * 140, 0, 22)
-		card.Size = UDim2.new(0, 132, 0, 132)
-		card.BackgroundColor3 = Color3.fromRGB(38, 32, 70)
-		card.BorderSizePixel = 0
-		card.ZIndex = 21
-		NeverYieldPortal.corner(card, UDim.new(0, 12))
-		card.Parent = body
-		NeverYieldPets.eggPreview(card, egg, UDim2.new(0, 21, 0, 2), UDim2.new(0, 90, 0, 62))
-		NeverYieldPets.label(card, {Position = UDim2.new(0, 4, 0, 64), Size = UDim2.new(1, -8, 0, 18), Text = egg.name})
-		NeverYieldPets.label(card, {Position = UDim2.new(0, 4, 0, 80), Size = UDim2.new(1, -8, 0, 14), TextSize = 10, TextColor3 = Color3.fromRGB(200, 200, 230),
-			Text = egg.id == "basic" and "mostly common" or egg.id == "fancy" and "rare to legendary" or "epic + legendary, mythic skins"})
-		NeverYieldPets.button(card, "\u{1F4B0} " .. egg.price, UDim2.new(0, 12, 0, 98), UDim2.new(1, -24, 0, 28), Color3.fromRGB(60, 160, 90), function()
+		local col, row = (i - 1) % 5, math.floor((i - 1) / 5)
+		local card = NeverYieldPets.card(body, UDim2.new(0, col * 130, 0, 34 + row * 152), UDim2.new(0, 124, 0, 146))
+		NeverYieldPets.eggPreview(card, egg, UDim2.new(0, 22, 0, 2), UDim2.new(0, 80, 0, 56))
+		NeverYieldPets.label(card, {Position = UDim2.new(0, 4, 0, 58), Size = UDim2.new(1, -8, 0, 16), TextSize = 13, Text = egg.name})
+		NeverYieldPets.label(card, {Position = UDim2.new(0, 4, 0, 74), Size = UDim2.new(1, -8, 0, 26), TextSize = 10, TextWrapped = true,
+			TextColor3 = Color3.fromRGB(200, 200, 230), Text = egg.desc .. "  (" .. NeverYieldPets.hatchTime(egg.hatch) .. "s)"})
+		NeverYieldPets.button(card, "\u{1F4B0} " .. NeverYieldStats.num(egg.price), UDim2.new(0, 10, 0, 108), UDim2.new(1, -20, 0, 30), Color3.fromRGB(60, 160, 90), function()
 			if NeverYieldPets.buyEgg(egg.id) then NeverYieldPets.refresh() end
 		end)
 	end
-	-- slots
-	local nextSlot
-	for _, s in ipairs(NeverYieldPets.slots) do
-		if data.slots < s.count then nextSlot = s break end
-	end
-	local slotCard = Instance.new("Frame")
-	slotCard.Position = UDim2.new(0, 430, 0, 22)
-	slotCard.Size = UDim2.new(0, 214, 0, 132)
-	slotCard.BackgroundColor3 = Color3.fromRGB(38, 32, 70)
-	slotCard.BorderSizePixel = 0
-	slotCard.ZIndex = 21
-	NeverYieldPortal.corner(slotCard, UDim.new(0, 12))
-	slotCard.Parent = body
-	NeverYieldPets.label(slotCard, {Position = UDim2.new(0, 8, 0, 10), Size = UDim2.new(1, -16, 0, 40), TextSize = 16, TextWrapped = true,
-		Text = "Pet slots: " .. data.slots .. (nextSlot and ("\nUnlock slot " .. nextSlot.count) or "\n(maxed)")})
-	if nextSlot then
-		NeverYieldPets.button(slotCard, "\u{1F4B0} " .. nextSlot.price, UDim2.new(0, 30, 0, 80), UDim2.new(1, -60, 0, 34), Color3.fromRGB(60, 160, 90), function()
-			if data.coins < nextSlot.price then
-				notify('Pets', 'Not enough coins.')
-				return
-			end
-			NeverYieldPets.addCoins(-nextSlot.price)
-			data.slots = nextSlot.count
-			notify('Pets', 'You can now have ' .. data.slots .. ' pets following you!')
-			NeverYieldPets.refresh()
-		end)
-	end
-	-- food
-	NeverYieldPets.label(body, {Position = UDim2.new(0, 0, 0, 162), Size = UDim2.new(1, 0, 0, 20), TextXAlignment = Enum.TextXAlignment.Left, Text = "FOOD"})
+end
+
+NeverYieldPets.shopPages.items = function(body, ui, data)
+	NeverYieldPets.label(body, {Position = UDim2.new(0, 0, 0, 34), Size = UDim2.new(1, 0, 0, 18), TextXAlignment = Enum.TextXAlignment.Left, Text = "FOOD"})
 	for i, food in ipairs(NeverYieldPets.foods) do
 		NeverYieldPets.button(body, food.icon .. " " .. food.name .. "\n\u{1F4B0} " .. food.price .. "   (have " .. (data.food[food.id] or 0) .. ")",
-			UDim2.new(0, (i - 1) * 130, 0, 184), UDim2.new(0, 124, 0, 46), Color3.fromRGB(90, 60, 40), function()
-				if data.coins < food.price then
-					notify('Pets', 'Not enough coins.')
-					return
-				end
-				NeverYieldPets.addCoins(-food.price)
+			UDim2.new(0, (i - 1) * 130, 0, 54), UDim2.new(0, 124, 0, 46), Color3.fromRGB(90, 60, 40), function()
+				if not NeverYieldPets.spend(food.price) then return end
 				data.food[food.id] = (data.food[food.id] or 0) + 1
 				NeverYieldPets.refresh()
 			end)
 	end
-	-- skins
-	NeverYieldPets.label(body, {Position = UDim2.new(0, 0, 0, 238), Size = UDim2.new(1, 0, 0, 20), TextXAlignment = Enum.TextXAlignment.Left,
-		Text = "SKINS (unlocked skins can be put on any pet in its detail page)"})
+	NeverYieldPets.label(body, {Position = UDim2.new(0, 0, 0, 110), Size = UDim2.new(1, 0, 0, 18), TextXAlignment = Enum.TextXAlignment.Left, Text = "POTIONS (10 minutes, buying again adds time)"})
+	for i, potion in ipairs(NeverYieldPets.potions) do
+		NeverYieldPets.button(body, potion.icon .. " " .. potion.name .. "\n" .. potion.desc .. "\n\u{1F4B0} " .. potion.price,
+			UDim2.new(0, (i - 1) * 216, 0, 130), UDim2.new(0, 208, 0, 60), Color3.fromRGB(70, 60, 140), function()
+				if not NeverYieldPets.spend(potion.price) then return end
+				data.boosts[potion.id] = math.max(data.boosts[potion.id] or 0, os.time()) + 600
+				notify('Pets', potion.name .. ' active!')
+				NeverYieldPets.refresh()
+			end)
+	end
+	NeverYieldPets.label(body, {Position = UDim2.new(0, 0, 0, 200), Size = UDim2.new(1, 0, 0, 18), TextXAlignment = Enum.TextXAlignment.Left, Text = "OTHER"})
+	NeverYieldPets.button(body, "\u{26A1} Instant Hatch\nhatch any egg right now\n\u{1F4B0} " .. NeverYieldPets.instantPrice .. "   (have " .. data.items.instant .. ")",
+		UDim2.new(0, 0, 0, 220), UDim2.new(0, 208, 0, 60), Color3.fromRGB(150, 90, 220), function()
+			if not NeverYieldPets.spend(NeverYieldPets.instantPrice) then return end
+			data.items.instant = data.items.instant + 1
+			NeverYieldPets.refresh()
+		end)
+	NeverYieldPets.button(body, "\u{26BD} Toy Ball\nall pets +25 happiness, following pets +5 XP\n\u{1F4B0} " .. NeverYieldPets.ballPrice,
+		UDim2.new(0, 216, 0, 220), UDim2.new(0, 208, 0, 60), Color3.fromRGB(60, 130, 170), function()
+			if not NeverYieldPets.spend(NeverYieldPets.ballPrice) then return end
+			for _, pet in pairs(data.pets) do
+				pet.happy = math.min(100, pet.happy + 25)
+			end
+			for _, id in ipairs(data.equipped) do
+				local pet = data.pets[id]
+				if pet then
+					NeverYieldPets.giveXp(pet, 5)
+					NeverYieldPets.effect(pet, "hearts")
+				end
+			end
+			notify('Pets', 'Playtime! Everyone is happier.')
+			NeverYieldPets.refresh()
+		end)
+end
+
+NeverYieldPets.shopPages.skins = function(body, ui, data)
+	NeverYieldPets.label(body, {Position = UDim2.new(0, 0, 0, 34), Size = UDim2.new(1, 0, 0, 18), TextXAlignment = Enum.TextXAlignment.Left,
+		Text = "Unlocked skins can be put on any pet (pet detail page)."})
 	local col = 0
 	for _, skin in ipairs(NeverYieldPets.skins) do
 		if skin.id ~= "classic" then
 			local owned = data.skins[skin.id]
 			local rarity = NeverYieldPets.rarities[NeverYieldPets.rarityIndex[skin.rarity]]
-			local b = NeverYieldPets.button(body, skin.name .. "\n" .. (owned and "Owned" or ("\u{1F4B0} " .. skin.price)),
-				UDim2.new(0, (col % 5) * 130, 0, 260 + math.floor(col / 5) * 50), UDim2.new(0, 124, 0, 44), owned and Color3.fromRGB(50, 45, 80) or Color3.fromRGB(70, 55, 130), function()
-					if data.skins[skin.id] then return end
-					if data.coins < skin.price then
-						notify('Pets', 'Not enough coins.')
-						return
-					end
-					NeverYieldPets.addCoins(-skin.price)
+			local card = NeverYieldPets.card(body, UDim2.new(0, (col % 5) * 130, 0, 56 + math.floor(col / 5) * 140), UDim2.new(0, 124, 0, 134), rarity.color)
+			NeverYieldPets.preview(card, {species = "cat", skin = skin.id, level = 1, traits = {}}, UDim2.new(0, 4, 0, 2), UDim2.new(1, -8, 0, 72), true)
+			NeverYieldPets.label(card, {Position = UDim2.new(0, 4, 0, 74), Size = UDim2.new(1, -8, 0, 18), Text = skin.name, TextColor3 = rarity.color})
+			NeverYieldPets.button(card, owned and "Owned" or ("\u{1F4B0} " .. NeverYieldStats.num(skin.price)), UDim2.new(0, 10, 0, 96), UDim2.new(1, -20, 0, 30),
+				owned and Color3.fromRGB(50, 45, 80) or Color3.fromRGB(60, 160, 90), function()
+					if data.skins[skin.id] or not NeverYieldPets.spend(skin.price) then return end
 					data.skins[skin.id] = true
 					notify('Pets', skin.name .. ' skin unlocked!')
 					NeverYieldPets.refresh()
 				end)
-			b.TextColor3 = rarity.color
 			col = col + 1
 		end
 	end
 end
 
-NeverYieldPets.pages.breed = function(body, ui)
+NeverYieldPets.shopPages.hats = function(body, ui, data)
+	NeverYieldPets.label(body, {Position = UDim2.new(0, 0, 0, 34), Size = UDim2.new(1, 0, 0, 18), TextXAlignment = Enum.TextXAlignment.Left,
+		Text = "Hats can be put on any pet (pet detail page)."})
+	for i, hat in ipairs(NeverYieldPets.hats) do
+		local col, row = (i - 1) % 5, math.floor((i - 1) / 5)
+		local owned = data.hats[hat.id]
+		local rarity = NeverYieldPets.rarities[NeverYieldPets.rarityIndex[hat.rarity]]
+		local card = NeverYieldPets.card(body, UDim2.new(0, col * 130, 0, 56 + row * 140), UDim2.new(0, 124, 0, 134), rarity.color)
+		NeverYieldPets.preview(card, {species = "bunny", skin = "classic", level = 1, traits = {}, hat = hat.id}, UDim2.new(0, 4, 0, 2), UDim2.new(1, -8, 0, 72), true)
+		NeverYieldPets.label(card, {Position = UDim2.new(0, 4, 0, 74), Size = UDim2.new(1, -8, 0, 18), Text = hat.name, TextColor3 = rarity.color})
+		NeverYieldPets.button(card, owned and "Owned" or ("\u{1F4B0} " .. NeverYieldStats.num(hat.price)), UDim2.new(0, 10, 0, 96), UDim2.new(1, -20, 0, 30),
+			owned and Color3.fromRGB(50, 45, 80) or Color3.fromRGB(60, 160, 90), function()
+				if data.hats[hat.id] or not NeverYieldPets.spend(hat.price) then return end
+				data.hats[hat.id] = true
+				notify('Pets', hat.name .. ' unlocked!')
+				NeverYieldPets.refresh()
+			end)
+	end
+end
+
+NeverYieldPets.shopPages.upgrades = function(body, ui, data)
+	local function nextOf(list, current)
+		for _, s in ipairs(list) do
+			if current < s.count then return s end
+		end
+	end
+	local slot, storage = nextOf(NeverYieldPets.slots, data.slots), nextOf(NeverYieldPets.storages, data.storage)
+	local rows = {
+		{"\u{1F43E} Pet slots: " .. data.slots, slot and ("Unlock slot " .. slot.count) or "maxed", slot and slot.price, function()
+			data.slots = slot.count
+			notify('Pets', 'You can now have ' .. data.slots .. ' pets following you!')
+		end},
+		{"\u{1F4E6} Storage: " .. data.storage .. " pets", storage and ("Upgrade to " .. storage.count) or "maxed", storage and storage.price, function()
+			data.storage = storage.count
+		end},
+		{"\u{1F95A} Incubator", data.incubator and "owned: eggs hatch 2x faster" or "eggs hatch 2x faster", (not data.incubator) and NeverYieldPets.incubatorPrice, function()
+			data.incubator = true
+		end},
+	}
+	for i, row in ipairs(rows) do
+		local card = NeverYieldPets.card(body, UDim2.new(0, 0, 0, 34 + (i - 1) * 80), UDim2.new(1, 0, 0, 72))
+		NeverYieldPets.label(card, {Position = UDim2.new(0, 16, 0, 8), Size = UDim2.new(0.6, 0, 0, 28), TextSize = 18, TextXAlignment = Enum.TextXAlignment.Left, Text = row[1]})
+		NeverYieldPets.label(card, {Position = UDim2.new(0, 16, 0, 38), Size = UDim2.new(0.6, 0, 0, 22), TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left,
+			TextColor3 = Color3.fromRGB(200, 200, 230), Text = row[2]})
+		if row[3] then
+			NeverYieldPets.button(card, "\u{1F4B0} " .. NeverYieldStats.num(row[3]), UDim2.new(1, -170, 0, 16), UDim2.new(0, 150, 0, 40), Color3.fromRGB(60, 160, 90), function()
+				if not NeverYieldPets.spend(row[3]) then return end
+				row[4]()
+				NeverYieldPets.dirty = true
+				NeverYieldPets.refresh()
+			end)
+		end
+	end
+end
+
+NeverYieldPets.pages.shop = function(body, ui)
 	local data = NeverYieldPets.data
+	for i, info in ipairs(NeverYieldPets.shopTabs) do
+		NeverYieldPets.button(body, info[2], UDim2.new(0, (i - 1) * 104, 0, 0), UDim2.new(0, 98, 0, 26),
+			ui.shopTab == info[1] and Color3.fromRGB(255, 120, 180) or Color3.fromRGB(50, 42, 95), function()
+				ui.shopTab = info[1]
+				NeverYieldPets.refresh()
+			end)
+	end
+	local page = NeverYieldPets.shopPages[ui.shopTab] or NeverYieldPets.shopPages.eggs
+	page(body, ui, data)
+end
+
+NeverYieldPets.pages.breed = function(body, ui)
 	local eligible = {}
 	for _, pet in ipairs(NeverYieldPets.sortedPets()) do
 		if NeverYieldPets.canBreed(pet) then table.insert(eligible, pet) end
 	end
 	NeverYieldPets.label(body, {Size = UDim2.new(1, 0, 0, 36), TextWrapped = true, TextColor3 = Color3.fromRGB(210, 200, 255),
-		Text = "Pick two pets (level 5+). The baby gets a parent's species and skin, with a chance of a surprise species, a mutated skin or a shiny. Costs \u{1F4B0} " .. NeverYieldPets.breedCost .. ", parents rest 5 minutes, the egg hatches in 2 minutes."})
+		Text = "Pick two pets (level 5+). The baby gets a parent's species and skin, with a chance of a surprise species, a mutated skin or a shiny. Costs \u{1F4B0} " .. NeverYieldPets.breedCost .. ", parents rest 5 minutes."})
 	if #eligible < 2 then
 		NeverYieldPets.label(body, {Position = UDim2.new(0, 0, 0, 140), Size = UDim2.new(1, 0, 0, 40), TextSize = 18,
 			Text = "You need two rested pets at level 5 or higher (" .. #eligible .. " ready)."})
@@ -22916,16 +24861,9 @@ NeverYieldPets.pages.breed = function(body, ui)
 	for side, key in ipairs({"breedA", "breedB"}) do
 		local pet = eligible[ui[key]]
 		local x = side == 1 and 30 or 400
-		local stage = Instance.new("Frame")
-		stage.Position = UDim2.new(0, x, 0, 46)
-		stage.Size = UDim2.new(0, 220, 0, 200)
-		stage.BackgroundColor3 = Color3.fromRGB(38, 32, 70)
-		stage.BorderSizePixel = 0
-		stage.ZIndex = 21
-		NeverYieldPortal.corner(stage, UDim.new(0, 14))
-		stage.Parent = body
-		NeverYieldPets.preview(stage, pet, UDim2.new(0, 10, 0, 6), UDim2.new(1, -20, 0, 150), true)
 		local rarity = NeverYieldPets.rarityOf(pet)
+		local stage = NeverYieldPets.card(body, UDim2.new(0, x, 0, 46), UDim2.new(0, 220, 0, 200), rarity.color)
+		NeverYieldPets.preview(stage, pet, UDim2.new(0, 10, 0, 6), UDim2.new(1, -20, 0, 150), true)
 		NeverYieldPets.label(stage, {Position = UDim2.new(0, 0, 0, 156), Size = UDim2.new(1, 0, 0, 20), TextSize = 15, Text = pet.name .. "  Lv " .. pet.level})
 		NeverYieldPets.label(stage, {Position = UDim2.new(0, 0, 0, 176), Size = UDim2.new(1, 0, 0, 18), TextSize = 12, TextColor3 = rarity.color,
 			Text = rarity.name .. " " .. NeverYieldPets.speciesById[pet.species].name .. " (" .. (NeverYieldPets.skinById[pet.skin] or NeverYieldPets.skins[1]).name .. ")"})
@@ -22949,40 +24887,29 @@ end
 
 NeverYieldPets.pages.index = function(body, ui)
 	local data = NeverYieldPets.data
-	local found, skins = 0, 0
+	local found, skins, hats = 0, 0, 0
 	for _ in pairs(data.discovered) do found = found + 1 end
 	for _ in pairs(data.skins) do skins = skins + 1 end
-	NeverYieldPets.label(body, {Size = UDim2.new(1, 0, 0, 20), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(210, 200, 255),
-		Text = "Species found: " .. found .. "/" .. #NeverYieldPets.species .. "   |   Skins: " .. skins .. "/" .. #NeverYieldPets.skins ..
-		"   |   Hatched " .. data.stats.hatched .. ", bred " .. data.stats.bred .. ", fed " .. data.stats.fed .. ", coins earned " .. data.stats.coinsEarned})
+	for _ in pairs(data.hats) do hats = hats + 1 end
+	NeverYieldPets.label(body, {Size = UDim2.new(1, 0, 0, 20), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(210, 200, 255), TextSize = 12,
+		Text = "Species " .. found .. "/" .. #NeverYieldPets.species .. "  |  Skins " .. skins .. "/" .. #NeverYieldPets.skins .. "  |  Hats " .. hats .. "/" .. #NeverYieldPets.hats ..
+		"  |  hatched " .. data.stats.hatched .. ", bred " .. data.stats.bred .. ", fed " .. data.stats.fed .. ", coins earned " .. NeverYieldStats.num(data.stats.coinsEarned)})
 	for i, species in ipairs(NeverYieldPets.species) do
-		local col, row = (i - 1) % 5, math.floor((i - 1) / 5)
+		local col, row = (i - 1) % 7, math.floor((i - 1) / 7)
 		local rarity = NeverYieldPets.rarities[NeverYieldPets.rarityIndex[species.rarity]]
-		local card = Instance.new("Frame")
-		card.Position = UDim2.new(0, col * 130, 0, 28 + row * 160)
-		card.Size = UDim2.new(0, 122, 0, 152)
-		card.BackgroundColor3 = Color3.fromRGB(38, 32, 70)
-		card.BorderSizePixel = 0
-		card.ZIndex = 21
-		NeverYieldPortal.corner(card, UDim.new(0, 12))
-		local stroke = Instance.new("UIStroke")
-		stroke.Color = rarity.color
-		stroke.Thickness = 1.5
-		stroke.Parent = card
-		card.Parent = body
+		local card = NeverYieldPets.card(body, UDim2.new(0, col * 92, 0, 26 + row * 110), UDim2.new(0, 86, 0, 104), rarity.color)
 		if data.discovered[species.id] then
-			NeverYieldPets.preview(card, {species = species.id, skin = "classic", level = 1, traits = {}}, UDim2.new(0, 6, 0, 6), UDim2.new(1, -12, 0, 100), true)
-			NeverYieldPets.label(card, {Position = UDim2.new(0, 0, 0, 110), Size = UDim2.new(1, 0, 0, 20), TextSize = 15, Text = species.name})
+			NeverYieldPets.preview(card, {species = species.id, skin = "classic", level = 1, traits = {}}, UDim2.new(0, 3, 0, 2), UDim2.new(1, -6, 0, 66), true)
+			NeverYieldPets.label(card, {Position = UDim2.new(0, 0, 0, 68), Size = UDim2.new(1, 0, 0, 18), TextSize = 13, Text = species.name})
 		else
-			NeverYieldPets.label(card, {Position = UDim2.new(0, 0, 0, 30), Size = UDim2.new(1, 0, 0, 60), TextSize = 46, Font = Enum.Font.FredokaOne,
+			NeverYieldPets.label(card, {Position = UDim2.new(0, 0, 0, 14), Size = UDim2.new(1, 0, 0, 44), TextSize = 38, Font = Enum.Font.FredokaOne,
 				Text = "?", TextColor3 = Color3.fromRGB(90, 85, 130)})
-			NeverYieldPets.label(card, {Position = UDim2.new(0, 0, 0, 110), Size = UDim2.new(1, 0, 0, 20), TextSize = 15, Text = "???"})
+			NeverYieldPets.label(card, {Position = UDim2.new(0, 0, 0, 68), Size = UDim2.new(1, 0, 0, 18), TextSize = 13, Text = "???"})
 		end
-		NeverYieldPets.label(card, {Position = UDim2.new(0, 0, 0, 130), Size = UDim2.new(1, 0, 0, 16), TextSize = 12, TextColor3 = rarity.color, Text = rarity.name})
+		NeverYieldPets.label(card, {Position = UDim2.new(0, 0, 0, 86), Size = UDim2.new(1, 0, 0, 14), TextSize = 11, TextColor3 = rarity.color, Text = rarity.name})
 	end
 end
 
--- egg hatching popup: wobble, crack, flash, reveal
 NeverYieldPets.hatchPopup = function(egg, pet, newSpecies)
 	local screen = WackyState.overlay()
 	local card = Instance.new("Frame")
@@ -23000,8 +24927,7 @@ NeverYieldPets.hatchPopup = function(egg, pet, newSpecies)
 	card.Parent = screen
 	TweenService:Create(scale, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
 	WackyState.sound(WackyState.diamondWhoosh or NeverYieldPets.coinSound, nil, 0.5)
-	local def = egg.bred and {color = {255, 230, 240}, spots = {255, 140, 200}} or NeverYieldPets.eggById[egg.kind] or NeverYieldPets.eggs[1]
-	local vp, eggPart = NeverYieldPets.eggPreview(card, def, UDim2.new(0, 60, 0, 30), UDim2.new(0, 240, 0, 220))
+	local vp = NeverYieldPets.eggPreview(card, NeverYieldPets.eggDefOf(egg), UDim2.new(0, 60, 0, 30), UDim2.new(0, 240, 0, 220))
 	vp.ZIndex = 71
 	local status = NeverYieldPets.label(card, {Position = UDim2.new(0, 0, 0, 262), Size = UDim2.new(1, 0, 0, 40), Font = Enum.Font.FredokaOne, TextSize = 28, Text = "Hatching...", ZIndex = 72})
 	task.spawn(function()
