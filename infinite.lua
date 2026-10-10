@@ -1,4 +1,4 @@
--- NeverYield v1.24.5 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.24.6 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.24.5" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.24.6" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -28576,6 +28576,10 @@ NeverYieldPets.pages.settings = function(body, ui)
 	end
 end
 
+-- ProSoundEffects "Crack Egg Crunchy" / "Eggs Break" (checked): cracks while the egg shakes, then it breaks
+NeverYieldPets.eggCracks = {9113959343, 9113959332, 9113959071, 9113958797, 9113959737, 9113959955}
+NeverYieldPets.eggBreak = 9114232668
+
 NeverYieldPets.hatchPopup = function(egg, pet, newSpecies)
 	local screen = WackyState.overlay()
 	local card = Instance.new("Frame")
@@ -28602,8 +28606,28 @@ NeverYieldPets.hatchPopup = function(egg, pet, newSpecies)
 		for _, p in ipairs(vp:GetChildren()) do
 			if p:IsA("BasePart") then bases[p] = p.CFrame end
 		end
+		-- cracks come faster and louder; each one adds a line to a zig-zag across the shell
+		local crackTimes = {0.45, 0.95, 1.4, 1.75, 2.0, 2.2}
+		local nextCrack = 1
 		while tick() - start < 2.4 and card.Parent do
 			local e = tick() - start
+			if crackTimes[nextCrack] and e >= crackTimes[nextCrack] then
+				local cracks = NeverYieldPets.eggCracks
+				NeverYieldPets.sfx(cracks[math.random(1, #cracks)], nil, 0.35 + nextCrack * 0.07, 0.9 + math.random() * 0.25)
+				local x0 = -0.45 + (nextCrack - 1) * 0.16
+				local up = nextCrack % 2 == 1
+				local y0, y1 = up and -0.03 or 0.17, up and 0.17 or -0.03
+				local mx, my = x0 + 0.08, (y0 + y1) / 2
+				local z = -0.8 * math.sqrt(math.max(0.05, 1 - (mx / 0.8) ^ 2 - (my / 1.05) ^ 2)) - 0.01
+				local line = Instance.new("Part")
+				line.Size = Vector3.new(math.sqrt(0.16 ^ 2 + (y1 - y0) ^ 2) + 0.04, 0.05, 0.05)
+				line.Color = Color3.fromRGB(60, 45, 35)
+				line.Material = Enum.Material.SmoothPlastic
+				line.CFrame = CFrame.new(mx, my, z) * CFrame.Angles(0, 0, math.atan2(y1 - y0, 0.16))
+				line.Parent = vp
+				bases[line] = line.CFrame
+				nextCrack = nextCrack + 1
+			end
 			local wobble = math.sin(e * (10 + e * 12)) * math.min(0.5, e * 0.25)
 			for p, base in pairs(bases) do
 				p.CFrame = CFrame.Angles(0, 0, wobble) * base
@@ -28611,6 +28635,7 @@ NeverYieldPets.hatchPopup = function(egg, pet, newSpecies)
 			RunService.RenderStepped:Wait()
 		end
 		if not card.Parent then return end
+		NeverYieldPets.sfx(NeverYieldPets.eggBreak, nil, 0.7)
 		NeverYieldPets.sfx(WackyState.diamondBeep or NeverYieldPets.coinSound, nil, 0.5, 0.7)
 		local flash = Instance.new("Frame")
 		flash.Size = UDim2.new(1, 0, 1, 0)
