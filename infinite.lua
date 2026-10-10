@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.23.2" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.23.3" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -5326,6 +5326,7 @@ CMDs[#CMDs + 1] = {NAME = 'END / theend', DESC = 'A black hole (only you see it)
 CMDs[#CMDs + 1] = {NAME = 'portal / agartha', DESC = 'Opens a sparking see-through gateway to Agartha, a peaceful floating island with a cottage and yard. It closes 5 s after you walk through; type portal again in Agartha to come back'}
 CMDs[#CMDs + 1] = {NAME = 'door / room', DESC = 'A door to YOUR room: open it to see inside, walk in, press Edit to place furniture, trophies and unlocks anywhere and pick floors, walls and lighting. It saves'}
 CMDs[#CMDs + 1] = {NAME = 'undoor', DESC = 'Removes the door to your room (brings you back if you are inside)'}
+CMDs[#CMDs + 1] = {NAME = 'doordebug', DESC = 'Shows why the view through your room door is or is not showing'}
 CMDs[#CMDs + 1] = {NAME = 'roomreset', DESC = 'Puts your room back to the default layout (the old one is kept as a backup file)'}
 CMDs[#CMDs + 1] = {NAME = 'achievements / trophies [tab]', DESC = '(Also in Settings) Your achievements and their trophies. Tabs: basics, neveryield, minigames, pets, explorer, social, milestones, settings'}
 CMDs[#CMDs + 1] = {NAME = 'unportal', DESC = 'Closes the Agartha portal (brings you back if you are inside)'}
@@ -24351,19 +24352,24 @@ NeverYieldDoor.updateWindow = function(win, door, other, frontSign, char)
 		local params = RaycastParams.new()
 		params.FilterType = Enum.RaycastFilterType.Exclude
 		local skip = {char, door.model}
-		for _ = 1, 5 do
+		for _ = 1, 8 do
 			params.FilterDescendantsInstances = skip
 			local hit = workspace:Raycast(camPos, door.cf.Position - camPos, params)
 			if not hit then break end
-			if hit.Instance:GetAttribute("NYFx") then
-				table.insert(skip, hit.Instance)
+			local inst = hit.Instance
+			local model = inst:FindFirstAncestorOfClass("Model")
+			if inst:GetAttribute("NYFx") or inst.Transparency > 0.6 or not inst.CanCollide or (model and model:FindFirstChildOfClass("Humanoid")) then
+				table.insert(skip, inst)
 			else
+				win.blocker = inst:GetFullName()
 				visible = false
 				break
 			end
 		end
 	end
 	win.screen.Enabled = visible
+	win.visible = visible
+	if visible then win.blocker = nil end
 	if not visible then return end
 	local tl, tr, bl, br = corners[1], corners[2], corners[3], corners[4]
 	local size = cam.ViewportSize
@@ -24402,7 +24408,14 @@ end
 
 NeverYieldDoor.setOpen = function(s, open)
 	local D = NeverYieldDoor
-	if open and not s.inside then pcall(D.refreshView, s) end
+	if open and not s.inside then
+		local ok, err = pcall(D.refreshView, s)
+		if not ok then
+			s.viewError = tostring(err)
+			warn("[NeverYield door] " .. s.viewError)
+			notify('Door', 'Could not build the view into your room: ' .. s.viewError)
+		end
+	end
 	for _, door in ipairs({s.homeDoor, s.roomDoor}) do
 		door.target = open and 100 or 0
 	end
@@ -24550,6 +24563,21 @@ addcmd('door',{'room','myroom'},function(args, speaker)
 		end
 	end))
 	notify('Door', 'Your door is here. Open it to see your room, walk in, and press Edit to decorate. (undoor removes it)', 8)
+end)
+
+addcmd('doordebug',{'roomdebug'},function(args, speaker)
+	local s = NeverYieldDoor.state
+	if not s then
+		notify('Door', 'No door is out.')
+		return
+	end
+	local cam = workspace.CurrentCamera
+	local rel = s.homeDoor.cf:PointToObjectSpace(cam.CFrame.Position)
+	local hw = s.homeWindow
+	local info = string.format("view built: %s | showing: %s | blocked by: %s | door angle: %d | camera side: %.1f | inside: %s | error: %s",
+		tostring(hw ~= nil), tostring(hw and hw.visible), tostring(hw and hw.blocker or "-"), math.floor(s.homeDoor.angle), rel.Z, tostring(s.inside), tostring(s.viewError or "-"))
+	warn("[NeverYield doordebug] " .. info)
+	notify('Door Debug', info, 15)
 end)
 
 addcmd('undoor',{'removedoor','nodoor'},function(args, speaker)
