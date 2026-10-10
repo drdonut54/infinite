@@ -4957,6 +4957,31 @@ CMDs[#CMDs + 1] = {NAME = 'compliment / hypeme', DESC = 'Get hyped up'}
 CMDs[#CMDs + 1] = {NAME = 'roastme', DESC = 'Get roasted'}
 CMDs[#CMDs + 1] = {NAME = 'chaos / surpriseme', DESC = 'Runs a random wacky command'}
 CMDs[#CMDs + 1] = {NAME = 'unwacky / stopwacky', DESC = 'Turns off every wacky effect'}
+CMDs[#CMDs + 1] = {NAME = 'skin / material [name/random]', DESC = 'Local skin: gold, chrome, diamond, glass, ice, lava, neon, wood, stone, grass'}
+CMDs[#CMDs + 1] = {NAME = 'unskin', DESC = 'Restores your normal look'}
+CMDs[#CMDs + 1] = {NAME = 'aura [color]', DESC = 'Glowing particle aura (rainbow if no color)'}
+CMDs[#CMDs + 1] = {NAME = 'unaura', DESC = 'Removes the aura'}
+CMDs[#CMDs + 1] = {NAME = 'halo [color]', DESC = 'Spinning ring of light above your head'}
+CMDs[#CMDs + 1] = {NAME = 'unhalo', DESC = 'Removes the halo'}
+CMDs[#CMDs + 1] = {NAME = 'pet / companion [name]', DESC = 'A little cube buddy that follows you around'}
+CMDs[#CMDs + 1] = {NAME = 'unpet', DESC = 'Sends your pet home'}
+CMDs[#CMDs + 1] = {NAME = 'nuke / kaboom', DESC = 'Harmless visual explosion with screen flash and shake'}
+CMDs[#CMDs + 1] = {NAME = 'fireworks [count]', DESC = 'Launches a fireworks show around you'}
+CMDs[#CMDs + 1] = {NAME = 'timelapse [speed]', DESC = 'Fast-forwards the day/night cycle'}
+CMDs[#CMDs + 1] = {NAME = 'untimelapse', DESC = 'Stops the timelapse and restores the time'}
+CMDs[#CMDs + 1] = {NAME = 'sunset / goldenhour', DESC = 'Warm sunset lighting'}
+CMDs[#CMDs + 1] = {NAME = 'unsunset', DESC = 'Removes the sunset'}
+CMDs[#CMDs + 1] = {NAME = 'flashlight / torch', DESC = 'Puts a flashlight on you'}
+CMDs[#CMDs + 1] = {NAME = 'unflashlight', DESC = 'Turns off the flashlight'}
+CMDs[#CMDs + 1] = {NAME = 'horror / spookymode', DESC = 'Dark spooky lighting plus a flashlight'}
+CMDs[#CMDs + 1] = {NAME = 'unhorror', DESC = 'Turns the lights back on'}
+CMDs[#CMDs + 1] = {NAME = 'matrix', DESC = 'Green vision + low gravity. There is no spoon'}
+CMDs[#CMDs + 1] = {NAME = 'unmatrix / bluepill', DESC = 'Leaves the matrix'}
+CMDs[#CMDs + 1] = {NAME = 'flop / faceplant [seconds]', DESC = 'Ragdoll flop onto the floor'}
+CMDs[#CMDs + 1] = {NAME = 'zoomies / sanic [seconds] [speed]', DESC = 'Temporary super speed with a rainbow trail'}
+CMDs[#CMDs + 1] = {NAME = 'joke', DESC = 'Tells a terrible joke'}
+CMDs[#CMDs + 1] = {NAME = 'wouldyourather / wyr', DESC = 'Asks a would-you-rather question'}
+CMDs[#CMDs + 1] = {NAME = 'stopwatch / timer', DESC = 'Starts / stops a stopwatch'}
 -- wait()
 
 for i = 1, #CMDs do
@@ -6555,11 +6580,13 @@ Close_4.MouseButton1Click:Connect(function()
 	PluginsFrame:TweenPosition(UDim2.new(0, 0, 0, 175), "InOut", "Quart", 0.5, true, nil)
 end)
 
+-- Your own copy of the script: rejoin / serverhop / keepiy load this in the next server
+CustomSourceURL = "https://raw.githubusercontent.com/kassvance54-lgtm/infinite/refs/heads/main/infinite"
 local TeleportCheck = false
 Players.LocalPlayer.OnTeleport:Connect(function(State)
 	if KeepInfYield and (not TeleportCheck) and queueteleport then
 		TeleportCheck = true
-		queueteleport("loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()")
+		queueteleport("local ok = pcall(function() loadstring(game:HttpGet('" .. CustomSourceURL .. "'))() end) if not ok then loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))() end")
 	end
 end)
 
@@ -13908,9 +13935,456 @@ addcmd('unwacky',{'stopwacky','unchaos'},function(args, speaker)
 end)
 
 addcmd('wacky',{'wackyhelp'},function(args, speaker)
-	notify('Wacky Commands', 'disco, rainbowchar, ghost, drunk, earthquake, camroll, vertigo, orbitcam, filter, weather, confetti, dancefloor, moongravity, pogo, moonwalk, backflip, frontflip, barrelroll, rocket, jetpack, helicopter, trail, partyfx, beyblade, magic8ball, coinflip, roll, fortune, compliment, roastme, chaos, unwacky', 15)
+	notify('Wacky Commands', 'disco, rainbowchar, ghost, drunk, earthquake, camroll, vertigo, orbitcam, filter, weather, confetti, dancefloor, moongravity, pogo, moonwalk, backflip, frontflip, barrelroll, rocket, jetpack, helicopter, trail, partyfx, beyblade, magic8ball, coinflip, roll, fortune, compliment, roastme, skin, aura, halo, pet, nuke, fireworks, timelapse, sunset, flashlight, horror, matrix, flop, zoomies, joke, wouldyourather, stopwatch, chaos, unwacky', 20)
 end)
 -- ================== END WACKY COMMANDS ==================
+
+-- ==================== WACKY COMMANDS 2 ====================
+WackyState.colors = {
+	red = Color3.fromRGB(255, 60, 60), orange = Color3.fromRGB(255, 150, 40), yellow = Color3.fromRGB(255, 230, 60),
+	green = Color3.fromRGB(60, 255, 100), blue = Color3.fromRGB(60, 140, 255), purple = Color3.fromRGB(170, 80, 255),
+	pink = Color3.fromRGB(255, 120, 200), white = Color3.new(1, 1, 1), black = Color3.fromRGB(20, 20, 20),
+	gold = Color3.fromRGB(255, 200, 50), cyan = Color3.fromRGB(60, 240, 255)
+}
+
+WackyState.colorArg = function(arg)
+	return arg and WackyState.colors[arg:lower()] or nil
+end
+
+-- Skins
+WackyState.skins = {
+	gold = {Material = Enum.Material.Foil, Color = Color3.fromRGB(255, 200, 50)},
+	chrome = {Material = Enum.Material.Foil, Color = Color3.fromRGB(200, 200, 215)},
+	diamond = {Material = Enum.Material.Glass, Color = Color3.fromRGB(150, 230, 255), Transparency = 0.25},
+	glass = {Material = Enum.Material.Glass, Color = Color3.new(1, 1, 1), Transparency = 0.5},
+	ice = {Material = Enum.Material.Ice, Color = Color3.fromRGB(170, 220, 255)},
+	lava = {Material = Enum.Material.CrackedLava, Color = Color3.fromRGB(255, 90, 20)},
+	neon = {Material = Enum.Material.Neon},
+	wood = {Material = Enum.Material.Wood, Color = Color3.fromRGB(140, 90, 50)},
+	stone = {Material = Enum.Material.Slate, Color = Color3.fromRGB(120, 120, 120)},
+	grass = {Material = Enum.Material.Grass, Color = Color3.fromRGB(80, 170, 60)},
+}
+
+addcmd('skin',{'material'},function(args, speaker)
+	local names = {}
+	for k in pairs(WackyState.skins) do
+		table.insert(names, k)
+	end
+	table.sort(names)
+	local choice = args[1] and args[1]:lower() or "random"
+	if choice == "random" then
+		choice = WackyState.pick(names)
+	end
+	local preset = WackyState.skins[choice]
+	if not preset then
+		notify('Skin', 'Unknown skin. Try: ' .. table.concat(names, ', ') .. ', random')
+		return
+	end
+	local color = preset.Color or WackyState.colorArg(args[2]) or WackyState.randomColor()
+	WackyState.saved.skin = WackyState.saved.skin or setmetatable({}, {__mode = "k"})
+	for _, part in ipairs(WackyState.parts(speaker)) do
+		if WackyState.saved.skin[part] == nil then
+			WackyState.saved.skin[part] = {part.Color, part.Material, part.Transparency}
+		end
+		pcall(function()
+			part.Material = preset.Material
+			part.Color = color
+			if preset.Transparency and part.Transparency < 1 then
+				part.Transparency = preset.Transparency
+			end
+		end)
+	end
+	notify('Skin', 'You are now made of ' .. choice .. '. Use unskin to change back.')
+end)
+
+addcmd('unskin',{'unmaterial'},function(args, speaker)
+	for part, data in pairs(WackyState.saved.skin or {}) do
+		if part.Parent then
+			part.Color, part.Material, part.Transparency = data[1], data[2], data[3]
+		end
+	end
+	WackyState.saved.skin = nil
+end)
+
+-- Aura
+addcmd('aura',{},function(args, speaker)
+	local root = getRoot(speaker.Character)
+	if not root then return end
+	WackyState.clear("aura")
+	local color = WackyState.colorArg(args[1])
+	local emitter = WackyState.track("aura", Instance.new("ParticleEmitter"))
+	emitter.Name = randomString()
+	emitter.Rate = 60
+	emitter.Speed = NumberRange.new(1, 3)
+	emitter.SpreadAngle = Vector2.new(180, 180)
+	emitter.Lifetime = NumberRange.new(1, 1.8)
+	emitter.Acceleration = Vector3.new(0, 4, 0)
+	emitter.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.8), NumberSequenceKeypoint.new(1, 0)})
+	emitter.Transparency = NumberSequence.new(0.2, 1)
+	emitter.LightEmission = 1
+	emitter.Color = color and ColorSequence.new(color) or WackyState.rainbowSequence()
+	emitter.Parent = root
+end)
+
+addcmd('unaura',{'noaura'},function(args, speaker)
+	WackyState.clear("aura")
+end)
+
+-- Halo
+addcmd('halo',{},function(args, speaker)
+	WackyState.disconnect("halo")
+	WackyState.clear("halo")
+	local color = WackyState.colorArg(args[1]) or Color3.fromRGB(255, 230, 120)
+	local orbs = {}
+	for i = 1, 12 do
+		local orb = WackyState.track("halo", Instance.new("Part"))
+		orb.Name = randomString()
+		orb.Shape = Enum.PartType.Ball
+		orb.Size = Vector3.new(0.35, 0.35, 0.35)
+		orb.Material = Enum.Material.Neon
+		orb.Color = color
+		orb.Anchored = true
+		orb.CanCollide = false
+		orb.CanQuery = false
+		orb.CanTouch = false
+		orb.Parent = workspace
+		table.insert(orbs, orb)
+	end
+	WackyState.connect("halo", RunService.Heartbeat:Connect(function()
+		local head = speaker.Character and speaker.Character:FindFirstChild("Head")
+		if not head then return end
+		local t = tick()
+		for i, orb in ipairs(orbs) do
+			local a = t * 1.5 + (i / #orbs) * math.pi * 2
+			orb.CFrame = CFrame.new(head.Position + Vector3.new(math.cos(a) * 1.1, 1.3 + math.sin(t * 2) * 0.1, math.sin(a) * 1.1))
+		end
+	end))
+end)
+
+addcmd('unhalo',{'nohalo'},function(args, speaker)
+	WackyState.disconnect("halo")
+	WackyState.clear("halo")
+end)
+
+-- Pet companion
+WackyState.petNames = {"Sir Cubes", "Blocky", "Mr. Bobble", "Lil Noob", "Sparkles", "Captain Oof", "Pebble", "Nugget"}
+
+addcmd('pet',{'companion'},function(args, speaker)
+	local name = getstring(1, args)
+	if name == "" then
+		name = WackyState.pick(WackyState.petNames)
+	end
+	WackyState.disconnect("pet")
+	WackyState.clear("pet")
+	local body = WackyState.track("pet", Instance.new("Part"))
+	body.Name = randomString()
+	body.Size = Vector3.new(1.4, 1.4, 1.4)
+	body.Material = Enum.Material.Neon
+	body.Anchored = true
+	body.CanCollide = false
+	body.CanQuery = false
+	body.CanTouch = false
+	local face = Instance.new("SurfaceGui")
+	face.Face = Enum.NormalId.Front
+	face.Parent = body
+	local faceText = Instance.new("TextLabel")
+	faceText.Size = UDim2.new(1, 0, 1, 0)
+	faceText.BackgroundTransparency = 1
+	faceText.Text = "^_^"
+	faceText.TextScaled = true
+	faceText.Font = Enum.Font.GothamBold
+	faceText.TextColor3 = Color3.new(0, 0, 0)
+	faceText.Parent = face
+	local tag = Instance.new("BillboardGui")
+	tag.Size = UDim2.new(0, 120, 0, 24)
+	tag.StudsOffset = Vector3.new(0, 1.6, 0)
+	tag.AlwaysOnTop = true
+	tag.Parent = body
+	local tagText = Instance.new("TextLabel")
+	tagText.Size = UDim2.new(1, 0, 1, 0)
+	tagText.BackgroundTransparency = 1
+	tagText.Text = name
+	tagText.TextScaled = true
+	tagText.Font = Enum.Font.GothamBold
+	tagText.TextColor3 = Color3.new(1, 1, 1)
+	tagText.TextStrokeTransparency = 0.3
+	tagText.Parent = tag
+	body.Parent = workspace
+	local faces = {"^_^", "o_o", ":3", "^o^", "-_-", ">_<", "owo"}
+	local lastFace = 0
+	WackyState.connect("pet", RunService.Heartbeat:Connect(function()
+		local root = getRoot(speaker.Character)
+		if not root then return end
+		local t = tick()
+		local target = (root.CFrame * CFrame.new(3, 1.5 + math.sin(t * 3) * 0.4, 2)).Position
+		local pos = body.Position:Lerp(target, 0.12)
+		body.CFrame = CFrame.lookAt(pos, workspace.CurrentCamera.CFrame.Position)
+		body.Color = WackyState.rainbow(0.15)
+		if t - lastFace > 2.5 then
+			lastFace = t
+			faceText.Text = WackyState.pick(faces)
+		end
+	end))
+	notify('Pet', 'Say hi to ' .. name .. '! Use unpet to send them home.')
+end)
+
+addcmd('unpet',{'nopet'},function(args, speaker)
+	WackyState.disconnect("pet")
+	WackyState.clear("pet")
+end)
+
+-- Explosions and fireworks (visual only, no damage)
+addcmd('nuke',{'kaboom'},function(args, speaker)
+	local root = getRoot(speaker.Character)
+	if not root then return end
+	local pos = root.Position + root.CFrame.LookVector * 40
+	local boom = Instance.new("Explosion")
+	boom.Position = pos
+	boom.BlastRadius = 30
+	boom.BlastPressure = 0
+	boom.DestroyJointRadiusPercent = 0
+	boom.ExplosionType = Enum.ExplosionType.NoCraters
+	boom.Parent = workspace
+	local ball = Instance.new("Part")
+	ball.Name = randomString()
+	ball.Shape = Enum.PartType.Ball
+	ball.Anchored = true
+	ball.CanCollide = false
+	ball.CanQuery = false
+	ball.CanTouch = false
+	ball.Material = Enum.Material.Neon
+	ball.Color = Color3.fromRGB(255, 140, 40)
+	ball.Size = Vector3.new(2, 2, 2)
+	ball.Position = pos
+	ball.Parent = workspace
+	TweenService:Create(ball, TweenInfo.new(1.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = Vector3.new(60, 60, 60), Transparency = 1}):Play()
+	Services.Debris:AddItem(ball, 2)
+	local flash = Instance.new("ColorCorrectionEffect")
+	flash.Name = randomString()
+	flash.Brightness = 0.8
+	flash.Parent = Lighting
+	TweenService:Create(flash, TweenInfo.new(1.5), {Brightness = 0}):Play()
+	Services.Debris:AddItem(flash, 2)
+	WackyState.bindCam("nukeshake", function()
+		local cam = workspace.CurrentCamera
+		cam.CFrame = cam.CFrame * CFrame.new((math.random() - 0.5) * 1.5, (math.random() - 0.5) * 1.5, 0)
+	end)
+	task.delay(1.2, function()
+		WackyState.unbindCam("nukeshake")
+	end)
+end)
+
+addcmd('fireworks',{'firework'},function(args, speaker)
+	local count = math.clamp(math.floor(WackyState.num(args[1], 5)), 1, 30)
+	for i = 1, count do
+		task.delay((i - 1) * 0.35, function()
+			local root = getRoot(speaker.Character)
+			if not root then return end
+			local color = WackyState.randomColor()
+			local shell = Instance.new("Part")
+			shell.Name = randomString()
+			shell.Shape = Enum.PartType.Ball
+			shell.Size = Vector3.new(0.6, 0.6, 0.6)
+			shell.Material = Enum.Material.Neon
+			shell.Color = color
+			shell.Anchored = true
+			shell.CanCollide = false
+			shell.CanQuery = false
+			shell.CanTouch = false
+			shell.Position = root.Position + Vector3.new(math.random(-15, 15), 0, math.random(-15, 15))
+			local sparks = Instance.new("ParticleEmitter")
+			sparks.Rate = 0
+			sparks.Speed = NumberRange.new(20, 35)
+			sparks.SpreadAngle = Vector2.new(180, 180)
+			sparks.Lifetime = NumberRange.new(1, 1.6)
+			sparks.Drag = 3
+			sparks.Acceleration = Vector3.new(0, -8, 0)
+			sparks.LightEmission = 1
+			sparks.Size = NumberSequence.new(0.5, 0)
+			sparks.Color = ColorSequence.new(color, WackyState.randomColor())
+			sparks.Parent = shell
+			shell.Parent = workspace
+			local up = TweenService:Create(shell, TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = shell.Position + Vector3.new(0, math.random(35, 55), 0)})
+			up:Play()
+			up.Completed:Wait()
+			shell.Transparency = 1
+			sparks:Emit(120)
+			Services.Debris:AddItem(shell, 3)
+		end)
+	end
+end)
+
+-- Lighting moods
+addcmd('timelapse',{},function(args, speaker)
+	local speed = WackyState.num(args[1], 2)
+	WackyState.saved.clock = WackyState.saved.clock or Lighting.ClockTime
+	WackyState.connect("timelapse", RunService.Heartbeat:Connect(function(dt)
+		Lighting.ClockTime = (Lighting.ClockTime + dt * speed) % 24
+	end))
+end)
+
+addcmd('untimelapse',{'notimelapse'},function(args, speaker)
+	WackyState.disconnect("timelapse")
+	if WackyState.saved.clock then
+		Lighting.ClockTime = WackyState.saved.clock
+		WackyState.saved.clock = nil
+	end
+end)
+
+addcmd('sunset',{'goldenhour'},function(args, speaker)
+	WackyState.saved.sunsetClock = WackyState.saved.sunsetClock or Lighting.ClockTime
+	Lighting.ClockTime = 17.8
+	WackyState.clear("sunset")
+	local cc = WackyState.track("sunset", Instance.new("ColorCorrectionEffect"))
+	cc.Name = randomString()
+	cc.TintColor = Color3.fromRGB(255, 205, 170)
+	cc.Saturation = 0.25
+	cc.Parent = Lighting
+end)
+
+addcmd('unsunset',{'nosunset'},function(args, speaker)
+	WackyState.clear("sunset")
+	if WackyState.saved.sunsetClock then
+		Lighting.ClockTime = WackyState.saved.sunsetClock
+		WackyState.saved.sunsetClock = nil
+	end
+end)
+
+addcmd('flashlight',{'torch'},function(args, speaker)
+	local root = getRoot(speaker.Character)
+	if not root then return end
+	WackyState.clear("flashlight")
+	local light = WackyState.track("flashlight", Instance.new("SpotLight"))
+	light.Name = randomString()
+	light.Face = Enum.NormalId.Front
+	light.Range = 60
+	light.Angle = 50
+	light.Brightness = 5
+	light.Shadows = true
+	light.Parent = root
+end)
+
+addcmd('unflashlight',{'untorch','noflashlight'},function(args, speaker)
+	WackyState.clear("flashlight")
+end)
+
+addcmd('horror',{'spookymode'},function(args, speaker)
+	WackyState.saved.horror = WackyState.saved.horror or {Lighting.ClockTime, Lighting.Brightness}
+	Lighting.ClockTime = 0
+	Lighting.Brightness = 0
+	WackyState.clear("horror")
+	local cc = WackyState.track("horror", Instance.new("ColorCorrectionEffect"))
+	cc.Name = randomString()
+	cc.Brightness = -0.2
+	cc.Contrast = 0.4
+	cc.Saturation = -0.6
+	cc.TintColor = Color3.fromRGB(255, 160, 160)
+	cc.Parent = Lighting
+	execCmd('flashlight', speaker)
+	notify('Horror', 'Something is watching you... Use unhorror to turn the lights back on.')
+end)
+
+addcmd('unhorror',{'unspookymode'},function(args, speaker)
+	WackyState.clear("horror")
+	execCmd('unflashlight', speaker)
+	local s = WackyState.saved.horror
+	if s then
+		Lighting.ClockTime, Lighting.Brightness = s[1], s[2]
+		WackyState.saved.horror = nil
+	end
+end)
+
+addcmd('matrix',{'thereisnospoon'},function(args, speaker)
+	execCmd('filter nightvision', speaker)
+	execCmd('moongravity 45', speaker)
+	notify('Matrix', 'There is no spoon. Use unmatrix to take the blue pill.')
+end)
+
+addcmd('unmatrix',{'bluepill'},function(args, speaker)
+	execCmd('unfilter', speaker)
+	execCmd('normalgravity', speaker)
+end)
+
+-- Movement silliness
+addcmd('flop',{'faceplant'},function(args, speaker)
+	local char = speaker.Character
+	local root = getRoot(char)
+	local hum = char and char:FindFirstChildOfClass("Humanoid")
+	if not root or not hum then return end
+	hum.PlatformStand = true
+	local v = root.AssemblyLinearVelocity
+	root.AssemblyLinearVelocity = Vector3.new(v.X, 25, v.Z)
+	root.AssemblyAngularVelocity = Vector3.new(math.random(-12, 12), math.random(-6, 6), math.random(-12, 12))
+	task.delay(WackyState.num(args[1], 2.5), function()
+		pcall(function()
+			hum.PlatformStand = false
+			hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+		end)
+	end)
+end)
+
+addcmd('zoomies',{'sanic'},function(args, speaker)
+	local char = speaker.Character
+	local hum = char and char:FindFirstChildOfClass("Humanoid")
+	if not hum or WackyState.zooming then return end
+	WackyState.zooming = true
+	local old = hum.WalkSpeed
+	hum.WalkSpeed = WackyState.num(args[2], 80)
+	execCmd('trail 0.6', speaker)
+	notify('Zoomies', 'GOTTA GO FAST!')
+	task.delay(WackyState.num(args[1], 5), function()
+		pcall(function() hum.WalkSpeed = old end)
+		execCmd('untrail', speaker)
+		WackyState.zooming = false
+	end)
+end)
+
+-- More silly notifications
+WackyState.jokes = {
+	"Why did the noob cross the road? To get to the other obby.",
+	"I told my friend a joke about lava. It was too hot to handle.",
+	"Why don't Robloxians ever get lost? They always respawn at home.",
+	"What's a noob's favorite exercise? Falling.",
+	"I would tell you a joke about server lag... but you wouldn't get it until later.",
+	"Why was the brick so calm? It was anchored.",
+	"My character has a great personality. It's just not rendering yet.",
+	"Why did the part go to therapy? It had too many unresolved collisions."
+}
+
+WackyState.wyr = {
+	"Would you rather only walk backwards forever, or only jump everywhere?",
+	"Would you rather have infinite Robux but no friends, or infinite friends but no Robux?",
+	"Would you rather be a giant noob or a tiny pro?",
+	"Would you rather have lava floors or ice floors in every game?",
+	"Would you rather lose your hat collection or your favorite emote?",
+	"Would you rather be followed by a pet forever or always have confetti falling on you?"
+}
+
+addcmd('joke',{'telljoke'},function(args, speaker)
+	notify('Joke', WackyState.pick(WackyState.jokes), 8)
+end)
+
+addcmd('wouldyourather',{'wyr'},function(args, speaker)
+	notify('Would You Rather', WackyState.pick(WackyState.wyr), 8)
+end)
+
+addcmd('stopwatch',{'timer'},function(args, speaker)
+	if WackyState.stopwatchStart then
+		notify('Stopwatch', string.format('Stopped at %.2f seconds', tick() - WackyState.stopwatchStart))
+		WackyState.stopwatchStart = nil
+	else
+		WackyState.stopwatchStart = tick()
+		notify('Stopwatch', 'Started! Run stopwatch again to stop it.')
+	end
+end)
+
+for _, cmd in ipairs({'skin random', 'aura', 'halo', 'pet', 'nuke', 'fireworks 6', 'timelapse 4', 'sunset', 'horror', 'matrix', 'flop', 'zoomies', 'joke', 'wouldyourather'}) do
+	table.insert(WackyState.chaosList, cmd)
+end
+for _, cmd in ipairs({'unskin', 'unaura', 'unhalo', 'unpet', 'untimelapse', 'unsunset', 'unhorror', 'unflashlight', 'unmatrix'}) do
+	table.insert(WackyState.undoList, cmd)
+end
+-- ================ END WACKY COMMANDS 2 ================
 
 addcmd('removecmd',{'deletecmd'},function(args, speaker)
 	removecmd(args[1])
