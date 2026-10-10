@@ -1,4 +1,4 @@
--- NeverYield v1.12.0 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.13.2 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.12.0" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.13.2" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -5280,7 +5280,7 @@ CMDs[#CMDs + 1] = {NAME = 'orbitcam / cinematic [speed] [distance]', DESC = 'Cam
 CMDs[#CMDs + 1] = {NAME = 'unorbitcam / uncinematic', DESC = 'Returns your camera to normal'}
 CMDs[#CMDs + 1] = {NAME = 'filter [name/random]', DESC = 'Screen filter: noir, sepia, vaporwave, nightvision, deepfried, underwater, thermal, dream'}
 CMDs[#CMDs + 1] = {NAME = 'unfilter', DESC = 'Removes the screen filter'}
-CMDs[#CMDs + 1] = {NAME = 'weather [type/random]', DESC = 'Weather with sound, clouds and lighting: snow, blizzard (the whole map snows over!), rain, storm (gets dark, thunder), sandstorm, aurora, stars, galaxy, bloodmoon, sakura, autumn, hearts, embers, fireflies, rainbow, meteors'}
+CMDs[#CMDs + 1] = {NAME = 'weather [type]', DESC = 'No type = a random one. Weather with sound, clouds and lighting: snow, blizzard (the whole map snows over!), rain, storm (gets dark, thunder), sandstorm, aurora, stars, galaxy, bloodmoon, sakura, autumn, hearts, embers, fireflies, rainbow, meteors'}
 CMDs[#CMDs + 1] = {NAME = 'weathervolume [0-3]', DESC = 'Changes how loud the weather sounds are (default 1)'}
 CMDs[#CMDs + 1] = {NAME = 'skipweather / nexttrack', DESC = 'Weather sounds change by themselves every few minutes (plus owls, wolves, thunder, chimes...); this skips to another track now'}
 CMDs[#CMDs + 1] = {NAME = 'fuckoff / unloadny', DESC = 'Completely unloads NeverYield: turns everything off and removes the GUI'}
@@ -5420,6 +5420,11 @@ CMDs[#CMDs + 1] = {NAME = 'hud / statsdisplay', DESC = 'Shows FPS, speed and pos
 CMDs[#CMDs + 1] = {NAME = 'unhud', DESC = 'Hides the stats display'}
 CMDs[#CMDs + 1] = {NAME = 'calc / math [expression]', DESC = 'Calculator, e.g. calc (5+3)*2'}
 CMDs[#CMDs + 1] = {NAME = 'randomplayer / pickplayer', DESC = 'Picks a random player in the server'}
+CMDs[#CMDs + 1] = {NAME = '--- MIDAS & DIAMOND RUSH ---', DESC = ''}
+CMDs[#CMDs + 1] = {NAME = 'midas / goldtouch', DESC = 'Everything you touch (and walk on) turns to gold, with sparkles. Only you see it'}
+CMDs[#CMDs + 1] = {NAME = 'unmidas', DESC = 'Turns everything back to normal'}
+CMDs[#CMDs + 1] = {NAME = 'diamond / diamondrush [seconds]', DESC = 'Mini-game: diamonds rain from the sky, collect them before time runs out (pink = 3, golden = 10). Music, popups and a saved best score'}
+CMDs[#CMDs + 1] = {NAME = 'undiamond', DESC = 'Stops a Diamond Rush round'}
 CMDs[#CMDs + 1] = {NAME = '--- STATS TRACKER ---', DESC = ''}
 CMDs[#CMDs + 1] = {NAME = 'stats / mystats [tab]', DESC = '(Also a button in Settings) Your lifetime stats across every game: kills, deaths, K/D, streaks, playtime, games, chat, people, commands. Tabs: overview, combat, games, chat, people, commands'}
 CMDs[#CMDs + 1] = {NAME = 'killcount / kd', DESC = 'Quick kills and deaths for this server and all time'}
@@ -13703,21 +13708,52 @@ end
 -- so turning effects off in any order always ends with the original lighting.
 WackyState.light = {orig = {}, users = {}, restoring = {}}
 
-WackyState.lightStopRestore = function()
+WackyState.lightStopRestore = function(props)
 	local L = WackyState.light
+	local wanted
+	if props then
+		wanted = {}
+		local touches = false
+		for _, prop in ipairs(props) do
+			wanted[prop] = true
+			if L.restoring[prop] ~= nil then
+				touches = true
+			end
+		end
+		if not touches then return end
+	end
 	if L.tween then
 		pcall(function() L.tween:Cancel() end)
 		L.tween = nil
 	end
+	local remaining = math.max(0, (L.tweenEnd or 0) - tick())
+	local rest = {}
 	for prop, value in pairs(L.restoring) do
-		pcall(function() Lighting[prop] = value end)
+		if wanted and not wanted[prop] and remaining > 0.05 then
+			rest[prop] = value
+		else
+			pcall(function() Lighting[prop] = value end)
+		end
 	end
 	L.restoring = {}
+	if next(rest) then
+		L.restoring = rest
+		local tween = TweenService:Create(Lighting, TweenInfo.new(remaining, Enum.EasingStyle.Sine), rest)
+		L.tween = tween
+		L.tweenEnd = tick() + remaining
+		tween.Completed:Connect(function()
+			if L.tween == tween then
+				L.tween = nil
+				L.restoring = {}
+			end
+		end)
+		tween:Play()
+	end
 end
 
 WackyState.lightClaim = function(owner, props)
 	local L = WackyState.light
-	WackyState.lightStopRestore()
+	WackyState.lightStopRestore(props)
 	for _, prop in ipairs(props) do
 		local users = L.users[prop]
 		if not users then
@@ -13754,6 +13790,7 @@ WackyState.lightRelease = function(owner, fadeTime)
 		L.restoring = free
 		local tween = TweenService:Create(Lighting, TweenInfo.new(fadeTime, Enum.EasingStyle.Sine), free)
 		L.tween = tween
+		L.tweenEnd = tick() + fadeTime
 		tween.Completed:Connect(function()
 			if L.tween == tween then
 				L.tween = nil
@@ -17867,7 +17904,7 @@ WackyState.startSnowCover = function(speaker, fullTime)
 		end
 	end
 
-	local stepIds = {9125965076, 9125965053}
+	local stepIds = {9125965076, 9125965053, 9125965330, 9125965296, 9125965499, 9125965260, 9119316414, 9119310905}
 	WackyState.connect("snowcover", RunService.Heartbeat:Connect(function()
 		local now = tick()
 		local char = speaker.Character
@@ -17960,7 +17997,17 @@ WackyState.startSnowCover = function(speaker, fullTime)
 					if #cover.prints > 160 then
 						pcall(function() table.remove(cover.prints, 1):Destroy() end)
 					end
-					WackyState.sound(stepIds[math.random(1, #stepIds)], nil, 0.18 * WackyState.weatherVolume, false, 0.9 + math.random() * 0.3)
+					-- one crunch per stride (not per footprint), random clip / pitch / volume
+					if now >= (cover.nextStep or 0) then
+						local speed = (root.AssemblyLinearVelocity * Vector3.new(1, 0, 1)).Magnitude
+						cover.nextStep = now + (speed > 28 and 0.3 or 0.48) + math.random() * 0.18
+						local id = stepIds[math.random(1, #stepIds)]
+						if id == cover.lastStep then
+							id = stepIds[(table.find(stepIds, id) % #stepIds) + 1]
+						end
+						cover.lastStep = id
+						WackyState.sound(id, nil, (0.12 + math.random() * 0.08) * WackyState.weatherVolume, false, 0.85 + math.random() * 0.25)
+					end
 				end
 			end
 		end
@@ -17973,7 +18020,7 @@ addcmd('weather',{},function(args, speaker)
 		table.insert(names, k)
 	end
 	table.sort(names)
-	local choice = args[1] and args[1]:lower() or "snow"
+	local choice = args[1] and args[1]:lower() or "random"
 	if choice == "random" then
 		choice = WackyState.pick(names)
 	end
@@ -18260,7 +18307,44 @@ end)
 -- ==================== THE END ====================
 -- A black hole only you can see swallows the map, then you, then server hops you out.
 -- Everything here is client-side: the server and other players are not affected.
+-- Look (v1.12.1): pure black event horizon, a thin photon ring and a lensing glow on a camera-facing
+-- billboard (drawn behind the horizon), a swirling accretion disk made of glowing clouds locked to a
+-- spinning ring, streams of matter spiralling in (trails), twin polar jets, and map parts that heat up
+-- and glow as they fall in.
 WackyState.endSounds = {rumble = 9114031727, drone = 9114353261, suck = 9125805781, implode = 9120704346, boom = 9120769331}
+WackyState.endSmoke = "rbxasset://textures/particles/smoke_main.dds"
+
+-- a filled circle inside a GUI (used for the photon ring and the glow layers)
+WackyState.endCircle = function(parent, diameter, color, transparency, z)
+	local f = Instance.new("Frame")
+	f.Name = randomString()
+	f.AnchorPoint = Vector2.new(0.5, 0.5)
+	f.Position = UDim2.new(0.5, 0, 0.5, 0)
+	f.Size = UDim2.new(diameter, 0, diameter, 0)
+	f.BackgroundColor3 = color
+	f.BackgroundTransparency = transparency
+	f.BorderSizePixel = 0
+	f.ZIndex = z or 1
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(0.5, 0)
+	c.Parent = f
+	f.Parent = parent
+	return f
+end
+
+WackyState.endPart = function(parent)
+	local p = Instance.new("Part")
+	p.Name = randomString()
+	p.Anchored = true
+	p.CanCollide = false
+	p.CanQuery = false
+	p.CanTouch = false
+	p.CastShadow = false
+	p.Transparency = 1
+	p.Size = Vector3.new(1, 1, 1)
+	p.Parent = parent
+	return p
+end
 
 addcmd('end',{'theend','blackholeleave'},function(args, speaker)
 	if WackyState.ending then return end
@@ -18289,65 +18373,152 @@ addcmd('end',{'theend','blackholeleave'},function(args, speaker)
 	end
 	look = look.Unit
 	local center = root.Position + look * 140 + Vector3.new(0, 45, 0)
-	local tilt = CFrame.Angles(math.rad(16), 0, math.rad(9))
+	-- tilt the disk so you see it at an angle (front edge passes in front of the horizon)
+	local tilt = CFrame.lookAt(Vector3.zero, look) * CFrame.Angles(math.rad(14), 0, math.rad(6))
 	local diskUp = tilt.UpVector
 	local radius = 2
 
-	local function ball(color, material, transparency)
-		local p = Instance.new("Part")
-		p.Name = randomString()
-		p.Shape = Enum.PartType.Ball
-		p.Anchored = true
-		p.CanCollide = false
-		p.CanQuery = false
-		p.CanTouch = false
-		p.CastShadow = false
-		p.Color = color
-		p.Material = material
-		p.Transparency = transparency
-		p.Size = Vector3.new(1, 1, 1)
-		p.Position = center
-		p.Parent = folder
-		return p
-	end
-	local core = ball(Color3.new(0, 0, 0), Enum.Material.SmoothPlastic, 0)
-	local horizon = ball(Color3.fromRGB(140, 70, 255), Enum.Material.ForceField, 0)
-	local glow = ball(Color3.fromRGB(255, 140, 60), Enum.Material.Neon, 0.88)
+	-- event horizon: nothing escapes, so it's simply black
+	local core = WackyState.endPart(folder)
+	core.Shape = Enum.PartType.Ball
+	core.Material = Enum.Material.SmoothPlastic
+	core.Color = Color3.new(0, 0, 0)
+	core.Transparency = 0
+	core.Position = center
 
-	-- accretion disk: glowing debris orbiting in a tilted ring
-	local disk = {}
-	for i = 1, 120 do
-		local p = Instance.new("Part")
-		p.Name = randomString()
-		p.Anchored = true
-		p.CanCollide = false
-		p.CanQuery = false
-		p.CanTouch = false
-		p.CastShadow = false
-		p.Material = Enum.Material.Neon
-		local r = 1.3 + math.random() ^ 1.4 * 2.4
-		p.Color = Color3.fromRGB(255, 200, 120):Lerp(Color3.fromRGB(150, 60, 255), math.clamp((r - 1.3) / 2.4, 0, 1))
-		p.Parent = folder
-		table.insert(disk, {part = p, r = r, a = math.random() * math.pi * 2, h = (math.random() - 0.5) * 0.15, s = 0.5 + math.random()})
+	-- photon ring + lensing glow. The billboard sits at the centre, so the black sphere hides its
+	-- middle and only a thin bright rim and a soft halo stay visible around the edge.
+	local LENS = 7 -- billboard width in horizon radii
+	local lens = Instance.new("BillboardGui")
+	lens.Name = randomString()
+	lens.Adornee = core
+	lens.AlwaysOnTop = false
+	lens.LightInfluence = 0
+	pcall(function() lens.Brightness = 2 end)
+	lens.Size = UDim2.new(radius * LENS, 0, radius * LENS, 0)
+	lens.Parent = core
+	local glowGradients = {}
+	local haloColors = {
+		{6.8, Color3.fromRGB(90, 40, 200), 0.94}, {6.0, Color3.fromRGB(130, 50, 210), 0.92}, {5.2, Color3.fromRGB(190, 60, 170), 0.9},
+		{4.5, Color3.fromRGB(240, 90, 110), 0.88}, {3.8, Color3.fromRGB(255, 130, 70), 0.85}, {3.2, Color3.fromRGB(255, 170, 90), 0.8},
+		{2.7, Color3.fromRGB(255, 205, 140), 0.72}, {2.35, Color3.fromRGB(255, 230, 190), 0.55},
+	}
+	for i, h in ipairs(haloColors) do
+		local circle = WackyState.endCircle(lens, h[1] / LENS, h[2], h[3], i)
+		if i >= 5 then
+			-- one side of the glow is brighter (light from the side spinning towards you)
+			local g = Instance.new("UIGradient")
+			g.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.5, 0.25), NumberSequenceKeypoint.new(1, 0.7)})
+			g.Parent = circle
+			table.insert(glowGradients, g)
+		end
+	end
+	local photon = WackyState.endCircle(lens, 2.1 / LENS, Color3.fromRGB(255, 244, 225), 0, 20)
+	local photonGradient = Instance.new("UIGradient")
+	photonGradient.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 0.45)})
+	photonGradient.Parent = photon
+
+	-- accretion disk: glowing clouds on rings, locked to a spinning part so the whole disk turns
+	local spinner = WackyState.endPart(folder)
+	local clouds = {}
+	local layers = {
+		{r = 1.3, n = 16, c0 = Color3.fromRGB(255, 250, 235), c1 = Color3.fromRGB(255, 200, 120), size = 0.5, rate = 9},
+		{r = 1.8, n = 20, c0 = Color3.fromRGB(255, 215, 140), c1 = Color3.fromRGB(255, 130, 60), size = 0.7, rate = 8},
+		{r = 2.5, n = 22, c0 = Color3.fromRGB(255, 150, 70), c1 = Color3.fromRGB(220, 70, 80), size = 0.9, rate = 6},
+		{r = 3.3, n = 18, c0 = Color3.fromRGB(200, 80, 120), c1 = Color3.fromRGB(110, 50, 200), size = 1.05, rate = 4},
+	}
+	for _, layer in ipairs(layers) do
+		for i = 1, layer.n do
+			local a = (i / layer.n) * math.pi * 2 + math.random() * 0.3
+			local att = Instance.new("Attachment")
+			att.Name = randomString()
+			att.Parent = spinner
+			local e = Instance.new("ParticleEmitter")
+			e.Name = randomString()
+			e.Texture = WackyState.endSmoke
+			e.LockedToPart = true
+			e.Speed = NumberRange.new(0)
+			e.Lifetime = NumberRange.new(1.2, 2)
+			e.Rate = layer.rate
+			e.LightEmission = 1
+			e.LightInfluence = 0
+			e.Rotation = NumberRange.new(0, 360)
+			e.RotSpeed = NumberRange.new(-40, 40)
+			e.Color = ColorSequence.new(layer.c0, layer.c1)
+			e.Transparency = NumberSequence.new({
+				NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.25, 0.35),
+				NumberSequenceKeypoint.new(0.75, 0.5), NumberSequenceKeypoint.new(1, 1),
+			})
+			e.Parent = att
+			table.insert(clouds, {att = att, emitter = e, r = layer.r, a = a, size = layer.size})
+		end
+	end
+	-- faint solid sheet under the clouds so the disk never looks patchy
+	local sheet = WackyState.endPart(folder)
+	sheet.Shape = Enum.PartType.Cylinder
+	sheet.Material = Enum.Material.Neon
+	sheet.Color = Color3.fromRGB(255, 140, 70)
+	sheet.Transparency = 0.93
+
+	-- streams of matter spiralling in (each leaves a glowing trail)
+	local streams = {}
+	for i = 1, 36 do
+		local p = WackyState.endPart(folder)
+		local a0 = Instance.new("Attachment")
+		a0.Parent = p
+		local a1 = Instance.new("Attachment")
+		a1.Parent = p
+		local trail = Instance.new("Trail")
+		trail.Attachment0 = a0
+		trail.Attachment1 = a1
+		trail.FaceCamera = true
+		trail.Lifetime = 0.45
+		trail.LightEmission = 1
+		trail.LightInfluence = 0
+		trail.Transparency = NumberSequence.new(0.05, 1)
+		trail.WidthScale = NumberSequence.new(1, 0)
+		local hot = math.random()
+		trail.Color = ColorSequence.new(Color3.fromRGB(255, 245, 225):Lerp(Color3.fromRGB(255, 170, 90), hot), Color3.fromRGB(255, 110, 60):Lerp(Color3.fromRGB(150, 60, 220), hot))
+		trail.Parent = p
+		table.insert(streams, {part = p, a0 = a0, a1 = a1, trail = trail, r = 1.2 + math.random() * 2.4, a = math.random() * math.pi * 2,
+			h = (math.random() - 0.5) * 0.12, fall = 0.06 + math.random() * 0.1})
+	end
+
+	-- twin polar jets (they switch on once the hole has grown)
+	local jetPart = WackyState.endPart(folder)
+	local jets = {}
+	for _, dir in ipairs({1, -1}) do
+		local j0 = Instance.new("Attachment")
+		j0.Parent = jetPart
+		local j1 = Instance.new("Attachment")
+		j1.Parent = jetPart
+		local beam = Instance.new("Beam")
+		beam.Attachment0 = j0
+		beam.Attachment1 = j1
+		beam.FaceCamera = true
+		beam.Texture = WackyState.endSmoke
+		beam.TextureMode = Enum.TextureMode.Wrap
+		beam.TextureSpeed = 1.5
+		beam.LightEmission = 1
+		beam.LightInfluence = 0
+		beam.Segments = 12
+		beam.Color = ColorSequence.new(Color3.fromRGB(220, 235, 255), Color3.fromRGB(140, 90, 255))
+		beam.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.15), NumberSequenceKeypoint.new(0.6, 0.6), NumberSequenceKeypoint.new(1, 1)})
+		beam.Enabled = false
+		beam.Parent = jetPart
+		table.insert(jets, {a0 = j0, a1 = j1, beam = beam, dir = dir})
 	end
 
 	-- matter streaking inward from all around
-	local shell = Instance.new("Part")
-	shell.Name = randomString()
+	local shell = WackyState.endPart(folder)
 	shell.Shape = Enum.PartType.Ball
-	shell.Anchored = true
-	shell.CanCollide = false
-	shell.CanQuery = false
-	shell.CanTouch = false
-	shell.Transparency = 1
 	shell.Position = center
-	shell.Parent = folder
 	local streaks = Instance.new("ParticleEmitter")
 	streaks.Texture = "rbxasset://textures/particles/sparkles_main.dds"
 	streaks.Rate = 120
 	streaks.LightEmission = 1
-	streaks.Color = ColorSequence.new(Color3.fromRGB(255, 190, 120), Color3.fromRGB(160, 80, 255))
-	streaks.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.2, 0.2), NumberSequenceKeypoint.new(1, 0.6)})
+	streaks.Color = ColorSequence.new(Color3.fromRGB(255, 200, 140), Color3.fromRGB(160, 90, 255))
+	streaks.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.2, 0.3), NumberSequenceKeypoint.new(1, 0.7)})
 	streaks.Orientation = Enum.ParticleOrientation.VelocityParallel
 	pcall(function()
 		streaks.Shape = Enum.ParticleEmitterShape.Sphere
@@ -18356,20 +18527,29 @@ addcmd('end',{'theend','blackholeleave'},function(args, speaker)
 	end)
 	streaks.Parent = shell
 
-	-- screen mood
+	-- screen mood: the world slowly dims while the hole grows
 	local cc = Instance.new("ColorCorrectionEffect")
 	cc.Name = randomString()
 	cc.Parent = Lighting
 	local bloom = Instance.new("BloomEffect")
 	bloom.Name = randomString()
-	bloom.Intensity = 0.4
-	bloom.Size = 30
-	bloom.Threshold = 0.8
+	bloom.Intensity = 0.6
+	bloom.Size = 36
+	bloom.Threshold = 0.75
 	bloom.Parent = Lighting
 	local blur = Instance.new("BlurEffect")
 	blur.Name = randomString()
 	blur.Size = 0
 	blur.Parent = Lighting
+	pcall(function()
+		WackyState.lightClaim("theend", {"Brightness", "ExposureCompensation", "Ambient", "OutdoorAmbient"})
+		TweenService:Create(Lighting, TweenInfo.new(25, Enum.EasingStyle.Sine), {
+			Brightness = WackyState.light.orig.Brightness * 0.35,
+			ExposureCompensation = WackyState.light.orig.ExposureCompensation - 0.6,
+			Ambient = Color3.fromRGB(45, 30, 70),
+			OutdoorAmbient = Color3.fromRGB(55, 40, 80),
+		}):Play()
+	end)
 
 	local function loop(id, volume)
 		local s = WackyState.sound(id, nil, 0, true)
@@ -18417,6 +18597,7 @@ addcmd('end',{'theend','blackholeleave'},function(args, speaker)
 	local clone, cloneStart, cloneFrom
 	local hidden = {}
 	local lastHide, diskRadius = 0, nil
+	local spin = 0
 
 	local function hideCharacter(model)
 		for _, d in ipairs(model:GetDescendants()) do
@@ -18441,7 +18622,7 @@ addcmd('end',{'theend','blackholeleave'},function(args, speaker)
 			return
 		end
 		table.insert(active, {
-			part = part, offset = part.Position - center, rot = part.CFrame - part.Position, size = part.Size,
+			part = part, offset = part.Position - center, rot = part.CFrame - part.Position, size = part.Size, color = part.Color,
 			big = part.Size.Magnitude > 250 or part:IsA("MeshPart") or part:IsA("UnionOperation"), trans = part.Transparency, start = now,
 			dur = math.clamp(entry.dist / 160, 1.3, 3.4),
 		})
@@ -18476,31 +18657,72 @@ addcmd('end',{'theend','blackholeleave'},function(args, speaker)
 			radius = math.min(radius + dt * 12, 120)
 		end
 		core.Size = Vector3.new(1, 1, 1) * radius * 2
-		horizon.Size = core.Size * 1.12
-		glow.Size = core.Size * 1.6
-		core.Position, horizon.Position, glow.Position, shell.Position = center, center, center, center
+		core.Position, shell.Position = center, center
+		lens.Size = UDim2.new(radius * LENS, 0, radius * LENS, 0)
+		photonGradient.Rotation = (t * 25) % 360
+		for i, g in ipairs(glowGradients) do
+			g.Rotation = (t * 25 + i * 8) % 360
+		end
 		shell.Size = Vector3.new(1, 1, 1) * radius * 8
 		streaks.Speed = NumberRange.new(radius * 2.2, radius * 3)
 		streaks.Lifetime = NumberRange.new(1.2, 1.5)
-		streaks.Size = NumberSequence.new(math.max(0.3, radius * 0.06), 0)
-		streaks.Rate = 60 + radius * 4
-		local resizeDisk = math.abs(radius - (diskRadius or -1)) > 0.5
-		if resizeDisk then
+		streaks.Size = NumberSequence.new(math.max(0.3, radius * 0.05), 0)
+		streaks.Rate = 60 + radius * 3
+
+		-- the disk turns; everything is re-scaled only when the hole has grown a bit
+		spin = spin + dt * 0.8
+		spinner.CFrame = CFrame.new(center) * tilt * CFrame.Angles(0, spin, 0)
+		sheet.CFrame = CFrame.new(center) * tilt * CFrame.Angles(0, 0, math.pi / 2)
+		jetPart.CFrame = CFrame.new(center) * tilt
+		local resize = math.abs(radius - (diskRadius or -100)) > math.max(0.5, radius * 0.03)
+		if resize then
 			diskRadius = radius
-		end
-		for _, d in ipairs(disk) do
-			d.a = d.a + dt * 2.4 / (d.r ^ 1.5) * d.s
-			local r = radius * d.r
-			if resizeDisk then
-				d.part.Size = Vector3.new(1, 1, 1) * math.max(0.4, radius * 0.07 * d.s)
+			for _, c in ipairs(clouds) do
+				c.att.Position = Vector3.new(math.cos(c.a) * c.r * radius, 0, math.sin(c.a) * c.r * radius)
+				local s = math.min(100, c.size * radius)
+				c.emitter.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, s * 0.6), NumberSequenceKeypoint.new(1, s)})
 			end
-			d.part.CFrame = CFrame.new(center + tilt:VectorToWorldSpace(Vector3.new(math.cos(d.a) * r, d.h * r, math.sin(d.a) * r)))
+			sheet.Size = Vector3.new(0.05, radius * 7, radius * 7)
+			local width = math.max(0.25, radius * 0.045)
+			for _, s in ipairs(streams) do
+				s.a0.Position = Vector3.new(0, width / 2, 0)
+				s.a1.Position = Vector3.new(0, -width / 2, 0)
+			end
+			for _, j in ipairs(jets) do
+				j.a0.Position = Vector3.new(0, j.dir * radius * 0.9, 0)
+				j.a1.Position = Vector3.new(0, j.dir * radius * 9, 0)
+				j.beam.Width0 = radius * 0.3
+				j.beam.Width1 = radius * 1.5
+				j.beam.TextureLength = radius * 3
+			end
 		end
+		if t > 9 and not jets[1].beam.Enabled then
+			for _, j in ipairs(jets) do
+				j.beam.Enabled = true
+			end
+		end
+
+		-- matter spirals in, faster near the hole; when a stream is eaten it starts again further out
+		for _, s in ipairs(streams) do
+			s.a = s.a + dt * 2.4 / (s.r ^ 1.5)
+			s.r = s.r - dt * s.fall * (1.6 / s.r)
+			local reset = s.r < 1.02
+			if reset then
+				s.r = 3.2 + math.random() * 0.6
+				s.a = math.random() * math.pi * 2
+			end
+			local r = s.r * radius
+			s.part.CFrame = CFrame.new(center + tilt:VectorToWorldSpace(Vector3.new(math.cos(s.a) * r, s.h * r, math.sin(s.a) * r)))
+			if reset then
+				pcall(function() s.trail:Clear() end)
+			end
+		end
+
 		local mood = math.clamp(radius / 90, 0, 1)
-		cc.TintColor = Color3.new(1, 1, 1):Lerp(Color3.fromRGB(190, 160, 255), mood)
-		cc.Saturation = -0.4 * mood
-		cc.Contrast = 0.35 * mood
-		bloom.Intensity = 0.4 + mood * 1.4
+		cc.TintColor = Color3.new(1, 1, 1):Lerp(Color3.fromRGB(200, 170, 255), mood)
+		cc.Saturation = -0.3 * mood
+		cc.Contrast = 0.3 * mood
+		bloom.Intensity = 0.6 + mood * 1.2
 		shake = 0.2 + mood * 2.2
 
 		-- swallow the map, nearest first, faster and faster
@@ -18542,9 +18764,9 @@ addcmd('end',{'theend','blackholeleave'},function(args, speaker)
 				phase = "player"
 				-- now the real me gets pulled in
 				clone = char
-				for _, d in ipairs(char:GetDescendants()) do
-					if d:IsA("BasePart") then
-						pcall(function() d.CanCollide = false end)
+				for _, part in ipairs(char:GetDescendants()) do
+					if part:IsA("BasePart") then
+						pcall(function() part.CanCollide = false end)
 					end
 				end
 				cloneStart = now
@@ -18568,7 +18790,8 @@ addcmd('end',{'theend','blackholeleave'},function(args, speaker)
 			end
 		end
 
-		-- everything captured spirals into the hole
+		-- everything captured spirals in, heating up until it glows
+		local hotColor = Color3.fromRGB(255, 175, 95)
 		for i = #active, 1, -1 do
 			local a = active[i]
 			local p = (now - a.start) / a.dur
@@ -18577,11 +18800,18 @@ addcmd('end',{'theend','blackholeleave'},function(args, speaker)
 				table.remove(active, i)
 			else
 				local e = p * p
-				local spin = e * math.pi * 3 * (1 + 80 / (a.offset.Magnitude + 1))
-				local rotated = CFrame.fromAxisAngle(diskUp, spin):VectorToWorldSpace(a.offset)
+				local swirl = e * math.pi * 3 * (1 + 80 / (a.offset.Magnitude + 1))
+				local rotated = CFrame.fromAxisAngle(diskUp, swirl):VectorToWorldSpace(a.offset)
 				rotated = rotated - diskUp * rotated:Dot(diskUp) * e
 				pcall(function()
 					a.part.CFrame = CFrame.new(center + rotated * (1 - e)) * a.rot * CFrame.Angles(e * 5, e * 3, e * 2)
+					if p > 0.45 then
+						a.part.Color = a.color:Lerp(hotColor, math.clamp((p - 0.45) / 0.4, 0, 1))
+						if p > 0.7 and not a.glowing then
+							a.glowing = true
+							a.part.Material = Enum.Material.Neon
+						end
+					end
 					if a.big then
 						a.part.Transparency = math.max(a.trans, e)
 					elseif p > 0.5 then
@@ -18608,8 +18838,8 @@ addcmd('end',{'theend','blackholeleave'},function(args, speaker)
 				local p = math.clamp((now - cloneStart) / 4, 0, 1)
 				local e = p * p
 				local offset = cloneFrom.Position - center
-				local spin = e * math.pi * 4
-				local rotated = CFrame.fromAxisAngle(diskUp, spin):VectorToWorldSpace(offset) * (1 - e)
+				local swirl = e * math.pi * 4
+				local rotated = CFrame.fromAxisAngle(diskUp, swirl):VectorToWorldSpace(offset) * (1 - e)
 				pcall(function()
 					clone:PivotTo(CFrame.new(center + rotated) * (cloneFrom - cloneFrom.Position) * CFrame.Angles(e * 8, e * 5, e * 3))
 					if math.floor(now * 30) % 2 == 0 then
@@ -18625,7 +18855,7 @@ addcmd('end',{'theend','blackholeleave'},function(args, speaker)
 			end
 		end
 
-		-- the hole collapses into a flash, then black
+		-- the hole collapses with a shockwave, a flash, then black
 		if phase == "collapse" and not finished then
 			finished = true
 			WackyState.sound(WackyState.endSounds.implode, nil, 1)
@@ -18638,6 +18868,23 @@ addcmd('end',{'theend','blackholeleave'},function(args, speaker)
 				white.Size = UDim2.new(1, 0, 1, 0)
 				white.ZIndex = 50
 				white.Parent = screen
+				-- shockwave ring racing outwards
+				local wavePart = WackyState.endPart(workspace)
+				wavePart.Position = center
+				local wave = Instance.new("BillboardGui")
+				wave.Adornee = wavePart
+				wave.AlwaysOnTop = true
+				wave.LightInfluence = 0
+				wave.Size = UDim2.new(radius * 2, 0, radius * 2, 0)
+				wave.Parent = wavePart
+				local ring = WackyState.endCircle(wave, 1, Color3.new(1, 1, 1), 1, 1)
+				local ringStroke = Instance.new("UIStroke")
+				ringStroke.Color = Color3.fromRGB(230, 210, 255)
+				ringStroke.Thickness = 10
+				ringStroke.Parent = ring
+				TweenService:Create(wave, TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1400, 0, 1400, 0)}):Play()
+				TweenService:Create(ringStroke, TweenInfo.new(1), {Transparency = 1, Thickness = 2}):Play()
+				Services.Debris:AddItem(wavePart, 1.2)
 				local shrinkStart, from = tick(), radius
 				while tick() - shrinkStart < 0.8 do
 					radius = from * (1 - (tick() - shrinkStart) / 0.8) ^ 2 + 0.05
@@ -18645,9 +18892,6 @@ addcmd('end',{'theend','blackholeleave'},function(args, speaker)
 				end
 				WackyState.sound(WackyState.endSounds.boom, nil, 1)
 				white.BackgroundTransparency = 0
-				for _, d in ipairs(disk) do
-					pcall(function() d.part:Destroy() end)
-				end
 				pcall(function() folder:Destroy() end)
 				phase = "done"
 				task.wait(0.15)
@@ -18707,6 +18951,7 @@ addcmd('end',{'theend','blackholeleave'},function(args, speaker)
 				for _, obj in ipairs({black, title, sub, white, cc, bloom, blur, rumble, drone}) do
 					pcall(function() obj:Destroy() end)
 				end
+				pcall(function() WackyState.lightRelease("theend", 2) end)
 				pcall(function() camera.FieldOfView = baseFov end)
 				pcall(function()
 					if PARENT and PARENT:IsA("ScreenGui") then
@@ -18722,6 +18967,548 @@ addcmd('end',{'theend','blackholeleave'},function(args, speaker)
 	end))
 end)
 -- ================== END THE END ==================
+
+-- ==================== MIDAS & DIAMOND RUSH ====================
+WackyState.midasGold = Color3.fromRGB(255, 196, 48)
+WackyState.gemSounds = {9114619224, 9114618734, 9114618921, 9114619221} -- ProSoundEffects glass tinks
+WackyState.sparkleTexture = "rbxasset://textures/particles/sparkles_main.dds"
+
+WackyState.burst = function(parent, colorA, colorB, amount, speed)
+	local e = Instance.new("ParticleEmitter")
+	e.Name = randomString()
+	e.Texture = WackyState.sparkleTexture
+	e.Rate = 0
+	e.Speed = NumberRange.new(speed * 0.5, speed)
+	e.SpreadAngle = Vector2.new(180, 180)
+	e.Lifetime = NumberRange.new(0.4, 0.8)
+	e.LightEmission = 1
+	e.Size = NumberSequence.new(0.5, 0)
+	e.Color = ColorSequence.new(colorA, colorB)
+	e.Parent = parent
+	e:Emit(amount)
+	return e
+end
+
+-- Midas: everything you touch (and the floor you walk on) turns to gold, only on your screen
+addcmd('midas',{'goldtouch','midastouch'},function(args, speaker)
+	WackyState.midas = WackyState.midas or {saved = {}, conns = {}}
+	local m = WackyState.midas
+	if m.active then
+		notify('Midas', 'You already have the golden touch. Use unmidas to stop.')
+		return
+	end
+	m.active = true
+	local lastSound = 0
+	local function gild(part, point)
+		if not m.active or not part:IsA("BasePart") or part:IsA("Terrain") or m.saved[part] then return end
+		if part.Transparency >= 0.95 or part:GetAttribute("NYFx") then return end
+		local char = speaker.Character
+		if char and part:IsDescendantOf(char) then return end
+		local data = {part.Color, part.Material, part.Reflectance}
+		pcall(function()
+			if part:IsA("UnionOperation") then
+				data[4] = part.UsePartColor
+				part.UsePartColor = true
+			elseif part:IsA("MeshPart") then
+				data[5] = part.TextureID
+				part.TextureID = ""
+			end
+		end)
+		m.saved[part] = data
+		part.Material = Enum.Material.Foil
+		data[6] = TweenService:Create(part, TweenInfo.new(0.35, Enum.EasingStyle.Quad), {Color = WackyState.midasGold, Reflectance = math.max(part.Reflectance, 0.2)})
+		data[6]:Play()
+		local at = Instance.new("Attachment")
+		at.Name = randomString()
+		at.Parent = part
+		pcall(function() at.WorldPosition = point or part.Position end)
+		WackyState.burst(at, Color3.fromRGB(255, 240, 160), WackyState.midasGold, 14, 9)
+		Services.Debris:AddItem(at, 1.2)
+		if tick() - lastSound > 0.07 then
+			lastSound = tick()
+			WackyState.sound(WackyState.pick(WackyState.gemSounds), nil, 0.35, false, 0.66 + math.random() * 0.16)
+		end
+	end
+	local function clearConns()
+		for _, c in ipairs(m.conns) do
+			pcall(function() c:Disconnect() end)
+		end
+		m.conns = {}
+	end
+	m.clearConns = clearConns
+	local function hookChar(char)
+		clearConns()
+		WackyState.clear("midas")
+		local function hookPart(p)
+			if p:IsA("BasePart") then
+				table.insert(m.conns, p.Touched:Connect(function(hit)
+					gild(hit, p.Position)
+				end))
+			end
+		end
+		for _, p in ipairs(char:GetDescendants()) do
+			hookPart(p)
+		end
+		table.insert(m.conns, char.DescendantAdded:Connect(hookPart))
+		-- golden sparkles around your hands
+		for _, name in ipairs({"RightHand", "LeftHand", "Right Arm", "Left Arm"}) do
+			local hand = char:FindFirstChild(name)
+			if hand then
+				local glow = WackyState.track("midas", Instance.new("ParticleEmitter"))
+				glow.Name = randomString()
+				glow.Texture = WackyState.sparkleTexture
+				glow.Rate = 12
+				glow.Speed = NumberRange.new(0.5, 1.5)
+				glow.SpreadAngle = Vector2.new(180, 180)
+				glow.Lifetime = NumberRange.new(0.6, 1)
+				glow.LightEmission = 1
+				glow.Size = NumberSequence.new(0.35, 0)
+				glow.Color = ColorSequence.new(Color3.fromRGB(255, 235, 150), WackyState.midasGold)
+				glow.Parent = hand
+			end
+		end
+	end
+	if speaker.Character then
+		hookChar(speaker.Character)
+	end
+	WackyState.connect("midasSpawn", speaker.CharacterAdded:Connect(function(char)
+		char:WaitForChild("HumanoidRootPart", 10)
+		if m.active then
+			hookChar(char)
+		end
+	end))
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	local lastFloor = 0
+	WackyState.connect("midasFloor", RunService.Heartbeat:Connect(function()
+		if tick() - lastFloor < 0.12 then return end
+		lastFloor = tick()
+		local char = speaker.Character
+		local root = getRoot(char)
+		if not root then return end
+		params.FilterDescendantsInstances = {char}
+		local hit = workspace:Raycast(root.Position, Vector3.new(0, -8, 0), params)
+		if hit and hit.Instance then
+			gild(hit.Instance, hit.Position)
+		end
+	end))
+	notify('Midas', 'Everything you touch turns to gold! Use unmidas to turn it all back.')
+end)
+
+addcmd('unmidas',{'nomidas','ungoldtouch'},function(args, speaker)
+	local m = WackyState.midas
+	if not m then return end
+	m.active = false
+	if m.clearConns then m.clearConns() end
+	WackyState.disconnect("midasSpawn")
+	WackyState.disconnect("midasFloor")
+	WackyState.clear("midas")
+	local count = 0
+	for part, data in pairs(m.saved) do
+		pcall(function()
+			if data[6] then data[6]:Cancel() end
+			part.Color, part.Material, part.Reflectance = data[1], data[2], data[3]
+			if data[4] ~= nil then part.UsePartColor = data[4] end
+			if data[5] ~= nil then part.TextureID = data[5] end
+		end)
+		count = count + 1
+	end
+	m.saved = {}
+	if count > 0 then
+		notify('Midas', count .. ' things turned back to normal.')
+	end
+end)
+
+-- Diamond Rush: diamonds rain from the sky, collect as many as you can before time runs out
+WackyState.diamondMusic = {9048374150, 111760324494890, 130511819535092, 123057834140134} -- APM / DistroKid official Roblox music
+WackyState.diamondSting = 1837770099
+WackyState.diamondBeep = 9113400139
+WackyState.diamondWhoosh = 9120710054
+WackyState.diamondTypes = {
+	{name = "Diamond", value = 1, color = Color3.fromRGB(165, 235, 255), glow = Color3.fromRGB(120, 220, 255), chance = 0.85, scale = 1},
+	{name = "Pink Diamond", value = 3, color = Color3.fromRGB(255, 150, 225), glow = Color3.fromRGB(255, 120, 210), chance = 0.12, scale = 1.15},
+	{name = "Golden Diamond", value = 10, color = Color3.fromRGB(255, 210, 80), glow = Color3.fromRGB(255, 190, 60), chance = 0.03, scale = 1.35},
+}
+
+-- a cut diamond made of stacked glass cylinders: wide girdle, stepped crown with a flat top, stepped point below
+WackyState.makeDiamond = function(kind)
+	local s = kind.scale
+	local model = Instance.new("Model")
+	model.Name = randomString()
+	local hitbox = Instance.new("Part")
+	hitbox.Name = randomString()
+	hitbox.Size = Vector3.new(2, 2.4, 2) * s
+	hitbox.Transparency = 1
+	hitbox.CanCollide = true
+	hitbox.CanQuery = false
+	hitbox.CanTouch = false
+	hitbox.CustomPhysicalProperties = PhysicalProperties.new(0.7, 0.5, 0.45)
+	hitbox:SetAttribute("NYFx", true)
+	hitbox.Parent = model
+	model.PrimaryPart = hitbox
+	local layers = {
+		{2.0, 0.16, 0.45},
+		{1.75, 0.22, 0.64}, {1.4, 0.2, 0.85}, {1.05, 0.12, 1.01},
+		{1.8, 0.26, 0.24}, {1.45, 0.26, -0.02}, {1.1, 0.26, -0.28}, {0.75, 0.26, -0.54}, {0.42, 0.26, -0.8}, {0.16, 0.2, -1.03},
+	}
+	for _, l in ipairs(layers) do
+		local p = Instance.new("Part")
+		p.Name = randomString()
+		p.Shape = Enum.PartType.Cylinder
+		p.Size = Vector3.new(l[2], l[1], l[1]) * s
+		p.Material = Enum.Material.Glass
+		p.Color = kind.color
+		p.Transparency = 0.04
+		p.Reflectance = 0.2
+		p.CanCollide = false
+		p.CanQuery = false
+		p.CanTouch = false
+		p.Massless = true
+		p.CastShadow = false
+		p:SetAttribute("NYFx", true)
+		p.CFrame = hitbox.CFrame * CFrame.new(0, l[3] * s, 0) * CFrame.Angles(0, 0, math.pi / 2)
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0 = hitbox
+		weld.Part1 = p
+		weld.Parent = p
+		p.Parent = model
+	end
+	local core = Instance.new("Part")
+	core.Name = randomString()
+	core.Shape = Enum.PartType.Ball
+	core.Size = Vector3.new(0.6, 0.6, 0.6) * s
+	core.Material = Enum.Material.Neon
+	core.Color = kind.glow
+	core.CanCollide = false
+	core.CanQuery = false
+	core.CanTouch = false
+	core.Massless = true
+	core:SetAttribute("NYFx", true)
+	core.CFrame = hitbox.CFrame * CFrame.new(0, 0.3 * s, 0)
+	local coreWeld = Instance.new("WeldConstraint")
+	coreWeld.Part0 = hitbox
+	coreWeld.Part1 = core
+	coreWeld.Parent = core
+	core.Parent = model
+	local light = Instance.new("PointLight")
+	light.Color = kind.glow
+	light.Range = 10 * s
+	light.Brightness = 1.5
+	light.Parent = hitbox
+	local sparkle = Instance.new("ParticleEmitter")
+	sparkle.Texture = WackyState.sparkleTexture
+	sparkle.Rate = 4
+	sparkle.Speed = NumberRange.new(1, 2)
+	sparkle.SpreadAngle = Vector2.new(180, 180)
+	sparkle.Lifetime = NumberRange.new(0.5, 0.9)
+	sparkle.LightEmission = 1
+	sparkle.Size = NumberSequence.new(0.45 * s, 0)
+	sparkle.Color = ColorSequence.new(Color3.new(1, 1, 1), kind.glow)
+	sparkle.Parent = hitbox
+	return model, hitbox
+end
+
+WackyState.diamondPick = function()
+	local roll = math.random()
+	local total = 0
+	for _, kind in ipairs(WackyState.diamondTypes) do
+		total = total + kind.chance
+		if roll <= total then
+			return kind
+		end
+	end
+	return WackyState.diamondTypes[1]
+end
+
+-- rounded popup card on the overlay
+WackyState.diamondCard = function(width, height)
+	local card = Instance.new("Frame")
+	card.Name = randomString()
+	card.AnchorPoint = Vector2.new(0.5, 0.5)
+	card.Position = UDim2.new(0.5, 0, 0.45, 0)
+	card.Size = UDim2.new(0, width, 0, height)
+	card.BackgroundColor3 = Color3.fromRGB(14, 18, 40)
+	card.BackgroundTransparency = 0.05
+	card.BorderSizePixel = 0
+	card.ZIndex = 60
+	NeverYieldPortal.corner(card, UDim.new(0, 18))
+	local stroke, strokeGradient = NeverYieldPortal.stroke(card, 3, 0)
+	strokeGradient.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(120, 220, 255)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 150, 225)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 220, 255)),
+	})
+	local scale = Instance.new("UIScale")
+	scale.Scale = 0.3
+	scale.Parent = card
+	card.Parent = WackyState.overlay()
+	TweenService:Create(scale, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+	task.spawn(function()
+		while card.Parent do
+			strokeGradient.Rotation = (tick() * 120) % 360
+			RunService.RenderStepped:Wait()
+		end
+	end)
+	return card, scale
+end
+
+WackyState.diamondText = function(parent, text, y, height, size, font, color)
+	local l = Instance.new("TextLabel")
+	l.Name = randomString()
+	l.BackgroundTransparency = 1
+	l.Position = UDim2.new(0, 16, 0, y)
+	l.Size = UDim2.new(1, -32, 0, height)
+	l.Font = font or Enum.Font.GothamBold
+	l.TextSize = size
+	l.TextWrapped = true
+	l.Text = text
+	l.TextColor3 = color or Color3.new(1, 1, 1)
+	l.ZIndex = 61
+	l.Parent = parent
+	return l
+end
+
+WackyState.diamondStop = function(showResults)
+	local g = WackyState.diamondGame
+	if not g or g.stopped then return end
+	g.stopped = true
+	WackyState.disconnect("diamondRush")
+	if g.music then
+		TweenService:Create(g.music, TweenInfo.new(1.5), {Volume = 0}):Play()
+		Services.Debris:AddItem(g.music, 1.6)
+	end
+	for _, d in ipairs(g.diamonds) do
+		pcall(function()
+			d.hitbox.Anchored = true
+			for _, p in ipairs(d.model:GetDescendants()) do
+				if p:IsA("BasePart") and p.Transparency < 1 then
+					TweenService:Create(p, TweenInfo.new(0.6), {Transparency = 1}):Play()
+				end
+			end
+			Services.Debris:AddItem(d.model, 0.7)
+		end)
+	end
+	g.diamonds = {}
+	pcall(function() g.hud:Destroy() end)
+	pcall(function() g.intro:Destroy() end)
+	if not showResults then
+		WackyState.diamondGame = nil
+		return
+	end
+	-- save the best score with your other stats
+	local best, newBest = g.score, false
+	pcall(function()
+		local data = NeverYieldStats.data
+		data.minigames = type(data.minigames) == "table" and data.minigames or {}
+		local mg = data.minigames
+		mg.diamondRounds = (mg.diamondRounds or 0) + 1
+		mg.diamondTotal = (mg.diamondTotal or 0) + g.score
+		if g.score > (mg.diamondBest or 0) then
+			mg.diamondBest = g.score
+			newBest = g.score > 0
+		end
+		best = mg.diamondBest
+		NeverYieldStats.dirty = true
+	end)
+	WackyState.sound(WackyState.diamondSting, nil, 0.6)
+	local card, scale = WackyState.diamondCard(380, 250)
+	WackyState.diamondText(card, "TIME'S UP!", 14, 44, 38, Enum.Font.FredokaOne, Color3.fromRGB(190, 240, 255))
+	WackyState.diamondText(card, "\u{1F48E} " .. g.score .. " points", 64, 40, 30, Enum.Font.FredokaOne)
+	WackyState.diamondText(card, g.counts[1] .. " diamonds  |  " .. g.counts[2] .. " pink  |  " .. g.counts[3] .. " golden", 106, 22, 15, Enum.Font.Gotham, Color3.fromRGB(210, 220, 255))
+	WackyState.diamondText(card, newBest and "NEW BEST!" or ("Best: " .. best), 136, 30, newBest and 24 or 18, Enum.Font.FredokaOne, newBest and Color3.fromRGB(255, 215, 90) or Color3.fromRGB(200, 200, 230))
+	local close = Instance.new("TextButton")
+	close.Name = randomString()
+	close.AnchorPoint = Vector2.new(0.5, 0)
+	close.Position = UDim2.new(0.5, 0, 0, 186)
+	close.Size = UDim2.new(0, 160, 0, 40)
+	close.BackgroundColor3 = Color3.fromRGB(70, 150, 230)
+	close.Font = Enum.Font.FredokaOne
+	close.TextSize = 22
+	close.Text = "Nice!"
+	close.TextColor3 = Color3.new(1, 1, 1)
+	close.ZIndex = 62
+	NeverYieldPortal.corner(close, UDim.new(0, 12))
+	close.Parent = card
+	local function closeCard()
+		if not card.Parent then return end
+		TweenService:Create(scale, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Scale = 0}):Play()
+		Services.Debris:AddItem(card, 0.3)
+	end
+	close.MouseButton1Click:Connect(closeCard)
+	task.delay(10, closeCard)
+	WackyState.diamondGame = nil
+end
+
+addcmd('diamond',{'diamondrush','diamonds'},function(args, speaker)
+	if WackyState.diamondGame then
+		notify('Diamond Rush', 'A round is already running! Use undiamond to stop it.')
+		return
+	end
+	local duration = math.clamp(math.floor(WackyState.num(args[1], 60)), 15, 300)
+	local best = 0
+	pcall(function() best = (NeverYieldStats.data.minigames or {}).diamondBest or 0 end)
+	local g = {score = 0, counts = {0, 0, 0}, diamonds = {}, duration = duration}
+	WackyState.diamondGame = g
+
+	-- intro popup
+	WackyState.sound(WackyState.diamondWhoosh, nil, 0.6)
+	local intro, introScale = WackyState.diamondCard(420, 250)
+	g.intro = intro
+	local title = WackyState.diamondText(intro, "DIAMOND RUSH", 14, 50, 44, Enum.Font.FredokaOne)
+	local titleGradient = Instance.new("UIGradient")
+	titleGradient.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(140, 230, 255)), ColorSequenceKeypoint.new(0.5, Color3.new(1, 1, 1)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 160, 230)),
+	})
+	titleGradient.Parent = title
+	WackyState.diamondText(intro, "Diamonds are raining from the sky!\nWalk into them to collect them.", 70, 44, 17, Enum.Font.GothamBold)
+	WackyState.diamondText(intro, "\u{1F48E} Diamond = 1     Pink = 3     Golden = 10", 122, 24, 16, Enum.Font.Gotham, Color3.fromRGB(200, 230, 255))
+	WackyState.diamondText(intro, "You have " .. duration .. " seconds.   Best: " .. best, 150, 24, 16, Enum.Font.Gotham, Color3.fromRGB(200, 230, 255))
+	local count = WackyState.diamondText(intro, "Get ready...", 186, 44, 34, Enum.Font.FredokaOne, Color3.fromRGB(255, 220, 120))
+
+	task.spawn(function()
+		task.wait(2.5)
+		for i = 3, 1, -1 do
+			if g.stopped then return end
+			count.Text = tostring(i)
+			WackyState.sound(WackyState.diamondBeep, nil, 0.5, false, 0.9)
+			task.wait(1)
+		end
+		if g.stopped then return end
+		count.Text = "GO!"
+		WackyState.sound(WackyState.diamondBeep, nil, 0.6, false, 1.4)
+		task.wait(0.4)
+		TweenService:Create(introScale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Scale = 0}):Play()
+		Services.Debris:AddItem(intro, 0.35)
+
+		-- music
+		local music = WackyState.sound(WackyState.pick(WackyState.diamondMusic), nil, 0, true)
+		TweenService:Create(music, TweenInfo.new(1.5), {Volume = 0.35}):Play()
+		g.music = music
+
+		-- HUD
+		local hud = Instance.new("Frame")
+		hud.Name = randomString()
+		hud.AnchorPoint = Vector2.new(0.5, 0)
+		hud.Position = UDim2.new(0.5, 0, 0, 70)
+		hud.Size = UDim2.new(0, 300, 0, 70)
+		hud.BackgroundColor3 = Color3.fromRGB(14, 18, 40)
+		hud.BackgroundTransparency = 0.15
+		hud.BorderSizePixel = 0
+		hud.ZIndex = 55
+		NeverYieldPortal.corner(hud, UDim.new(0, 14))
+		NeverYieldPortal.stroke(hud, 2, 0.2)
+		hud.Parent = WackyState.overlay()
+		g.hud = hud
+		local scoreLabel = WackyState.diamondText(hud, "\u{1F48E} 0", 6, 40, 32, Enum.Font.FredokaOne)
+		scoreLabel.TextXAlignment = Enum.TextXAlignment.Left
+		scoreLabel.ZIndex = 56
+		local timeLabel = WackyState.diamondText(hud, "", 6, 40, 32, Enum.Font.FredokaOne)
+		timeLabel.TextXAlignment = Enum.TextXAlignment.Right
+		timeLabel.ZIndex = 56
+		local bestLabel = WackyState.diamondText(hud, "Best: " .. best, 46, 18, 14, Enum.Font.Gotham, Color3.fromRGB(200, 220, 255))
+		bestLabel.ZIndex = 56
+		local scoreScale = Instance.new("UIScale")
+		scoreScale.Parent = scoreLabel
+
+		local start = tick()
+		local nextSpawn, lastBeep = 0, -1
+		WackyState.connect("diamondRush", RunService.Heartbeat:Connect(function()
+			local now = tick()
+			local left = g.duration - (now - start)
+			if left <= 0 then
+				WackyState.diamondStop(true)
+				return
+			end
+			local secs = math.ceil(left)
+			timeLabel.Text = string.format("%d:%02d", math.floor(secs / 60), secs % 60)
+			if secs <= 10 then
+				timeLabel.TextColor3 = Color3.fromRGB(255, 110, 110)
+				if secs ~= lastBeep then
+					lastBeep = secs
+					WackyState.sound(WackyState.diamondBeep, nil, 0.35, false, 1.2)
+				end
+			end
+			local root = getRoot(speaker.Character)
+			if not root then return end
+
+			-- spawn: faster and faster as time runs out
+			if now >= nextSpawn and #g.diamonds < 70 then
+				nextSpawn = now + 0.32 - 0.17 * math.clamp((now - start) / g.duration, 0, 1)
+				local kind = WackyState.diamondPick()
+				local model, hitbox = WackyState.makeDiamond(kind)
+				local angle, dist = math.random() * math.pi * 2, 8 + math.random() * 50
+				model:PivotTo(CFrame.new(root.Position + Vector3.new(math.cos(angle) * dist, 65 + math.random() * 25, math.sin(angle) * dist))
+					* CFrame.Angles(math.random() * 6.28, math.random() * 6.28, math.random() * 6.28))
+				model.Parent = workspace
+				hitbox.AssemblyAngularVelocity = Vector3.new(math.random(-6, 6), math.random(-6, 6), math.random(-6, 6))
+				table.insert(g.diamonds, {model = model, hitbox = hitbox, kind = kind, born = now, seed = math.random() * 10})
+			end
+
+			-- collect, land, spin
+			for i = #g.diamonds, 1, -1 do
+				local d = g.diamonds[i]
+				local hitbox = d.hitbox
+				if not hitbox.Parent or now - d.born > 30 or hitbox.Position.Y < workspace.FallenPartsDestroyHeight + 20 then
+					pcall(function() d.model:Destroy() end)
+					table.remove(g.diamonds, i)
+				elseif (hitbox.Position - root.Position).Magnitude < 4.5 * d.kind.scale then
+					g.score = g.score + d.kind.value
+					local index = table.find(WackyState.diamondTypes, d.kind) or 1
+					g.counts[index] = g.counts[index] + 1
+					scoreLabel.Text = "\u{1F48E} " .. g.score
+					scoreScale.Scale = 1.3
+					TweenService:Create(scoreScale, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+					WackyState.sound(WackyState.pick(WackyState.gemSounds), nil, d.kind.value >= 10 and 0.9 or 0.55, false, (d.kind.value >= 10 and 0.8 or 1.05) + math.random() * 0.25)
+					-- sparkle burst and a floating "+points"
+					local fx = WackyState.endPart and WackyState.endPart(workspace) or Instance.new("Part")
+					fx.Anchored, fx.CanCollide, fx.Transparency = true, false, 1
+					fx.Position = hitbox.Position
+					fx.Parent = workspace
+					WackyState.burst(fx, Color3.new(1, 1, 1), d.kind.glow, d.kind.value >= 10 and 40 or 18, 14)
+					local tag = Instance.new("BillboardGui")
+					tag.Size = UDim2.new(0, 120, 0, 40)
+					tag.AlwaysOnTop = true
+					tag.StudsOffset = Vector3.new(0, 2, 0)
+					tag.Parent = fx
+					local plus = Instance.new("TextLabel")
+					plus.BackgroundTransparency = 1
+					plus.Size = UDim2.new(1, 0, 1, 0)
+					plus.Font = Enum.Font.FredokaOne
+					plus.TextScaled = true
+					plus.Text = "+" .. d.kind.value
+					plus.TextColor3 = d.kind.glow
+					plus.TextStrokeTransparency = 0.2
+					plus.Parent = tag
+					TweenService:Create(tag, TweenInfo.new(0.8), {StudsOffset = Vector3.new(0, 6, 0)}):Play()
+					TweenService:Create(plus, TweenInfo.new(0.8), {TextTransparency = 1, TextStrokeTransparency = 1}):Play()
+					Services.Debris:AddItem(fx, 0.9)
+					pcall(function() d.model:Destroy() end)
+					table.remove(g.diamonds, i)
+				elseif d.landed then
+					local t = now + d.seed
+					hitbox.CFrame = d.rest * CFrame.new(0, math.sin(t * 3) * 0.3, 0) * CFrame.Angles(0, t * 2, 0)
+				elseif now - d.born > 0.8 and hitbox.AssemblyLinearVelocity.Magnitude < 2 then
+					-- landed: stand upright and hover-spin so it's easy to see
+					d.landed = true
+					hitbox.Anchored = true
+					d.rest = CFrame.new(hitbox.Position + Vector3.new(0, 1.2 * d.kind.scale, 0))
+				end
+			end
+		end))
+	end)
+end)
+
+addcmd('undiamond',{'stopdiamond','nodiamond'},function(args, speaker)
+	if WackyState.diamondGame then
+		WackyState.diamondStop(false)
+		notify('Diamond Rush', 'Round stopped.')
+	end
+end)
+
+table.insert(WackyState.chaosList, 'midas')
+table.insert(WackyState.undoList, 'unmidas')
+table.insert(WackyState.undoList, 'undiamond')
+-- ================== END MIDAS & DIAMOND RUSH ==================
 
 -- ==================== NEVERYIELD STATS ====================
 -- Lifetime stats saved in the executor workspace (NeverYield_stats.json), so they carry across every game.
@@ -18753,7 +19540,7 @@ NeverYieldStats.load = function()
 				data = decoded
 			elseif type(raw) == "string" and raw ~= "" then
 				-- keep a copy of a damaged file instead of silently losing it
-				writefile("NeverYield_stats_broken.json", raw, true)
+				writefile("NeverYield_stats_broken_" .. os.date("%Y%m%d_%H%M%S") .. ".json", raw, true)
 			end
 		end
 	end)
@@ -18808,10 +19595,15 @@ NeverYieldStats.save = function()
 	pcall(NeverYieldStats.trim)
 	local ok, encoded = pcall(function() return HttpService:JSONEncode(NeverYieldStats.data) end)
 	if ok and encoded then
-		writefile(NeverYieldStats.file, encoded, true)
-		NeverYieldStats.dirty = false
+		local wrote = false
+		pcall(function()
+			wrote = writefile ~= nil and writefile(NeverYieldStats.file, encoded, true) == true
+		end)
 		NeverYieldStats.lastSave = os.clock()
-		return true
+		if wrote then
+			NeverYieldStats.dirty = false
+			return true
+		end
 	end
 	return false
 end
@@ -19666,6 +20458,15 @@ addcmd('statsreset',{},function(args, speaker)
 	end)
 	NeverYieldStats.data = NeverYieldStats.blank()
 	NeverYieldStats.data.totals.sessions = 1
+	local s = NeverYieldStats.session
+	s.tagKills, s.myDeaths, s.countedKills, s.countedDeaths, s.streak, s.npcKills = 0, 0, 0, 0, 0, 0
+	s.messages, s.jumps, s.distance, s.playtime, s.commands = 0, 0, 0, 0, 0
+	s.lastKiller, s.seen, s.spawnTime = nil, {}, os.clock()
+	for _, kind in pairs(s.board) do
+		for _, entry in pairs(kind) do
+			entry.gained = 0
+		end
+	end
 	NeverYieldStats.game().visits = 1
 	NeverYieldStats.save()
 	if NeverYieldStats.render then

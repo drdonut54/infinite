@@ -5,6 +5,11 @@ Versions before 1.11.3 were reconstructed from the Desktop `.bakN` backups (one 
 
 | Version | Date | Commands | Change |
 |---|---|---|---|
+| 1.13.2 | 10-10 | 621 | Diamond Rush: diamonds were invisible (only the hitbox moved to the sky, the glass stayed behind); whole model now moves together, glass slightly more solid |
+| 1.13.1 | 10-10 | 621 | Review fixes: statsreset also resets this server's counters; stats save reports failed writes; lighting effects only cut short the fade of the properties they use; damaged stats backups get a timestamp |
+| 1.13.0 | 10-10 | 621 | New `midas` (everything you touch turns gold) and `diamond` Diamond Rush mini-game (diamond models rain down, popups, music, score/timer, saved best); snow footsteps spaced out with 8 varied clips |
+| 1.12.2 | 10-10 | 617 | `weather` with no type picks a random weather instead of always snow |
+| 1.12.1 | 10-10 | 617 | THE END black hole revamp: black horizon, photon ring + lensing glow, swirling cloud accretion disk, spiralling light streams, polar jets, map parts heat up and glow, world dims, shockwave on collapse |
 | 1.12.0 | 10-10 | 617 | Weather sounds vary: 3-6 verified loops per weather, crossfade to a new one every 1.5-2.5 min, plus one-shot accents (owls, wolves, distant thunder, coyotes, wind chimes, wood cracks); new `skipweather` |
 | 1.11.3 | 10-10 | 616 | Stats button in Settings (under Theme Studio); NeverYield shows its own version number in the title |
 | 1.11.3 | 10-10 02:02 | 616 | fixes / tweaks |
