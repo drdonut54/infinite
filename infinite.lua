@@ -1,4 +1,4 @@
--- NeverYield v1.25.2 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.25.3 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.25.2" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.25.3" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -21734,25 +21734,10 @@ NeverYieldAgartha.build = function(O)
 	return folder
 end
 
--- kas's own avatar sits on a garden bench behind the cottage, chilling with a Space Sandwich
+-- kas's own avatar sits on the grass behind the cottage, leaning back against the stone base, with a Space Sandwich.
+-- The pose is a statue: every part is placed and anchored by hand and the joints are removed, so nothing can stand it back up.
 NeverYieldAgartha.ownerId = 8488044155
 NeverYieldAgartha.chill = function(folder, O)
-	local P = NeverYieldAgartha.part
-	local M = Enum.Material
-	local function at(x, y, z) return CFrame.new(O + Vector3.new(x, y, z)) end
-	local bx, bz = -6, 58
-	local wood, iron = Color3.fromRGB(150, 105, 70), Color3.fromRGB(40, 40, 45)
-	-- the bench faces out over the back yard; its back is towards the cottage
-	P(folder, Vector3.new(6, 0.35, 1.8), at(bx, 1.85, bz), wood, M.WoodPlanks)
-	for _, y in ipairs({2.7, 3.5}) do
-		P(folder, Vector3.new(6, 0.5, 0.2), at(bx, y, bz - 0.95) * CFrame.Angles(math.rad(-10), 0, 0), wood, M.WoodPlanks)
-	end
-	for _, x in ipairs({-2.7, 2.7}) do
-		P(folder, Vector3.new(0.3, 1.7, 1.6), at(bx + x, 0.85, bz), iron, M.Metal)
-		P(folder, Vector3.new(0.25, 2.3, 0.25), at(bx + x, 2.9, bz - 1.0), iron, M.Metal)
-		P(folder, Vector3.new(0.25, 0.25, 1.7), at(bx + x, 2.75, bz - 0.1), iron, M.Metal)
-		P(folder, Vector3.new(0.25, 0.75, 0.25), at(bx + x, 2.4, bz + 0.65), iron, M.Metal)
-	end
 	-- your own character when you are kas; otherwise Roblox's copy of kas's avatar (only some executors allow it)
 	local lp = Players.LocalPlayer
 	local model
@@ -21772,7 +21757,7 @@ NeverYieldAgartha.chill = function(folder, O)
 		model:Destroy()
 		return
 	end
-	-- a statue of you: no scripts, sounds, tools, NeverYield effects or forces
+	-- no scripts, sounds, tools, NeverYield effects or forces
 	local junk = {"BodyMover", "AlignPosition", "AlignOrientation", "LinearVelocity", "AngularVelocity", "VectorForce", "Torque",
 		"BaseScript", "ModuleScript", "Sound", "ForceField", "Tool", "Highlight", "Trail", "Beam", "Animator"}
 	for _, d in ipairs(model:GetDescendants()) do
@@ -21784,77 +21769,106 @@ NeverYieldAgartha.chill = function(folder, O)
 	end
 	hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
 	hum.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
-	hum.PlatformStand = true
-	pcall(function() hum.EvaluateStateMachine = false end)
-	for _, p in ipairs(model:GetDescendants()) do
-		if p:IsA("BasePart") then
-			p.Anchored = p == root
-			p.CanCollide, p.CanTouch, p.Massless = false, false, true
-		end
-	end
-	-- sitting pose: thighs forward (knees bent on R15), right hand up with the sandwich, left hand on the lap
-	local function bend(name, cf)
-		local motor = model:FindFirstChild(name, true)
-		if motor and motor:IsA("Motor6D") then motor.C0 = motor.C0 * cf end
-	end
-	if hum.RigType == Enum.HumanoidRigType.R15 then
-		bend("RightHip", CFrame.Angles(math.rad(90), 0, 0))
-		bend("LeftHip", CFrame.Angles(math.rad(90), 0, 0))
-		bend("RightKnee", CFrame.Angles(math.rad(-90), 0, 0))
-		bend("LeftKnee", CFrame.Angles(math.rad(-90), 0, 0))
-		bend("RightShoulder", CFrame.Angles(math.rad(55), 0, 0))
-		bend("RightElbow", CFrame.Angles(math.rad(60), 0, 0))
-		bend("LeftShoulder", CFrame.Angles(math.rad(30), 0, 0))
-		bend("LeftElbow", CFrame.Angles(math.rad(25), 0, 0))
-	else
-		bend("Right Hip", CFrame.Angles(0, 0, math.rad(90)))
-		bend("Left Hip", CFrame.Angles(0, 0, math.rad(-90)))
-		bend("Right Shoulder", CFrame.Angles(0, 0, math.rad(80)))
-		bend("Left Shoulder", CFrame.Angles(0, 0, math.rad(-35)))
-	end
-	-- where each rig part ends up relative to the root, following the motors
-	local function partCF(part, depth)
-		if part == root or (depth or 0) > 12 then return CFrame.new() end
-		for _, m in ipairs(model:GetDescendants()) do
-			if m:IsA("Motor6D") and m.Part1 == part and m.Part0 then
-				return partCF(m.Part0, (depth or 0) + 1) * m.C0 * m.C1:Inverse()
-			end
-		end
-		return root.CFrame:ToObjectSpace(part.CFrame)
-	end
-	-- sit the thighs on the bench
-	local lowest
-	for _, name in ipairs({"RightUpperLeg", "LeftUpperLeg", "Right Leg", "Left Leg"}) do
-		local thigh = model:FindFirstChild(name)
-		if thigh then
-			local cf = partCF(thigh)
-			local half = 0.5 * (math.abs(cf.RightVector.Y) * thigh.Size.X + math.abs(cf.UpVector.Y) * thigh.Size.Y + math.abs(cf.LookVector.Y) * thigh.Size.Z)
-			lowest = math.min(lowest or math.huge, cf.Y - half)
-		end
-	end
-	lowest = lowest or -1.5
-	-- the Space Sandwich (Roblox catalog gear 12547976), rebuilt from its own mesh and texture
+	pcall(function()
+		hum.EvaluateStateMachine = false
+		hum.RequiresNeck = false
+		hum.BreakJointsOnDeath = false
+		hum.AutomaticScalingEnabled = false
+	end)
+	-- the Space Sandwich (Roblox catalog gear 12547976), rebuilt from its own mesh and texture, in the right hand
 	local hand = model:FindFirstChild("RightHand") or model:FindFirstChild("Right Arm")
 	if hand then
 		local sandwich = Instance.new("Part")
 		sandwich.Name = randomString()
 		sandwich.Size = Vector3.new(1, 1.2, 1)
-		sandwich.CanCollide, sandwich.CanTouch, sandwich.Massless = false, false, true
 		local mesh = Instance.new("SpecialMesh")
 		mesh.MeshType = Enum.MeshType.FileMesh
 		mesh.MeshId = "rbxassetid://12510164"
 		mesh.TextureId = "rbxassetid://12509672"
 		mesh.Scale = Vector3.new(1.5, 1.5, 1.5)
 		mesh.Parent = sandwich
-		local weld = Instance.new("Weld")
-		weld.Part0 = hand
-		weld.Part1 = sandwich
-		weld.C0 = CFrame.new(0, -hand.Size.Y / 2 - 0.2, -0.25) * CFrame.Angles(math.rad(-90), 0, 0)
+		sandwich.CFrame = hand.CFrame * CFrame.new(0, -hand.Size.Y / 2 - 0.2, -0.25) * CFrame.Angles(math.rad(-90), 0, 0)
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0, weld.Part1 = hand, sandwich
 		weld.Parent = sandwich
 		sandwich.Parent = model
 	end
+	-- where everything is now (accessories keep their offset to the body part they are welded to)
+	local original = {}
+	for _, p in ipairs(model:GetDescendants()) do
+		if p:IsA("BasePart") then original[p] = p.CFrame end
+	end
+	local motors = {}
+	for _, m in ipairs(model:GetDescendants()) do
+		if m:IsA("Motor6D") and m.Part0 and m.Part1 then motors[m.Part1] = m end
+	end
+	-- sitting on the ground, leaning back 20 degrees: legs flat (R15: left knee up), sandwich at the chest, left hand on the grass
+	local lean = math.rad(20)
+	local pose
+	if hum.RigType == Enum.HumanoidRigType.R15 then
+		pose = {
+			RightHip = CFrame.Angles(math.rad(70), 0, 0),
+			LeftHip = CFrame.Angles(math.rad(110), 0, 0), LeftKnee = CFrame.Angles(math.rad(-105), 0, 0),
+			RightShoulder = CFrame.Angles(math.rad(55), 0, 0), RightElbow = CFrame.Angles(math.rad(75), 0, 0),
+			LeftShoulder = CFrame.Angles(math.rad(25), 0, math.rad(-12)), LeftElbow = CFrame.Angles(math.rad(15), 0, 0),
+		}
+	else
+		pose = {
+			["Right Hip"] = CFrame.Angles(0, 0, math.rad(70)), ["Left Hip"] = CFrame.Angles(0, 0, math.rad(-70)),
+			["Right Shoulder"] = CFrame.Angles(0, 0, math.rad(60)), ["Left Shoulder"] = CFrame.Angles(0, 0, math.rad(-10)),
+		}
+	end
+	local placed = {[root] = CFrame.Angles(0, math.pi, 0) * CFrame.Angles(lean, 0, 0)}
+	local function place(part, depth)
+		if placed[part] then return placed[part] end
+		local m = motors[part]
+		if not m or (depth or 0) > 12 then return nil end
+		local parentCF = place(m.Part0, (depth or 0) + 1)
+		if not parentCF then return nil end
+		placed[part] = parentCF * m.C0 * (pose[m.Name] or CFrame.new()) * m.C1:Inverse()
+		return placed[part]
+	end
+	for part in pairs(motors) do place(part) end
+	-- everything else (hats, hair, the sandwich...) follows the body part it is welded to
+	local function bodyOf(part)
+		for _, w in ipairs(model:GetDescendants()) do
+			local a, b
+			if (w:IsA("JointInstance") or w:IsA("WeldConstraint")) and not w:IsA("Motor6D") then
+				a, b = w.Part0, w.Part1
+			elseif w:IsA("RigidConstraint") and w.Attachment0 and w.Attachment1 then
+				a, b = w.Attachment0.Parent, w.Attachment1.Parent
+			end
+			if a == part and b and placed[b] then return b end
+			if b == part and a and placed[a] then return a end
+		end
+	end
+	local torso = model:FindFirstChild("UpperTorso") or model:FindFirstChild("Torso") or root
+	for p in pairs(original) do
+		if not placed[p] then
+			local body = bodyOf(p) or (placed[torso] and torso) or root
+			placed[p] = placed[body] * original[body]:ToObjectSpace(original[p])
+		end
+	end
+	-- sit the lowest point of the body on the grass, back against the cottage's stone base (behind the back wall)
+	local low = math.huge
+	for p, c in pairs(placed) do
+		if motors[p] then
+			local half = 0.5 * (math.abs(c.RightVector.Y) * p.Size.X + math.abs(c.UpVector.Y) * p.Size.Y + math.abs(c.LookVector.Y) * p.Size.Z)
+			low = math.min(low, c.Y - half)
+		end
+	end
+	if low == math.huge then low = -1.5 end
+	local spot = CFrame.new(O + Vector3.new(-6, -low, 52.5))
+	for _, d in ipairs(model:GetDescendants()) do
+		if d:IsA("Motor6D") then d:Destroy() end
+	end
+	for p in pairs(original) do
+		p.Anchored = true
+		p.CanCollide, p.CanTouch, p.CanQuery = false, false, false
+		p.CFrame = spot * placed[p]
+	end
+	root.Transparency = 1
 	model.Name = randomString()
-	model:PivotTo(at(bx, 2.03 - lowest, bz - 0.35) * CFrame.Angles(0, math.pi, 0))
 	model.Parent = folder
 end
 
