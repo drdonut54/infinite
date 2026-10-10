@@ -1,4 +1,4 @@
--- NeverYield v1.24.1 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.24.2 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.24.1" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.24.2" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -21446,30 +21446,71 @@ NeverYieldAgartha.build = function(O)
 		end
 	end
 	-- brick fireplace on the back wall with a mantel, logs and a real fire
+	-- the surround is built around a real opening (4 wide, 3.35 high) with a recessed firebox behind it
 	local fx, fz = 4.5, hz + 11.4
-	P(folder, Vector3.new(7, 7.5, 1.6), at(fx, 5.4, fz), Color3.fromRGB(150, 85, 70), M.Brick)
-	P(folder, Vector3.new(4, 3.4, 1.0), at(fx, 3.4, fz - 0.4), Color3.fromRGB(25, 20, 20), M.Slate)
-	P(folder, Vector3.new(8, 0.5, 2.2), at(fx, 9.3, fz - 0.3), woodDark, M.Wood)
-	for _, lx in ipairs({-0.9, 0.9}) do
-		P(folder, Vector3.new(2.6, 0.5, 0.5), at(fx + lx * 0.4, 2.1, fz - 0.6) * CFrame.Angles(0, lx * 0.4, 0), Color3.fromRGB(90, 60, 40), M.Wood, "Cylinder")
+	local brick, soot = Color3.fromRGB(150, 85, 70), Color3.fromRGB(45, 32, 28)
+	for _, side in ipairs({-1, 1}) do
+		P(folder, Vector3.new(1.5, 7.5, 1.6), at(fx + side * 2.75, 5.4, fz), brick, M.Brick)
+		P(folder, Vector3.new(0.2, 3.35, 1.4), at(fx + side * 1.9, 3.33, fz + 0.05), soot, M.Brick)
 	end
-	local hearth = P(folder, Vector3.new(2.5, 0.4, 0.6), at(fx, 2.4, fz - 0.6), Color3.fromRGB(255, 140, 50), M.Neon, nil, {Transparency = 0.4})
+	P(folder, Vector3.new(4, 4.15, 1.6), at(fx, 7.08, fz), brick, M.Brick)
+	P(folder, Vector3.new(4, 3.35, 0.2), at(fx, 3.33, fz + 0.7), soot, M.Brick)
+	P(folder, Vector3.new(4, 0.2, 1.6), at(fx, 1.75, fz), Color3.fromRGB(30, 26, 24), M.Slate)
+	P(folder, Vector3.new(4.4, 0.3, 0.3), at(fx, 5.1, fz - 0.85), Color3.fromRGB(120, 115, 110), M.Slate)
+	P(folder, Vector3.new(6.4, 0.3, 1.5), at(fx, 1.8, fz - 1.5), Color3.fromRGB(110, 105, 100), M.Slate)
+	P(folder, Vector3.new(8, 0.5, 2.2), at(fx, 9.3, fz - 0.3), woodDark, M.Wood)
+	-- logs on a bed of glowing embers
+	for _, log in ipairs({{-0.6, 2.05, 0.35, 0.25}, {0.6, 2.05, 0.35, -0.25}, {0, 2.42, 0.05, 0}}) do
+		P(folder, Vector3.new(2.4, 0.42, 0.42), at(fx + log[1], log[2], fz + log[3]) * CFrame.Angles(0, log[4], 0), Color3.fromRGB(85, 55, 35), M.Wood, "Cylinder")
+		P(folder, Vector3.new(0.05, 0.36, 0.36), at(fx + log[1], log[2], fz + log[3]) * CFrame.Angles(0, log[4], 0) * CFrame.new(1.19, 0, 0), Color3.fromRGB(255, 110, 40), M.Neon, "Cylinder")
+	end
+	for i = 1, 9 do
+		P(folder, Vector3.new(0.3, 0.18, 0.3), at(fx - 1.4 + i * 0.28, 1.9, fz + rng:NextNumber(-0.3, 0.5)), Color3.fromRGB(255, rng:NextInteger(70, 140), 30), M.Neon, "Ellipsoid")
+	end
+	-- iron grate in front
+	for i = -3, 3 do
+		P(folder, Vector3.new(0.1, 0.7, 0.1), at(fx + i * 0.45, 2.2, fz - 0.62), Color3.fromRGB(35, 35, 40), M.Metal)
+	end
+	P(folder, Vector3.new(3.0, 0.1, 0.1), at(fx, 2.55, fz - 0.62), Color3.fromRGB(35, 35, 40), M.Metal)
+	-- the fire itself: a real Fire effect, flame and spark particles, warm light and a crackle
+	local hearth = P(folder, Vector3.new(1.6, 0.4, 0.6), at(fx, 2.45, fz + 0.15), Color3.new(0, 0, 0), M.SmoothPlastic, nil, {Transparency = 1, CanCollide = false})
+	local flames = Instance.new("Fire")
+	flames.Size = 3.2
+	flames.Heat = 6
+	flames.Color = Color3.fromRGB(255, 120, 30)
+	flames.SecondaryColor = Color3.fromRGB(255, 220, 90)
+	flames.Parent = hearth
 	local fire = Instance.new("ParticleEmitter")
 	fire.Texture = "rbxasset://textures/particles/fire_main.dds"
-	fire.Rate = 26
-	fire.Speed = NumberRange.new(1, 2.5)
-	fire.SpreadAngle = Vector2.new(15, 15)
-	fire.Lifetime = NumberRange.new(0.4, 0.8)
-	fire.Size = NumberSequence.new(1.1, 0.2)
+	fire.Rate = 32
+	fire.Speed = NumberRange.new(1.2, 2.6)
+	fire.SpreadAngle = Vector2.new(12, 12)
+	fire.Lifetime = NumberRange.new(0.5, 0.9)
+	fire.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 1.3), NumberSequenceKeypoint.new(1, 0.2)})
+	fire.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.1), NumberSequenceKeypoint.new(1, 1)})
 	fire.LightEmission = 1
 	fire.EmissionDirection = Enum.NormalId.Top
 	fire.Color = ColorSequence.new(Color3.fromRGB(255, 220, 110), Color3.fromRGB(255, 90, 30))
 	fire.Parent = hearth
+	local sparks = Instance.new("ParticleEmitter")
+	sparks.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	sparks.Rate = 6
+	sparks.Speed = NumberRange.new(2, 4)
+	sparks.SpreadAngle = Vector2.new(25, 25)
+	sparks.Lifetime = NumberRange.new(0.6, 1.2)
+	sparks.Size = NumberSequence.new(0.15, 0)
+	sparks.LightEmission = 1
+	sparks.EmissionDirection = Enum.NormalId.Top
+	sparks.Color = ColorSequence.new(Color3.fromRGB(255, 190, 80))
+	sparks.Parent = hearth
 	local fireLight = Instance.new("PointLight")
 	fireLight.Color = Color3.fromRGB(255, 150, 70)
 	fireLight.Range = 18
-	fireLight.Brightness = 1.6
+	fireLight.Brightness = 1.8
+	fireLight.Shadows = true
 	fireLight.Parent = hearth
+	local crackle = WackyState.sound(9112780462, hearth, 0.45, true) -- ProSoundEffects fireplace crackle (same as the room)
+	crackle.RollOffMaxDistance = 40
 	for _, cx in ipairs({-2.8, 2.8}) do
 		P(folder, Vector3.new(0.9, 0.35, 0.35), at(fx + cx, 10, fz - 0.3), Color3.fromRGB(250, 245, 235), M.SmoothPlastic, "Cylinder", {CFrame = at(fx + cx, 10, fz - 0.3) * up})
 		P(folder, Vector3.new(0.25, 0.35, 0.25), at(fx + cx, 10.6, fz - 0.3), Color3.fromRGB(255, 200, 90), M.Neon, "Ellipsoid")
@@ -22150,7 +22191,7 @@ addcmd('portal',{'agartha','gateway'},function(args, speaker)
 	end)
 	local view = land:Clone()
 	for _, d in ipairs(view:GetDescendants()) do
-		if d:IsA("ParticleEmitter") or d:IsA("Light") or d:IsA("ProximityPrompt") then
+		if d:IsA("ParticleEmitter") or d:IsA("Light") or d:IsA("ProximityPrompt") or d:IsA("Sound") or d:IsA("Fire") then
 			d:Destroy()
 		elseif d:IsA("BasePart") and d:GetAttribute("ViewOnly") then
 			d.Transparency = 0.25
