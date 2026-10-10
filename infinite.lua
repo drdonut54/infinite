@@ -1,4 +1,4 @@
--- NeverYield v1.21.2 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.22.1 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.21.2" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.22.1" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -5304,8 +5304,11 @@ CMDs[#CMDs + 1] = {NAME = 'weathervolume [0-3]', DESC = 'Changes how loud the we
 CMDs[#CMDs + 1] = {NAME = 'skipweather / nexttrack', DESC = 'Weather sounds change by themselves every few minutes (plus owls, wolves, thunder, chimes...); this skips to another track now'}
 CMDs[#CMDs + 1] = {NAME = 'fuckoff / unloadny', DESC = 'Completely unloads NeverYield: turns everything off, resets your speed, jump, gravity and camera to the game values, and removes the GUI'}
 CMDs[#CMDs + 1] = {NAME = 'END / theend', DESC = 'A black hole (only you see it) swallows the map and you, then takes you to a new server'}
-CMDs[#CMDs + 1] = {NAME = 'portal / agartha', DESC = 'Opens a sparking see-through gateway to Agartha, a peaceful floating island with a cottage and yard. Walk through it (only you see it)'}
+CMDs[#CMDs + 1] = {NAME = 'portal / agartha', DESC = 'Opens a sparking see-through gateway to Agartha, a peaceful floating island with a cottage and yard. It closes 5 s after you walk through; type portal again in Agartha to come back'}
+CMDs[#CMDs + 1] = {NAME = 'door / studyhall', DESC = 'An old door appears: open it to see into a dark, dusty 90s marble study hall and walk through (only you see it)'}
+CMDs[#CMDs + 1] = {NAME = 'undoor', DESC = 'Removes the study hall door (brings you back if you are inside)'}
 CMDs[#CMDs + 1] = {NAME = 'unportal', DESC = 'Closes the Agartha portal (brings you back if you are inside)'}
+CMDs[#CMDs + 1] = {NAME = 'portaldebug', DESC = 'Shows what the portal windows see (for fixing display problems)'}
 CMDs[#CMDs + 1] = {NAME = 'clown / circus', DESC = 'Clown characters chase you with pathfinding, faster over time. You get the Clown Buster gun (one shot each). Caught = you die and get server hopped. Kills and time go to stats'}
 CMDs[#CMDs + 1] = {NAME = 'unclown', DESC = 'Sends the clowns away (before they catch you)'}
 CMDs[#CMDs + 1] = {NAME = 'moon / moonfall', DESC = 'An angry-faced moon falls on the map while a masked imp giggles at you; countdown, quakes, impact, then shop to a new server (only you see it)'}
@@ -21040,7 +21043,7 @@ end)
 NeverYieldAgartha = {
 	music = {111013044669280, 91781617219749, 128660783280547, 134071496659126}, -- DistroKid official Roblox music
 	birds = 9119383684, sparks = 9119380767, whoosh = 9119468100,
-	radius = 6,
+	radius = 7,
 }
 
 NeverYieldAgartha.part = function(parent, size, cf, color, material, shape, props)
@@ -21715,7 +21718,7 @@ end
 
 -- see-through window: a full-screen ViewportFrame with a camera mirrored through the doorways (so the
 -- perspective matches exactly), clipped to where the doorway is on your screen by two crossed rectangles
-NeverYieldAgartha.makeWindow = function(model, sky)
+NeverYieldAgartha.makeWindow = function(model, skyTop, skyBottom)
 	local screen = Instance.new("ScreenGui")
 	screen.Name = randomString()
 	screen.IgnoreGuiInset = true
@@ -21725,16 +21728,28 @@ NeverYieldAgartha.makeWindow = function(model, sky)
 	if not pcall(function() screen.Parent = gethui and gethui() or COREGUI end) then
 		screen.Parent = Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")
 	end
-	local win = {screen = screen, clips = {}}
-	for i = 1, 2 do
+	local win = {screen = screen, clips = {}, parts = 0}
+	for _, d in ipairs(model:GetDescendants()) do
+		if d:IsA("BasePart") then win.parts = win.parts + 1 end
+	end
+	-- three overlapping rectangles that all stay inside the ring (together close to a circle)
+	win.shapes = {{0.93, 0.31}, {0.7, 0.7}, {0.31, 0.93}}
+	for i = 1, #win.shapes do
 		local clip = Instance.new("Frame")
 		clip.BackgroundTransparency = 1
 		clip.BorderSizePixel = 0
 		clip.ClipsDescendants = true
 		clip.Parent = screen
+		local sky = Instance.new("Frame")
+		sky.BorderSizePixel = 0
+		sky.BackgroundColor3 = Color3.new(1, 1, 1)
+		sky.Parent = clip
+		local gradient = Instance.new("UIGradient")
+		gradient.Rotation = 90
+		gradient.Color = ColorSequence.new(skyTop, skyBottom)
+		gradient.Parent = sky
 		local vp = Instance.new("ViewportFrame")
-		vp.BackgroundColor3 = sky
-		vp.BackgroundTransparency = 0
+		vp.BackgroundTransparency = 1
 		vp.Ambient = Color3.fromRGB(205, 195, 185)
 		vp.LightColor = Color3.fromRGB(255, 240, 220)
 		vp.LightDirection = Vector3.new(-0.5, -1, 0.4)
@@ -21744,8 +21759,41 @@ NeverYieldAgartha.makeWindow = function(model, sky)
 		vp.CurrentCamera = cam
 		local copy = (i == 1) and model or model:Clone()
 		copy.Parent = vp
-		table.insert(win.clips, {frame = clip, vp = vp, cam = cam})
+		table.insert(win.clips, {frame = clip, vp = vp, sky = sky, cam = cam})
 	end
+	-- glowing energy ring over the edge of the window
+	local ring = Instance.new("Frame")
+	ring.AnchorPoint = Vector2.new(0.5, 0.5)
+	ring.BackgroundTransparency = 1
+	ring.Parent = screen
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0.5, 0)
+	corner.Parent = ring
+	local glow = Instance.new("UIStroke")
+	glow.Color = Color3.new(1, 1, 1)
+	glow.Transparency = 0.05
+	glow.Parent = ring
+	local swirl = Instance.new("UIGradient")
+	swirl.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 240, 170)), ColorSequenceKeypoint.new(0.25, Color3.fromRGB(255, 150, 40)),
+		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 220, 120)), ColorSequenceKeypoint.new(0.75, Color3.fromRGB(255, 120, 30)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 240, 170)),
+	})
+	swirl.Parent = glow
+	local inner = Instance.new("Frame")
+	inner.AnchorPoint = Vector2.new(0.5, 0.5)
+	inner.Position = UDim2.new(0.5, 0, 0.5, 0)
+	inner.Size = UDim2.new(0.86, 0, 0.86, 0)
+	inner.BackgroundTransparency = 1
+	inner.Parent = ring
+	local innerCorner = Instance.new("UICorner")
+	innerCorner.CornerRadius = UDim.new(0.5, 0)
+	innerCorner.Parent = inner
+	local innerGlow = Instance.new("UIStroke")
+	innerGlow.Color = Color3.fromRGB(255, 220, 150)
+	innerGlow.Transparency = 0.55
+	innerGlow.Parent = inner
+	win.ring, win.glow, win.swirl, win.innerGlow = ring, glow, swirl, innerGlow
 	return win
 end
 
@@ -21754,10 +21802,9 @@ NeverYieldAgartha.updateWindow = function(win, gate, other, frontSign, char)
 	local camPos = cam.CFrame.Position
 	local rel = gate.cf:PointToObjectSpace(camPos)
 	local center = gate.cf.Position
-	local sp, onScreen = cam:WorldToViewportPoint(center)
-	local visible = rel.Z * frontSign > 0.6 and sp.Z > 0 and gate.radius > 0.6 and (camPos - center).Magnitude < 400
+	local sp = cam:WorldToViewportPoint(center)
+	local visible = rel.Z * frontSign > 0.6 and sp.Z > 0 and gate.radius > 0.6 and (camPos - center).Magnitude < 500
 	if visible then
-		-- hidden behind a wall? (pets, effects and the island itself do not count)
 		local params = RaycastParams.new()
 		params.FilterType = Enum.RaycastFilterType.Exclude
 		local skip = {char, gate.ring, gate.pane}
@@ -21773,9 +21820,10 @@ NeverYieldAgartha.updateWindow = function(win, gate, other, frontSign, char)
 			end
 		end
 	end
+	win.visible = visible
 	win.screen.Enabled = visible
 	if not visible then return end
-	local r = gate.radius * 0.97
+	local r = gate.radius * 0.96
 	local side = cam:WorldToViewportPoint(center + gate.cf.RightVector * r)
 	local top = cam:WorldToViewportPoint(center + gate.cf.UpVector * r)
 	local rx = math.max(4, (Vector2.new(side.X, side.Y) - Vector2.new(sp.X, sp.Y)).Magnitude)
@@ -21783,16 +21831,23 @@ NeverYieldAgartha.updateWindow = function(win, gate, other, frontSign, char)
 	local size = cam.ViewportSize
 	local virtual = other.cf:ToWorldSpace(gate.cf:ToObjectSpace(cam.CFrame))
 	for i, clip in ipairs(win.clips) do
-		local w = (i == 1) and rx * 1.96 or rx * 1.3
-		local h = (i == 1) and ry * 1.3 or ry * 1.96
+		local shape = win.shapes[i]
+		local w, h = rx * 2 * shape[1], ry * 2 * shape[2]
 		local x, y = sp.X - w / 2, sp.Y - h / 2
 		clip.frame.Position = UDim2.new(0, x, 0, y)
 		clip.frame.Size = UDim2.new(0, w, 0, h)
 		clip.vp.Position = UDim2.new(0, -x, 0, -y)
 		clip.vp.Size = UDim2.new(0, size.X, 0, size.Y)
+		clip.sky.Position = clip.vp.Position
+		clip.sky.Size = clip.vp.Size
 		clip.cam.FieldOfView = cam.FieldOfView
 		clip.cam.CFrame = virtual
 	end
+	win.ring.Position = UDim2.new(0, sp.X, 0, sp.Y)
+	win.ring.Size = UDim2.new(0, rx * 1.84, 0, ry * 1.84)
+	win.glow.Thickness = math.max(3, math.min(rx, ry) * 0.2)
+	win.innerGlow.Thickness = math.max(1, math.min(rx, ry) * 0.05)
+	win.swirl.Rotation = (tick() * 200) % 360
 end
 
 NeverYieldAgartha.layoutGate = function(gate, t)
@@ -21825,7 +21880,7 @@ NeverYieldAgartha.snapshot = function(center, radius, limit, gateCF)
 	for _, inst in ipairs(workspace:GetDescendants()) do
 		if count >= limit then break end
 		if inst:IsA("BasePart") and not inst:IsA("Terrain") and inst.Transparency < 0.95 and not inst:GetAttribute("NYFx") and (inst.Position - center).Magnitude < radius
-			and (not gateCF or gateCF:PointToObjectSpace(inst.Position).Z < 1) then
+			and (not gateCF or gateCF:PointToObjectSpace(inst.Position).Z < 12) then
 			local owned, anc = false, inst.Parent
 			while anc and anc ~= workspace do
 				if chars[anc] then owned = true break end
@@ -21847,13 +21902,38 @@ NeverYieldAgartha.snapshot = function(center, radius, limit, gateCF)
 	return model
 end
 
+NeverYieldAgartha.openGates = function(s)
+	local A = NeverYieldAgartha
+	A.destroyGate(s.homeGate)
+	A.destroyGate(s.awayGate)
+	s.homeGate = A.makeGate(s.homeCF, nil, Color3.fromRGB(130, 190, 255), Color3.fromRGB(255, 205, 170))
+	s.awayGate = A.makeGate(s.awayCF, nil, Color3.fromRGB(150, 180, 220), Color3.fromRGB(200, 210, 230), Enum.NormalId.Back)
+	s.gatesOpen, s.openStart, s.closeAt, s.closingStart = true, tick(), nil, nil
+	s.idleCloseAt = tick() + 60
+	WackyState.sound(A.whoosh, nil, 0.8, false, 0.7)
+end
+
+NeverYieldAgartha.shutGates = function(s)
+	local A = NeverYieldAgartha
+	A.destroyGate(s.homeGate)
+	A.destroyGate(s.awayGate)
+	s.homeGate, s.awayGate = nil, nil
+	s.gatesOpen, s.closingStart, s.closeAt = false, nil, nil
+	for _, win in ipairs({s.homeWindow, s.awayWindow}) do
+		pcall(function() win.screen.Enabled = false end)
+	end
+	if not s.inside then
+		A.close()
+	end
+end
+
 NeverYieldAgartha.close = function()
 	local A = NeverYieldAgartha
 	local s = A.state
 	if not s then return end
 	if s.inside then
 		local root = getRoot(Players.LocalPlayer.Character)
-		if root then root.CFrame = s.homeGate.cf * CFrame.new(0, 0, -6) * CFrame.Angles(0, math.pi, 0) end
+		if root then root.CFrame = s.homeCF * CFrame.new(0, 0, -6) * CFrame.Angles(0, math.pi, 0) end
 		A.leaveMood(s)
 	end
 	A.state = nil
@@ -21872,8 +21952,19 @@ NeverYieldAgartha.close = function()
 	pcall(function() s.birds:Destroy() end)
 end
 
+-- terrain water is client-side; streaming can wipe it, so it is refilled whenever you are in Agartha
+NeverYieldAgartha.fillWater = function()
+	local A = NeverYieldAgartha
+	if not A.pondCenter then return end
+	pcall(function()
+		workspace.Terrain:FillCylinder(CFrame.new(A.pondCenter + Vector3.new(0, -1.3, 0)), 4, A.pondRadius, Enum.Material.Water)
+	end)
+end
+
 NeverYieldAgartha.enterMood = function(s)
 	s.inside = true
+	NeverYieldAgartha.fillWater()
+	s.nextWater = tick() + 1
 	WackyState.lightClaim("agartha", {"ClockTime", "Brightness", "Ambient", "OutdoorAmbient", "ExposureCompensation"})
 	Lighting.ClockTime, Lighting.Brightness = 16.4, 2.4
 	Lighting.Ambient, Lighting.OutdoorAmbient = Color3.fromRGB(150, 130, 120), Color3.fromRGB(170, 150, 140)
@@ -21921,7 +22012,13 @@ end
 addcmd('portal',{'agartha','gateway'},function(args, speaker)
 	local A = NeverYieldAgartha
 	if A.state then
-		notify('Portal', 'A portal is already open. Use unportal to close it.')
+		local st = A.state
+		if st.gatesOpen then
+			notify('Portal', 'The portal is already open. Use unportal to close it.')
+		else
+			A.openGates(st)
+			notify('Portal', 'The way back is open. It closes 5 seconds after you walk through.', 6)
+		end
 		return
 	end
 	local root = getRoot(speaker.Character)
@@ -21931,11 +22028,11 @@ addcmd('portal',{'agartha','gateway'},function(args, speaker)
 	if look.Magnitude < 0.1 then look = root.CFrame.LookVector * Vector3.new(1, 0, 1) end
 	look = look.Unit
 	-- the doorway stands 10 studs in front of you; its front (-Z) faces you
-	local gatePos = root.Position + look * 10 + Vector3.new(0, 1.5, 0)
+	local gatePos = root.Position + look * 20 + Vector3.new(0, 2.5, 0)
 	local homeCF = CFrame.lookAt(gatePos, gatePos - look)
 	-- Agartha: far away and high up; its doorway looks into the yard
 	local O = root.Position + Vector3.new(6000, 1600, 0)
-	local awayPos = O + Vector3.new(0, 4.5, -46)
+	local awayPos = O + Vector3.new(0, 5.5, -46)
 	local awayCF = CFrame.lookAt(awayPos, awayPos - Vector3.new(0, 0, 1))
 	local land = A.build(O)
 	land.Parent = workspace
@@ -21951,24 +22048,41 @@ addcmd('portal',{'agartha','gateway'},function(args, speaker)
 			d.Transparency = 0.25
 		end
 	end
-	local homeView = A.snapshot(root.Position, 160, 450, homeCF)
+	local homeView = A.snapshot(gatePos, 220, 900, homeCF)
 	local s = {land = land}
-	s.homeGate = A.makeGate(homeCF, nil, Color3.fromRGB(130, 190, 255), Color3.fromRGB(255, 205, 170))
-	s.awayGate = A.makeGate(awayCF, nil, Color3.fromRGB(150, 180, 220), Color3.fromRGB(200, 210, 230), Enum.NormalId.Back)
-	s.homeWindow = A.makeWindow(view, Color3.fromRGB(150, 200, 255))
-	s.awayWindow = A.makeWindow(homeView, Color3.fromRGB(170, 200, 235))
+	s.homeCF, s.awayCF = homeCF, awayCF
+	A.openGates(s)
+	s.homeWindow = A.makeWindow(view, Color3.fromRGB(120, 180, 255), Color3.fromRGB(255, 215, 185))
+	s.awayWindow = A.makeWindow(homeView, Color3.fromRGB(140, 185, 240), Color3.fromRGB(215, 225, 240))
 	s.music = WackyState.sound(WackyState.pick(A.music), nil, 0, true)
 	s.birds = WackyState.sound(A.birds, nil, 0, true)
 	TweenService:Create(s.music, TweenInfo.new(2), {Volume = 0.05}):Play()
 	A.state = s
 	WackyState.sound(A.whoosh, nil, 0.8, false, 0.7)
-	local start = tick()
 	local lastSide = {}
 	WackyState.connect("agartha", RunService.RenderStepped:Connect(function()
-		local t = tick() - start
-		-- the ring spins open with a little overshoot
+		local now = tick()
+		if s.inside and now > (s.nextWater or 0) then
+			s.nextWater = now + 3
+			A.fillWater()
+		end
+		if not s.gatesOpen then return end
+		local t = now - s.openStart
+		-- the ring spins open with a little overshoot, and spins shut when it closes
 		local p = math.clamp(t / 1.3, 0, 1)
 		local radius = A.radius * (1 + 2.70158 * (p - 1) ^ 3 + 1.70158 * (p - 1) ^ 2)
+		if s.closingStart then
+			local q = math.clamp((now - s.closingStart) / 0.8, 0, 1)
+			radius = A.radius * (1 - q * q)
+			p = 0
+			if q >= 1 then
+				A.shutGates(s)
+				return
+			end
+		elseif (s.closeAt and now > s.closeAt) or (not s.closeAt and not s.inside and now > s.idleCloseAt) then
+			s.closingStart = now
+			WackyState.sound(A.whoosh, nil, 0.6, false, 0.6)
+		end
 		for _, gate in ipairs({s.homeGate, s.awayGate}) do
 			gate.radius = math.max(0.2, radius)
 			A.layoutGate(gate, t)
@@ -21991,13 +22105,26 @@ addcmd('portal',{'agartha','gateway'},function(args, speaker)
 			if lastSide[key] ~= nil and side ~= lastSide[key] and wanted and math.sqrt(rel.X * rel.X + rel.Y * rel.Y) < A.radius then
 				A.travel(gate, other, r)
 				if key == "home" then A.enterMood(s) else A.leaveMood(s) end
+				s.closeAt = tick() + 5
 				lastSide = {}
 				return
 			end
 			lastSide[key] = side
 		end
 	end))
-	notify('Portal', 'A gateway to Agartha is open. Walk through it! (unportal closes it)', 8)
+	notify('Portal', 'A gateway to Agartha is open. Walk through it! It closes 5 seconds after you go through; type portal again to come back.', 8)
+end)
+
+addcmd('portaldebug',{'agarthadebug'},function(args, speaker)
+	local s = NeverYieldAgartha.state
+	if not s then
+		notify('Portal', 'No portal is open.')
+		return
+	end
+	local info = string.format("home window: %s, %d parts (Agartha) | Agartha window: %s, %d parts (your map) | inside: %s",
+		tostring(s.homeWindow.visible), s.homeWindow.parts, tostring(s.awayWindow.visible), s.awayWindow.parts, tostring(s.inside))
+	warn("[NeverYield portaldebug] " .. info)
+	notify('Portal Debug', info, 15)
 end)
 
 addcmd('unportal',{'closeportal','unagartha'},function(args, speaker)
@@ -22498,6 +22625,578 @@ end)
 table.insert(WackyState.undoList, 'unclown')
 -- ================== END CLOWNS ==================
 
+-- ==================== STUDY HALL DOOR ====================
+-- "door": an old wooden door appears in front of you. Open it (prompt) and you can see straight into a
+-- dark, dusty 90s marble study hall; walk through to go there, its own door brings you back. Doors swing
+-- shut 5 seconds after you walk through (open them again with the prompt). Client-side only.
+NeverYieldDoor = {
+	library = 9125716196, clock = 9116464138, hum = 9125446564, creak = 9120839552, shut = 9114829231,
+	width = 4.4, height = 7.6,
+}
+
+-- the hall; H = middle of the floor. The way in is a door in the south wall (z = -32), the hall runs to +Z
+NeverYieldDoor.build = function(H)
+	local folder = Instance.new("Model")
+	folder.Name = randomString()
+	local P = NeverYieldAgartha.part
+	local M = Enum.Material
+	local function at(x, y, z) return CFrame.new(H + Vector3.new(x, y, z)) end
+	local up = CFrame.Angles(0, 0, math.pi / 2)
+	local rng = Random.new(11)
+	local wood = Color3.fromRGB(72, 46, 30)
+	local woodLight = Color3.fromRGB(110, 75, 48)
+	local plaster = Color3.fromRGB(118, 108, 92)
+	local brass = Color3.fromRGB(190, 150, 70)
+
+	-- checkered dark marble floor
+	P(folder, Vector3.new(42, 1, 66), at(0, -0.5, 0), Color3.fromRGB(30, 28, 32), M.Marble)
+	for ix = 0, 4 do
+		for iz = 0, 7 do
+			local dark = (ix + iz) % 2 == 0
+			P(folder, Vector3.new(8, 0.12, 8), at(-16 + ix * 8, 0.06, -28 + iz * 8), dark and Color3.fromRGB(34, 32, 38) or Color3.fromRGB(62, 58, 64), M.Marble)
+		end
+	end
+	-- walls: wood wainscot below, dusty plaster above, crown moulding; the south wall has the doorway
+	local function wall(cf, w, d)
+		P(folder, Vector3.new(w, 18, d), cf * CFrame.new(0, 9, 0), plaster, M.Concrete)
+		P(folder, Vector3.new(w, 6, d + 0.3), cf * CFrame.new(0, 3, 0), wood, M.Wood)
+		P(folder, Vector3.new(w, 0.5, d + 0.5), cf * CFrame.new(0, 6.1, 0), woodLight, M.Wood)
+		P(folder, Vector3.new(w, 0.8, d + 0.6), cf * CFrame.new(0, 17.6, 0), woodLight, M.Wood)
+	end
+	wall(at(-20.5, 0, 0), 1, 66)
+	wall(at(20.5, 0, 0), 1, 66)
+	wall(at(0, 0, 32.5), 42, 1)
+	local dw, dh = NeverYieldDoor.width, NeverYieldDoor.height
+	wall(at(-(dw / 2 + 9.6), 0, -32.5), 19.2, 1)
+	wall(at(dw / 2 + 9.6, 0, -32.5), 19.2, 1)
+	P(folder, Vector3.new(dw, 18 - dh, 1), at(0, dh + (18 - dh) / 2, -32.5), plaster, M.Concrete)
+	-- door frame on the inside
+	for _, side in ipairs({-1, 1}) do
+		P(folder, Vector3.new(0.6, dh + 0.6, 1.4), at(side * (dw / 2 + 0.3), (dh + 0.6) / 2, -32.5), woodLight, M.Wood)
+	end
+	P(folder, Vector3.new(dw + 1.8, 0.7, 1.4), at(0, dh + 0.35, -32.5), woodLight, M.Wood)
+	-- ceiling with beams and flickering fluorescent panels
+	P(folder, Vector3.new(42, 1, 66), at(0, 18.5, 0), Color3.fromRGB(48, 42, 38), M.Wood)
+	for _, z in ipairs({-24, -12, 0, 12, 24}) do
+		P(folder, Vector3.new(41, 1, 1.2), at(0, 17.6, z), wood, M.Wood)
+	end
+	NeverYieldDoor.flicker = {}
+	for _, x in ipairs({-8, 8}) do
+		for _, z in ipairs({-18, -6, 6, 18}) do
+			P(folder, Vector3.new(3.4, 0.25, 8.4), at(x, 17.85, z), Color3.fromRGB(150, 150, 145), M.Metal)
+			local tube = P(folder, Vector3.new(2.6, 0.2, 7.6), at(x, 17.65, z), Color3.fromRGB(225, 238, 215), M.Neon, nil, {Transparency = 0.15})
+			local light = Instance.new("PointLight")
+			light.Color = Color3.fromRGB(215, 230, 205)
+			light.Range = 20
+			light.Brightness = 0.55
+			light.Parent = tube
+			table.insert(NeverYieldDoor.flicker, {tube = tube, light = light})
+		end
+	end
+	-- marble columns
+	for _, x in ipairs({-13, 13}) do
+		for _, z in ipairs({-18, 0, 18}) do
+			P(folder, Vector3.new(16, 2.6, 2.6), at(x, 9, z) * up, Color3.fromRGB(78, 74, 82), M.Marble, "Cylinder")
+			P(folder, Vector3.new(3.6, 1.2, 3.6), at(x, 0.6, z), Color3.fromRGB(60, 56, 64), M.Marble)
+			P(folder, Vector3.new(3.6, 1.2, 3.6), at(x, 17.0, z), Color3.fromRGB(60, 56, 64), M.Marble)
+		end
+	end
+	-- red runner down the middle
+	P(folder, Vector3.new(4, 0.1, 58), at(0, 0.18, 0), Color3.fromRGB(110, 30, 35), M.Fabric)
+	P(folder, Vector3.new(3.2, 0.11, 58), at(0, 0.19, 0), Color3.fromRGB(140, 45, 45), M.Fabric)
+
+	-- study tables, green banker's lamps, books, a few beige 90s computers, chairs you can sit on
+	local function chair(cx, cz, yaw)
+		local base = at(cx, 0, cz) * CFrame.Angles(0, yaw, 0)
+		P(folder, Vector3.new(2, 0.3, 2), base * CFrame.new(0, 2.4, 0), woodLight, M.Wood)
+		local cushion = P(folder, Vector3.new(1.7, 0.2, 1.7), base * CFrame.new(0, 2.6, 0), Color3.fromRGB(70, 90, 70), M.Fabric)
+		NeverYieldAgartha.seat(cushion, base * CFrame.new(0, 2.7 + 1.5, -0.1), "Sit")
+		for _, lx in ipairs({-0.8, 0.8}) do
+			for _, lz in ipairs({-0.8, 0.8}) do
+				P(folder, Vector3.new(0.22, 2.3, 0.22), base * CFrame.new(lx, 1.15, lz), wood, M.Wood)
+			end
+			P(folder, Vector3.new(0.24, 3, 0.24), base * CFrame.new(lx, 4, 0.85), wood, M.Wood)
+		end
+		P(folder, Vector3.new(1.6, 1.1, 0.18), base * CFrame.new(0, 4.6, 0.85), woodLight, M.Wood)
+	end
+	local computers = 0
+	for _, tx in ipairs({-6, 6}) do
+		for _, tz in ipairs({-16, -4, 8}) do
+			P(folder, Vector3.new(4, 0.35, 10), at(tx, 3.2, tz), Color3.fromRGB(80, 52, 34), M.Wood)
+			for _, lx in ipairs({-1.7, 1.7}) do
+				for _, lz in ipairs({-4.6, 4.6}) do
+					P(folder, Vector3.new(0.35, 3, 0.35), at(tx + lx, 1.5, tz + lz), wood, M.Wood)
+				end
+			end
+			for _, lz in ipairs({-2.6, 2.6}) do
+				-- banker's lamp
+				P(folder, Vector3.new(0.18, 0.9, 0.9), at(tx, 3.48, tz + lz) * up, brass, M.Foil, "Cylinder")
+				P(folder, Vector3.new(0.12, 1.1, 0.12), at(tx, 4.0, tz + lz), brass, M.Foil)
+				local shade = P(folder, Vector3.new(1.6, 0.5, 0.8), at(tx, 4.6, tz + lz), Color3.fromRGB(30, 110, 60), M.Glass, "Ellipsoid", {Transparency = 0.1})
+				local glow = Instance.new("PointLight")
+				glow.Color = Color3.fromRGB(255, 210, 140)
+				glow.Range = 9
+				glow.Brightness = 1.1
+				glow.Parent = shade
+				P(folder, Vector3.new(1.0, 0.15, 0.4), at(tx, 4.38, tz + lz), Color3.fromRGB(255, 225, 160), M.Neon, "Ellipsoid")
+			end
+			-- books and papers
+			for k = 1, 3 do
+				local bz = tz + rng:NextNumber(-1.5, 1.5)
+				local h = 3.4
+				for b = 1, rng:NextInteger(1, 4) do
+					local th = rng:NextNumber(0.2, 0.45)
+					P(folder, Vector3.new(1.3, th, 1.8), at(tx + rng:NextNumber(-1, 1), h + th / 2, bz) * CFrame.Angles(0, rng:NextNumber(-0.4, 0.4), 0),
+						({Color3.fromRGB(120, 30, 30), Color3.fromRGB(30, 50, 100), Color3.fromRGB(40, 80, 50), Color3.fromRGB(150, 120, 60)})[rng:NextInteger(1, 4)], M.SmoothPlastic)
+					h = h + th
+				end
+			end
+			P(folder, Vector3.new(1.6, 0.05, 2.1), at(tx - 0.8, 3.4, tz + 0.5) * CFrame.Angles(0, 0.3, 0), Color3.fromRGB(235, 228, 205), M.SmoothPlastic)
+			if computers < 3 and rng:NextNumber() < 0.6 then
+				computers = computers + 1
+				local beige = Color3.fromRGB(205, 195, 170)
+				local cz = tz - 0.2
+				P(folder, Vector3.new(2.2, 2, 2.2), at(tx + 0.6, 4.4, cz), beige, M.SmoothPlastic)
+				P(folder, Vector3.new(1.6, 1.3, 0.1), at(tx + 0.6, 4.5, cz - 1.12) * CFrame.Angles(0, 0, 0), Color3.fromRGB(15, 30, 20), M.SmoothPlastic)
+				local screen = P(folder, Vector3.new(1.4, 1.1, 0.05), at(tx + 0.6, 4.5, cz - 1.16), Color3.fromRGB(40, 150, 70), M.Neon, nil, {Transparency = 0.55})
+				local sg = Instance.new("SurfaceGui")
+				sg.Face = Enum.NormalId.Front
+				sg.LightInfluence = 0
+				sg.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+				sg.PixelsPerStud = 60
+				sg.Parent = screen
+				local txt = Instance.new("TextLabel")
+				txt.Size = UDim2.new(1, 0, 1, 0)
+				txt.BackgroundTransparency = 1
+				txt.Font = Enum.Font.Code
+				txt.TextScaled = true
+				txt.TextColor3 = Color3.fromRGB(120, 255, 140)
+				txt.TextXAlignment = Enum.TextXAlignment.Left
+				txt.TextYAlignment = Enum.TextYAlignment.Top
+				txt.Text = "C:\\>dir\nSTUDY.DOC\nNOTES.TXT\nC:\\>_"
+				txt.Parent = sg
+				P(folder, Vector3.new(1.9, 0.12, 0.7), at(tx + 0.6, 3.44, cz - 1.9), beige, M.SmoothPlastic)
+				P(folder, Vector3.new(0.8, 2, 2), at(tx - 1.3, 4.4, cz + 1.5), beige, M.SmoothPlastic)
+			end
+			chair(tx - 3, tz - 2.2, math.rad(90))
+			chair(tx + 3, tz + 2.2, math.rad(-90))
+		end
+	end
+
+	-- tall bookshelves along both long walls
+	local bookColors = {Color3.fromRGB(120, 30, 30), Color3.fromRGB(30, 50, 100), Color3.fromRGB(40, 80, 50), Color3.fromRGB(150, 120, 60),
+		Color3.fromRGB(80, 50, 90), Color3.fromRGB(190, 180, 150), Color3.fromRGB(60, 40, 30)}
+	for _, side in ipairs({-1, 1}) do
+		for _, z in ipairs({-26, -9, 9, 26}) do
+			local sx = side * 19.2
+			P(folder, Vector3.new(1.8, 12, 8), at(sx, 6, z), wood, M.Wood)
+			for shelf = 0, 4 do
+				local sy = 1 + shelf * 2.3
+				P(folder, Vector3.new(1.9, 0.25, 7.8), at(sx - side * 0.1, sy, z), woodLight, M.Wood)
+				local bz = z - 3.7
+				while bz < z + 3.6 do
+					local bw, bh = rng:NextNumber(0.3, 0.6), rng:NextNumber(1.3, 2.0)
+					local lean = rng:NextNumber() < 0.08 and 0.25 or 0
+					P(folder, Vector3.new(1.2, bh, bw), at(sx - side * 0.5, sy + 0.12 + bh / 2, bz + bw / 2) * CFrame.Angles(lean, 0, 0), bookColors[rng:NextInteger(1, #bookColors)], M.SmoothPlastic)
+					bz = bz + bw + 0.05
+				end
+			end
+		end
+	end
+
+	-- north wall: chalkboard, teacher's desk with a globe and an apple, a big clock
+	P(folder, Vector3.new(16, 7, 0.4), at(0, 9.5, 31.8), wood, M.Wood)
+	P(folder, Vector3.new(15, 6, 0.45), at(0, 9.5, 31.75), Color3.fromRGB(32, 58, 44), M.Slate)
+	for i = 1, 6 do
+		P(folder, Vector3.new(rng:NextNumber(3, 9), 0.12, 0.47), at(rng:NextNumber(-3, 3), 8 + i * 0.6, 31.7) * CFrame.Angles(0, 0, rng:NextNumber(-0.05, 0.05)), Color3.fromRGB(220, 220, 210), M.SmoothPlastic, nil, {Transparency = 0.25})
+	end
+	P(folder, Vector3.new(15, 0.3, 0.8), at(0, 6.4, 31.4), woodLight, M.Wood)
+	P(folder, Vector3.new(8, 3.2, 3.6), at(0, 1.6, 26), Color3.fromRGB(85, 55, 35), M.Wood)
+	P(folder, Vector3.new(8.4, 0.3, 4), at(0, 3.35, 26), woodLight, M.Wood)
+	P(folder, Vector3.new(0.3, 0.9, 0.9), at(2.5, 3.6, 26) * up, brass, M.Foil, "Cylinder")
+	P(folder, Vector3.new(1.4, 1.4, 1.4), at(2.5, 4.9, 26), Color3.fromRGB(60, 110, 170), M.SmoothPlastic, "Ball")
+	P(folder, Vector3.new(0.5, 0.4, 0.4), at(2.35, 5.2, 25.4), Color3.fromRGB(80, 150, 70), M.SmoothPlastic, "Ellipsoid")
+	P(folder, Vector3.new(0.6, 0.6, 0.6), at(-2.5, 3.8, 26), Color3.fromRGB(190, 30, 35), M.SmoothPlastic, "Ball")
+	local clock = P(folder, Vector3.new(0.4, 3, 3), at(0, 14.5, 31.9) * CFrame.Angles(0, math.rad(90), 0), Color3.fromRGB(240, 235, 220), M.SmoothPlastic, "Cylinder")
+	P(folder, Vector3.new(0.35, 3.4, 3.4), at(0, 14.5, 31.95) * CFrame.Angles(0, math.rad(90), 0), Color3.fromRGB(30, 25, 25), M.Metal, "Cylinder")
+	P(folder, Vector3.new(0.12, 1.0, 0.1), at(0, 14.9, 31.65) * CFrame.Angles(0, 0, math.rad(-30)), Color3.fromRGB(20, 20, 20), M.SmoothPlastic)
+	P(folder, Vector3.new(0.1, 1.3, 0.1), at(0.35, 14.3, 31.62) * CFrame.Angles(0, 0, math.rad(110)), Color3.fromRGB(20, 20, 20), M.SmoothPlastic)
+	NeverYieldDoor.clockPart = clock
+
+	-- tall windows with blinds on the west wall, an orange street light glowing outside, radiators below
+	for _, z in ipairs({-14, 14}) do
+		P(folder, Vector3.new(0.3, 9, 5), at(-20.1, 10.5, z), Color3.fromRGB(255, 170, 90), M.Neon, nil, {Transparency = 0.55})
+		for i = 0, 17 do
+			P(folder, Vector3.new(0.12, 0.3, 5), at(-19.7, 6.4 + i * 0.5, z) * CFrame.Angles(0, 0, math.rad(25)), Color3.fromRGB(215, 205, 180), M.SmoothPlastic)
+		end
+		P(folder, Vector3.new(0.6, 9.4, 0.5), at(-19.8, 10.5, z - 2.7), woodLight, M.Wood)
+		P(folder, Vector3.new(0.6, 9.4, 0.5), at(-19.8, 10.5, z + 2.7), woodLight, M.Wood)
+		P(folder, Vector3.new(0.8, 0.5, 5.9), at(-19.7, 5.9, z), woodLight, M.Wood)
+		local beam = P(folder, Vector3.new(14, 0.2, 4.6), at(-13.5, 6.5, z) * CFrame.Angles(0, 0, math.rad(-35)), Color3.fromRGB(255, 200, 140), M.Neon, nil, {Transparency = 0.93, CanCollide = false})
+		for i = 0, 6 do
+			P(folder, Vector3.new(0.6, 2.2, 0.3), at(-19.4, 1.6, z - 2.4 + i * 0.8), Color3.fromRGB(150, 145, 140), M.Metal)
+		end
+	end
+	-- filing cabinets, a plant, 90s posters
+	for i = 0, 1 do
+		local fx = 16.5 - i * 2.4
+		P(folder, Vector3.new(2.2, 5.2, 2.4), at(fx, 2.6, 30.4), Color3.fromRGB(120, 125, 125), M.Metal)
+		for d = 0, 3 do
+			P(folder, Vector3.new(1.9, 1.05, 0.08), at(fx, 0.9 + d * 1.25, 29.18), Color3.fromRGB(140, 145, 145), M.Metal)
+			P(folder, Vector3.new(0.6, 0.15, 0.12), at(fx, 1.1 + d * 1.25, 29.12), Color3.fromRGB(70, 70, 70), M.Metal)
+		end
+	end
+	P(folder, Vector3.new(1.6, 1.8, 1.6), at(-17.5, 0.9, 29.5), Color3.fromRGB(150, 80, 50), M.Slate)
+	for i = 1, 5 do
+		local a = i / 5 * math.pi * 2
+		P(folder, Vector3.new(0.8, 2.6, 0.4), at(-17.5 + math.cos(a) * 0.3, 2.9, 29.5 + math.sin(a) * 0.3) * CFrame.Angles(math.sin(a) * 0.4, 0, math.cos(a) * 0.4), Color3.fromRGB(60, 120, 60), M.SmoothPlastic, "Ellipsoid")
+	end
+	local function poster(cf, bg, text, fg)
+		local p = P(folder, Vector3.new(3.4, 4.6, 0.1), cf, bg, M.SmoothPlastic)
+		local sg = Instance.new("SurfaceGui")
+		sg.Face = Enum.NormalId.Front
+		sg.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		sg.PixelsPerStud = 40
+		sg.Parent = p
+		local t = Instance.new("TextLabel")
+		t.Size = UDim2.new(1, 0, 1, 0)
+		t.BackgroundTransparency = 1
+		t.Font = Enum.Font.Arcade
+		t.TextScaled = true
+		t.TextColor3 = fg
+		t.Text = text
+		t.Parent = sg
+	end
+	poster(at(20.0, 10, -20) * CFrame.Angles(0, math.rad(-90), 0), Color3.fromRGB(240, 60, 140), "READ!", Color3.fromRGB(255, 240, 60))
+	poster(at(20.0, 10, 4) * CFrame.Angles(0, math.rad(-90), 0), Color3.fromRGB(40, 200, 200), "STAY\nIN\nSCHOOL", Color3.fromRGB(60, 20, 90))
+	poster(at(-20.0, 10.5, 0) * CFrame.Angles(0, math.rad(90), 0), Color3.fromRGB(250, 230, 120), "CLASS\nOF\n'97", Color3.fromRGB(200, 40, 60))
+
+	-- dust drifting through the light
+	local dustPart = P(folder, Vector3.new(38, 14, 60), at(0, 9, 0), Color3.new(1, 1, 1), M.SmoothPlastic, nil, {Transparency = 1, CanCollide = false})
+	local dust = Instance.new("ParticleEmitter")
+	dust.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	dust.Rate = 28
+	dust.Speed = NumberRange.new(0.1, 0.4)
+	dust.SpreadAngle = Vector2.new(180, 180)
+	dust.Lifetime = NumberRange.new(8, 12)
+	dust.Size = NumberSequence.new(0.08)
+	dust.LightEmission = 0.4
+	dust.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.3, 0.4), NumberSequenceKeypoint.new(1, 1)})
+	dust.Color = ColorSequence.new(Color3.fromRGB(230, 220, 200))
+	dust.Acceleration = Vector3.new(0.05, -0.02, 0.03)
+	pcall(function()
+		dust.Shape = Enum.ParticleEmitterShape.Box
+		dust.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
+	end)
+	dust.Parent = dustPart
+	return folder
+end
+
+-- an old wooden door with a frame; its front (-Z) faces whoever spawned it, it swings open away from you
+NeverYieldDoor.makeDoor = function(cf, withFrame)
+	local P = NeverYieldAgartha.part
+	local M = Enum.Material
+	local door = {cf = cf, angle = 0, target = 0, parts = {}}
+	local folder = Instance.new("Model")
+	folder.Name = randomString()
+	folder.Parent = workspace
+	door.model = folder
+	local w, h = NeverYieldDoor.width, NeverYieldDoor.height
+	local frameColor = Color3.fromRGB(110, 75, 48)
+	if withFrame then
+		for _, side in ipairs({-1, 1}) do
+			P(folder, Vector3.new(0.6, h + 0.6, 0.9), cf * CFrame.new(side * (w / 2 + 0.3), 0.3, 0), frameColor, M.Wood)
+		end
+		P(folder, Vector3.new(w + 1.8, 0.7, 0.9), cf * CFrame.new(0, h / 2 + 0.35, 0), frameColor, M.Wood)
+		P(folder, Vector3.new(w + 1.8, 0.25, 1.2), cf * CFrame.new(0, -h / 2 + 0.12, 0), Color3.fromRGB(90, 85, 80), M.Marble)
+	end
+	local slab = P(folder, Vector3.new(w, h, 0.35), cf, Color3.fromRGB(96, 60, 38), M.Wood)
+	door.slab = slab
+	local deco = {}
+	for _, py in ipairs({1.7, -1.7}) do
+		for _, pz in ipairs({-0.2, 0.2}) do
+			table.insert(deco, {P(folder, Vector3.new(w - 1.2, 2.6, 0.08), cf, Color3.fromRGB(80, 50, 32), M.Wood), CFrame.new(0, py, pz)})
+		end
+	end
+	for _, pz in ipairs({-0.3, 0.3}) do
+		table.insert(deco, {P(folder, Vector3.new(0.4, 0.4, 0.4), cf, Color3.fromRGB(200, 160, 70), M.Foil, "Ball"), CFrame.new(w / 2 - 0.5, -0.2, pz)})
+	end
+	door.deco = deco
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.ActionText = "Open"
+	prompt.ObjectText = "Door"
+	prompt.HoldDuration = 0
+	prompt.MaxActivationDistance = 10
+	prompt.RequiresLineOfSight = false
+	prompt.KeyboardKeyCode = Enum.KeyCode.E
+	prompt.Parent = slab
+	door.prompt = prompt
+	NeverYieldDoor.pose(door)
+	return door
+end
+
+NeverYieldDoor.pose = function(door)
+	local w = NeverYieldDoor.width
+	local hinge = door.cf * CFrame.new(-w / 2, 0, 0) * CFrame.Angles(0, math.rad(-door.angle), 0)
+	local slabCF = hinge * CFrame.new(w / 2, 0, 0)
+	door.slab.CFrame = slabCF
+	for _, d in ipairs(door.deco) do
+		d[1].CFrame = slabCF * d[2]
+	end
+end
+
+-- see-through window shaped like the doorway: three horizontal strips inside the projected opening
+NeverYieldDoor.makeWindow = function(model, color)
+	local screen = Instance.new("ScreenGui")
+	screen.Name = randomString()
+	screen.IgnoreGuiInset = true
+	screen.ResetOnSpawn = false
+	screen.DisplayOrder = -5
+	screen.Enabled = false
+	if not pcall(function() screen.Parent = gethui and gethui() or COREGUI end) then
+		screen.Parent = Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")
+	end
+	local win = {screen = screen, clips = {}}
+	for i = 1, 3 do
+		local clip = Instance.new("Frame")
+		clip.BackgroundTransparency = 1
+		clip.BorderSizePixel = 0
+		clip.ClipsDescendants = true
+		clip.Parent = screen
+		local vp = Instance.new("ViewportFrame")
+		vp.BackgroundColor3 = color
+		vp.BackgroundTransparency = 0
+		vp.Ambient = Color3.fromRGB(150, 140, 130)
+		vp.LightColor = Color3.fromRGB(255, 225, 190)
+		vp.LightDirection = Vector3.new(-0.3, -1, 0.3)
+		vp.Parent = clip
+		local cam = Instance.new("Camera")
+		cam.Parent = vp
+		vp.CurrentCamera = cam
+		local copy = (i == 1) and model or model:Clone()
+		copy.Parent = vp
+		table.insert(win.clips, {frame = clip, vp = vp, cam = cam})
+	end
+	return win
+end
+
+NeverYieldDoor.updateWindow = function(win, door, other, frontSign, char)
+	local cam = workspace.CurrentCamera
+	local camPos = cam.CFrame.Position
+	local rel = door.cf:PointToObjectSpace(camPos)
+	local w, h = NeverYieldDoor.width - 0.2, NeverYieldDoor.height - 0.2
+	local visible = door.angle > 50 and rel.Z * frontSign > 0.5 and (camPos - door.cf.Position).Magnitude < 400
+	local corners = {}
+	if visible then
+		for _, c in ipairs({{-1, 1}, {1, 1}, {-1, -1}, {1, -1}}) do
+			local sp = cam:WorldToViewportPoint(door.cf * Vector3.new(c[1] * w / 2, c[2] * h / 2, 0))
+			if sp.Z <= 0 then visible = false break end
+			table.insert(corners, Vector2.new(sp.X, sp.Y))
+		end
+	end
+	if visible then
+		local params = RaycastParams.new()
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		local skip = {char, door.model}
+		for _ = 1, 5 do
+			params.FilterDescendantsInstances = skip
+			local hit = workspace:Raycast(camPos, door.cf.Position - camPos, params)
+			if not hit then break end
+			if hit.Instance:GetAttribute("NYFx") then
+				table.insert(skip, hit.Instance)
+			else
+				visible = false
+				break
+			end
+		end
+	end
+	win.screen.Enabled = visible
+	if not visible then return end
+	local tl, tr, bl, br = corners[1], corners[2], corners[3], corners[4]
+	local size = cam.ViewportSize
+	local virtual = other.cf:ToWorldSpace(door.cf:ToObjectSpace(cam.CFrame))
+	for i, clip in ipairs(win.clips) do
+		local f0, f1 = (i - 1) / 3, i / 3
+		local leftTop, leftBottom = tl:Lerp(bl, f0), tl:Lerp(bl, f1)
+		local rightTop, rightBottom = tr:Lerp(br, f0), tr:Lerp(br, f1)
+		local x0 = math.max(leftTop.X, leftBottom.X)
+		local x1 = math.min(rightTop.X, rightBottom.X)
+		local y0 = math.min(leftTop.Y, rightTop.Y)
+		local y1 = math.max(leftBottom.Y, rightBottom.Y)
+		if i == 1 then y0 = math.max(leftTop.Y, rightTop.Y) end
+		if i == 3 then y1 = math.min(leftBottom.Y, rightBottom.Y) end
+		clip.frame.Position = UDim2.new(0, x0, 0, y0)
+		clip.frame.Size = UDim2.new(0, math.max(0, x1 - x0), 0, math.max(0, y1 - y0))
+		clip.vp.Position = UDim2.new(0, -x0, 0, -y0)
+		clip.vp.Size = UDim2.new(0, size.X, 0, size.Y)
+		clip.cam.FieldOfView = cam.FieldOfView
+		clip.cam.CFrame = virtual
+	end
+end
+
+NeverYieldDoor.setOpen = function(s, open)
+	local D = NeverYieldDoor
+	for _, door in ipairs({s.homeDoor, s.hallDoor}) do
+		door.target = open and 100 or 0
+	end
+	s.open = open
+	WackyState.sound(open and D.creak or D.shut, s.inside and s.hallDoor.slab or s.homeDoor.slab, 0.8, false, 0.95 + math.random() * 0.1)
+	for _, door in ipairs({s.homeDoor, s.hallDoor}) do
+		door.prompt.ActionText = open and "Close" or "Open"
+	end
+end
+
+NeverYieldDoor.enterMood = function(s)
+	s.inside = true
+	WackyState.lightClaim("studyhall", {"ClockTime", "Brightness", "Ambient", "OutdoorAmbient", "ExposureCompensation"})
+	Lighting.ClockTime, Lighting.Brightness = 21, 0.4
+	Lighting.Ambient, Lighting.OutdoorAmbient = Color3.fromRGB(70, 62, 55), Color3.fromRGB(55, 50, 48)
+	Lighting.ExposureCompensation = -0.2
+	local atmosphere = Instance.new("Atmosphere")
+	atmosphere.Density, atmosphere.Offset, atmosphere.Glare, atmosphere.Haze = 0.38, 0, 0, 1.6
+	atmosphere.Color, atmosphere.Decay = Color3.fromRGB(150, 132, 110), Color3.fromRGB(90, 80, 70)
+	WackyState.envSet("Atmosphere", atmosphere)
+	local cc = WackyState.track("studyhall", Instance.new("ColorCorrectionEffect"))
+	cc.Saturation, cc.Contrast, cc.TintColor = -0.25, 0.1, Color3.fromRGB(255, 236, 210)
+	cc.Parent = Lighting
+	for _, snd in ipairs({{s.library, 0.35}, {s.clock, 0.6}, {s.hum, 0.18}}) do
+		TweenService:Create(snd[1], TweenInfo.new(2), {Volume = snd[2]}):Play()
+	end
+end
+
+NeverYieldDoor.leaveMood = function(s)
+	s.inside = false
+	WackyState.clear("studyhall")
+	WackyState.envRestore("Atmosphere")
+	WackyState.lightRelease("studyhall", 1)
+	for _, snd in ipairs({s.library, s.clock, s.hum}) do
+		TweenService:Create(snd, TweenInfo.new(1.5), {Volume = 0}):Play()
+	end
+end
+
+NeverYieldDoor.close = function()
+	local D = NeverYieldDoor
+	local s = D.state
+	if not s then return end
+	if s.inside then
+		local root = getRoot(Players.LocalPlayer.Character)
+		if root then root.CFrame = s.homeDoor.cf * CFrame.new(0, 0, -5) * CFrame.Angles(0, math.pi, 0) end
+		D.leaveMood(s)
+	end
+	D.state = nil
+	NeverYieldAgartha.standUp()
+	WackyState.disconnect("studydoor")
+	for _, obj in ipairs({s.homeDoor.model, s.hallDoor.model, s.hall, s.homeWindow.screen, s.hallWindow.screen, s.library, s.clock, s.hum}) do
+		pcall(function() obj:Destroy() end)
+	end
+end
+
+addcmd('door',{'studyhall','oldoor'},function(args, speaker)
+	local D = NeverYieldDoor
+	if D.state then
+		notify('Door', 'The door is already here. Use undoor to remove it.')
+		return
+	end
+	local root = getRoot(speaker.Character)
+	if not root then return end
+	local camera = workspace.CurrentCamera
+	local look = camera.CFrame.LookVector * Vector3.new(1, 0, 1)
+	if look.Magnitude < 0.1 then look = root.CFrame.LookVector * Vector3.new(1, 0, 1) end
+	look = look.Unit
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = {speaker.Character}
+	local spot = root.Position + look * 12
+	local hit = workspace:Raycast(spot + Vector3.new(0, 10, 0), Vector3.new(0, -40, 0), params)
+	local floorY = hit and hit.Position.Y or (root.Position.Y - 3)
+	local doorPos = Vector3.new(spot.X, floorY + D.height / 2, spot.Z)
+	local homeCF = CFrame.lookAt(doorPos, doorPos - look)
+	local H = root.Position + Vector3.new(-6000, 1600, 0)
+	local hall = D.build(H)
+	hall.Parent = workspace
+	local hallPos = H + Vector3.new(0, D.height / 2, -32.5)
+	local hallCF = CFrame.lookAt(hallPos, hallPos - Vector3.new(0, 0, 1))
+	local view = hall:Clone()
+	for _, d in ipairs(view:GetDescendants()) do
+		if d:IsA("ParticleEmitter") or d:IsA("Light") or d:IsA("ProximityPrompt") then d:Destroy() end
+	end
+	local homeView = NeverYieldAgartha.snapshot(doorPos, 200, 900, homeCF)
+	local s = {hall = hall, open = false}
+	s.homeDoor = D.makeDoor(homeCF, true)
+	s.hallDoor = D.makeDoor(hallCF, false)
+	s.homeWindow = D.makeWindow(view, Color3.fromRGB(40, 35, 32))
+	s.hallWindow = D.makeWindow(homeView, Color3.fromRGB(160, 190, 230))
+	s.library = WackyState.sound(D.library, nil, 0, true)
+	s.hum = WackyState.sound(D.hum, nil, 0, true)
+	s.clock = WackyState.sound(D.clock, D.clockPart, 0, true)
+	s.clock.RollOffMaxDistance = 80
+	D.state = s
+	for _, door in ipairs({s.homeDoor, s.hallDoor}) do
+		door.prompt.Triggered:Connect(function()
+			D.setOpen(s, not s.open)
+			s.closeAt = nil
+		end)
+	end
+	local lastSide = {}
+	local nextFlicker = 0
+	WackyState.connect("studydoor", RunService.RenderStepped:Connect(function(dt)
+		local now = tick()
+		-- swing the doors
+		for _, door in ipairs({s.homeDoor, s.hallDoor}) do
+			if math.abs(door.angle - door.target) > 0.1 then
+				door.angle = door.angle + (door.target - door.angle) * math.clamp(dt * 6, 0, 1)
+				D.pose(door)
+			end
+		end
+		if s.closeAt and now > s.closeAt then
+			s.closeAt = nil
+			D.setOpen(s, false)
+		end
+		-- fluorescent flicker inside
+		if s.inside and now > nextFlicker then
+			nextFlicker = now + 2 + math.random() * 5
+			local f = D.flicker[math.random(1, #D.flicker)]
+			task.spawn(function()
+				for _ = 1, math.random(2, 5) do
+					f.light.Enabled = false
+					f.tube.Transparency = 0.7
+					task.wait(0.04 + math.random() * 0.08)
+					f.light.Enabled = true
+					f.tube.Transparency = 0.15
+					task.wait(0.04 + math.random() * 0.1)
+				end
+			end)
+		end
+		D.updateWindow(s.homeWindow, s.homeDoor, s.hallDoor, -1, speaker.Character)
+		D.updateWindow(s.hallWindow, s.hallDoor, s.homeDoor, 1, speaker.Character)
+		-- walking through the open doorway
+		local r = getRoot(speaker.Character)
+		if not r or not s.open or s.homeDoor.angle < 60 then return end
+		for key, pair in pairs({home = {s.homeDoor, s.hallDoor}, hall = {s.hallDoor, s.homeDoor}}) do
+			local door, other = pair[1], pair[2]
+			local rel = door.cf:PointToObjectSpace(r.Position)
+			local side = rel.Z >= 0
+			local wanted = (key == "home") and side or (key == "hall" and not side)
+			if lastSide[key] ~= nil and side ~= lastSide[key] and wanted and math.abs(rel.X) < D.width / 2 + 0.5 and math.abs(rel.Y) < D.height / 2 + 1.5 then
+				NeverYieldAgartha.travel(door, other, r)
+				if key == "home" then D.enterMood(s) else D.leaveMood(s) end
+				s.closeAt = tick() + 5
+				lastSide = {}
+				return
+			end
+			lastSide[key] = side
+		end
+	end))
+	notify('Door', 'An old door appeared. Open it and see where it leads... (undoor removes it)', 8)
+end)
+
+addcmd('undoor',{'removedoor','nodoor'},function(args, speaker)
+	NeverYieldDoor.close()
+end)
+
+table.insert(WackyState.undoList, 'undoor')
+-- ================== END STUDY HALL DOOR ==================
+
 -- ==================== MIDAS & DIAMOND RUSH ====================
 WackyState.midasGold = Color3.fromRGB(255, 196, 48)
 WackyState.gemSounds = {9114619224, 9114618734, 9114618921, 9114619221} -- ProSoundEffects glass tinks
@@ -22652,6 +23351,7 @@ end)
 -- Diamond Rush: diamonds rain from the sky, collect as many as you can before time runs out
 WackyState.diamondMusic = {9048374150, 111760324494890, 130511819535092, 123057834140134} -- APM / DistroKid official Roblox music
 WackyState.diamondSting = 1837770099
+WackyState.diamondStings = {1837770099, 1836473422, 9043656146, 1837762485, 1841739944} -- end-of-round jingles (APM official)
 WackyState.diamondBeep = 9113400139
 WackyState.diamondWhoosh = 9120710054
 WackyState.diamondTypes = {
@@ -22843,7 +23543,7 @@ WackyState.diamondStop = function(showResults)
 	pcall(function()
 		if petCoins > 0 then NeverYieldPets.addCoins(petCoins) end
 	end)
-	WackyState.sound(WackyState.diamondSting, nil, 0.6)
+	WackyState.sound(WackyState.pick(WackyState.diamondStings), nil, 0.6)
 	local card, scale = WackyState.diamondCard(380, 250)
 	WackyState.diamondText(card, "TIME'S UP!", 14, 44, 38, Enum.Font.FredokaOne, Color3.fromRGB(190, 240, 255))
 	WackyState.diamondText(card, "\u{1F48E} " .. g.score .. " points", 64, 40, 30, Enum.Font.FredokaOne)
@@ -24457,6 +25157,22 @@ NeverYieldPets.incubatorPrice = 3000
 NeverYieldPets.instantPrice = 150
 NeverYieldPets.ballPrice = 80
 NeverYieldPets.coinSound = 9114619224
+-- celebration jingles (APM official Roblox music); one is picked at random each time
+NeverYieldPets.hatchMusic = {1837762472, 1841605720, 9045505559, 1841814926}
+NeverYieldPets.levelMusic = {1836860398, 1839881844, 9043711287, 1842141584}
+
+NeverYieldPets.jingle = function(kind)
+	local settings = NeverYieldPets.data and NeverYieldPets.data.settings
+	if settings and settings.music == false then return end
+	local list = kind == "level" and NeverYieldPets.levelMusic or NeverYieldPets.hatchMusic
+	WackyState.sound(WackyState.pick(list), nil, 0.5)
+end
+
+NeverYieldPets.sfx = function(id, parent, volume, pitch)
+	local settings = NeverYieldPets.data and NeverYieldPets.data.settings
+	if settings and settings.sounds == false then return end
+	return WackyState.sound(id, parent, volume, false, pitch or 1)
+end
 NeverYieldPets.heart = "rbxassetid://249529864"
 
 -- ---------- data ----------
@@ -24464,7 +25180,7 @@ NeverYieldPets.blank = function()
 	return {version = 2, coins = 200, nextId = 1, pets = {}, equipped = {}, food = {berry = 3, cookie = 1}, eggs = {},
 		skins = {classic = true}, hats = {}, items = {instant = 0}, boosts = {}, discovered = {}, slots = 3, storage = 60, incubator = false,
 		lastDecay = os.time(), lastDaily = "", streak = 0,
-		stats = {hatched = 0, bred = 0, fed = 0, coinsEarned = 0, released = 0}, created = os.time()}
+		stats = {hatched = 0, bred = 0, fed = 0, coinsEarned = 0, released = 0}, settings = {music = true, sounds = true}, created = os.time()}
 end
 
 NeverYieldPets.load = function()
@@ -24492,6 +25208,8 @@ NeverYieldPets.load = function()
 		if type(data.stats[k]) ~= "number" then data.stats[k] = v end
 	end
 	if type(data.items.instant) ~= "number" then data.items.instant = 0 end
+	if data.settings.music == nil then data.settings.music = true end
+	if data.settings.sounds == nil then data.settings.sounds = true end
 	data.skins.classic = true
 	local eq = {}
 	for _, id in ipairs(data.equipped) do
@@ -24707,7 +25425,7 @@ NeverYieldPets.feed = function(pet, foodId)
 	data.stats.fed = data.stats.fed + 1
 	NeverYieldPets.giveXp(pet, food.xp)
 	NeverYieldPets.effect(pet, "hearts")
-	WackyState.sound(NeverYieldPets.coinSound, nil, 0.4, false, 1.5)
+	NeverYieldPets.sfx(NeverYieldPets.coinSound, nil, 0.4, 1.5)
 	NeverYieldPets.dirty = true
 	return true
 end
@@ -24766,6 +25484,10 @@ NeverYieldPets.hatch = function(index, instant)
 	local data = NeverYieldPets.data
 	local egg = data.eggs[index]
 	if not egg then return end
+	if NeverYieldPets.hatching and tick() - NeverYieldPets.hatching < 20 then
+		notify('Pets', 'Wait for your egg to finish hatching first!')
+		return
+	end
 	if os.time() < egg.ready and not instant then
 		notify('Pets', 'Not ready yet! ' .. (egg.ready - os.time()) .. ' seconds left.')
 		return
@@ -24787,8 +25509,10 @@ NeverYieldPets.hatch = function(index, instant)
 		NeverYieldPets.equip(pet.id)
 	end
 	NeverYieldPets.save()
-	pcall(NeverYieldPets.hatchPopup, egg, pet, newSpecies)
-	if NeverYieldPets.refresh then pcall(NeverYieldPets.refresh) end
+	NeverYieldPets.hatching = tick()
+	pcall(NeverYieldPets.close)
+	local ok = pcall(NeverYieldPets.hatchPopup, egg, pet, newSpecies)
+	if not ok then NeverYieldPets.hatching = nil end
 end
 
 NeverYieldPets.breedCost = 100
@@ -25161,7 +25885,7 @@ NeverYieldPets.effect = function(pet, kind)
 		e.Color = ColorSequence.new(Color3.fromRGB(255, 240, 150), Color3.fromRGB(120, 220, 255))
 		e.Parent = s.root
 		e:Emit(30)
-		WackyState.sound(WackyState.diamondSting or NeverYieldPets.coinSound, nil, 0.35)
+		NeverYieldPets.jingle("level")
 	end
 	Services.Debris:AddItem(e, 2)
 end
@@ -25266,7 +25990,7 @@ NeverYieldPets.step = function(dt)
 					coins = coins * coinBoost
 					NeverYieldPets.addCoins(coins)
 					NeverYieldPets.popText(s.root, "+" .. coins .. " \u{1F4B0}", Color3.fromRGB(255, 215, 80))
-					WackyState.sound(NeverYieldPets.coinSound, nil, 0.35, false, 1.3 + math.random() * 0.2)
+					NeverYieldPets.sfx(NeverYieldPets.coinSound, nil, 0.35, 1.3 + math.random() * 0.2)
 				end
 			end
 		elseif pet and not s then
@@ -25282,7 +26006,7 @@ end
 
 -- ---------- UI ----------
 NeverYieldPets.ui = {}
-NeverYieldPets.tabs = {{"pets", "My Pets"}, {"eggs", "Eggs"}, {"shop", "Shop"}, {"breed", "Breed"}, {"index", "Index"}}
+NeverYieldPets.tabs = {{"pets", "My Pets"}, {"eggs", "Eggs"}, {"shop", "Shop"}, {"breed", "Breed"}, {"index", "Index"}, {"settings", "Settings"}}
 NeverYieldPets.shopTabs = {{"eggs", "Eggs"}, {"items", "Items"}, {"skins", "Skins"}, {"hats", "Hats"}, {"upgrades", "Upgrades"}}
 
 NeverYieldPets.label = function(parent, props)
@@ -25493,7 +26217,7 @@ NeverYieldPets.open = function(tab)
 	NeverYieldPets.button(panel, "X", UDim2.new(1, -46, 0, 14), UDim2.new(0, 32, 0, 32), Color3.fromRGB(150, 50, 80), NeverYieldPets.close)
 	ui.tabButtons = {}
 	for i, info in ipairs(NeverYieldPets.tabs) do
-		ui.tabButtons[info[1]] = NeverYieldPets.button(panel, info[2], UDim2.new(0, 20 + (i - 1) * 128, 0, 58), UDim2.new(0, 120, 0, 30), nil, function()
+		ui.tabButtons[info[1]] = NeverYieldPets.button(panel, info[2], UDim2.new(0, 20 + (i - 1) * 107, 0, 58), UDim2.new(0, 100, 0, 30), nil, function()
 			ui.tab, ui.page, ui.detail = info[1], 1, nil
 			NeverYieldPets.refresh()
 		end)
@@ -26027,6 +26751,26 @@ NeverYieldPets.pages.index = function(body, ui)
 	end
 end
 
+NeverYieldPets.pages.settings = function(body, ui)
+	local settings = NeverYieldPets.data.settings
+	local rows = {
+		{"music", "\u{1F3B5} Celebration music", "Plays when an egg hatches and when a pet levels up."},
+		{"sounds", "\u{1F50A} Pet sounds", "Coin pickups, eating and the egg-hatching sounds."},
+	}
+	for i, row in ipairs(rows) do
+		local on = settings[row[1]] ~= false
+		local card = NeverYieldPets.card(body, UDim2.new(0, 0, 0, 10 + (i - 1) * 84), UDim2.new(1, 0, 0, 74))
+		NeverYieldPets.label(card, {Position = UDim2.new(0, 16, 0, 10), Size = UDim2.new(0.7, 0, 0, 28), TextSize = 18, TextXAlignment = Enum.TextXAlignment.Left, Text = row[2]})
+		NeverYieldPets.label(card, {Position = UDim2.new(0, 16, 0, 40), Size = UDim2.new(0.7, 0, 0, 22), TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left,
+			TextColor3 = Color3.fromRGB(200, 200, 230), Text = row[3]})
+		NeverYieldPets.button(card, on and "ON" or "MUTED", UDim2.new(1, -150, 0, 17), UDim2.new(0, 130, 0, 40), on and Color3.fromRGB(60, 170, 90) or Color3.fromRGB(150, 60, 70), function()
+			settings[row[1]] = not on
+			NeverYieldPets.dirty = true
+			NeverYieldPets.refresh()
+		end)
+	end
+end
+
 NeverYieldPets.hatchPopup = function(egg, pet, newSpecies)
 	local screen = WackyState.overlay()
 	local card = Instance.new("Frame")
@@ -26043,7 +26787,7 @@ NeverYieldPets.hatchPopup = function(egg, pet, newSpecies)
 	scale.Parent = card
 	card.Parent = screen
 	TweenService:Create(scale, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
-	WackyState.sound(WackyState.diamondWhoosh or NeverYieldPets.coinSound, nil, 0.5)
+	NeverYieldPets.sfx(WackyState.diamondWhoosh or NeverYieldPets.coinSound, nil, 0.5)
 	local vp = NeverYieldPets.eggPreview(card, NeverYieldPets.eggDefOf(egg), UDim2.new(0, 60, 0, 30), UDim2.new(0, 240, 0, 220))
 	vp.ZIndex = 71
 	local status = NeverYieldPets.label(card, {Position = UDim2.new(0, 0, 0, 262), Size = UDim2.new(1, 0, 0, 40), Font = Enum.Font.FredokaOne, TextSize = 28, Text = "Hatching...", ZIndex = 72})
@@ -26062,7 +26806,7 @@ NeverYieldPets.hatchPopup = function(egg, pet, newSpecies)
 			RunService.RenderStepped:Wait()
 		end
 		if not card.Parent then return end
-		WackyState.sound(WackyState.diamondBeep or NeverYieldPets.coinSound, nil, 0.5, false, 0.7)
+		NeverYieldPets.sfx(WackyState.diamondBeep or NeverYieldPets.coinSound, nil, 0.5, 0.7)
 		local flash = Instance.new("Frame")
 		flash.Size = UDim2.new(1, 0, 1, 0)
 		flash.BackgroundColor3 = Color3.new(1, 1, 1)
@@ -26089,10 +26833,11 @@ NeverYieldPets.hatchPopup = function(egg, pet, newSpecies)
 		status.TextColor3 = rarity.color
 		NeverYieldPets.label(card, {Position = UDim2.new(0, 0, 0, 236), Size = UDim2.new(1, 0, 0, 26), TextSize = 18, ZIndex = 72,
 			Text = skin.name .. " " .. species.name .. (newSpecies and "  -  NEW SPECIES!" or "")})
-		WackyState.sound(WackyState.diamondSting or NeverYieldPets.coinSound, nil, 0.5)
+		NeverYieldPets.jingle("hatch")
 		NeverYieldPets.button(card, "Awesome!", UDim2.new(0.5, -80, 0, 316), UDim2.new(0, 160, 0, 44), Color3.fromRGB(255, 140, 90), function()
 			TweenService:Create(scale, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Scale = 0}):Play()
 			Services.Debris:AddItem(card, 0.3)
+			NeverYieldPets.hatching = nil
 		end).ZIndex = 73
 	end)
 end

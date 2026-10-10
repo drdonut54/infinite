@@ -5,6 +5,9 @@ Versions before 1.11.3 were reconstructed from the Desktop `.bakN` backups (one 
 
 | Version | Date | Commands | Change |
 |---|---|---|---|
+| 1.22.1 | 10-10 | 633 | Pets: 4 hatch jingles + 4 level-up jingles (random), Settings tab to mute celebration music / pet sounds, only one egg hatches at a time and the Pet Hub closes when hatching; Diamond Rush ends with one of 5 jingles |
+| 1.22.0 | 10-10 | 633 | New `door`: old wooden door with an Open prompt into a dark dusty 90s marble study hall (see-through doorway, sittable chairs, flickering lights, CRTs, bookshelves); portal closes 5 s after you walk through (type portal again to return); Agartha pond water refills so it can't vanish |
+| 1.21.3 | 10-10 | 631 | Portal opens 20 studs away and bigger; window is a near-circle inside the ring with a glowing swirling edge and a gradient sky; bigger home snapshot; `portaldebug` |
 | 1.21.2 | 10-10 | 630 | `fuckoff` also resets WalkSpeed, JumpPower/JumpHeight, HipHeight, slope, gravity, FOV and camera zoom to the game's own values (taken from fresh spawns) |
 | 1.21.1 | 10-10 | 630 | Agartha: portal view drawn on screen with a mirrored camera (true see-through window, both ways); pond is real terrain water; chairs, bench and armchair are sittable and the bed sleepable (E, jump to get up) |
 | 1.21.0 | 10-10 | 630 | Clowns are real R6 characters (Humanoid + default walk animation, clown costume), use pathfinding and get faster (20 to 30); Clown Buster gun one-shots them; kills/survival saved; stats panel gets Minigames (Diamond Rush + Clowns) and Pets tabs |
