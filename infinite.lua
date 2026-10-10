@@ -1,4 +1,4 @@
--- NeverYield v1.25.1 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.25.2 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.25.1" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.25.2" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -23072,6 +23072,49 @@ addcmd('clown',{'clowns','circus'},function(args, speaker)
 		return hit and hit.Position.Y or (fromY - 3)
 	end
 
+	-- a stuck or lost clown comes back 30-45 studs away, preferably somewhere you are not looking,
+	-- and only where pathfinding says it can really walk to you (so it never lands on a roof or in your face)
+	local relocatePath = PathfindingService:CreatePath({AgentRadius = 1.5, AgentHeight = 5, AgentCanJump = true, AgentCanClimb = true})
+	local function relocate(c, root)
+		if c.relocating or tick() - c.relocatedAt < 10 then return end
+		c.relocating = true
+		task.spawn(function()
+			local cam = workspace.CurrentCamera
+			local look = cam and cam.CFrame.LookVector * Vector3.new(1, 0, 1) or Vector3.zero
+			local found
+			for attempt = 1, 10 do
+				local a = math.random() * math.pi * 2
+				local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+				local hidden = look.Magnitude < 0.1 or dir:Dot(look.Unit) < 0.2
+				if hidden or attempt > 6 then
+					local d = 30 + math.random() * 15
+					local x, z = root.Position.X + dir.X * d, root.Position.Z + dir.Z * d
+					if c.kind == "flying" then
+						found = Vector3.new(x, root.Position.Y + 18, z)
+						break
+					end
+					local hit = workspace:Raycast(Vector3.new(x, root.Position.Y + 30, z), Vector3.new(0, -90, 0), params)
+					if hit and math.abs(hit.Position.Y - root.Position.Y) < 25 then
+						local spot = hit.Position + Vector3.new(0, 3.2, 0)
+						local ok = pcall(function() relocatePath:ComputeAsync(spot, root.Position) end)
+						if ok and relocatePath.Status == Enum.PathStatus.Success then
+							found = spot
+							break
+						end
+					end
+				end
+			end
+			if found and c.model.Parent and not c.dead then
+				c.model:PivotTo(CFrame.lookAt(found, Vector3.new(root.Position.X, found.Y, root.Position.Z)))
+				local now = tick()
+				c.waypoints, c.nextPath, c.pathFails, c.strikes = nil, 0, 0, 0
+				c.checkPos, c.checkAt, c.lastPos, c.lastMove = c.hrp.Position, now, c.hrp.Position, now
+				c.bestDist, c.bestAt, c.relocatedAt = (root.Position - found).Magnitude, now, now
+			end
+			c.relocating = false
+		end)
+	end
+
 	local function startRound()
 		s.round = s.round + 1
 		s.wave = C.roundInfo(s.round)
@@ -23110,6 +23153,9 @@ addcmd('clown',{'clowns','circus'},function(args, speaker)
 		c.maxHp = w.hp
 		c.speed = w.speed
 		c.damage = w.damage
+		-- progress tracking: stuck = barely moved for 3 checks in a row, lost = not getting closer for 25 s
+		c.checkPos, c.checkAt, c.strikes = hrp.Position, tick(), 0
+		c.bestDist, c.bestAt, c.pathFails, c.relocatedAt = math.huge, tick(), 0, 0
 		local torso = model:FindFirstChild("Torso")
 		if kind == "speedy" then
 			c.maxHp, c.speed, c.cash = w.hp * 0.6, w.speed * 1.35, math.floor(w.cash * 1.3)
@@ -23177,7 +23223,7 @@ addcmd('clown',{'clowns','circus'},function(args, speaker)
 		fill.Parent = back
 		c.bar = fill
 		if kind ~= "flying" then
-			c.path = PathfindingService:CreatePath({AgentRadius = 2, AgentHeight = 5, AgentCanJump = true, WaypointSpacing = 4})
+			c.path = PathfindingService:CreatePath({AgentRadius = 1.5, AgentHeight = 5, AgentCanJump = true, AgentCanClimb = true, WaypointSpacing = 4})
 		end
 		model.Parent = workspace
 		pcall(function()
@@ -23277,15 +23323,18 @@ addcmd('clown',{'clowns','circus'},function(args, speaker)
 			else
 				local toPlayer = root.Position - c.hrp.Position
 				local dist = toPlayer.Magnitude
-				-- stuck far away (behind walls, on a roof...): it comes back near you so the round can end
-				if dist > 140 or (now - c.lastMove > 8 and dist > 30) then
-					local a = math.random() * math.pi * 2
-					local x, z = root.Position.X + math.cos(a) * 40, root.Position.Z + math.sin(a) * 40
-					local y = c.kind == "flying" and root.Position.Y + 18 or ground(x, z, root.Position.Y) + 3.2
-					c.model:PivotTo(CFrame.lookAt(Vector3.new(x, y, z), Vector3.new(root.Position.X, y, root.Position.Z)))
-					c.lastPos, c.lastMove, c.waypoints, c.nextPath = c.hrp.Position, now, nil, 0
-					toPlayer = root.Position - c.hrp.Position
-					dist = toPlayer.Magnitude
+				-- stuck (behind a wall, in a corner), lost (wandering without getting closer) or unreachable (no path):
+				-- it comes back at a fair distance so the round can end
+				if c.kind ~= "flying" then
+					if now - c.checkAt >= 3 then
+						c.strikes = ((c.hrp.Position - c.checkPos).Magnitude < 4 and dist > 25) and c.strikes + 1 or 0
+						c.checkPos, c.checkAt = c.hrp.Position, now
+					end
+					if dist < c.bestDist - 5 then c.bestDist, c.bestAt = dist, now end
+					if dist > c.bestDist + 40 then c.bestDist, c.bestAt = dist, now end -- you ran off; judge from here
+				end
+				if dist > 140 or c.strikes >= 3 or c.pathFails >= 3 or (dist > 60 and now - c.bestAt > 25) then
+					relocate(c, root)
 				end
 				if c.kind == "flying" then
 					-- float towards you from above, then dive
@@ -23305,16 +23354,21 @@ addcmd('clown',{'clowns','circus'},function(args, speaker)
 						c.waypoints = nil
 						c.hum:MoveTo(root.Position)
 					else
+						-- you moved away from where the path was aimed: plan a new one
+						if c.pathGoal and (root.Position - c.pathGoal).Magnitude > 10 then c.nextPath = math.min(c.nextPath, now) end
 						if now > c.nextPath and not c.computing then
 							c.nextPath = now + 0.8 + math.random() * 0.6
 							c.computing = true
 							task.spawn(function()
-								local ok = pcall(function() c.path:ComputeAsync(c.hrp.Position, root.Position) end)
+								local goal = root.Position
+								local ok = pcall(function() c.path:ComputeAsync(c.hrp.Position, goal) end)
 								if ok and c.path.Status == Enum.PathStatus.Success then
 									c.waypoints = c.path:GetWaypoints()
 									c.wp = 2
+									c.pathGoal, c.pathFails = goal, 0
 								else
 									c.waypoints = nil
+									c.pathFails = c.pathFails + 1
 								end
 								c.computing = false
 							end)
