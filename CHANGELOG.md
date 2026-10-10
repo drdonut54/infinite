@@ -5,6 +5,22 @@ Versions before 1.11.3 were reconstructed from the Desktop `.bakN` backups (one 
 
 | Version | Date | Commands | Change |
 |---|---|---|---|
+| 1.22.1 | 10-10 | 633 | Pets: 4 hatch jingles + 4 level-up jingles (random), Settings tab to mute celebration music / pet sounds, only one egg hatches at a time and the Pet Hub closes when hatching; Diamond Rush ends with one of 5 jingles |
+| 1.22.0 | 10-10 | 633 | New `door`: old wooden door with an Open prompt into a dark dusty 90s marble study hall (see-through doorway, sittable chairs, flickering lights, CRTs, bookshelves); portal closes 5 s after you walk through (type portal again to return); Agartha pond water refills so it can't vanish |
+| 1.21.3 | 10-10 | 631 | Portal opens 20 studs away and bigger; window is a near-circle inside the ring with a glowing swirling edge and a gradient sky; bigger home snapshot; `portaldebug` |
+| 1.21.2 | 10-10 | 630 | `fuckoff` also resets WalkSpeed, JumpPower/JumpHeight, HipHeight, slope, gravity, FOV and camera zoom to the game's own values (taken from fresh spawns) |
+| 1.21.1 | 10-10 | 630 | Agartha: portal view drawn on screen with a mirrored camera (true see-through window, both ways); pond is real terrain water; chairs, bench and armchair are sittable and the bed sleepable (E, jump to get up) |
+| 1.21.0 | 10-10 | 630 | Clowns are real R6 characters (Humanoid + default walk animation, clown costume), use pathfinding and get faster (20 to 30); Clown Buster gun one-shots them; kills/survival saved; stats panel gets Minigames (Diamond Rush + Clowns) and Pets tabs |
+| 1.20.0 | 10-10 | 630 | Frame styles around the panel (Neon Pulse default, Classic Lines, Marquee, HUD, Electric, Orbit, Chain, Halo Glow, RGB, None) + Theme Studio Frame tab + `frame`; Agartha portal window fixed (was empty: viewports don't render in CanvasGroups) with glass sheen and matched camera; cottage gets real glass windows, open door and a full interior |
+| 1.19.0 | 10-10 | 629 | New `clown`: a growing crowd of part-built clowns chases you with creepy circus music; caught = HONK, you die, then server hop |
+| 1.18.0 | 10-10 | 627 | New `portal`: sling-ring style see-through gateway to Agartha (floating island with cottage, yard, waterfall, view, peaceful music); old portal replay is now `reopen` |
+| 1.17.1 | 10-10 | 625 | Moon rebuilt to look like the Zelda moon (sockets, bulging eyes, brows, hooked nose, clenched teeth); masked imp rebuilt (straw hat, poncho, spiky heart mask) |
+| 1.17.0 | 10-10 | 625 | Theme outlines: 16 animated panel outlines (thunder, inferno, aura, frost, code, glitch, rainbow...), Theme Studio Outlines tab, theme-matched defaults, `outline` command |
+| 1.16.0 | 10-10 | 624 | Pet Hub v2: chibi models with faces, 21 species (incl. mythic Phoenix), 9 eggs, potions, instant hatch, toy ball, 10 hats, slot/storage/incubator upgrades, shop sub-tabs |
+| 1.15.1 | 10-10 | 624 | Breakdance is a real looping routine (toprock, windmill, headspin, freeze); lean pivots at the feet; headstand on the head; moonwalk slides its legs; crabwalk crab pose; blink stops at walls; dash is a real burst |
+| 1.15.0 | 10-10 | 624 | New `moon`: angry-faced moon falls with a masked imp, countdown, quakes, impact fireball, then shop to a new server (`moon` alias moved off moongravity) |
+| 1.14.1 | 10-10 | 623 | Horror 2.0: pitch-black fog, The Watcher hunts you (moves only when unseen), flashlight flicker, heartbeat/whispers/static, jumpscare that kills you (`horror safe` = no dying) |
+| 1.14.0 | 10-10 | 623 | Pet Hub replaces the cube pet: 10 species, 11 skins, eggs + hatch popups, food, hunger/happiness, levels to 50, tricks, coins, breeding, index; Settings button |
 | 1.13.2 | 10-10 | 621 | Diamond Rush: diamonds were invisible (only the hitbox moved to the sky, the glass stayed behind); whole model now moves together, glass slightly more solid |
 | 1.13.1 | 10-10 | 621 | Review fixes: statsreset also resets this server's counters; stats save reports failed writes; lighting effects only cut short the fade of the properties they use; damaged stats backups get a timestamp |
 | 1.13.0 | 10-10 | 621 | New `midas` (everything you touch turns gold) and `diamond` Diamond Rush mini-game (diamond models rain down, popups, music, score/timer, saved best); snow footsteps spaced out with 8 varied clips |
