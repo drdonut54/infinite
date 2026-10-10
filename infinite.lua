@@ -5306,7 +5306,7 @@ CMDs[#CMDs + 1] = {NAME = 'wouldyourather / wyr', DESC = 'Asks a would-you-rathe
 CMDs[#CMDs + 1] = {NAME = 'stopwatch / timer', DESC = 'Starts / stops a stopwatch'}
 CMDs[#CMDs + 1] = {NAME = 'neveryield / about', DESC = 'Shows NeverYield info'}
 CMDs[#CMDs + 1] = {NAME = 'themes / themestudio', DESC = 'Opens the animated Theme Studio (also in Settings)'}
-CMDs[#CMDs + 1] = {NAME = 'theme [name]', DESC = 'auto, space, nebula, galaxy, void, cosmic, christmas, halloween, newyear, lunarnewyear, valentines, stpatricks, easter, fourthofjuly, thanksgiving, hanukkah, diwali, classic, custom'}
+CMDs[#CMDs + 1] = {NAME = 'theme [name]', DESC = 'Cosmic: auto, space, nebula, galaxy, void, cosmic, classic. Vibes: ocean, sunset, matrix, sakura, candy, lava, arctic, forest, midnight, vaporwave, royal, toxic. Holidays: christmas, halloween, newyear, lunarnewyear, valentines, stpatricks, easter, fourthofjuly, thanksgiving, hanukkah, diwali. Memes: doge, stonks, sus, nyan, thisisfine, cheems, noob, vibecat, moai, trollge, skull, funnyaward'}
 CMDs[#CMDs + 1] = {NAME = 'autotheme / holidaytheme', DESC = 'Automatically wear the holiday theme for today'}
 CMDs[#CMDs + 1] = {NAME = 'themedebug', DESC = 'Shows what the Theme Studio drew (for fixing display problems)'}
 CMDs[#CMDs + 1] = {NAME = 'spacemode / space', DESC = 'Purple space lighting, floating stars and low gravity'}
@@ -15863,6 +15863,102 @@ NeverYieldTheme.list = {
 		desc = "Festival of lights: glowing lamps and sparkles.",
 		colors = {{40, 10, 40}, {72, 20, 64}, {240, 150, 30}, {255, 240, 210}, {0, 0, 0}, {255, 170, 50}},
 		rim = {{255, 160, 0}, {220, 40, 160}, {255, 220, 90}}, particles = {"🪔", "✨", "🎇"}},
+	{id = "ocean", group = "vibes", name = "Ocean", icon = "🌊", mode = "rise", rate = 2,
+		desc = "Deep blue water with bubbles and fish drifting up.",
+		colors = {{6, 24, 40}, {10, 44, 70}, {30, 140, 190}, {215, 245, 255}, {0, 0, 0}, {60, 190, 230}},
+		rim = {{40, 200, 255}, {20, 90, 200}, {120, 255, 230}}, particles = {"🐟", "💧", "🐚", "🌊"}},
+	{id = "sunset", group = "vibes", name = "Sunset", icon = "🌅", mode = "drift", rate = 1,
+		desc = "Warm pink and orange evening sky.",
+		colors = {{40, 14, 30}, {80, 28, 48}, {250, 120, 70}, {255, 232, 214}, {0, 0, 0}, {255, 150, 90}},
+		rim = {{255, 120, 60}, {255, 60, 120}, {255, 200, 90}}, particles = {"🌅", "✨", "🕊️"}},
+	{id = "matrix", group = "vibes", name = "Matrix", icon = "💻", mode = "fall", rate = 6, fx = "glow",
+		desc = "Green code raining down. There is no spoon.",
+		colors = {{2, 10, 4}, {6, 22, 10}, {30, 200, 70}, {150, 255, 170}, {0, 0, 0}, {40, 220, 90}},
+		rim = {{30, 255, 90}, {0, 120, 40}, {150, 255, 170}}, texts = {"0", "1", "01", "10", "1"}, textFont = "Code"},
+	{id = "sakura", group = "vibes", name = "Sakura", icon = "🌸", mode = "fall", rate = 3,
+		desc = "Soft pink cherry blossoms falling.",
+		colors = {{50, 26, 40}, {86, 44, 66}, {240, 150, 190}, {255, 236, 244}, {0, 0, 0}, {255, 170, 210}},
+		rim = {{255, 170, 210}, {255, 230, 240}, {200, 90, 150}}, particles = {"🌸", "🌸", "💮"}},
+	{id = "candy", group = "vibes", name = "Candy", icon = "🍭", mode = "fall", rate = 3,
+		desc = "Bubblegum colors and falling sweets.",
+		colors = {{60, 20, 60}, {100, 36, 96}, {255, 120, 200}, {255, 240, 250}, {0, 0, 0}, {120, 220, 255}},
+		rim = {{255, 120, 200}, {120, 220, 255}, {255, 240, 120}}, particles = {"🍬", "🍭", "🍩", "🧁"}},
+	{id = "lava", group = "vibes", name = "Lava", icon = "🌋", mode = "rise", rate = 3, fx = "candle",
+		desc = "Molten orange with embers rising.",
+		colors = {{30, 6, 4}, {60, 14, 8}, {255, 90, 20}, {255, 225, 200}, {0, 0, 0}, {255, 120, 30}},
+		rim = {{255, 60, 0}, {255, 170, 0}, {120, 0, 0}}, particles = {"🔥", "🌋", "✨"}},
+	{id = "arctic", group = "vibes", name = "Arctic", icon = "🧊", mode = "fall", rate = 3,
+		desc = "Icy blues, snow and penguins.",
+		colors = {{14, 30, 44}, {24, 52, 74}, {140, 210, 240}, {235, 250, 255}, {0, 0, 0}, {170, 225, 250}},
+		rim = {{170, 230, 255}, {255, 255, 255}, {90, 170, 230}}, particles = {"🧊", "❄️", "🐧"}},
+	{id = "forest", group = "vibes", name = "Forest", icon = "🌲", mode = "drift", rate = 2,
+		desc = "Mossy greens with leaves and butterflies.",
+		colors = {{10, 26, 14}, {20, 46, 24}, {90, 170, 80}, {225, 245, 220}, {0, 0, 0}, {120, 200, 100}},
+		rim = {{60, 170, 70}, {150, 110, 60}, {180, 230, 120}}, particles = {"🍃", "🌲", "🍄", "🦋"}},
+	{id = "midnight", group = "vibes", name = "Midnight", icon = "🌙", mode = "twinkle", rate = 3,
+		desc = "Deep night blue with a sleepy moon.",
+		colors = {{6, 8, 20}, {12, 16, 36}, {70, 90, 170}, {210, 220, 255}, {0, 0, 0}, {100, 120, 220}},
+		rim = {{60, 80, 200}, {200, 210, 255}, {30, 30, 90}}, particles = {"🌙", "⭐", "✨"}},
+	{id = "vaporwave", group = "vibes", name = "Vaporwave", icon = "🌴", mode = "drift", rate = 2,
+		desc = "Neon pink and cyan, straight out of 1995.",
+		colors = {{30, 10, 50}, {56, 20, 90}, {255, 90, 200}, {255, 230, 255}, {0, 0, 0}, {90, 230, 255}},
+		rim = {{255, 90, 200}, {90, 230, 255}, {180, 120, 255}}, particles = {"🌴", "💿", "📼", "🐬"}},
+	{id = "royal", group = "vibes", name = "Royal Gold", icon = "👑", mode = "twinkle", rate = 3, fx = "glow",
+		desc = "Black and gold with sparkling crowns and gems.",
+		colors = {{28, 20, 6}, {50, 38, 12}, {230, 190, 70}, {255, 246, 215}, {0, 0, 0}, {240, 200, 90}},
+		rim = {{255, 215, 90}, {255, 255, 220}, {180, 130, 30}}, particles = {"👑", "💎", "✨"}},
+	{id = "toxic", group = "vibes", name = "Toxic", icon = "☢️", mode = "rise", rate = 3, fx = "flicker",
+		desc = "Radioactive green. Do not touch.",
+		colors = {{10, 20, 4}, {22, 40, 8}, {160, 255, 40}, {235, 255, 200}, {0, 0, 0}, {180, 255, 60}},
+		rim = {{160, 255, 40}, {40, 60, 10}, {220, 255, 120}}, particles = {"☢️", "🧪", "💚"}},
+	{id = "doge", group = "memes", name = "Doge", icon = "🐕", iconImage = "rbxassetid://631727248", watermark = "rbxassetid://631727248", mode = "drift", rate = 1.5,
+		desc = "much theme. very script. wow.",
+		colors = {{48, 36, 14}, {82, 62, 26}, {230, 180, 70}, {255, 245, 220}, {0, 0, 0}, {240, 190, 80}},
+		rim = {{240, 190, 80}, {255, 240, 200}, {160, 110, 40}}, images = {"rbxassetid://631727248", "rbxassetid://157767960"}, texts = {"wow", "such theme", "very script", "much yield", "amaze"}},
+	{id = "stonks", group = "memes", name = "Stonks", icon = "📈", iconImage = "rbxassetid://3362482510", watermark = "rbxassetid://3362482510", mode = "rise", rate = 2,
+		desc = "Number go up. Investments only go up.",
+		colors = {{6, 14, 40}, {12, 28, 70}, {40, 200, 90}, {220, 255, 230}, {0, 0, 0}, {60, 220, 110}},
+		rim = {{40, 220, 90}, {40, 90, 220}, {220, 255, 230}}, images = {"rbxassetid://3362482510"}, particles = {"📈", "💰", "💸"}, texts = {"STONKS"}},
+	{id = "sus", group = "memes", name = "Among Us", icon = "🔴", iconImage = "rbxassetid://6344756217", watermark = "rbxassetid://6502780016", mode = "drift", rate = 1.5,
+		desc = "Red is acting kinda sus.",
+		colors = {{10, 10, 22}, {20, 20, 40}, {200, 30, 40}, {230, 235, 255}, {0, 0, 0}, {200, 40, 50}},
+		rim = {{220, 30, 40}, {60, 210, 230}, {255, 255, 255}}, images = {"rbxassetid://6344756217", "rbxassetid://6696296215", "rbxassetid://6502780016"}, texts = {"sus", "SUS", "emergency meeting"}},
+	{id = "nyan", group = "memes", name = "Nyan Cat", icon = "🌈", iconImage = "rbxassetid://61574940", watermark = "rbxassetid://61574940", mode = "drift", rate = 1.2,
+		desc = "Nyan nyan nyan nyan nyan nyan.",
+		colors = {{8, 14, 50}, {14, 24, 80}, {255, 120, 200}, {255, 255, 255}, {0, 0, 0}, {255, 150, 220}},
+		rim = {{255, 60, 60}, {255, 160, 40}, {255, 240, 60}, {60, 220, 80}, {60, 140, 255}, {160, 80, 255}}, images = {"rbxassetid://61574940"}, particles = {"⭐", "✨"}},
+	{id = "thisisfine", group = "memes", name = "This Is Fine", icon = "🔥", iconImage = "rbxassetid://296950923", watermark = "rbxassetid://296950923", mode = "rise", rate = 3, fx = "flicker",
+		desc = "Everything is on fire. This is fine.",
+		colors = {{40, 18, 6}, {74, 34, 10}, {255, 140, 40}, {255, 236, 200}, {0, 0, 0}, {255, 160, 60}},
+		rim = {{255, 120, 20}, {255, 200, 60}, {180, 40, 10}}, images = {"rbxassetid://296950923"}, particles = {"🔥", "🔥", "☕"}, texts = {"this is fine"}},
+	{id = "cheems", group = "memes", name = "Cheems", icon = "🐶", iconImage = "rbxassetid://6950508957", watermark = "rbxassetid://6950508957", mode = "fall", rate = 1.5,
+		desc = "Hemlo. Bonk.",
+		colors = {{44, 34, 20}, {74, 58, 34}, {220, 170, 90}, {255, 242, 220}, {0, 0, 0}, {230, 180, 100}},
+		rim = {{220, 170, 90}, {255, 235, 200}, {140, 100, 50}}, images = {"rbxassetid://6950508957"}, texts = {"bonk", "hemlo", "bork"}},
+	{id = "noob", group = "memes", name = "Noob", icon = "🙂", iconImage = "rbxassetid://458144713", watermark = "rbxassetid://458144713", mode = "drift", rate = 1.5,
+		desc = "Classic Roblox. Oof.",
+		colors = {{20, 40, 80}, {30, 60, 120}, {240, 210, 40}, {255, 255, 255}, {0, 0, 0}, {110, 190, 60}},
+		rim = {{245, 205, 50}, {50, 110, 200}, {110, 190, 60}}, images = {"rbxassetid://458144713", "rbxassetid://1025787149"}, texts = {"oof", "OOF"}},
+	{id = "vibecat", group = "memes", name = "Vibe Cat", icon = "😎", iconImage = "rbxassetid://5247118810", watermark = "rbxassetid://5247118810", mode = "rise", rate = 2, fx = "heartbeat",
+		desc = "Just vibing. Grumpy Cat does not approve.",
+		colors = {{50, 28, 44}, {80, 44, 72}, {255, 160, 210}, {255, 240, 248}, {0, 0, 0}, {255, 180, 220}},
+		rim = {{255, 160, 210}, {200, 160, 255}, {255, 240, 250}}, images = {"rbxassetid://5247118810", "rbxassetid://420237037"}, particles = {"🎵", "🎶", "😎"}},
+	{id = "moai", group = "memes", name = "Moai", icon = "🗿", iconImage = "rbxassetid://9496106352", watermark = "rbxassetid://9496106352", mode = "rise", rate = 1.2,
+		desc = "🗿",
+		colors = {{30, 30, 32}, {52, 52, 56}, {150, 150, 140}, {235, 235, 225}, {0, 0, 0}, {170, 170, 160}},
+		rim = {{160, 160, 150}, {90, 90, 90}, {220, 220, 210}}, images = {"rbxassetid://9496106352"}, particles = {"🗿", "🗿"}},
+	{id = "trollge", group = "memes", name = "Trollge", icon = "😈", iconImage = "rbxassetid://6930020327", watermark = "rbxassetid://6930020327", mode = "twinkle", rate = 2, fx = "flicker",
+		desc = "Problem?",
+		colors = {{4, 4, 4}, {14, 14, 14}, {200, 200, 200}, {255, 255, 255}, {0, 0, 0}, {180, 180, 180}},
+		rim = {{255, 255, 255}, {40, 40, 40}, {160, 0, 0}}, images = {"rbxassetid://6930020327"}, texts = {"problem?"}},
+	{id = "skull", group = "memes", name = "Skull", icon = "💀", iconImage = "rbxassetid://6991349708", watermark = "rbxassetid://6991349708", mode = "fall", rate = 2,
+		desc = "I'm dead. 💀",
+		colors = {{12, 10, 10}, {28, 24, 22}, {220, 210, 190}, {245, 240, 230}, {0, 0, 0}, {200, 190, 170}},
+		rim = {{235, 225, 205}, {90, 80, 70}, {255, 255, 255}}, images = {"rbxassetid://6991349708"}, particles = {"💀", "☠️"}},
+	{id = "funnyaward", group = "memes", name = "Funny Award", icon = "🏆", iconImage = "rbxassetid://4748311898", watermark = "rbxassetid://4748311898", mode = "burst", rate = 0.8,
+		desc = "And the funny award goes to... not you.",
+		colors = {{60, 8, 8}, {100, 16, 16}, {240, 190, 40}, {255, 245, 220}, {0, 0, 0}, {250, 200, 60}},
+		rim = {{230, 30, 30}, {255, 210, 60}, {255, 255, 255}}, images = {"rbxassetid://4748311898"}, particles = {"🏆"}, texts = {"not you"}},
 	{id = "classic", name = "Classic", icon = "⬛", desc = "The original grey Infinite Yield colors, no effects.",
 		colors = {{36, 36, 37}, {46, 46, 47}, {78, 78, 79}, {255, 255, 255}, {0, 0, 0}, {78, 78, 79}},
 		rim = {{120, 120, 125}, {200, 200, 205}, {120, 120, 125}}},
@@ -15870,6 +15966,10 @@ NeverYieldTheme.list = {
 }
 
 NeverYieldTheme.cosmicIds = {auto = true, space = true, nebula = true, galaxy = true, void = true, cosmic = true, classic = true}
+
+NeverYieldTheme.groupOf = function(theme)
+	return theme.group or (NeverYieldTheme.cosmicIds[theme.id] and "cosmic" or "holidays")
+end
 
 NeverYieldTheme.byId = {}
 for _, theme in ipairs(NeverYieldTheme.list) do
@@ -15943,24 +16043,67 @@ NeverYieldTheme.layer = function()
 	return layer
 end
 
+NeverYieldTheme.pool = function(theme)
+	if theme.pool then return theme.pool end
+	local pool = {}
+	for _, v in ipairs(theme.particles or {}) do table.insert(pool, {kind = "emoji", value = v}) end
+	for _, v in ipairs(theme.texts or {}) do table.insert(pool, {kind = "text", value = v}) end
+	for _, v in ipairs(theme.images or {}) do
+		table.insert(pool, {kind = "image", value = v})
+		table.insert(pool, {kind = "image", value = v})
+	end
+	theme.pool = pool
+	return pool
+end
+
+NeverYieldTheme.fade = function(label, value)
+	if label:IsA("ImageLabel") then
+		label.ImageTransparency = value
+	else
+		label.TextTransparency = value
+	end
+end
+
 NeverYieldTheme.makeParticle = function(theme, parent)
-	local label = Instance.new("TextLabel")
-	local size = math.random(12, 20)
+	local entry = WackyState.pick(NeverYieldTheme.pool(theme))
+	local label
+	if entry.kind == "image" then
+		label = Instance.new("ImageLabel")
+		local size = math.random(20, 32)
+		label.Size = UDim2.new(0, size, 0, size)
+		label.Image = entry.value
+		label.ScaleType = Enum.ScaleType.Fit
+		label.ImageTransparency = 0.15
+	else
+		label = Instance.new("TextLabel")
+		label.TextScaled = true
+		label.Text = entry.value
+		label.TextColor3 = NeverYieldTheme.rgb(theme.rim[math.random(1, #theme.rim)])
+		label.TextTransparency = 0.35
+		if entry.kind == "text" then
+			local width = math.clamp(#entry.value * 8, 14, 110)
+			label.Size = UDim2.new(0, width, 0, 16)
+			label.Font = Enum.Font[theme.textFont or "Cartoon"]
+			label.TextStrokeTransparency = 0.6
+		else
+			local size = math.random(12, 20)
+			label.Size = UDim2.new(0, size, 0, size)
+			label.Font = Enum.Font.GothamBold
+		end
+	end
 	label.Name = randomString()
 	label.BackgroundTransparency = 1
 	label.AnchorPoint = Vector2.new(0.5, 0.5)
-	label.Size = UDim2.new(0, size, 0, size)
-	label.TextScaled = true
-	label.Font = Enum.Font.GothamBold
-	label.Text = WackyState.pick(theme.particles)
-	label.TextColor3 = NeverYieldTheme.rgb(theme.rim[math.random(1, #theme.rim)])
-	label.TextTransparency = 0.35
 	label.ZIndex = 10
 	label.Parent = parent
 	return label
 end
 
 NeverYieldTheme.animate = function(label, info, goal)
+	if label:IsA("ImageLabel") and goal.TextTransparency then
+		goal.ImageTransparency = goal.TextTransparency
+		goal.TextTransparency = nil
+	end
 	local tween = TweenService:Create(label, info, goal)
 	tween.Completed:Connect(function()
 		label:Destroy()
@@ -16006,7 +16149,7 @@ NeverYieldTheme.emit = function(theme, layer)
 		})
 	else
 		label.Position = UDim2.new(x, 0, math.random(), 0)
-		label.TextTransparency = 1
+		NeverYieldTheme.fade(label, 1)
 		NeverYieldTheme.animate(label, TweenInfo.new(0.8 + math.random(), Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, 0, true), {
 			TextTransparency = 0.2,
 		})
@@ -16021,7 +16164,7 @@ NeverYieldTheme.step = function()
 	local theme = NeverYieldTheme.active
 	if not theme then return end
 	local now = tick()
-	if theme.particles and theme.rate and NeverYieldPortal.scale > 0.05 and now - NeverYieldTheme.lastSpawn > 1 / theme.rate then
+	if #NeverYieldTheme.pool(theme) > 0 and theme.rate and NeverYieldPortal.scale > 0.05 and now - NeverYieldTheme.lastSpawn > 1 / theme.rate then
 		NeverYieldTheme.lastSpawn = now
 		NeverYieldTheme.emit(theme, NeverYieldTheme.layer())
 	end
@@ -16071,6 +16214,19 @@ NeverYieldTheme.apply = function(id, save)
 	end
 	for _, child in ipairs(NeverYieldTheme.layer():GetChildren()) do
 		child:Destroy()
+	end
+	if theme.watermark then
+		local mark = Instance.new("ImageLabel")
+		mark.Name = randomString()
+		mark.BackgroundTransparency = 1
+		mark.AnchorPoint = Vector2.new(1, 1)
+		mark.Position = UDim2.new(1, -8, 1, -8)
+		mark.Size = UDim2.new(0, 96, 0, 96)
+		mark.Image = theme.watermark
+		mark.ScaleType = Enum.ScaleType.Fit
+		mark.ImageTransparency = 0.82
+		mark.ZIndex = 10
+		mark.Parent = NeverYieldTheme.layer()
 	end
 	pcall(NeverYieldPortal.pulse)
 	if save then
@@ -16233,10 +16389,10 @@ NeverYieldTheme.openStudio = function(page)
 	local tabs = {}
 	local currentTab = "cosmic"
 	local showTab
-	for k, info in ipairs({{"cosmic", "Cosmic"}, {"holidays", "Holidays"}, {"custom", "Custom Colors"}}) do
+	for k, info in ipairs({{"cosmic", "Cosmic"}, {"vibes", "Vibes"}, {"holidays", "Holidays"}, {"memes", "Memes"}, {"custom", "Custom Colors"}}) do
 		local tab = Instance.new("TextButton")
-		tab.Position = UDim2.new(0.5, -188 + (k - 1) * 128, 0, 70)
-		tab.Size = UDim2.new(0, 120, 0, 28)
+		tab.Position = UDim2.new(0.5, -262 + (k - 1) * 106, 0, 70)
+		tab.Size = UDim2.new(0, 100, 0, 28)
 		tab.AutoButtonColor = false
 		tab.BorderSizePixel = 0
 		tab.Font = Enum.Font.GothamBold
@@ -16478,11 +16634,11 @@ NeverYieldTheme.openStudio = function(page)
 	for i, theme in ipairs(shownThemes) do
 		local card = Instance.new("TextButton")
 		card.Name = theme.id
-		local group = NeverYieldTheme.cosmicIds[theme.id] and "cosmic" or "holidays"
+		local group = NeverYieldTheme.groupOf(theme)
 		groupCount[group] = (groupCount[group] or 0) + 1
 		local k = groupCount[group]
-		local finalPos = UDim2.new(0, 1 + ((k - 1) % 5) * 110, 0, 2 + math.floor((k - 1) / 5) * 96)
-		card.Size = UDim2.new(0, 100, 0, 86)
+		local finalPos = UDim2.new(0, 4 + ((k - 1) % 6) * 90, 0, 2 + math.floor((k - 1) / 6) * 96)
+		card.Size = UDim2.new(0, 84, 0, 86)
 		card.Position = finalPos + UDim2.new(0, 0, 0, 24)
 		table.insert(cardIntro, {card = card, pos = finalPos, group = group})
 		card.Text = ""
@@ -16501,14 +16657,25 @@ NeverYieldTheme.openStudio = function(page)
 		cardScale.Scale = 1
 		cardScale.Parent = card
 
-		local icon = Instance.new("TextLabel")
+		local icon
+		if theme.iconImage then
+			icon = Instance.new("ImageLabel")
+			icon.Image = theme.iconImage
+			icon.ScaleType = Enum.ScaleType.Fit
+			icon.AnchorPoint = Vector2.new(0.5, 0)
+			icon.Position = UDim2.new(0.5, 0, 0, 5)
+			icon.Size = UDim2.new(0, 40, 0, 40)
+			corner(icon, 8)
+		else
+			icon = Instance.new("TextLabel")
+			icon.Position = UDim2.new(0, 0, 0, 6)
+			icon.Size = UDim2.new(1, 0, 0, 38)
+			icon.TextScaled = true
+			icon.Font = Enum.Font.GothamBold
+			icon.Text = theme.icon
+			icon.TextColor3 = Color3.new(1, 1, 1)
+		end
 		icon.BackgroundTransparency = 1
-		icon.Position = UDim2.new(0, 0, 0, 6)
-		icon.Size = UDim2.new(1, 0, 0, 38)
-		icon.TextScaled = true
-		icon.Font = Enum.Font.GothamBold
-		icon.Text = theme.icon
-		icon.TextColor3 = Color3.new(1, 1, 1)
 		icon.ZIndex = 22
 		icon.Parent = card
 
@@ -16517,7 +16684,7 @@ NeverYieldTheme.openStudio = function(page)
 		name.Position = UDim2.new(0, 4, 0, 48)
 		name.Size = UDim2.new(1, -8, 0, 16)
 		name.Font = Enum.Font.GothamBold
-		name.TextSize = 12
+		name.TextSize = 11
 		name.TextTruncate = Enum.TextTruncate.AtEnd
 		name.Text = theme.name
 		name.TextColor3 = theme.colors and NeverYieldTheme.rgb(theme.colors[4]) or Color3.new(1, 1, 1)
@@ -16657,8 +16824,8 @@ NeverYieldTheme.openStudio = function(page)
 	local sel = NeverYieldTheme.selected
 	if page == "custom" or sel == "custom" then
 		startTab = "custom"
-	elseif sel ~= "auto" and not NeverYieldTheme.cosmicIds[sel] then
-		startTab = "holidays"
+	elseif sel ~= "auto" and NeverYieldTheme.byId[sel] then
+		startTab = NeverYieldTheme.groupOf(NeverYieldTheme.byId[sel])
 	end
 	showTab(startTab)
 	for i, entry in ipairs(cardIntro) do
@@ -16843,9 +17010,9 @@ WackyState.weather = {
 		clouds = {cover = 0.8, density = 0.6, color = {245, 245, 255}},
 		bloom = {intensity = 0.6, size = 24, threshold = 0.85}, saturation = -0.1,
 		emitters = {
-			{tex = "flake", area = "around", box = {70, 36, 70}, offset = 12, dir = "Bottom", color = {255, 255, 255}, rate = 70, speed = {1.5, 3}, size = {0.3, 0.55}, life = 12, spread = 35, light = 0.15, spin = true, accel = {1.5, -0.5, 0}, wind = 2},
-			{tex = "soft", area = "above", color = {255, 255, 255}, rate = 260, speed = {5, 9}, size = {0.12, 0.24}, life = 9, spread = 25, light = 0.2, accel = {2, 0, 0}, wind = 2},
-			{tex = "soft", area = "around", box = {260, 70, 260}, offset = 20, dir = "Bottom", color = {235, 242, 255}, rate = 320, speed = {2, 4}, size = {0.1, 0.18}, life = 10, spread = 40, transparency = 0.35, accel = {1, -0.5, 0}, wind = 2},
+			{tex = "flake", area = "around", box = {70, 36, 70}, offset = 12, dir = "Bottom", color = {255, 255, 255}, rate = 45, speed = {1.5, 3}, size = {0.32, 0.6}, life = 12, spread = 35, light = 0.15, spin = true, accel = {1.5, -0.5, 0}, wind = 2},
+			{tex = "soft", area = "above", color = {255, 255, 255}, rate = 150, speed = {5, 9}, size = {0.14, 0.28}, life = 9, spread = 25, light = 0.2, accel = {2, 0, 0}, wind = 2},
+			{tex = "soft", area = "around", box = {260, 70, 260}, offset = 20, dir = "Bottom", color = {235, 242, 255}, rate = 170, speed = {2, 4}, size = {0.13, 0.22}, life = 10, spread = 40, transparency = 0.35, accel = {1, -0.5, 0}, wind = 2},
 		}},
 	blizzard = {sky = "winter", clock = 13, tint = {230, 238, 255}, shake = 0.15, sound = {"blizzard", 0.8}, accumulate = 25,
 		dark = {brightness = 0.8, exposure = -0.2, ambient = {120, 125, 140}, outdoor = {130, 135, 150}},
@@ -16853,9 +17020,9 @@ WackyState.weather = {
 		clouds = {cover = 1, density = 0.9, color = {230, 230, 240}},
 		bloom = {intensity = 0.5, size = 24, threshold = 0.85}, saturation = -0.2,
 		emitters = {
-			{tex = "flake", area = "around", box = {60, 30, 60}, offset = 8, dir = "Bottom", color = {255, 255, 255}, rate = 260, speed = {12, 20}, size = {0.25, 0.45}, life = 4, spread = 40, light = 0.15, spin = true, accel = {40, -10, 10}, wind = 14},
-			{tex = "soft", area = "around", box = {140, 50, 140}, offset = 10, dir = "Bottom", color = {255, 255, 255}, rate = 900, speed = {20, 30}, size = {0.12, 0.22}, life = 4, spread = 30, light = 0.2, accel = {45, -10, 12}, wind = 16},
-			{tex = "soft", area = "around", box = {260, 70, 260}, offset = 20, dir = "Bottom", color = {230, 238, 252}, rate = 600, speed = {15, 25}, size = {0.1, 0.18}, life = 5, spread = 40, transparency = 0.4, accel = {40, -8, 10}, wind = 16},
+			{tex = "flake", area = "around", box = {60, 30, 60}, offset = 8, dir = "Bottom", color = {255, 255, 255}, rate = 150, speed = {12, 20}, size = {0.28, 0.5}, life = 4, spread = 40, light = 0.15, spin = true, accel = {40, -10, 10}, wind = 14},
+			{tex = "soft", area = "around", box = {140, 50, 140}, offset = 10, dir = "Bottom", color = {255, 255, 255}, rate = 450, speed = {20, 30}, size = {0.15, 0.27}, life = 4, spread = 30, light = 0.2, accel = {45, -10, 12}, wind = 16},
+			{tex = "soft", area = "around", box = {260, 70, 260}, offset = 20, dir = "Bottom", color = {230, 238, 252}, rate = 300, speed = {15, 25}, size = {0.13, 0.22}, life = 5, spread = 40, transparency = 0.4, accel = {40, -8, 10}, wind = 16},
 		}},
 	rain = {sky = "storm", tint = {205, 210, 220}, brightness = -0.05, sound = {"rain", 0.6},
 		dark = {brightness = 0.65, exposure = -0.35, ambient = {80, 82, 92}, outdoor = {90, 92, 102}},
@@ -17183,10 +17350,14 @@ WackyState.stopSnowCover = function(instant)
 		while tick() - started < 4 do
 			local level = startLevel * (1 - (tick() - started) / 4)
 			local n = #cover.mapParts
+			local budgetEnd = os.clock() + 0.002
 			for _ = 1, math.min(1500, n) do
 				if index > n then index = 1 end
 				pcall(WackyState.snowApplyMap, cover.mapParts[index], level)
 				index = index + 1
+				if os.clock() > budgetEnd then
+					break
+				end
 			end
 			if cover.terrain then
 				for mat, color in pairs(cover.terrainColors) do
@@ -17431,12 +17602,17 @@ WackyState.startSnowCover = function(speaker, fullTime)
 		-- whole-map snow: update a slice of parts every frame
 		local n = #cover.mapParts
 		if n > 0 then
+			local stage = math.floor(cover.level * 12 + 0.5) / 12
+			local budgetEnd = os.clock() + 0.0015
 			for _ = 1, math.min(700, n) do
 				if cover.mapIndex > n then cover.mapIndex = 1 end
 				local entry = cover.mapParts[cover.mapIndex]
 				cover.mapIndex = cover.mapIndex + 1
-				if math.abs(entry.applied - cover.level) > 0.01 then
-					pcall(WackyState.snowApplyMap, entry, cover.level)
+				if entry.applied ~= stage then
+					pcall(WackyState.snowApplyMap, entry, stage)
+					if os.clock() > budgetEnd then
+						break
+					end
 				end
 			end
 		end
@@ -17457,9 +17633,11 @@ WackyState.startSnowCover = function(speaker, fullTime)
 					cap.part.Transparency = math.max(0, 1 - level * 2.5)
 					cap.weld.C0 = CFrame.new(cap.offset + Vector3.new(0, thick * 0.3, 0))
 				end
-				if cover.terrain then
+				local terrainStage = math.floor(level * 12 + 0.5) / 12
+				if cover.terrain and cover.terrainStage ~= terrainStage then
+					cover.terrainStage = terrainStage
 					for mat, color in pairs(cover.terrainColors) do
-						pcall(function() cover.terrain:SetMaterialColor(mat, color:Lerp(WackyState.snowWhite, math.clamp(level * 1.3, 0, 0.9))) end)
+						pcall(function() cover.terrain:SetMaterialColor(mat, color:Lerp(WackyState.snowWhite, math.clamp(terrainStage * 1.3, 0, 0.9))) end)
 					end
 					if level > 0.3 and cover.decoration then
 						pcall(function() cover.terrain.Decoration = false end)
@@ -17945,6 +18123,7 @@ addcmd('end',{'theend','blackholeleave'},function(args, speaker)
 	local shake = 0
 	local clone, cloneStart, cloneFrom
 	local hidden = {}
+	local lastHide, diskRadius = 0, nil
 
 	local function hideCharacter(model)
 		for _, d in ipairs(model:GetDescendants()) do
@@ -17964,13 +18143,13 @@ addcmd('end',{'theend','blackholeleave'},function(args, speaker)
 			part.CanQuery = false
 			part.CanTouch = false
 		end)
-		if #active > 900 then
+		if #active > 400 then
 			pcall(function() part:Destroy() end)
 			return
 		end
 		table.insert(active, {
 			part = part, offset = part.Position - center, rot = part.CFrame - part.Position, size = part.Size,
-			big = part.Size.Magnitude > 250, trans = part.Transparency, start = now,
+			big = part.Size.Magnitude > 250 or part:IsA("MeshPart") or part:IsA("UnionOperation"), trans = part.Transparency, start = now,
 			dur = math.clamp(entry.dist / 160, 1.3, 3.4),
 		})
 	end
@@ -18012,10 +18191,16 @@ addcmd('end',{'theend','blackholeleave'},function(args, speaker)
 		streaks.Lifetime = NumberRange.new(1.2, 1.5)
 		streaks.Size = NumberSequence.new(math.max(0.3, radius * 0.06), 0)
 		streaks.Rate = 60 + radius * 4
+		local resizeDisk = math.abs(radius - (diskRadius or -1)) > 0.5
+		if resizeDisk then
+			diskRadius = radius
+		end
 		for _, d in ipairs(disk) do
 			d.a = d.a + dt * 2.4 / (d.r ^ 1.5) * d.s
 			local r = radius * d.r
-			d.part.Size = Vector3.new(1, 1, 1) * math.max(0.4, radius * 0.07 * d.s)
+			if resizeDisk then
+				d.part.Size = Vector3.new(1, 1, 1) * math.max(0.4, radius * 0.07 * d.s)
+			end
 			d.part.CFrame = CFrame.new(center + tilt:VectorToWorldSpace(Vector3.new(math.cos(d.a) * r, d.h * r, math.sin(d.a) * r)))
 		end
 		local mood = math.clamp(radius / 90, 0, 1)
@@ -18028,7 +18213,7 @@ addcmd('end',{'theend','blackholeleave'},function(args, speaker)
 		-- swallow the map, nearest first, faster and faster
 		if phase == "swallow" then
 			local target = math.floor(#queue * math.clamp(t / swallowTime, 0, 1) ^ 2.2)
-			local budget = 250
+			local budget = 90
 			while captured < target and budget > 0 do
 				captured = captured + 1
 				budget = budget - 1
@@ -18114,9 +18299,12 @@ addcmd('end',{'theend','blackholeleave'},function(args, speaker)
 		end
 
 		-- keep hidden characters hidden (the camera scripts like to reset this)
-		for _, d in ipairs(hidden) do
-			if d.Parent then
-				d.LocalTransparencyModifier = 1
+		if now - lastHide > 0.5 then
+			lastHide = now
+			for _, d in ipairs(hidden) do
+				if d.Parent then
+					d.LocalTransparencyModifier = 1
+				end
 			end
 		end
 
