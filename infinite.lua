@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.23.0" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.23.1" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -23107,6 +23107,16 @@ addcmd('clown',{'clowns','circus'},function(args, speaker)
 			else
 				local toPlayer = root.Position - c.hrp.Position
 				local dist = toPlayer.Magnitude
+				-- stuck far away (behind walls, on a roof...): it comes back near you so the round can end
+				if dist > 140 or (now - c.lastMove > 8 and dist > 30) then
+					local a = math.random() * math.pi * 2
+					local x, z = root.Position.X + math.cos(a) * 40, root.Position.Z + math.sin(a) * 40
+					local y = c.kind == "flying" and root.Position.Y + 18 or ground(x, z, root.Position.Y) + 3.2
+					c.model:PivotTo(CFrame.lookAt(Vector3.new(x, y, z), Vector3.new(root.Position.X, y, root.Position.Z)))
+					c.lastPos, c.lastMove, c.waypoints, c.nextPath = c.hrp.Position, now, nil, 0
+					toPlayer = root.Position - c.hrp.Position
+					dist = toPlayer.Magnitude
+				end
 				if c.kind == "flying" then
 					-- float towards you from above, then dive
 					local target = root.Position + Vector3.new(0, dist > 14 and 8 or 0, 0)
@@ -23116,6 +23126,7 @@ addcmd('clown',{'clowns','circus'},function(args, speaker)
 					local pos = c.hrp.Position + (dir.Magnitude > 0.01 and dir.Unit * stepLen or Vector3.zero) + Vector3.new(0, bob, 0)
 					c.hrp.CFrame = CFrame.lookAt(pos, Vector3.new(root.Position.X, pos.Y, root.Position.Z))
 					if c.walk then c.walk:AdjustSpeed(0.4) end
+					c.lastMove = now
 				else
 					c.hum.WalkSpeed = c.speed
 					if c.walk then c.walk:AdjustSpeed(c.speed / 14) end
