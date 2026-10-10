@@ -5,6 +5,7 @@ Versions before 1.11.3 were reconstructed from the Desktop `.bakN` backups (one 
 
 | Version | Date | Commands | Change |
 |---|---|---|---|
+| 1.26.1 | 10-10 | 634 | Light switches and other small items can be picked up in Edit mode (E-prompts hidden while decorating); Agartha pond: no more blocky terrain-water octagon, glass water with glints |
 | 1.26.0 | 10-10 | 634 | 38 detailed furniture items (89 total); 16 curtain styles incl. match walls/floor, each window opens alone; 2 windows per room; inner doors fill their opening + door stops; wall effects avoid doorways; Agartha sitting pose works on AnimationConstraint rigs |
 | 1.25.4 | 10-10 | 634 | Doors in every doorway between rooms (E to open/close, swing + creak); curtains slide shut per room (E at a window or Edit > Style), saved |
 | 1.25.3 | 10-10 | 634 | Agartha: no bench; kas's avatar sits on the grass behind the cottage leaning on the stone base, posed by placing and anchoring every part (the bench pose was reset in-game) |

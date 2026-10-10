@@ -1,4 +1,4 @@
--- NeverYield v1.26.0 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.26.1 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.26.0" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.26.1" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -21663,7 +21663,16 @@ NeverYieldAgartha.build = function(O)
 
 	-- pond with rocks and lily pads, a bench beside it
 	NeverYieldAgartha.pondCenter, NeverYieldAgartha.pondRadius = O + Vector3.new(22, 0, -18), 8.8
-	P(folder, Vector3.new(0.5, 18, 18), at(22, 0.45, -18) * up, Color3.fromRGB(40, 115, 175), M.Glass, "Cylinder", {Transparency = 0.2, Reflectance = 0.15, CanCollide = false})
+	local pondTop = P(folder, Vector3.new(0.5, 18, 18), at(22, 0.45, -18) * up, Color3.fromRGB(40, 115, 175), M.Glass, "Cylinder", {Transparency = 0.2, Reflectance = 0.25, CanCollide = false})
+	local glints = Instance.new("ParticleEmitter")
+	glints.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	glints.Rate = 4
+	glints.Lifetime = NumberRange.new(0.4, 0.9)
+	glints.Speed = NumberRange.new(0)
+	glints.Size = NumberSequence.new(0.35, 0)
+	glints.LightEmission = 1
+	glints.Color = ColorSequence.new(Color3.fromRGB(220, 240, 255))
+	glints.Parent = pondTop
 	P(folder, Vector3.new(0.2, 17.6, 17.6), at(22, 0.12, -18) * up, Color3.fromRGB(25, 60, 70), M.Slate, "Cylinder", {CanCollide = false})
 	for i = 1, 12 do
 		local a = i / 12 * math.pi * 2
@@ -22258,12 +22267,14 @@ NeverYieldAgartha.close = function()
 	pcall(function() s.birds:Destroy() end)
 end
 
--- terrain water is client-side; streaming can wipe it, so it is refilled whenever you are in Agartha
+-- the pond used terrain water, but terrain snaps to a 4-stud grid and stood up above the pond as an octagon;
+-- the glass pond surface is the water now, and any old terrain water is cleared
 NeverYieldAgartha.fillWater = function()
 	local A = NeverYieldAgartha
-	if not A.pondCenter then return end
+	if not A.pondCenter or A.waterCleared then return end
+	A.waterCleared = true
 	pcall(function()
-		workspace.Terrain:FillCylinder(CFrame.new(A.pondCenter + Vector3.new(0, 0.2, 0)), 1.6, A.pondRadius, Enum.Material.Water)
+		workspace.Terrain:FillCylinder(CFrame.new(A.pondCenter + Vector3.new(0, 0.2, 0)), 4, A.pondRadius + 0.5, Enum.Material.Air)
 	end)
 end
 
@@ -22342,10 +22353,6 @@ addcmd('agartha',{'portal','gateway'},function(args, speaker)
 	local awayCF = CFrame.lookAt(awayPos, awayPos - Vector3.new(0, 0, 1))
 	local land = A.build(O)
 	land.Parent = workspace
-	-- real Roblox water in the pond
-	pcall(function()
-		workspace.Terrain:FillCylinder(CFrame.new(A.pondCenter + Vector3.new(0, 0.2, 0)), 1.6, A.pondRadius, Enum.Material.Water)
-	end)
 	local view = land:Clone()
 	for _, d in ipairs(view:GetDescendants()) do
 		if d:IsA("ParticleEmitter") or d:IsA("Light") or d:IsA("ProximityPrompt") or d:IsA("Sound") or d:IsA("Fire") then
@@ -25410,6 +25417,7 @@ NeverYieldRoom.buildShell = function(s, rs)
 	end
 	shell.Parent = rs.model
 	rs.shell = shell
+	if R.editing then R.promptsIn(shell, false) end
 	if R.decorate then R.decorate(s, rs, shell, floor, wall) end
 	if data.curtains == true then
 		-- older saves had one switch for the whole room
@@ -25816,6 +25824,7 @@ NeverYieldRoom.innerDoor = function(s, rs, shell, base, o)
 	P(shell, Vector3.new(o[2], 0.3, 0.15), base * CFrame.new(o[1], o[4] - 0.1, -0.75), C(240, 235, 225), M.Wood)
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.ActionText = "Open"
+	prompt.Name = "NYDoorPrompt"
 	prompt.ObjectText = rs.def.name .. " door"
 	prompt.HoldDuration = 0
 	prompt.MaxActivationDistance = 9
@@ -25904,6 +25913,19 @@ NeverYieldRoom.toggleLights = function(s, rs, part)
 	if R.editing then pcall(R.refreshPanel, s) end
 end
 
+-- prompts on furniture and windows sit on top of the item on screen and swallow the click, so the editor hides them
+NeverYieldRoom.promptsIn = function(container, on)
+	for _, d in ipairs(container:GetDescendants()) do
+		if d:IsA("ProximityPrompt") and d.Name ~= "NYDoorPrompt" then d.Enabled = on end
+	end
+end
+
+NeverYieldRoom.setPrompts = function(s, on)
+	for _, rs in ipairs(s.roomList or {}) do
+		if rs.model then NeverYieldRoom.promptsIn(rs.model, on) end
+	end
+end
+
 -- walking into another room: its lighting, and the editor works on it
 NeverYieldRoom.enterRoom = function(s, rs)
 	local R = NeverYieldRoom
@@ -25942,6 +25964,7 @@ NeverYieldRoom.spawnItem = function(s, rs, entry)
 	local model = R.build(entry.id, R.entryCF(rs, entry))
 	if not model then return end
 	model.Parent = rs.items
+	if R.editing then R.promptsIn(model, false) end
 	table.insert(rs.placed, {entry = entry, model = model})
 	local item = R.itemById[entry.id]
 	local on = R.rd(rs.id).lights ~= false
@@ -25989,6 +26012,7 @@ NeverYieldRoom.startEdit = function(s)
 	local R = NeverYieldRoom
 	local P = NeverYieldPets
 	R.editing = true
+	R.setPrompts(s, false)
 	s.editButton.Text = "\u{2705} Done"
 	s.tab = s.tab or "furniture"
 	local panel = Instance.new("Frame")
@@ -26123,6 +26147,7 @@ NeverYieldRoom.stopEdit = function(s)
 	R.cancelPlace(s)
 	R.select(s, nil)
 	R.editing = false
+	R.setPrompts(s, true)
 	WackyState.disconnect("roomEditMove")
 	WackyState.disconnect("roomEditInput")
 	if s.panel then s.panel:Destroy() s.panel = nil end
