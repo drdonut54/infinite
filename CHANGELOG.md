@@ -5,6 +5,11 @@ Versions before 1.11.3 were reconstructed from the Desktop `.bakN` backups (one 
 
 | Version | Date | Commands | Change |
 |---|---|---|---|
+| 1.27.1 | 10-10 | 634 | House clock ambience only plays when the radio is off |
+| 1.27.0 | 10-10 | 634 | House music + Retro Radio (11 stations, E/F); Agartha: 22 calm piano/harp tracks with reverb; more tracks for clowns, Diamond Rush, jingles and sound effects; music never keeps playing after you leave Agartha or the house |
+| 1.26.1 | 10-10 | 634 | Light switches and other small items can be picked up in Edit mode (E-prompts hidden while decorating); Agartha pond: no more blocky terrain-water octagon, glass water with glints |
+| 1.26.0 | 10-10 | 634 | 38 detailed furniture items (89 total); 16 curtain styles incl. match walls/floor, each window opens alone; 2 windows per room; inner doors fill their opening + door stops; wall effects avoid doorways; Agartha sitting pose works on AnimationConstraint rigs |
+| 1.25.4 | 10-10 | 634 | Doors in every doorway between rooms (E to open/close, swing + creak); curtains slide shut per room (E at a window or Edit > Style), saved |
 | 1.25.3 | 10-10 | 634 | Agartha: no bench; kas's avatar sits on the grass behind the cottage leaning on the stone base, posed by placing and anchoring every part (the bench pose was reset in-game) |
 | 1.25.2 | 10-10 | 634 | Clowns stop getting lost: real stuck/lost/unreachable detection (the old check never fired), they return 30-45 studs away out of view where a path to you exists; slimmer pathing agent, truss climbing, faster re-pathing |
 | 1.25.1 | 10-10 | 634 | 8 new floors + 9 new walls with real effects (fire, galaxy, diamond, rainbow, neon grid, void, clouds, water with fish, matrix, aquarium...), each unlocked by a rare achievement |
