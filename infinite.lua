@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.23.1" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.23.2" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -22153,6 +22153,9 @@ addcmd('portal',{'agartha','gateway'},function(args, speaker)
 			d:Destroy()
 		elseif d:IsA("BasePart") and d:GetAttribute("ViewOnly") then
 			d.Transparency = 0.25
+		elseif d:IsA("BasePart") and d.Size.Magnitude < 1.1 then
+			-- tiny details can't be seen through the portal; each window copy draws the island again
+			d:Destroy()
 		end
 	end
 	local homeView = A.snapshot(gatePos, 220, 600, homeCF)
