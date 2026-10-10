@@ -1,4 +1,4 @@
--- NeverYield v1.25.3 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.25.4 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.25.3" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.25.4" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -24609,6 +24609,7 @@ NeverYieldRoom.buildShell = function(s, rs)
 	local W, D, Hh = R.W, R.D, R.H
 	local hw, hd = W / 2, D / 2
 	rs.anim, rs.sky, rs.lamps, rs.walls, rs.wallParts = {}, {}, {}, {}, {}
+	rs.curtains, rs.curtainPrompts, rs.doors = {}, {}, {}
 	-- floor
 	P(shell, Vector3.new(W + 2, 1, D + 2), A(0, -0.5, 0), R.rgb(floor.color), R.mat(floor.mat))
 	if floor.checker then
@@ -24653,19 +24654,27 @@ NeverYieldRoom.buildShell = function(s, rs)
 		for _, o in ipairs(openings) do
 			local u, w, y0, y1 = o[1], o[2], o[3], o[4]
 			if y0 > 0 then
-				F(Vector3.new(w, y1 - y0, 0.2), u, (y0 + y1) / 2, 0, C(200, 225, 255), M.Glass, nil, {Transparency = 0.7})
+				local glass = F(Vector3.new(w, y1 - y0, 0.2), u, (y0 + y1) / 2, 0, C(200, 225, 255), M.Glass, nil, {Transparency = 0.7})
 				F(Vector3.new(w + 0.6, 0.4, 0.5), u, y0 - 0.1, 0.3, frameColor, M.Wood)
 				F(Vector3.new(w + 0.6, 0.4, 0.4), u, y1 + 0.1, 0.3, frameColor, M.Wood)
 				F(Vector3.new(0.3, y1 - y0, 0.3), u, (y0 + y1) / 2, 0.3, frameColor, M.Wood)
+				-- curtains: open at the sides, closed they meet in the middle
 				for _, cz in ipairs({-1, 1}) do
-					F(Vector3.new(1.4, y1 - y0 + 1.2, 0.3), u + cz * (w / 2 + 0.6), (y0 + y1) / 2 + 0.1, 0.8, C(200, 110, 90), M.Fabric)
+					local ch, cy = y1 - y0 + 1.2, (y0 + y1) / 2 + 0.1
+					local openSize, closedSize = Vector3.new(1.4, ch, 0.3), Vector3.new(w / 2 + 0.75, ch, 0.3)
+					local openCF = base * CFrame.new(u + cz * (w / 2 + 0.6), cy, 0.8)
+					local closedCF = base * CFrame.new(u + cz * (w / 4 + 0.35), cy, 0.8)
+					local curtain = P(shell, openSize, openCF, C(200, 110, 90), M.Fabric)
+					table.insert(rs.curtains, {part = curtain, open = {Size = openSize, CFrame = openCF}, closed = {Size = closedSize, CFrame = closedCF}})
 				end
+				R.curtainPrompt(s, rs, glass)
 				F(Vector3.new(w + 3, 0.2, 0.2), u, y1 + 0.8, 0.8, C(80, 60, 40), M.Wood, "Cylinder")
 			elseif kind == "link" then
 				for _, edge in ipairs({-1, 1}) do
 					F(Vector3.new(0.35, y1 + 0.3, 0.3), u + edge * (w / 2 + 0.17), (y1 + 0.3) / 2, 0.62, trim, trimMat)
 				end
 				F(Vector3.new(w + 0.7, 0.4, 0.3), u, y1 + 0.2, 0.62, trim, trimMat)
+				if rs.id ~= "living" then R.innerDoor(s, rs, shell, base, o) end
 			end
 		end
 		-- the view out of the windows: a sky and soft hills
@@ -24713,6 +24722,7 @@ NeverYieldRoom.buildShell = function(s, rs)
 	shell.Parent = rs.model
 	rs.shell = shell
 	if R.decorate then R.decorate(s, rs, shell, floor, wall) end
+	R.setCurtains(s, rs, data.curtains == true, false)
 	R.applyMood(s, rs)
 end
 
@@ -24951,6 +24961,87 @@ NeverYieldRoom.animate = function(s, dt)
 			part.CFrame = a.cf * CFrame.new(x, 0, 0) * CFrame.Angles(0, math.cos(t * a.speed + a.phase) >= 0 and 0 or math.pi, 0)
 		end
 	end
+end
+
+-- curtains: every window's glass has a prompt; it opens or closes all curtains in that room
+NeverYieldRoom.curtainSounds = {9114018343, 9114018394} -- ProSoundEffects curtain hardware rattle (checked)
+NeverYieldRoom.curtainPrompt = function(s, rs, glass)
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.ActionText = "Close curtains"
+	prompt.ObjectText = "Window"
+	prompt.HoldDuration = 0
+	prompt.MaxActivationDistance = 10
+	prompt.RequiresLineOfSight = false
+	prompt.KeyboardKeyCode = Enum.KeyCode.E
+	prompt.Parent = glass
+	prompt.Triggered:Connect(function()
+		NeverYieldRoom.setCurtains(s, rs, NeverYieldRoom.rd(rs.id).curtains ~= true, true)
+	end)
+	table.insert(rs.curtainPrompts, prompt)
+end
+
+NeverYieldRoom.setCurtains = function(s, rs, closed, animate)
+	local R = NeverYieldRoom
+	R.rd(rs.id).curtains = closed
+	for _, c in ipairs(rs.curtains or {}) do
+		local goal = closed and c.closed or c.open
+		if animate then
+			TweenService:Create(c.part, TweenInfo.new(0.9, Enum.EasingStyle.Sine), goal):Play()
+		else
+			c.part.Size, c.part.CFrame = goal.Size, goal.CFrame
+		end
+	end
+	for _, prompt in ipairs(rs.curtainPrompts or {}) do
+		prompt.ActionText = closed and "Open curtains" or "Close curtains"
+	end
+	if animate then
+		WackyState.sound(WackyState.pick(R.curtainSounds), nil, 0.6, false, 0.95 + math.random() * 0.1)
+		R.save()
+		if R.editing then pcall(R.refreshPanel, s) end
+	end
+end
+
+-- a panelled wooden door in a doorway between two rooms; it swings into the far room
+NeverYieldRoom.innerDoor = function(s, rs, shell, base, o)
+	local P = NeverYieldAgartha.part
+	local w, h = o[2] - 0.3, o[4] - 0.15
+	local hinge = base * CFrame.new(o[1] - o[2] / 2 + 0.2, 0, -0.5)
+	local wood, panel, brass = C(150, 105, 70), C(125, 85, 55), C(215, 175, 80)
+	local door = {hinge = hinge, parts = {}, open = false}
+	local function add(size, rel, color, mat, shape)
+		local part = P(shell, size, hinge * rel, color, mat, shape)
+		table.insert(door.parts, {part = part, rel = rel})
+		return part
+	end
+	local slab = add(Vector3.new(w, h, 0.3), CFrame.new(w / 2, h / 2, 0), wood, M.Wood)
+	for _, face in ipairs({-1, 1}) do
+		for _, py in ipairs({h * 0.7, h * 0.28}) do
+			add(Vector3.new(w - 1.4, h * 0.32, 0.06), CFrame.new(w / 2, py, face * 0.17), panel, M.Wood)
+		end
+		add(Vector3.new(0.3, 0.3, 0.3), CFrame.new(w - 0.55, h * 0.47, face * 0.3), brass, M.Foil, "Ball")
+		add(Vector3.new(0.1, 0.5, 0.06), CFrame.new(w - 0.55, h * 0.47, face * 0.17), brass, M.Foil)
+	end
+	for _, y in ipairs({1.4, h - 1.4}) do
+		add(Vector3.new(0.6, 0.18, 0.18), CFrame.new(0, y, 0) * up, C(60, 55, 50), M.Metal, "Cylinder")
+	end
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.ActionText = "Open"
+	prompt.ObjectText = rs.def.name .. " door"
+	prompt.HoldDuration = 0
+	prompt.MaxActivationDistance = 9
+	prompt.RequiresLineOfSight = false
+	prompt.KeyboardKeyCode = Enum.KeyCode.E
+	prompt.Parent = slab
+	prompt.Triggered:Connect(function()
+		door.open = not door.open
+		local swing = door.hinge * CFrame.Angles(0, door.open and math.rad(-95) or 0, 0)
+		for _, d in ipairs(door.parts) do
+			TweenService:Create(d.part, TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CFrame = swing * d.rel}):Play()
+		end
+		WackyState.sound(door.open and NeverYieldDoor.creak or NeverYieldDoor.shut, slab, 0.6, false, 1.05 + math.random() * 0.1)
+		prompt.ActionText = door.open and "Close" or "Open"
+	end)
+	table.insert(rs.doors, door)
 end
 
 -- lamps follow the room's lights; the room you stand in also sets the game's lighting
@@ -25331,6 +25422,10 @@ NeverYieldRoom.refreshPanel = function(s)
 		local on = R.rd(s.room.id).lights ~= false
 		row("\u{1F4A1} Lights: " .. (on and "ON" or "OFF"), "same as flipping a light switch in this room", on and Color3.fromRGB(200, 160, 60) or Color3.fromRGB(60, 50, 110), function()
 			R.toggleLights(s, s.room)
+		end)
+		local closed = R.rd(s.room.id).curtains == true
+		row("Curtains: " .. (closed and "CLOSED" or "OPEN"), "or press E at any window", closed and Color3.fromRGB(150, 70, 60) or Color3.fromRGB(60, 50, 110), function()
+			R.setCurtains(s, s.room, not closed, true)
 		end)
 		y = y + 6
 		group("FLOOR", R.floors, "floor", function() R.buildShell(s, s.room) end)
