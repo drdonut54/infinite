@@ -1,4 +1,4 @@
--- NeverYield v1.12.0 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.12.2 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.12.0" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.12.2" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -5280,7 +5280,7 @@ CMDs[#CMDs + 1] = {NAME = 'orbitcam / cinematic [speed] [distance]', DESC = 'Cam
 CMDs[#CMDs + 1] = {NAME = 'unorbitcam / uncinematic', DESC = 'Returns your camera to normal'}
 CMDs[#CMDs + 1] = {NAME = 'filter [name/random]', DESC = 'Screen filter: noir, sepia, vaporwave, nightvision, deepfried, underwater, thermal, dream'}
 CMDs[#CMDs + 1] = {NAME = 'unfilter', DESC = 'Removes the screen filter'}
-CMDs[#CMDs + 1] = {NAME = 'weather [type/random]', DESC = 'Weather with sound, clouds and lighting: snow, blizzard (the whole map snows over!), rain, storm (gets dark, thunder), sandstorm, aurora, stars, galaxy, bloodmoon, sakura, autumn, hearts, embers, fireflies, rainbow, meteors'}
+CMDs[#CMDs + 1] = {NAME = 'weather [type]', DESC = 'No type = a random one. Weather with sound, clouds and lighting: snow, blizzard (the whole map snows over!), rain, storm (gets dark, thunder), sandstorm, aurora, stars, galaxy, bloodmoon, sakura, autumn, hearts, embers, fireflies, rainbow, meteors'}
 CMDs[#CMDs + 1] = {NAME = 'weathervolume [0-3]', DESC = 'Changes how loud the weather sounds are (default 1)'}
 CMDs[#CMDs + 1] = {NAME = 'skipweather / nexttrack', DESC = 'Weather sounds change by themselves every few minutes (plus owls, wolves, thunder, chimes...); this skips to another track now'}
 CMDs[#CMDs + 1] = {NAME = 'fuckoff / unloadny', DESC = 'Completely unloads NeverYield: turns everything off and removes the GUI'}
@@ -17973,7 +17973,7 @@ addcmd('weather',{},function(args, speaker)
 		table.insert(names, k)
 	end
 	table.sort(names)
-	local choice = args[1] and args[1]:lower() or "snow"
+	local choice = args[1] and args[1]:lower() or "random"
 	if choice == "random" then
 		choice = WackyState.pick(names)
 	end
@@ -18260,7 +18260,44 @@ end)
 -- ==================== THE END ====================
 -- A black hole only you can see swallows the map, then you, then server hops you out.
 -- Everything here is client-side: the server and other players are not affected.
+-- Look (v1.12.1): pure black event horizon, a thin photon ring and a lensing glow on a camera-facing
+-- billboard (drawn behind the horizon), a swirling accretion disk made of glowing clouds locked to a
+-- spinning ring, streams of matter spiralling in (trails), twin polar jets, and map parts that heat up
+-- and glow as they fall in.
 WackyState.endSounds = {rumble = 9114031727, drone = 9114353261, suck = 9125805781, implode = 9120704346, boom = 9120769331}
+WackyState.endSmoke = "rbxasset://textures/particles/smoke_main.dds"
+
+-- a filled circle inside a GUI (used for the photon ring and the glow layers)
+WackyState.endCircle = function(parent, diameter, color, transparency, z)
+	local f = Instance.new("Frame")
+	f.Name = randomString()
+	f.AnchorPoint = Vector2.new(0.5, 0.5)
+	f.Position = UDim2.new(0.5, 0, 0.5, 0)
+	f.Size = UDim2.new(diameter, 0, diameter, 0)
+	f.BackgroundColor3 = color
+	f.BackgroundTransparency = transparency
+	f.BorderSizePixel = 0
+	f.ZIndex = z or 1
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(0.5, 0)
+	c.Parent = f
+	f.Parent = parent
+	return f
+end
+
+WackyState.endPart = function(parent)
+	local p = Instance.new("Part")
+	p.Name = randomString()
+	p.Anchored = true
+	p.CanCollide = false
+	p.CanQuery = false
+	p.CanTouch = false
+	p.CastShadow = false
+	p.Transparency = 1
+	p.Size = Vector3.new(1, 1, 1)
+	p.Parent = parent
+	return p
+end
 
 addcmd('end',{'theend','blackholeleave'},function(args, speaker)
 	if WackyState.ending then return end
@@ -18289,65 +18326,152 @@ addcmd('end',{'theend','blackholeleave'},function(args, speaker)
 	end
 	look = look.Unit
 	local center = root.Position + look * 140 + Vector3.new(0, 45, 0)
-	local tilt = CFrame.Angles(math.rad(16), 0, math.rad(9))
+	-- tilt the disk so you see it at an angle (front edge passes in front of the horizon)
+	local tilt = CFrame.lookAt(Vector3.zero, look) * CFrame.Angles(math.rad(14), 0, math.rad(6))
 	local diskUp = tilt.UpVector
 	local radius = 2
 
-	local function ball(color, material, transparency)
-		local p = Instance.new("Part")
-		p.Name = randomString()
-		p.Shape = Enum.PartType.Ball
-		p.Anchored = true
-		p.CanCollide = false
-		p.CanQuery = false
-		p.CanTouch = false
-		p.CastShadow = false
-		p.Color = color
-		p.Material = material
-		p.Transparency = transparency
-		p.Size = Vector3.new(1, 1, 1)
-		p.Position = center
-		p.Parent = folder
-		return p
-	end
-	local core = ball(Color3.new(0, 0, 0), Enum.Material.SmoothPlastic, 0)
-	local horizon = ball(Color3.fromRGB(140, 70, 255), Enum.Material.ForceField, 0)
-	local glow = ball(Color3.fromRGB(255, 140, 60), Enum.Material.Neon, 0.88)
+	-- event horizon: nothing escapes, so it's simply black
+	local core = WackyState.endPart(folder)
+	core.Shape = Enum.PartType.Ball
+	core.Material = Enum.Material.SmoothPlastic
+	core.Color = Color3.new(0, 0, 0)
+	core.Transparency = 0
+	core.Position = center
 
-	-- accretion disk: glowing debris orbiting in a tilted ring
-	local disk = {}
-	for i = 1, 120 do
-		local p = Instance.new("Part")
-		p.Name = randomString()
-		p.Anchored = true
-		p.CanCollide = false
-		p.CanQuery = false
-		p.CanTouch = false
-		p.CastShadow = false
-		p.Material = Enum.Material.Neon
-		local r = 1.3 + math.random() ^ 1.4 * 2.4
-		p.Color = Color3.fromRGB(255, 200, 120):Lerp(Color3.fromRGB(150, 60, 255), math.clamp((r - 1.3) / 2.4, 0, 1))
-		p.Parent = folder
-		table.insert(disk, {part = p, r = r, a = math.random() * math.pi * 2, h = (math.random() - 0.5) * 0.15, s = 0.5 + math.random()})
+	-- photon ring + lensing glow. The billboard sits at the centre, so the black sphere hides its
+	-- middle and only a thin bright rim and a soft halo stay visible around the edge.
+	local LENS = 7 -- billboard width in horizon radii
+	local lens = Instance.new("BillboardGui")
+	lens.Name = randomString()
+	lens.Adornee = core
+	lens.AlwaysOnTop = false
+	lens.LightInfluence = 0
+	pcall(function() lens.Brightness = 2 end)
+	lens.Size = UDim2.new(radius * LENS, 0, radius * LENS, 0)
+	lens.Parent = core
+	local glowGradients = {}
+	local haloColors = {
+		{6.8, Color3.fromRGB(90, 40, 200), 0.94}, {6.0, Color3.fromRGB(130, 50, 210), 0.92}, {5.2, Color3.fromRGB(190, 60, 170), 0.9},
+		{4.5, Color3.fromRGB(240, 90, 110), 0.88}, {3.8, Color3.fromRGB(255, 130, 70), 0.85}, {3.2, Color3.fromRGB(255, 170, 90), 0.8},
+		{2.7, Color3.fromRGB(255, 205, 140), 0.72}, {2.35, Color3.fromRGB(255, 230, 190), 0.55},
+	}
+	for i, h in ipairs(haloColors) do
+		local circle = WackyState.endCircle(lens, h[1] / LENS, h[2], h[3], i)
+		if i >= 5 then
+			-- one side of the glow is brighter (light from the side spinning towards you)
+			local g = Instance.new("UIGradient")
+			g.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.5, 0.25), NumberSequenceKeypoint.new(1, 0.7)})
+			g.Parent = circle
+			table.insert(glowGradients, g)
+		end
+	end
+	local photon = WackyState.endCircle(lens, 2.1 / LENS, Color3.fromRGB(255, 244, 225), 0, 20)
+	local photonGradient = Instance.new("UIGradient")
+	photonGradient.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 0.45)})
+	photonGradient.Parent = photon
+
+	-- accretion disk: glowing clouds on rings, locked to a spinning part so the whole disk turns
+	local spinner = WackyState.endPart(folder)
+	local clouds = {}
+	local layers = {
+		{r = 1.3, n = 16, c0 = Color3.fromRGB(255, 250, 235), c1 = Color3.fromRGB(255, 200, 120), size = 0.5, rate = 9},
+		{r = 1.8, n = 20, c0 = Color3.fromRGB(255, 215, 140), c1 = Color3.fromRGB(255, 130, 60), size = 0.7, rate = 8},
+		{r = 2.5, n = 22, c0 = Color3.fromRGB(255, 150, 70), c1 = Color3.fromRGB(220, 70, 80), size = 0.9, rate = 6},
+		{r = 3.3, n = 18, c0 = Color3.fromRGB(200, 80, 120), c1 = Color3.fromRGB(110, 50, 200), size = 1.05, rate = 4},
+	}
+	for _, layer in ipairs(layers) do
+		for i = 1, layer.n do
+			local a = (i / layer.n) * math.pi * 2 + math.random() * 0.3
+			local att = Instance.new("Attachment")
+			att.Name = randomString()
+			att.Parent = spinner
+			local e = Instance.new("ParticleEmitter")
+			e.Name = randomString()
+			e.Texture = WackyState.endSmoke
+			e.LockedToPart = true
+			e.Speed = NumberRange.new(0)
+			e.Lifetime = NumberRange.new(1.2, 2)
+			e.Rate = layer.rate
+			e.LightEmission = 1
+			e.LightInfluence = 0
+			e.Rotation = NumberRange.new(0, 360)
+			e.RotSpeed = NumberRange.new(-40, 40)
+			e.Color = ColorSequence.new(layer.c0, layer.c1)
+			e.Transparency = NumberSequence.new({
+				NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.25, 0.35),
+				NumberSequenceKeypoint.new(0.75, 0.5), NumberSequenceKeypoint.new(1, 1),
+			})
+			e.Parent = att
+			table.insert(clouds, {att = att, emitter = e, r = layer.r, a = a, size = layer.size})
+		end
+	end
+	-- faint solid sheet under the clouds so the disk never looks patchy
+	local sheet = WackyState.endPart(folder)
+	sheet.Shape = Enum.PartType.Cylinder
+	sheet.Material = Enum.Material.Neon
+	sheet.Color = Color3.fromRGB(255, 140, 70)
+	sheet.Transparency = 0.93
+
+	-- streams of matter spiralling in (each leaves a glowing trail)
+	local streams = {}
+	for i = 1, 36 do
+		local p = WackyState.endPart(folder)
+		local a0 = Instance.new("Attachment")
+		a0.Parent = p
+		local a1 = Instance.new("Attachment")
+		a1.Parent = p
+		local trail = Instance.new("Trail")
+		trail.Attachment0 = a0
+		trail.Attachment1 = a1
+		trail.FaceCamera = true
+		trail.Lifetime = 0.45
+		trail.LightEmission = 1
+		trail.LightInfluence = 0
+		trail.Transparency = NumberSequence.new(0.05, 1)
+		trail.WidthScale = NumberSequence.new(1, 0)
+		local hot = math.random()
+		trail.Color = ColorSequence.new(Color3.fromRGB(255, 245, 225):Lerp(Color3.fromRGB(255, 170, 90), hot), Color3.fromRGB(255, 110, 60):Lerp(Color3.fromRGB(150, 60, 220), hot))
+		trail.Parent = p
+		table.insert(streams, {part = p, a0 = a0, a1 = a1, trail = trail, r = 1.2 + math.random() * 2.4, a = math.random() * math.pi * 2,
+			h = (math.random() - 0.5) * 0.12, fall = 0.06 + math.random() * 0.1})
+	end
+
+	-- twin polar jets (they switch on once the hole has grown)
+	local jetPart = WackyState.endPart(folder)
+	local jets = {}
+	for _, dir in ipairs({1, -1}) do
+		local j0 = Instance.new("Attachment")
+		j0.Parent = jetPart
+		local j1 = Instance.new("Attachment")
+		j1.Parent = jetPart
+		local beam = Instance.new("Beam")
+		beam.Attachment0 = j0
+		beam.Attachment1 = j1
+		beam.FaceCamera = true
+		beam.Texture = WackyState.endSmoke
+		beam.TextureMode = Enum.TextureMode.Wrap
+		beam.TextureSpeed = 1.5
+		beam.LightEmission = 1
+		beam.LightInfluence = 0
+		beam.Segments = 12
+		beam.Color = ColorSequence.new(Color3.fromRGB(220, 235, 255), Color3.fromRGB(140, 90, 255))
+		beam.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.15), NumberSequenceKeypoint.new(0.6, 0.6), NumberSequenceKeypoint.new(1, 1)})
+		beam.Enabled = false
+		beam.Parent = jetPart
+		table.insert(jets, {a0 = j0, a1 = j1, beam = beam, dir = dir})
 	end
 
 	-- matter streaking inward from all around
-	local shell = Instance.new("Part")
-	shell.Name = randomString()
+	local shell = WackyState.endPart(folder)
 	shell.Shape = Enum.PartType.Ball
-	shell.Anchored = true
-	shell.CanCollide = false
-	shell.CanQuery = false
-	shell.CanTouch = false
-	shell.Transparency = 1
 	shell.Position = center
-	shell.Parent = folder
 	local streaks = Instance.new("ParticleEmitter")
 	streaks.Texture = "rbxasset://textures/particles/sparkles_main.dds"
 	streaks.Rate = 120
 	streaks.LightEmission = 1
-	streaks.Color = ColorSequence.new(Color3.fromRGB(255, 190, 120), Color3.fromRGB(160, 80, 255))
-	streaks.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.2, 0.2), NumberSequenceKeypoint.new(1, 0.6)})
+	streaks.Color = ColorSequence.new(Color3.fromRGB(255, 200, 140), Color3.fromRGB(160, 90, 255))
+	streaks.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.2, 0.3), NumberSequenceKeypoint.new(1, 0.7)})
 	streaks.Orientation = Enum.ParticleOrientation.VelocityParallel
 	pcall(function()
 		streaks.Shape = Enum.ParticleEmitterShape.Sphere
@@ -18356,20 +18480,29 @@ addcmd('end',{'theend','blackholeleave'},function(args, speaker)
 	end)
 	streaks.Parent = shell
 
-	-- screen mood
+	-- screen mood: the world slowly dims while the hole grows
 	local cc = Instance.new("ColorCorrectionEffect")
 	cc.Name = randomString()
 	cc.Parent = Lighting
 	local bloom = Instance.new("BloomEffect")
 	bloom.Name = randomString()
-	bloom.Intensity = 0.4
-	bloom.Size = 30
-	bloom.Threshold = 0.8
+	bloom.Intensity = 0.6
+	bloom.Size = 36
+	bloom.Threshold = 0.75
 	bloom.Parent = Lighting
 	local blur = Instance.new("BlurEffect")
 	blur.Name = randomString()
 	blur.Size = 0
 	blur.Parent = Lighting
+	pcall(function()
+		WackyState.lightClaim("theend", {"Brightness", "ExposureCompensation", "Ambient", "OutdoorAmbient"})
+		TweenService:Create(Lighting, TweenInfo.new(25, Enum.EasingStyle.Sine), {
+			Brightness = WackyState.light.orig.Brightness * 0.35,
+			ExposureCompensation = WackyState.light.orig.ExposureCompensation - 0.6,
+			Ambient = Color3.fromRGB(45, 30, 70),
+			OutdoorAmbient = Color3.fromRGB(55, 40, 80),
+		}):Play()
+	end)
 
 	local function loop(id, volume)
 		local s = WackyState.sound(id, nil, 0, true)
@@ -18417,6 +18550,7 @@ addcmd('end',{'theend','blackholeleave'},function(args, speaker)
 	local clone, cloneStart, cloneFrom
 	local hidden = {}
 	local lastHide, diskRadius = 0, nil
+	local spin = 0
 
 	local function hideCharacter(model)
 		for _, d in ipairs(model:GetDescendants()) do
@@ -18441,7 +18575,7 @@ addcmd('end',{'theend','blackholeleave'},function(args, speaker)
 			return
 		end
 		table.insert(active, {
-			part = part, offset = part.Position - center, rot = part.CFrame - part.Position, size = part.Size,
+			part = part, offset = part.Position - center, rot = part.CFrame - part.Position, size = part.Size, color = part.Color,
 			big = part.Size.Magnitude > 250 or part:IsA("MeshPart") or part:IsA("UnionOperation"), trans = part.Transparency, start = now,
 			dur = math.clamp(entry.dist / 160, 1.3, 3.4),
 		})
@@ -18476,31 +18610,72 @@ addcmd('end',{'theend','blackholeleave'},function(args, speaker)
 			radius = math.min(radius + dt * 12, 120)
 		end
 		core.Size = Vector3.new(1, 1, 1) * radius * 2
-		horizon.Size = core.Size * 1.12
-		glow.Size = core.Size * 1.6
-		core.Position, horizon.Position, glow.Position, shell.Position = center, center, center, center
+		core.Position, shell.Position = center, center
+		lens.Size = UDim2.new(radius * LENS, 0, radius * LENS, 0)
+		photonGradient.Rotation = (t * 25) % 360
+		for i, g in ipairs(glowGradients) do
+			g.Rotation = (t * 25 + i * 8) % 360
+		end
 		shell.Size = Vector3.new(1, 1, 1) * radius * 8
 		streaks.Speed = NumberRange.new(radius * 2.2, radius * 3)
 		streaks.Lifetime = NumberRange.new(1.2, 1.5)
-		streaks.Size = NumberSequence.new(math.max(0.3, radius * 0.06), 0)
-		streaks.Rate = 60 + radius * 4
-		local resizeDisk = math.abs(radius - (diskRadius or -1)) > 0.5
-		if resizeDisk then
+		streaks.Size = NumberSequence.new(math.max(0.3, radius * 0.05), 0)
+		streaks.Rate = 60 + radius * 3
+
+		-- the disk turns; everything is re-scaled only when the hole has grown a bit
+		spin = spin + dt * 0.8
+		spinner.CFrame = CFrame.new(center) * tilt * CFrame.Angles(0, spin, 0)
+		sheet.CFrame = CFrame.new(center) * tilt * CFrame.Angles(0, 0, math.pi / 2)
+		jetPart.CFrame = CFrame.new(center) * tilt
+		local resize = math.abs(radius - (diskRadius or -100)) > math.max(0.5, radius * 0.03)
+		if resize then
 			diskRadius = radius
-		end
-		for _, d in ipairs(disk) do
-			d.a = d.a + dt * 2.4 / (d.r ^ 1.5) * d.s
-			local r = radius * d.r
-			if resizeDisk then
-				d.part.Size = Vector3.new(1, 1, 1) * math.max(0.4, radius * 0.07 * d.s)
+			for _, c in ipairs(clouds) do
+				c.att.Position = Vector3.new(math.cos(c.a) * c.r * radius, 0, math.sin(c.a) * c.r * radius)
+				local s = math.min(100, c.size * radius)
+				c.emitter.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, s * 0.6), NumberSequenceKeypoint.new(1, s)})
 			end
-			d.part.CFrame = CFrame.new(center + tilt:VectorToWorldSpace(Vector3.new(math.cos(d.a) * r, d.h * r, math.sin(d.a) * r)))
+			sheet.Size = Vector3.new(0.05, radius * 7, radius * 7)
+			local width = math.max(0.25, radius * 0.045)
+			for _, s in ipairs(streams) do
+				s.a0.Position = Vector3.new(0, width / 2, 0)
+				s.a1.Position = Vector3.new(0, -width / 2, 0)
+			end
+			for _, j in ipairs(jets) do
+				j.a0.Position = Vector3.new(0, j.dir * radius * 0.9, 0)
+				j.a1.Position = Vector3.new(0, j.dir * radius * 9, 0)
+				j.beam.Width0 = radius * 0.3
+				j.beam.Width1 = radius * 1.5
+				j.beam.TextureLength = radius * 3
+			end
 		end
+		if t > 9 and not jets[1].beam.Enabled then
+			for _, j in ipairs(jets) do
+				j.beam.Enabled = true
+			end
+		end
+
+		-- matter spirals in, faster near the hole; when a stream is eaten it starts again further out
+		for _, s in ipairs(streams) do
+			s.a = s.a + dt * 2.4 / (s.r ^ 1.5)
+			s.r = s.r - dt * s.fall * (1.6 / s.r)
+			local reset = s.r < 1.02
+			if reset then
+				s.r = 3.2 + math.random() * 0.6
+				s.a = math.random() * math.pi * 2
+			end
+			local r = s.r * radius
+			s.part.CFrame = CFrame.new(center + tilt:VectorToWorldSpace(Vector3.new(math.cos(s.a) * r, s.h * r, math.sin(s.a) * r)))
+			if reset then
+				pcall(function() s.trail:Clear() end)
+			end
+		end
+
 		local mood = math.clamp(radius / 90, 0, 1)
-		cc.TintColor = Color3.new(1, 1, 1):Lerp(Color3.fromRGB(190, 160, 255), mood)
-		cc.Saturation = -0.4 * mood
-		cc.Contrast = 0.35 * mood
-		bloom.Intensity = 0.4 + mood * 1.4
+		cc.TintColor = Color3.new(1, 1, 1):Lerp(Color3.fromRGB(200, 170, 255), mood)
+		cc.Saturation = -0.3 * mood
+		cc.Contrast = 0.3 * mood
+		bloom.Intensity = 0.6 + mood * 1.2
 		shake = 0.2 + mood * 2.2
 
 		-- swallow the map, nearest first, faster and faster
@@ -18542,9 +18717,9 @@ addcmd('end',{'theend','blackholeleave'},function(args, speaker)
 				phase = "player"
 				-- now the real me gets pulled in
 				clone = char
-				for _, d in ipairs(char:GetDescendants()) do
-					if d:IsA("BasePart") then
-						pcall(function() d.CanCollide = false end)
+				for _, part in ipairs(char:GetDescendants()) do
+					if part:IsA("BasePart") then
+						pcall(function() part.CanCollide = false end)
 					end
 				end
 				cloneStart = now
@@ -18568,7 +18743,8 @@ addcmd('end',{'theend','blackholeleave'},function(args, speaker)
 			end
 		end
 
-		-- everything captured spirals into the hole
+		-- everything captured spirals in, heating up until it glows
+		local hotColor = Color3.fromRGB(255, 175, 95)
 		for i = #active, 1, -1 do
 			local a = active[i]
 			local p = (now - a.start) / a.dur
@@ -18577,11 +18753,18 @@ addcmd('end',{'theend','blackholeleave'},function(args, speaker)
 				table.remove(active, i)
 			else
 				local e = p * p
-				local spin = e * math.pi * 3 * (1 + 80 / (a.offset.Magnitude + 1))
-				local rotated = CFrame.fromAxisAngle(diskUp, spin):VectorToWorldSpace(a.offset)
+				local swirl = e * math.pi * 3 * (1 + 80 / (a.offset.Magnitude + 1))
+				local rotated = CFrame.fromAxisAngle(diskUp, swirl):VectorToWorldSpace(a.offset)
 				rotated = rotated - diskUp * rotated:Dot(diskUp) * e
 				pcall(function()
 					a.part.CFrame = CFrame.new(center + rotated * (1 - e)) * a.rot * CFrame.Angles(e * 5, e * 3, e * 2)
+					if p > 0.45 then
+						a.part.Color = a.color:Lerp(hotColor, math.clamp((p - 0.45) / 0.4, 0, 1))
+						if p > 0.7 and not a.glowing then
+							a.glowing = true
+							a.part.Material = Enum.Material.Neon
+						end
+					end
 					if a.big then
 						a.part.Transparency = math.max(a.trans, e)
 					elseif p > 0.5 then
@@ -18608,8 +18791,8 @@ addcmd('end',{'theend','blackholeleave'},function(args, speaker)
 				local p = math.clamp((now - cloneStart) / 4, 0, 1)
 				local e = p * p
 				local offset = cloneFrom.Position - center
-				local spin = e * math.pi * 4
-				local rotated = CFrame.fromAxisAngle(diskUp, spin):VectorToWorldSpace(offset) * (1 - e)
+				local swirl = e * math.pi * 4
+				local rotated = CFrame.fromAxisAngle(diskUp, swirl):VectorToWorldSpace(offset) * (1 - e)
 				pcall(function()
 					clone:PivotTo(CFrame.new(center + rotated) * (cloneFrom - cloneFrom.Position) * CFrame.Angles(e * 8, e * 5, e * 3))
 					if math.floor(now * 30) % 2 == 0 then
@@ -18625,7 +18808,7 @@ addcmd('end',{'theend','blackholeleave'},function(args, speaker)
 			end
 		end
 
-		-- the hole collapses into a flash, then black
+		-- the hole collapses with a shockwave, a flash, then black
 		if phase == "collapse" and not finished then
 			finished = true
 			WackyState.sound(WackyState.endSounds.implode, nil, 1)
@@ -18638,6 +18821,23 @@ addcmd('end',{'theend','blackholeleave'},function(args, speaker)
 				white.Size = UDim2.new(1, 0, 1, 0)
 				white.ZIndex = 50
 				white.Parent = screen
+				-- shockwave ring racing outwards
+				local wavePart = WackyState.endPart(workspace)
+				wavePart.Position = center
+				local wave = Instance.new("BillboardGui")
+				wave.Adornee = wavePart
+				wave.AlwaysOnTop = true
+				wave.LightInfluence = 0
+				wave.Size = UDim2.new(radius * 2, 0, radius * 2, 0)
+				wave.Parent = wavePart
+				local ring = WackyState.endCircle(wave, 1, Color3.new(1, 1, 1), 1, 1)
+				local ringStroke = Instance.new("UIStroke")
+				ringStroke.Color = Color3.fromRGB(230, 210, 255)
+				ringStroke.Thickness = 10
+				ringStroke.Parent = ring
+				TweenService:Create(wave, TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1400, 0, 1400, 0)}):Play()
+				TweenService:Create(ringStroke, TweenInfo.new(1), {Transparency = 1, Thickness = 2}):Play()
+				Services.Debris:AddItem(wavePart, 1.2)
 				local shrinkStart, from = tick(), radius
 				while tick() - shrinkStart < 0.8 do
 					radius = from * (1 - (tick() - shrinkStart) / 0.8) ^ 2 + 0.05
@@ -18645,9 +18845,6 @@ addcmd('end',{'theend','blackholeleave'},function(args, speaker)
 				end
 				WackyState.sound(WackyState.endSounds.boom, nil, 1)
 				white.BackgroundTransparency = 0
-				for _, d in ipairs(disk) do
-					pcall(function() d.part:Destroy() end)
-				end
 				pcall(function() folder:Destroy() end)
 				phase = "done"
 				task.wait(0.15)
@@ -18707,6 +18904,7 @@ addcmd('end',{'theend','blackholeleave'},function(args, speaker)
 				for _, obj in ipairs({black, title, sub, white, cc, bloom, blur, rumble, drone}) do
 					pcall(function() obj:Destroy() end)
 				end
+				pcall(function() WackyState.lightRelease("theend", 2) end)
 				pcall(function() camera.FieldOfView = baseFov end)
 				pcall(function()
 					if PARENT and PARENT:IsA("ScreenGui") then
