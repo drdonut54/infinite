@@ -1,4 +1,4 @@
--- NeverYield v1.20.0 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.21.0 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.20.0" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.21.0" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -5306,7 +5306,7 @@ CMDs[#CMDs + 1] = {NAME = 'fuckoff / unloadny', DESC = 'Completely unloads Never
 CMDs[#CMDs + 1] = {NAME = 'END / theend', DESC = 'A black hole (only you see it) swallows the map and you, then takes you to a new server'}
 CMDs[#CMDs + 1] = {NAME = 'portal / agartha', DESC = 'Opens a sparking see-through gateway to Agartha, a peaceful floating island with a cottage and yard. Walk through it (only you see it)'}
 CMDs[#CMDs + 1] = {NAME = 'unportal', DESC = 'Closes the Agartha portal (brings you back if you are inside)'}
-CMDs[#CMDs + 1] = {NAME = 'clown / circus', DESC = 'Clowns keep appearing and chase you, more and faster over time. If one catches you, you die and get server hopped (only you see them)'}
+CMDs[#CMDs + 1] = {NAME = 'clown / circus', DESC = 'Clown characters chase you with pathfinding, faster over time. You get the Clown Buster gun (one shot each). Caught = you die and get server hopped. Kills and time go to stats'}
 CMDs[#CMDs + 1] = {NAME = 'unclown', DESC = 'Sends the clowns away (before they catch you)'}
 CMDs[#CMDs + 1] = {NAME = 'moon / moonfall', DESC = 'An angry-faced moon falls on the map while a masked imp giggles at you; countdown, quakes, impact, then shop to a new server (only you see it)'}
 CMDs[#CMDs + 1] = {NAME = 'unweather / clearskies', DESC = 'Clears the weather'}
@@ -5455,7 +5455,7 @@ CMDs[#CMDs + 1] = {NAME = 'unpet', DESC = 'Sends all following pets back to the 
 CMDs[#CMDs + 1] = {NAME = 'feedpets / feedall', DESC = 'Feeds your following pets with the cheapest food you have'}
 CMDs[#CMDs + 1] = {NAME = 'petcoins', DESC = 'Shows your pet coins (pets find coins, walking with pets, daily reward, Diamond Rush)'}
 CMDs[#CMDs + 1] = {NAME = '--- STATS TRACKER ---', DESC = ''}
-CMDs[#CMDs + 1] = {NAME = 'stats / mystats [tab]', DESC = '(Also a button in Settings) Your lifetime stats across every game: kills, deaths, K/D, streaks, playtime, games, chat, people, commands. Tabs: overview, combat, games, chat, people, commands'}
+CMDs[#CMDs + 1] = {NAME = 'stats / mystats [tab]', DESC = '(Also a button in Settings) Your lifetime stats across every game. Tabs: overview, combat, minigames, pets, games, chat, people, commands'}
 CMDs[#CMDs + 1] = {NAME = 'killcount / kd', DESC = 'Quick kills and deaths for this server and all time'}
 CMDs[#CMDs + 1] = {NAME = 'mychats / chatsearch [text]', DESC = 'Opens your saved chat history (add text to search it)'}
 CMDs[#CMDs + 1] = {NAME = 'chatlogging [on/off]', DESC = 'Also save other players\' messages (on by default)'}
@@ -21796,34 +21796,71 @@ table.insert(WackyState.undoList, 'unportal')
 -- ================== END AGARTHA PORTAL ==================
 
 -- ==================== CLOWNS ====================
--- "clown": clowns keep appearing around you and chase you, more and faster over time. When one
--- catches you, you die and get server hopped. Only on your screen.
+-- "clown": real R6 clown characters keep appearing and chase you with pathfinding, faster over time.
+-- You get the Clown Buster (one shot per clown). If one catches you: you die and get server hopped.
+-- Kills and survival time are saved in your stats. Only on your screen.
 NeverYieldClowns = {
 	music = {81890241259637, 122263324184602, 125773734041692}, -- DistroKid official Roblox music
 	honks = {9116942696, 9114824238},
 	laughs = {9114011965, 9114011832, 9113787508},
+	shots = {9114725473, 9113051048, 9113052411},
+	walkAnim = "rbxassetid://180426354", -- Roblox's default R6 walk
 	suits = {{255, 60, 80}, {60, 140, 255}, {255, 200, 40}, {150, 70, 220}, {40, 200, 120}},
 	hair = {{255, 120, 30}, {60, 220, 90}, {255, 60, 160}, {80, 160, 255}},
 }
 
-NeverYieldClowns.make = function()
+NeverYieldClowns.rgb = function(t)
+	return Color3.fromRGB(t[1], t[2], t[3])
+end
+
+-- a real R6 character (HumanoidRootPart, Torso, Head, arms, legs, Motor6Ds, Humanoid) dressed as a clown
+NeverYieldClowns.make = function(cf)
 	local C = NeverYieldClowns
+	local suit = C.rgb(C.suits[math.random(1, #C.suits)])
+	local suit2 = C.rgb(C.suits[math.random(1, #C.suits)])
+	local hair = C.rgb(C.hair[math.random(1, #C.hair)])
+	local white, red, black = Color3.fromRGB(250, 248, 245), Color3.fromRGB(230, 30, 40), Color3.fromRGB(15, 12, 15)
 	local model = Instance.new("Model")
 	model.Name = randomString()
-	local root = Instance.new("Part")
-	root.Name = randomString()
-	root.Size = Vector3.new(1, 1, 1)
-	root.Transparency = 1
-	root.Anchored = true
-	root.CanCollide, root.CanQuery, root.CanTouch = false, false, false
-	root:SetAttribute("NYFx", true)
-	root.Parent = model
-	model.PrimaryPart = root
-	local suit = Color3.fromRGB(unpack(C.suits[math.random(1, #C.suits)]))
-	local suit2 = Color3.fromRGB(unpack(C.suits[math.random(1, #C.suits)]))
-	local hair = Color3.fromRGB(unpack(C.hair[math.random(1, #C.hair)]))
-	local white, red, black = Color3.fromRGB(250, 248, 245), Color3.fromRGB(230, 30, 40), Color3.fromRGB(15, 12, 15)
-	local function add(shape, size, pos, color, rot, material)
+	local function limb(name, size, color, offset, collide)
+		local p = Instance.new("Part")
+		p.Name = name
+		p.Size = size
+		p.Color = color
+		p.Material = Enum.Material.SmoothPlastic
+		p.TopSurface, p.BottomSurface = Enum.SurfaceType.Smooth, Enum.SurfaceType.Smooth
+		p.CanCollide = collide or false
+		p.CFrame = cf * offset
+		p:SetAttribute("NYFx", true)
+		p.Parent = model
+		return p
+	end
+	local hrp = limb("HumanoidRootPart", Vector3.new(2, 2, 1), white, CFrame.new(), false)
+	hrp.Transparency = 1
+	local torso = limb("Torso", Vector3.new(2, 2, 1), suit, CFrame.new(), true)
+	local head = limb("Head", Vector3.new(2, 1, 1), white, CFrame.new(0, 1.5, 0), true)
+	local headMesh = Instance.new("SpecialMesh")
+	headMesh.MeshType = Enum.MeshType.Head
+	headMesh.Scale = Vector3.new(1.25, 1.25, 1.25)
+	headMesh.Parent = head
+	local ra = limb("Right Arm", Vector3.new(1, 2, 1), suit, CFrame.new(1.5, 0, 0))
+	local la = limb("Left Arm", Vector3.new(1, 2, 1), suit, CFrame.new(-1.5, 0, 0))
+	local rl = limb("Right Leg", Vector3.new(1, 2, 1), suit2, CFrame.new(0.5, -2, 0))
+	local ll = limb("Left Leg", Vector3.new(1, 2, 1), suit2, CFrame.new(-0.5, -2, 0))
+	local function motor(name, p0, p1, c0, c1)
+		local m = Instance.new("Motor6D")
+		m.Name = name
+		m.Part0, m.Part1, m.C0, m.C1 = p0, p1, c0, c1
+		m.Parent = p0
+	end
+	motor("RootJoint", hrp, torso, CFrame.new(0, 0, 0, -1, 0, 0, 0, 0, 1, 0, 1, 0), CFrame.new(0, 0, 0, -1, 0, 0, 0, 0, 1, 0, 1, 0))
+	motor("Neck", torso, head, CFrame.new(0, 1, 0, -1, 0, 0, 0, 0, 1, 0, 1, 0), CFrame.new(0, -0.5, 0, -1, 0, 0, 0, 0, 1, 0, 1, 0))
+	motor("Right Shoulder", torso, ra, CFrame.new(1, 0.5, 0, 0, 0, 1, 0, 1, 0, -1, 0, 0), CFrame.new(-0.5, 0.5, 0, 0, 0, 1, 0, 1, 0, -1, 0, 0))
+	motor("Left Shoulder", torso, la, CFrame.new(-1, 0.5, 0, 0, 0, -1, 0, 1, 0, 1, 0, 0), CFrame.new(0.5, 0.5, 0, 0, 0, -1, 0, 1, 0, 1, 0, 0))
+	motor("Right Hip", torso, rl, CFrame.new(1, -1, 0, 0, 0, 1, 0, 1, 0, -1, 0, 0), CFrame.new(0.5, 1, 0, 0, 0, 1, 0, 1, 0, -1, 0, 0))
+	motor("Left Hip", torso, ll, CFrame.new(-1, -1, 0, 0, 0, -1, 0, 1, 0, 1, 0, 0), CFrame.new(-0.5, 1, 0, 0, 0, -1, 0, 1, 0, 1, 0, 0))
+	-- costume pieces welded onto the body parts
+	local function deco(parent, shape, size, offset, color, material)
 		local p
 		if shape == "Wedge" then
 			p = Instance.new("WedgePart")
@@ -21835,71 +21872,78 @@ NeverYieldClowns.make = function()
 		p.Size = size
 		p.Color = color
 		p.Material = material or Enum.Material.SmoothPlastic
-		p.CanCollide, p.CanQuery, p.CanTouch, p.Massless, p.CastShadow = false, false, false, true, false
 		p.TopSurface, p.BottomSurface = Enum.SurfaceType.Smooth, Enum.SurfaceType.Smooth
+		p.CanCollide, p.CanQuery, p.CanTouch, p.Massless, p.CastShadow = false, true, false, true, false
 		p:SetAttribute("NYFx", true)
 		if shape == "Ellipsoid" then
 			local mesh = Instance.new("SpecialMesh")
 			mesh.MeshType = Enum.MeshType.Sphere
 			mesh.Parent = p
 		end
-		local cf = CFrame.new(pos)
-		if rot then cf = cf * CFrame.Angles(math.rad(rot[1]), math.rad(rot[2]), math.rad(rot[3])) end
-		p.CFrame = root.CFrame * cf
+		p.CFrame = parent.CFrame * offset
 		local weld = Instance.new("WeldConstraint")
-		weld.Part0, weld.Part1 = root, p
+		weld.Part0, weld.Part1 = parent, p
 		weld.Parent = p
 		p.Parent = model
 		return p
 	end
-	-- giant shoes and legs
+	deco(head, "Ball", Vector3.new(0.45, 0.45, 0.45), CFrame.new(0, -0.05, -0.68), red, Enum.Material.Neon)
 	for _, side in ipairs({-1, 1}) do
-		add("Ellipsoid", Vector3.new(1.1, 0.7, 2.2), Vector3.new(0.6 * side, 0.35, -0.4), red)
-		add("Block", Vector3.new(0.55, 1.8, 0.55), Vector3.new(0.55 * side, 1.5, 0), suit2)
+		deco(head, "Block", Vector3.new(0.32, 0.5, 0.05), CFrame.new(0.3 * side, 0.2, -0.6) * CFrame.Angles(0, 0, math.rad(45)), Color3.fromRGB(60, 120, 255))
+		deco(head, "Ellipsoid", Vector3.new(0.2, 0.28, 0.1), CFrame.new(0.3 * side, 0.2, -0.64), black)
+		deco(head, "Ball", Vector3.new(0.08, 0.08, 0.08), CFrame.new(0.32 * side, 0.26, -0.69), white, Enum.Material.Neon)
+		for i = 0, 2 do
+			deco(head, "Ball", Vector3.new(0.75, 0.75, 0.75), CFrame.new((0.85 + i * 0.12) * side, 0.25 - i * 0.28, 0.1 + i * 0.12), hair, Enum.Material.Fabric)
+		end
+		deco(side == 1 and ra or la, "Ball", Vector3.new(0.85, 0.85, 0.85), CFrame.new(0, -1.1, 0), white)
+		deco(side == 1 and rl or ll, "Ellipsoid", Vector3.new(1.05, 0.6, 2.0), CFrame.new(0, -0.85, -0.45), red)
 	end
-	-- baggy polka-dot suit with pompom buttons
-	add("Ellipsoid", Vector3.new(2.3, 2.6, 1.8), Vector3.new(0, 3.3, 0), suit, nil, Enum.Material.Fabric)
-	for i = 1, 8 do
-		local a = math.random() * math.pi * 1.4 - math.pi * 0.7
-		local y = 2.5 + math.random() * 1.8
-		add("Ball", Vector3.new(0.32, 0.32, 0.32), Vector3.new(math.sin(a) * 1.05, y, -math.cos(a) * 0.82), white)
-	end
-	for i = 0, 2 do
-		add("Ball", Vector3.new(0.4, 0.4, 0.4), Vector3.new(0, 2.9 + i * 0.5, -0.92), hair)
-	end
-	-- arms reaching forward with white gloves
-	for _, side in ipairs({-1, 1}) do
-		add("Ellipsoid", Vector3.new(0.6, 0.6, 2.2), Vector3.new(1.25 * side, 3.9, -0.9), suit, {10, 10 * side, 0}, Enum.Material.Fabric)
-		add("Ball", Vector3.new(0.75, 0.75, 0.75), Vector3.new(1.35 * side, 3.75, -2.0), white)
-	end
-	-- ruffled collar
+	deco(head, "Ellipsoid", Vector3.new(1.0, 0.32, 0.12), CFrame.new(0, -0.32, -0.6), red)
+	deco(head, "Ellipsoid", Vector3.new(0.8, 0.15, 0.08), CFrame.new(0, -0.34, -0.65), black)
+	deco(head, "Ellipsoid", Vector3.new(0.95, 0.1, 0.95), CFrame.new(0, 0.75, 0.05), black)
+	deco(head, "Block", Vector3.new(0.5, 0.5, 0.5), CFrame.new(0, 1.05, 0.05), black)
+	deco(head, "Ball", Vector3.new(0.26, 0.26, 0.26), CFrame.new(0, 1.4, 0.05), red)
 	for i = 1, 12 do
 		local a = i / 12 * math.pi * 2
-		add("Ball", Vector3.new(0.55, 0.55, 0.55), Vector3.new(math.cos(a) * 0.85, 4.65, math.sin(a) * 0.7), (i % 2 == 0) and white or suit2)
+		deco(torso, "Ball", Vector3.new(0.5, 0.5, 0.5), CFrame.new(math.cos(a) * 0.9, 1.0, math.sin(a) * 0.55), (i % 2 == 0) and white or suit2)
 	end
-	-- head: white face, red nose, painted eyes, huge grin
-	add("Ball", Vector3.new(1.9, 1.9, 1.9), Vector3.new(0, 5.6, 0), white)
-	add("Ball", Vector3.new(0.55, 0.55, 0.55), Vector3.new(0, 5.55, -0.98), red, nil, Enum.Material.Neon)
-	for _, side in ipairs({-1, 1}) do
-		add("Block", Vector3.new(0.45, 0.7, 0.06), Vector3.new(0.42 * side, 5.95, -0.83), Color3.fromRGB(60, 120, 255), {0, 0, 45})
-		add("Ellipsoid", Vector3.new(0.3, 0.38, 0.12), Vector3.new(0.42 * side, 5.95, -0.88), black)
-		add("Ball", Vector3.new(0.1, 0.1, 0.1), Vector3.new(0.45 * side, 6.02, -0.94), Color3.new(1, 1, 1), nil, Enum.Material.Neon)
+	for i = 0, 2 do
+		deco(torso, "Ball", Vector3.new(0.34, 0.34, 0.34), CFrame.new(0, 0.55 - i * 0.55, -0.52), hair)
 	end
-	add("Ellipsoid", Vector3.new(1.3, 0.45, 0.2), Vector3.new(0, 5.05, -0.8), red, {0, 0, 0})
-	add("Ellipsoid", Vector3.new(1.05, 0.22, 0.12), Vector3.new(0, 5.02, -0.88), black)
-	for i = -2, 2 do
-		add("Block", Vector3.new(0.14, 0.12, 0.06), Vector3.new(i * 0.17, 5.1, -0.92), white)
+	for _ = 1, 6 do
+		deco(torso, "Ball", Vector3.new(0.22, 0.22, 0.22), CFrame.new(math.random(-80, 80) / 100, math.random(-70, 70) / 100, -0.5), white)
 	end
-	-- rainbow afro and a tiny hat
-	for _, side in ipairs({-1, 1}) do
-		for i = 0, 2 do
-			add("Ball", Vector3.new(0.9, 0.9, 0.9), Vector3.new((1.0 + i * 0.15) * side, 5.9 - i * 0.35, 0.1 + i * 0.15), hair, nil, Enum.Material.Fabric)
-		end
-	end
-	add("Ellipsoid", Vector3.new(1.1, 0.12, 1.1), Vector3.new(0, 6.55, 0.05), black)
-	add("Block", Vector3.new(0.6, 0.6, 0.6), Vector3.new(0, 6.9, 0.05), black)
-	add("Ball", Vector3.new(0.3, 0.3, 0.3), Vector3.new(0, 7.3, 0.05), red)
-	return model, root
+	local hum = Instance.new("Humanoid")
+	hum.RigType = Enum.HumanoidRigType.R6
+	hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+	hum.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
+	hum.WalkSpeed = 20
+	hum.JumpPower = 50
+	hum.Parent = model
+	local animator = Instance.new("Animator")
+	animator.Parent = hum
+	model.PrimaryPart = hrp
+	return model, hrp, hum, animator
+end
+
+NeverYieldClowns.saveStats = function(s, died)
+	pcall(function()
+		local data = NeverYieldStats.data
+		data.minigames = type(data.minigames) == "table" and data.minigames or {}
+		local mg = data.minigames
+		local survived = tick() - s.start
+		mg.clownRounds = (mg.clownRounds or 0) + 1
+		mg.clownKills = (mg.clownKills or 0) + s.kills
+		mg.clownTotalTime = (mg.clownTotalTime or 0) + survived
+		if s.kills > (mg.clownBestKills or 0) then mg.clownBestKills = s.kills end
+		if survived > (mg.clownBestTime or 0) then mg.clownBestTime = survived end
+		NeverYieldStats.dirty = true
+		NeverYieldStats.save()
+	end)
+end
+
+NeverYieldClowns.removeGun = function(s)
+	pcall(function() s.tool:Destroy() end)
 end
 
 NeverYieldClowns.stop = function()
@@ -21910,16 +21954,130 @@ NeverYieldClowns.stop = function()
 	for _, c in ipairs(s.clowns) do
 		pcall(function() c.model:Destroy() end)
 	end
+	NeverYieldClowns.removeGun(s)
 	pcall(function()
 		TweenService:Create(s.music, TweenInfo.new(1.5), {Volume = 0}):Play()
 		Services.Debris:AddItem(s.music, 1.6)
 	end)
 	pcall(function() s.cc:Destroy() end)
+	pcall(function() s.hud:Destroy() end)
+end
+
+-- a clown dies: it falls apart with a honk and a burst of confetti
+NeverYieldClowns.kill = function(s, c)
+	if c.dead then return end
+	c.dead = true
+	s.kills = s.kills + 1
+	pcall(function()
+		WackyState.sound(WackyState.pick(NeverYieldClowns.honks), c.hrp, 0.8, false, 1.3 + math.random() * 0.3)
+		WackyState.burst(c.hrp, Color3.fromRGB(255, 80, 120), Color3.fromRGB(80, 200, 255), 30, 18)
+		for _, j in ipairs(c.model:GetDescendants()) do
+			if j:IsA("JointInstance") or j:IsA("WeldConstraint") then j:Destroy() end
+		end
+		c.hum.Health = 0
+		for _, p in ipairs(c.model:GetDescendants()) do
+			if p:IsA("BasePart") then
+				p.CanCollide = true
+				p.AssemblyLinearVelocity = Vector3.new(math.random(-20, 20), math.random(15, 35), math.random(-20, 20))
+			end
+		end
+	end)
+	Services.Debris:AddItem(c.model, 3)
+end
+
+NeverYieldClowns.giveGun = function(speaker, s)
+	local C = NeverYieldClowns
+	local tool = Instance.new("Tool")
+	tool.Name = "Clown Buster"
+	tool.ToolTip = "Click to shoot clowns (one shot each)"
+	tool.CanBeDropped = false
+	tool.RequiresHandle = true
+	local handle = Instance.new("Part")
+	handle.Name = "Handle"
+	handle.Size = Vector3.new(0.35, 0.55, 1.5)
+	handle.Color = Color3.fromRGB(40, 40, 48)
+	handle.Material = Enum.Material.Metal
+	handle.CanCollide = false
+	handle:SetAttribute("NYFx", true)
+	handle.Parent = tool
+	local function piece(size, offset, color, material, shape)
+		local p = Instance.new("Part")
+		if shape == "Cylinder" then p.Shape = Enum.PartType.Cylinder end
+		p.Name = randomString()
+		p.Size = size
+		p.Color = color
+		p.Material = material or Enum.Material.Metal
+		p.CanCollide, p.CanQuery, p.CanTouch, p.Massless = false, false, false, true
+		p:SetAttribute("NYFx", true)
+		p.CFrame = handle.CFrame * offset
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0, weld.Part1 = handle, p
+		weld.Parent = p
+		p.Parent = tool
+		return p
+	end
+	-- barrel points along the handle's -Z (forward when held)
+	piece(Vector3.new(1.0, 0.28, 0.28), CFrame.new(0, 0.08, -1.1) * CFrame.Angles(0, math.rad(90), 0), Color3.fromRGB(70, 70, 80), Enum.Material.Metal, "Cylinder")
+	piece(Vector3.new(0.3, 0.9, 0.42), CFrame.new(0, -0.6, 0.45) * CFrame.Angles(math.rad(-15), 0, 0), Color3.fromRGB(120, 70, 40), Enum.Material.Wood)
+	piece(Vector3.new(0.37, 0.08, 1.3), CFrame.new(0, 0.1, -0.05), Color3.fromRGB(255, 60, 160), Enum.Material.Neon)
+	piece(Vector3.new(0.12, 0.18, 0.12), CFrame.new(0, 0.36, -0.6), Color3.fromRGB(30, 30, 35))
+	local muzzle = Instance.new("Attachment")
+	muzzle.Position = Vector3.new(0, 0.08, -1.65)
+	muzzle.Parent = handle
+	local mouse = Players.LocalPlayer:GetMouse()
+	local last = 0
+	tool.Activated:Connect(function()
+		if s.caught or tick() - last < 0.12 then return end
+		last = tick()
+		local char = speaker.Character
+		local origin = muzzle.WorldPosition
+		local aim = mouse.Hit and mouse.Hit.Position or (origin + workspace.CurrentCamera.CFrame.LookVector * 100)
+		local params = RaycastParams.new()
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		params.FilterDescendantsInstances = {char, tool}
+		local camPos = workspace.CurrentCamera.CFrame.Position
+		local hit = workspace:Raycast(camPos, (aim - camPos).Unit * 600, params)
+		local finish = hit and hit.Position or (camPos + (aim - camPos).Unit * 600)
+		WackyState.sound(WackyState.pick(C.shots), handle, 0.7, false, 0.9 + math.random() * 0.2)
+		-- tracer and muzzle flash
+		local tracer = Instance.new("Part")
+		tracer.Anchored, tracer.CanCollide, tracer.CanQuery, tracer.CanTouch = true, false, false, false
+		tracer.Material = Enum.Material.Neon
+		tracer.Color = Color3.fromRGB(255, 230, 120)
+		local length = (finish - origin).Magnitude
+		tracer.Size = Vector3.new(0.12, 0.12, length)
+		tracer.CFrame = CFrame.lookAt((origin + finish) / 2, finish)
+		tracer.Parent = workspace
+		TweenService:Create(tracer, TweenInfo.new(0.1), {Transparency = 1}):Play()
+		Services.Debris:AddItem(tracer, 0.12)
+		local flash = Instance.new("PointLight")
+		flash.Color = Color3.fromRGB(255, 200, 100)
+		flash.Range = 10
+		flash.Brightness = 3
+		flash.Parent = handle
+		Services.Debris:AddItem(flash, 0.06)
+		if hit then
+			for _, c in ipairs(s.clowns) do
+				if not c.dead and hit.Instance:IsDescendantOf(c.model) then
+					C.kill(s, c)
+					break
+				end
+			end
+		end
+	end)
+	tool.Parent = Players.LocalPlayer:FindFirstChildOfClass("Backpack")
+	s.tool = tool
+	-- equip it right away
+	pcall(function()
+		local hum = speaker.Character and speaker.Character:FindFirstChildOfClass("Humanoid")
+		if hum then hum:EquipTool(tool) end
+	end)
 end
 
 NeverYieldClowns.caught = function(speaker, s)
 	local C = NeverYieldClowns
 	s.caught = true
+	C.saveStats(s, true)
 	for _, id in ipairs(C.honks) do
 		WackyState.sound(id, nil, 1, false, 0.8 + math.random() * 0.3)
 	end
@@ -21955,10 +22113,11 @@ NeverYieldClowns.caught = function(speaker, s)
 		if hum then hum.Health = 0 end
 	end)
 	task.wait(2)
-	honk.Text = "the circus never ends..."
-	honk.Size = UDim2.new(0.7, 0, 0.1, 0)
+	local survived = math.floor(tick() - s.start)
+	honk.Text = string.format("you shot %d clowns and lasted %d:%02d... the circus never ends", s.kills, math.floor(survived / 60), survived % 60)
+	honk.Size = UDim2.new(0.8, 0, 0.1, 0)
 	TweenService:Create(red, TweenInfo.new(1), {BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0}):Play()
-	task.wait(2.5)
+	task.wait(3)
 	C.stop()
 	local hop = findCmd("shop") or findCmd("serverhop")
 	if hop then pcall(hop.FUNC, {}, speaker) end
@@ -21978,7 +22137,8 @@ addcmd('clown',{'clowns','circus'},function(args, speaker)
 		notify('Clowns', 'The clowns are already coming. Use unclown to send them away.')
 		return
 	end
-	local s = {clowns = {}, start = tick(), nextSpawn = tick() + 1.5}
+	local PathfindingService = game:GetService("PathfindingService")
+	local s = {clowns = {}, start = tick(), nextSpawn = tick() + 2, kills = 0}
 	C.state = s
 	s.music = WackyState.sound(WackyState.pick(C.music), nil, 0, true)
 	TweenService:Create(s.music, TweenInfo.new(2), {Volume = 0.5}):Play()
@@ -21987,70 +22147,139 @@ addcmd('clown',{'clowns','circus'},function(args, speaker)
 	s.cc.Saturation = 0.25
 	s.cc.Contrast = 0.15
 	s.cc.Parent = Lighting
+	C.giveGun(speaker, s)
+	-- HUD
+	local hud = Instance.new("TextLabel")
+	hud.AnchorPoint = Vector2.new(0.5, 0)
+	hud.Position = UDim2.new(0.5, 0, 0, 70)
+	hud.Size = UDim2.new(0, 360, 0, 44)
+	hud.BackgroundColor3 = Color3.fromRGB(30, 10, 20)
+	hud.BackgroundTransparency = 0.2
+	hud.Font = Enum.Font.FredokaOne
+	hud.TextSize = 24
+	hud.TextColor3 = Color3.new(1, 1, 1)
+	hud.ZIndex = 55
+	NeverYieldPortal.corner(hud, UDim.new(0, 12))
+	NeverYieldPortal.stroke(hud, 2, 0.2)
+	hud.Parent = WackyState.overlay()
+	s.hud = hud
+
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	local function ground(x, z, fromY)
 		local hit = workspace:Raycast(Vector3.new(x, fromY + 20, z), Vector3.new(0, -80, 0), params)
 		return hit and hit.Position.Y or (fromY - 3)
 	end
+	local function spawnClown(root)
+		local a = math.random() * math.pi * 2
+		local d = 45 + math.random() * 25
+		local x, z = root.Position.X + math.cos(a) * d, root.Position.Z + math.sin(a) * d
+		local pos = Vector3.new(x, ground(x, z, root.Position.Y) + 3.2, z)
+		local model, hrp, hum, animator = C.make(CFrame.lookAt(pos, Vector3.new(root.Position.X, pos.Y, root.Position.Z)))
+		model.Parent = workspace
+		local c = {model = model, hrp = hrp, hum = hum, nextPath = 0, waypoints = nil, wp = 1, lastMove = tick(), lastPos = hrp.Position,
+			path = PathfindingService:CreatePath({AgentRadius = 2, AgentHeight = 5, AgentCanJump = true, WaypointSpacing = 4}), nextLaugh = tick() + math.random() * 6}
+		pcall(function()
+			local anim = Instance.new("Animation")
+			anim.AnimationId = C.walkAnim
+			c.walk = animator:LoadAnimation(anim)
+			c.walk.Looped = true
+			c.walk:Play()
+		end)
+		table.insert(s.clowns, c)
+		local laugh = WackyState.sound(WackyState.pick(C.laughs), hrp, 0.8, false, 0.75 + math.random() * 0.3)
+		laugh.RollOffMaxDistance = 120
+	end
 	WackyState.connect("clowns", RunService.Heartbeat:Connect(function(dt)
 		local now = tick()
 		local root = getRoot(speaker.Character)
 		if not root or s.caught then return end
-		local filter = {speaker.Character}
-		for _, c in ipairs(s.clowns) do table.insert(filter, c.model) end
-		params.FilterDescendantsInstances = filter
 		local elapsed = now - s.start
-		-- more clowns, more often
-		if now >= s.nextSpawn and #s.clowns < 30 then
-			s.nextSpawn = now + math.max(1.1, 3.2 - elapsed * 0.04)
-			for _ = 1, (elapsed > 40 and 2 or 1) do
-				local a = math.random() * math.pi * 2
-				local d = 45 + math.random() * 25
-				local x, z = root.Position.X + math.cos(a) * d, root.Position.Z + math.sin(a) * d
-				local model = C.make()
-				local pos = Vector3.new(x, ground(x, z, root.Position.Y), z)
-				model:PivotTo(CFrame.new(pos))
-				model.Parent = workspace
-				table.insert(s.clowns, {model = model, pos = pos, speed = 11 + math.random() * 4, seed = math.random() * 10, nextLaugh = now + math.random() * 6})
-				local laugh = WackyState.sound(WackyState.pick(C.laughs), model.PrimaryPart, 0.8, false, 0.75 + math.random() * 0.3)
-				laugh.RollOffMaxDistance = 120
+		local alive = 0
+		local filter = {speaker.Character}
+		for _, c in ipairs(s.clowns) do
+			table.insert(filter, c.model)
+			if not c.dead then alive = alive + 1 end
+		end
+		params.FilterDescendantsInstances = filter
+		hud.Text = string.format("\u{1F921} %d shot   |   %d:%02d   |   %d coming", s.kills, math.floor(elapsed / 60), math.floor(elapsed) % 60, alive)
+		if now >= s.nextSpawn and alive < 18 then
+			s.nextSpawn = now + math.max(0.9, 2.6 - elapsed * 0.03)
+			for _ = 1, (elapsed > 30 and 2 or 1) do
+				spawnClown(root)
 			end
 		end
-		-- chase
-		for _, c in ipairs(s.clowns) do
-			local flat = Vector3.new(root.Position.X - c.pos.X, 0, root.Position.Z - c.pos.Z)
-			local dist = flat.Magnitude
-			local speed = math.min(24, c.speed + elapsed * 0.08)
-			if dist > 0.1 then
-				local step = math.min(dist, speed * dt)
-				local nx, nz = c.pos.X + flat.Unit.X * step, c.pos.Z + flat.Unit.Z * step
-				c.pos = Vector3.new(nx, ground(nx, nz, root.Position.Y), nz)
-			end
-			local t = now * 9 + c.seed
-			local bob = math.abs(math.sin(t)) * 0.6
-			local face = Vector3.new(root.Position.X, c.pos.Y, root.Position.Z)
-			if (face - c.pos).Magnitude > 0.1 then
-				c.model:PivotTo(CFrame.lookAt(c.pos, face) * CFrame.new(0, bob, 0) * CFrame.Angles(0, 0, math.sin(t) * 0.12))
-			end
-			if now > c.nextLaugh and dist < 50 then
-				c.nextLaugh = now + 5 + math.random() * 8
-				local id = math.random() < 0.3 and WackyState.pick(C.honks) or WackyState.pick(C.laughs)
-				local snd = WackyState.sound(id, c.model.PrimaryPart, 0.7, false, 0.8 + math.random() * 0.3)
-				snd.RollOffMaxDistance = 90
-			end
-			if dist < 3.2 and not s.caught then
-				task.spawn(C.caught, speaker, s)
-				return
+		local speed = math.min(30, 20 + elapsed * 0.15)
+		for i = #s.clowns, 1, -1 do
+			local c = s.clowns[i]
+			if c.dead or not c.model.Parent or c.hrp.Position.Y < workspace.FallenPartsDestroyHeight + 20 then
+				if not c.dead then pcall(function() c.model:Destroy() end) end
+				table.remove(s.clowns, i)
+			else
+				c.hum.WalkSpeed = speed
+				if c.walk then c.walk:AdjustSpeed(speed / 14) end
+				local toPlayer = root.Position - c.hrp.Position
+				local dist = toPlayer.Magnitude
+				-- close and nothing in the way: run straight at you
+				local direct = dist < 20 and workspace:Raycast(c.hrp.Position, toPlayer, params) == nil
+				if direct then
+					c.waypoints = nil
+					c.hum:MoveTo(root.Position)
+				else
+					-- otherwise follow a path around walls (recomputed often, in the background)
+					if now > c.nextPath and not c.computing then
+						c.nextPath = now + 0.8 + math.random() * 0.4
+						c.computing = true
+						task.spawn(function()
+							local ok = pcall(function() c.path:ComputeAsync(c.hrp.Position, root.Position) end)
+							if ok and c.path.Status == Enum.PathStatus.Success then
+								c.waypoints = c.path:GetWaypoints()
+								c.wp = 2
+							else
+								c.waypoints = nil
+							end
+							c.computing = false
+						end)
+					end
+					local wps = c.waypoints
+					if wps and wps[c.wp] then
+						local w = wps[c.wp]
+						c.hum:MoveTo(w.Position)
+						if w.Action == Enum.PathWaypointAction.Jump then c.hum.Jump = true end
+						local flat = (w.Position - c.hrp.Position) * Vector3.new(1, 0, 1)
+						if flat.Magnitude < 3 then c.wp = c.wp + 1 end
+					else
+						c.hum:MoveTo(root.Position)
+					end
+				end
+				-- stuck? hop and look for a new path
+				if (c.hrp.Position - c.lastPos).Magnitude > 1 then
+					c.lastPos, c.lastMove = c.hrp.Position, now
+				elseif now - c.lastMove > 1.2 then
+					c.hum.Jump = true
+					c.nextPath = 0
+					c.lastMove = now
+				end
+				if now > c.nextLaugh and dist < 50 then
+					c.nextLaugh = now + 5 + math.random() * 8
+					local id = math.random() < 0.3 and WackyState.pick(C.honks) or WackyState.pick(C.laughs)
+					local snd = WackyState.sound(id, c.hrp, 0.7, false, 0.8 + math.random() * 0.3)
+					snd.RollOffMaxDistance = 90
+				end
+				if dist < 3.6 then
+					task.spawn(C.caught, speaker, s)
+					return
+				end
 			end
 		end
 	end))
-	notify('Clowns', 'Do you hear that music? RUN. (unclown to stop)', 8)
+	notify('Clowns', 'Do you hear that music? You have the Clown Buster - one shot each. Survive! (unclown to stop)', 8)
 end)
 
 addcmd('unclown',{'unclowns','nocircus'},function(args, speaker)
 	local s = NeverYieldClowns.state
-	if s and s.caught then return end
+	if not s or s.caught then return end
+	NeverYieldClowns.saveStats(s, false)
 	NeverYieldClowns.stop()
 end)
 
@@ -22609,7 +22838,7 @@ table.insert(WackyState.undoList, 'undiamond')
 -- tags; whichever counted more in a server is used, so one kill is never counted twice.
 NeverYieldStats = {file = "NeverYield_stats.json", dirty = false, lastSave = 0, page = 1, chatMode = "mine", watched = setmetatable({}, {__mode = "k"})}
 NeverYieldStats.tagNames = {"creator", "Creator", "killer", "Killer", "KillerTag", "LastHit", "lastHit", "LastHitBy", "LastDamager", "LastAttacker", "Attacker", "DamagedBy"}
-NeverYieldStats.tabs = {{"overview", "Overview"}, {"combat", "Combat"}, {"games", "Games"}, {"chat", "Chat"}, {"people", "People"}, {"commands", "Commands"}}
+NeverYieldStats.tabs = {{"overview", "Overview"}, {"combat", "Combat"}, {"minigames", "Minigames"}, {"pets", "Pets"}, {"games", "Games"}, {"chat", "Chat"}, {"people", "People"}, {"commands", "Commands"}}
 NeverYieldStats.streakNames = {[3] = "Killing spree", [5] = "Rampage", [10] = "Unstoppable", [15] = "Godlike", [20] = "Legendary", [30] = "NEVERYIELD"}
 
 NeverYieldStats.blank = function()
@@ -23157,6 +23386,50 @@ NeverYieldStats.lines = function(tab)
 			add(i .. ". " .. tostring(c[1]), fmt.num(c[2]) .. " times")
 		end
 		if #out == 0 then add("No commands used yet (commands you type are counted).", nil) end
+	elseif tab == "minigames" then
+		local mg = type(data.minigames) == "table" and data.minigames or {}
+		local rounds = mg.diamondRounds or 0
+		add("--- DIAMOND RUSH ---", nil)
+		add("Best score", fmt.num(mg.diamondBest or 0))
+		add("Rounds played", fmt.num(rounds))
+		add("Points collected", fmt.num(mg.diamondTotal or 0))
+		add("Average per round", rounds > 0 and string.format("%.1f", (mg.diamondTotal or 0) / rounds) or "-")
+		add("--- CLOWNS ---", nil)
+		add("Most clowns shot in a round", fmt.num(mg.clownBestKills or 0))
+		add("Longest survival", fmt.time(mg.clownBestTime or 0))
+		add("Total clowns shot", fmt.num(mg.clownKills or 0))
+		add("Rounds played", fmt.num(mg.clownRounds or 0))
+		add("Total time running", fmt.time(mg.clownTotalTime or 0))
+	elseif tab == "pets" then
+		local P = NeverYieldPets
+		local pd = P and P.data
+		if not pd then
+			add("The Pet Hub has not loaded.", nil)
+		else
+			local count, shinies, best, rarest = 0, 0, nil, nil
+			for _, pet in pairs(pd.pets) do
+				count = count + 1
+				if pet.shiny then shinies = shinies + 1 end
+				if not best or pet.level > best.level then best = pet end
+				local r = P.rarityIndex[P.rarityOf(pet).id]
+				if not rarest or r > rarest[2] then rarest = {pet, r} end
+			end
+			local found, skins, hats = 0, 0, 0
+			for _ in pairs(pd.discovered) do found = found + 1 end
+			for _ in pairs(pd.skins) do skins = skins + 1 end
+			for _ in pairs(pd.hats or {}) do hats = hats + 1 end
+			add("Pets owned", count .. " / " .. pd.storage .. "  (" .. #pd.equipped .. " following)")
+			add("Species found", found .. " / " .. #P.species)
+			add("Skins / hats unlocked", skins .. " / " .. #P.skins .. "  |  " .. hats .. " / " .. #P.hats)
+			add("Shiny pets", fmt.num(shinies))
+			add("Highest level", best and (best.name .. " (Lv " .. best.level .. ")") or "-")
+			add("Rarest pet", rarest and (rarest[1].name .. " (" .. P.rarityOf(rarest[1]).name .. " " .. P.speciesById[rarest[1].species].name .. ")") or "-")
+			add("Eggs hatched", fmt.num(pd.stats.hatched))
+			add("Pets bred", fmt.num(pd.stats.bred))
+			add("Times fed", fmt.num(pd.stats.fed))
+			add("Coins now / earned", fmt.num(pd.coins) .. " / " .. fmt.num(pd.stats.coinsEarned))
+			add("Daily streak", (pd.streak or 0) .. " days")
+		end
 	end
 	return out
 end
@@ -23264,7 +23537,8 @@ NeverYieldStats.open = function(tab, filter)
 
 	local tabButtons = {}
 	for i, info in ipairs(NeverYieldStats.tabs) do
-		local b = button(info[2], UDim2.new(0, 14 + (i - 1) * 93, 0, 70), UDim2.new(0, 87, 0, 26))
+		local b = button(info[2], UDim2.new(0, 14 + (i - 1) * 69, 0, 70), UDim2.new(0, 65, 0, 26))
+		b.TextSize = 11
 		tabButtons[info[1]] = b
 		b.MouseButton1Click:Connect(function()
 			NeverYieldStats.filter = nil

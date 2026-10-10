@@ -5,6 +5,7 @@ Versions before 1.11.3 were reconstructed from the Desktop `.bakN` backups (one 
 
 | Version | Date | Commands | Change |
 |---|---|---|---|
+| 1.21.0 | 10-10 | 630 | Clowns are real R6 characters (Humanoid + default walk animation, clown costume), use pathfinding and get faster (20 to 30); Clown Buster gun one-shots them; kills/survival saved; stats panel gets Minigames (Diamond Rush + Clowns) and Pets tabs |
 | 1.20.0 | 10-10 | 630 | Frame styles around the panel (Neon Pulse default, Classic Lines, Marquee, HUD, Electric, Orbit, Chain, Halo Glow, RGB, None) + Theme Studio Frame tab + `frame`; Agartha portal window fixed (was empty: viewports don't render in CanvasGroups) with glass sheen and matched camera; cottage gets real glass windows, open door and a full interior |
 | 1.19.0 | 10-10 | 629 | New `clown`: a growing crowd of part-built clowns chases you with creepy circus music; caught = HONK, you die, then server hop |
 | 1.18.0 | 10-10 | 627 | New `portal`: sling-ring style see-through gateway to Agartha (floating island with cottage, yard, waterfall, view, peaceful music); old portal replay is now `reopen` |
