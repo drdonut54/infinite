@@ -5,6 +5,7 @@ Versions before 1.11.3 were reconstructed from the Desktop `.bakN` backups (one 
 
 | Version | Date | Commands | Change |
 |---|---|---|---|
+| 1.21.2 | 10-10 | 630 | `fuckoff` also resets WalkSpeed, JumpPower/JumpHeight, HipHeight, slope, gravity, FOV and camera zoom to the game's own values (taken from fresh spawns) |
 | 1.21.1 | 10-10 | 630 | Agartha: portal view drawn on screen with a mirrored camera (true see-through window, both ways); pond is real terrain water; chairs, bench and armchair are sittable and the bed sleepable (E, jump to get up) |
 | 1.21.0 | 10-10 | 630 | Clowns are real R6 characters (Humanoid + default walk animation, clown costume), use pathfinding and get faster (20 to 30); Clown Buster gun one-shots them; kills/survival saved; stats panel gets Minigames (Diamond Rush + Clowns) and Pets tabs |
 | 1.20.0 | 10-10 | 630 | Frame styles around the panel (Neon Pulse default, Classic Lines, Marquee, HUD, Electric, Orbit, Chain, Halo Glow, RGB, None) + Theme Studio Frame tab + `frame`; Agartha portal window fixed (was empty: viewports don't render in CanvasGroups) with glass sheen and matched camera; cottage gets real glass windows, open door and a full interior |

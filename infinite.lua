@@ -1,4 +1,4 @@
--- NeverYield v1.21.1 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.21.2 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.21.1" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.21.2" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -5302,7 +5302,7 @@ CMDs[#CMDs + 1] = {NAME = 'unfilter', DESC = 'Removes the screen filter'}
 CMDs[#CMDs + 1] = {NAME = 'weather [type]', DESC = 'No type = a random one. Weather with sound, clouds and lighting: snow, blizzard (the whole map snows over!), rain, storm (gets dark, thunder), sandstorm, aurora, stars, galaxy, bloodmoon, sakura, autumn, hearts, embers, fireflies, rainbow, meteors'}
 CMDs[#CMDs + 1] = {NAME = 'weathervolume [0-3]', DESC = 'Changes how loud the weather sounds are (default 1)'}
 CMDs[#CMDs + 1] = {NAME = 'skipweather / nexttrack', DESC = 'Weather sounds change by themselves every few minutes (plus owls, wolves, thunder, chimes...); this skips to another track now'}
-CMDs[#CMDs + 1] = {NAME = 'fuckoff / unloadny', DESC = 'Completely unloads NeverYield: turns everything off and removes the GUI'}
+CMDs[#CMDs + 1] = {NAME = 'fuckoff / unloadny', DESC = 'Completely unloads NeverYield: turns everything off, resets your speed, jump, gravity and camera to the game values, and removes the GUI'}
 CMDs[#CMDs + 1] = {NAME = 'END / theend', DESC = 'A black hole (only you see it) swallows the map and you, then takes you to a new server'}
 CMDs[#CMDs + 1] = {NAME = 'portal / agartha', DESC = 'Opens a sparking see-through gateway to Agartha, a peaceful floating island with a cottage and yard. Walk through it (only you see it)'}
 CMDs[#CMDs + 1] = {NAME = 'unportal', DESC = 'Closes the Agartha portal (brings you back if you are inside)'}
@@ -19250,6 +19250,58 @@ WackyState.classicOffCommands = {
 	"untpwalk", "unantivoid", "unantifling", "unloopfullbright", "uninvisibleparts",
 }
 
+-- the game's own values for your character, world and camera (taken from fresh spawns),
+-- so unloading can put back anything that was changed (speed, jump, gravity, FOV...)
+NeverYieldDefaults = {}
+pcall(function()
+	NeverYieldDefaults.gravity = workspace.Gravity
+	NeverYieldDefaults.fov = workspace.CurrentCamera.FieldOfView
+	NeverYieldDefaults.maxZoom = Players.LocalPlayer.CameraMaxZoomDistance
+	NeverYieldDefaults.minZoom = Players.LocalPlayer.CameraMinZoomDistance
+end)
+NeverYieldDefaults.grab = function(char, wait)
+	local hum = char:FindFirstChildOfClass("Humanoid") or char:WaitForChild("Humanoid", 10)
+	if not hum then return end
+	if wait then task.wait(1) end
+	if Players.LocalPlayer.Character ~= char then return end
+	NeverYieldDefaults.hum = {walk = hum.WalkSpeed, useJumpPower = hum.UseJumpPower, jumpPower = hum.JumpPower, jumpHeight = hum.JumpHeight,
+		hipHeight = hum.HipHeight, maxSlope = hum.MaxSlopeAngle}
+end
+if Players.LocalPlayer.Character then
+	task.spawn(NeverYieldDefaults.grab, Players.LocalPlayer.Character, false)
+end
+WackyState.connect("defaults", Players.LocalPlayer.CharacterAdded:Connect(function(char)
+	NeverYieldDefaults.grab(char, true)
+end))
+
+NeverYieldDefaults.restore = function()
+	local d = NeverYieldDefaults
+	local lp = Players.LocalPlayer
+	pcall(function() if d.gravity then workspace.Gravity = d.gravity end end)
+	pcall(function() if d.fov then workspace.CurrentCamera.FieldOfView = d.fov end end)
+	pcall(function()
+		if d.maxZoom then lp.CameraMaxZoomDistance = d.maxZoom end
+		if d.minZoom then lp.CameraMinZoomDistance = d.minZoom end
+	end)
+	local hum = lp.Character and lp.Character:FindFirstChildOfClass("Humanoid")
+	if hum then
+		pcall(function()
+			local h = d.hum
+			if h then
+				hum.WalkSpeed = h.walk
+				hum.UseJumpPower = h.useJumpPower
+				hum.JumpPower = h.jumpPower
+				hum.JumpHeight = h.jumpHeight
+				hum.HipHeight = h.hipHeight
+				hum.MaxSlopeAngle = h.maxSlope
+			end
+			hum.AutoRotate = true
+			hum.PlatformStand = false
+			hum.Sit = false
+		end)
+	end
+end
+
 addcmd('fuckoff',{'unloadny','unloadscript'},function(args, speaker)
 	if WackyState.unloading then return end
 	WackyState.unloading = true
@@ -19301,6 +19353,9 @@ addcmd('fuckoff',{'unloadny','unloadscript'},function(args, speaker)
 			cam.CameraSubject = hum
 		end
 	end)
+
+	-- 2b. put your character, gravity and camera back to the game's own values
+	pcall(NeverYieldDefaults.restore)
 
 	-- 3. stop reacting to chat, the prefix key, keybinds and teleports
 	KeepInfYield = false
