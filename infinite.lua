@@ -1,4 +1,4 @@
--- NeverYield v1.26.1 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.27.0 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.26.1" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.27.0" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -18198,6 +18198,89 @@ WackyState.sound = function(id, parent, volume, looped, pitch)
 	return sound
 end
 
+-- music playlists: one Sound plays a shuffled list and moves on when a song ends; a song that never loads is skipped.
+-- fadeMusic(sound, 0, t) fades out and then really pauses it, so nothing keeps playing quietly in the background.
+WackyState.playlists = setmetatable({}, {__mode = "k"})
+WackyState.playlist = function(ids, volume, parent)
+	local sound = Instance.new("Sound")
+	sound.Name = randomString()
+	sound.Volume = volume or 0.5
+	sound.Looped = false
+	local st = {ids = ids, order = {}, idx = 0, paused = false}
+	WackyState.playlists[sound] = st
+	sound.Ended:Connect(function()
+		if not st.paused then WackyState.playlistNext(sound) end
+	end)
+	sound.Parent = parent or Services.SoundService
+	WackyState.playlistNext(sound)
+	return sound
+end
+
+WackyState.playlistNext = function(sound)
+	local st = sound and WackyState.playlists[sound]
+	if not st or not sound.Parent or #st.ids == 0 then return end
+	st.idx = st.idx + 1
+	if st.idx > #st.order then
+		-- reshuffle; never the same song twice in a row
+		local last = st.order[#st.order]
+		st.order = {}
+		for _, id in ipairs(st.ids) do table.insert(st.order, id) end
+		for i = #st.order, 2, -1 do
+			local j = math.random(1, i)
+			st.order[i], st.order[j] = st.order[j], st.order[i]
+		end
+		if #st.order > 1 and st.order[1] == last then st.order[1], st.order[2] = st.order[2], st.order[1] end
+		st.idx = 1
+	end
+	local token = {}
+	st.token = token
+	sound.SoundId = "rbxassetid://" .. tostring(st.order[st.idx])
+	sound.TimePosition = 0
+	if not st.paused then sound:Play() end
+	task.delay(10, function()
+		if st.token ~= token or not sound.Parent or st.paused then return end
+		if sound.IsLoaded then
+			st.fails = 0
+		else
+			-- give up after a whole round of songs that would not load
+			st.fails = (st.fails or 0) + 1
+			if st.fails < #st.ids then WackyState.playlistNext(sound) end
+		end
+	end)
+end
+
+WackyState.playlistSet = function(sound, ids)
+	local st = sound and WackyState.playlists[sound]
+	if not st then return end
+	st.ids, st.order, st.idx = ids, {}, 0
+	WackyState.playlistNext(sound)
+end
+
+WackyState.playlistPause = function(sound, paused)
+	local st = sound and WackyState.playlists[sound]
+	if not st or not sound.Parent then return end
+	st.paused = paused
+	if paused then
+		sound:Pause()
+	elseif not sound.IsPlaying then
+		sound:Resume()
+	end
+end
+
+WackyState.fadeMusic = function(sound, volume, seconds)
+	if not sound or not sound.Parent then return end
+	if volume > 0 then WackyState.playlistPause(sound, false) end
+	local tween = TweenService:Create(sound, TweenInfo.new(seconds or 1), {Volume = volume})
+	if volume <= 0 then
+		tween.Completed:Connect(function(state)
+			if state == Enum.PlaybackState.Completed and sound.Parent then
+				if WackyState.playlists[sound] then WackyState.playlistPause(sound, true) else sound:Pause() end
+			end
+		end)
+	end
+	tween:Play()
+end
+
 -- Swap Lighting/Terrain environment objects locally, keeping the game's originals to put back
 WackyState.env = {parked = {}, ours = {}}
 
@@ -18332,25 +18415,25 @@ WackyState.weather = {
 -- Several loops per weather sound (one is picked at random, then it crossfades to another every
 -- 1.5-2.5 minutes) plus one-shot accents on top. All ProSoundEffects audio, checked against the asset API.
 WackyState.assets.soundPools = {
-	rain = {9112853287, 9112853563, 9112853653, 9112794265, 9112856553},
-	stormloop = {9120016022, 9120020768, 9120020741, 9112794090},
-	snowwind = {9114228774, 9114228918, 9113203785, 9113203961},
+	rain = {9112853287, 9112853563, 9112853653, 9112794265, 9112856553, 9112857054, 9112857056, 9112856881, 9112858162},
+	stormloop = {9120016022, 9120020768, 9120020741, 9112794090, 9120013350, 9120021435, 9126099976, 9113960374},
+	snowwind = {9114228774, 9114228918, 9113203785, 9113203961, 9113286969, 9114574159},
 	blizzard = {9114228928, 9114625552, 9114625745, 9114625414},
-	sandstorm = {9114057128, 9114057104, 9118029799},
-	night = {9112764573, 9112836038, 9112764891, 9112881910, 9112810388},
-	fire = {9112780561, 9112780462, 9112906396, 9112907072},
-	space = {9125515916, 9119392583, 9119392328, 9116389698},
-	birds = {9125485532, 9119383684, 9118752742, 9116970949, 9116969481, 9112750044},
+	sandstorm = {9114057128, 9114057104, 9118029799, 9114574159},
+	night = {9112764573, 9112836038, 9112764891, 9112881910, 9112810388, 9117114470, 9112764023, 9117114084, 9112764040},
+	fire = {9112780561, 9112780462, 9112906396, 9112907072, 9112780212},
+	space = {9125515916, 9119392583, 9119392328, 9116389698, 9119392620, 9119392572, 9114524003, 9114523852},
+	birds = {9125485532, 9119383684, 9118752742, 9116970949, 9116969481, 9112750044, 9116970359, 9116970600, 9112832081, 9112832311},
 }
 WackyState.assets.accents = {
-	winter = {9120051870, 9120052385, 9120749896},
-	howl = {9120789619, 9120052167, 9120790308, 9120790163},
-	thunderfar = {9120021237, 9120021259, 9120021267},
-	desert = {9113954299, 9113732046},
-	night = {9117182190, 9117182352, 9117182167, 9120051870},
-	chimes = {9120750346, 9120751091, 9120749896, 9120750051},
-	cosmic = {9119420108, 9116383749},
-	spooky = {9120790163, 9120790319, 9117182187},
+	winter = {9120051870, 9120052385, 9120749896, 9119315104, 9119315072, 9119314673, 9119315323},
+	howl = {9120789619, 9120052167, 9120790308, 9120790163, 9113951414, 9120052193, 9120052030, 9113951420},
+	thunderfar = {9120021237, 9120021259, 9120021267, 9120015808, 9119840329, 9119840148, 9120012454},
+	desert = {9113954299, 9113732046, 9118063436, 9118064316},
+	night = {9117182190, 9117182352, 9117182167, 9120051870, 9117181540, 9117181875, 9117181539, 9117181035},
+	chimes = {9120750346, 9120751091, 9120749896, 9120750051, 9120749869, 9120750794},
+	cosmic = {9119420108, 9116383749, 9120724941, 9120727259},
+	spooky = {9120790163, 9120790319, 9117182187, 9126214614, 9114228525, 9126214611, 9126213741},
 	fire = {9120827051},
 }
 for name, accent in pairs({
@@ -20598,12 +20681,12 @@ end)
 -- creeps while you watch it, and every so often screams and sprints at you. It walks through walls. If it reaches
 -- you: jumpscare, and your character dies. Only on your screen. "horror safe" = no dying.
 WackyState.horrorSounds = {
-	drones = {9114353372, 9114353056, 9113586892},
+	drones = {9114353372, 9114353056, 9113586892, 9114353038, 9125567032, 9125566528},
 	whispers = {9126214610, 9126213995, 9126214321, 9126214304, 9126214616, 9126213743},
 	creaks = {9120834836, 9120830282, 9114837821, 9120832817, 9114837202, 9120835880},
-	breath = {9114556036, 9113586144, 9113802218},
-	steps = {9114166413, 9114166629, 9114165468},
-	knock = {9114140465, 9114140362, 9114140683},
+	breath = {9114556036, 9113586144, 9113802218, 9113586280, 9113585730},
+	steps = {9114166413, 9114166629, 9114165468, 9114523017},
+	knock = {9114140465, 9114140362, 9114140683, 9114141948, 9114140663, 9114141555},
 	thump = 9119661511, static = 9113115842, burst = 9119580756, hit = 9125484743, scream = 9118843202,
 }
 WackyState.horrorLines = {"IT SEES YOU", "DON'T LOOK AWAY", "behind you", "it's getting closer", "you can't hide", "keep the light on",
@@ -21105,7 +21188,8 @@ end)
 -- with a cottage, a yard and a peaceful view, built from parts far above the map. Walk through to go
 -- there; the portal in Agartha brings you back. Everything is client-side.
 NeverYieldAgartha = {
-	music = {111013044669280, 91781617219749, 128660783280547, 134071496659126}, -- DistroKid official Roblox music
+	-- calm piano and harp (DistroKid official Roblox music, checked); played as a shuffled playlist
+	music = {140509927635162, 80870416475209, 139578624648088, 131887617177549, 121954511932606, 91785474776011, 135482869922110, 137585341028490, 77298341181169, 117682785819827, 105624473918406, 130145017769328, 77167557038705, 125299502320621, 123269400665565, 134870007059966, 126700974286630, 73164570435579, 119195329870678, 112400483208773, 114485280845757, 137346364987963},
 	birds = 9119383684, sparks = 9119380767, whoosh = 9119468100,
 	radius = 7,
 }
@@ -22296,7 +22380,7 @@ NeverYieldAgartha.enterMood = function(s)
 	local rays = WackyState.track("agartha", Instance.new("SunRaysEffect"))
 	rays.Intensity, rays.Spread = 0.12, 0.6
 	rays.Parent = Lighting
-	TweenService:Create(s.music, TweenInfo.new(3), {Volume = 0.45}):Play()
+	WackyState.fadeMusic(s.music, 0.4, 3)
 	TweenService:Create(s.birds, TweenInfo.new(3), {Volume = 0.35}):Play()
 end
 
@@ -22305,7 +22389,7 @@ NeverYieldAgartha.leaveMood = function(s)
 	WackyState.clear("agartha")
 	WackyState.envRestore("Atmosphere")
 	WackyState.lightRelease("agartha", 1.5)
-	TweenService:Create(s.music, TweenInfo.new(2), {Volume = 0.05}):Play()
+	WackyState.fadeMusic(s.music, 0, 2)
 	TweenService:Create(s.birds, TweenInfo.new(2), {Volume = 0}):Play()
 end
 
@@ -22370,9 +22454,16 @@ addcmd('agartha',{'portal','gateway'},function(args, speaker)
 	A.openGates(s)
 	s.homeWindow = A.makeWindow(view, Color3.fromRGB(120, 180, 255), Color3.fromRGB(255, 215, 185))
 	s.awayWindow = A.makeWindow(homeView, Color3.fromRGB(140, 185, 240), Color3.fromRGB(215, 225, 240))
-	s.music = WackyState.sound(WackyState.pick(A.music), nil, 0, true)
+	-- the island's music: silent until you step through, a soft reverb and rounded highs so it sounds airy
+	s.music = WackyState.playlist(A.music, 0)
+	WackyState.playlistPause(s.music, true)
+	local reverb = Instance.new("ReverbSoundEffect")
+	reverb.DecayTime, reverb.Density, reverb.Diffusion, reverb.DryLevel, reverb.WetLevel = 2.4, 0.8, 0.9, -1, -13
+	reverb.Parent = s.music
+	local eq = Instance.new("EqualizerSoundEffect")
+	eq.HighGain, eq.MidGain, eq.LowGain = -4, 0, 1.5
+	eq.Parent = s.music
 	s.birds = WackyState.sound(A.birds, nil, 0, true)
-	TweenService:Create(s.music, TweenInfo.new(2), {Volume = 0.05}):Play()
 	A.state = s
 	WackyState.sound(A.whoosh, nil, 0.8, false, 0.7)
 	local lastSide = {}
@@ -22381,6 +22472,12 @@ addcmd('agartha',{'portal','gateway'},function(args, speaker)
 		if s.inside and now > (s.nextWater or 0) then
 			s.nextWater = now + 3
 			A.fillWater()
+		end
+		-- left the island some other way (teleported, respawned, the house door...): music and lighting go back.
+		-- Checked before the gates, because they shut 5 s after you go through.
+		if s.inside then
+			local rr = getRoot(speaker.Character)
+			if rr and (rr.Position - O).Magnitude > 250 then A.leaveMood(s) end
 		end
 		if not s.gatesOpen then return end
 		local t = now - s.openStart
@@ -22456,7 +22553,7 @@ table.insert(WackyState.undoList, 'unportal')
 -- flying clowns from 10). Kills pay clown cash (only for this minigame) to spend in the Clown Shop (B) on
 -- gun and speed upgrades. When your health runs out: you die and get server hopped. Only on your screen.
 NeverYieldClowns = {
-	music = {81890241259637, 122263324184602, 125773734041692}, -- DistroKid official Roblox music
+	music = {81890241259637, 85807914948729, 1837177862, 1837201260, 136847919947471, 1835924107, 123449692137452, 117954214205123, 94791469261135, 77571716391310}, -- creepy circus (DistroKid / APM official Roblox music, checked)
 	honks = {9116942696, 9114824238},
 	laughs = {9114011965, 9114011832, 9113787508},
 	shots = {9114725473, 9113051048, 9113052411},
@@ -23045,7 +23142,7 @@ addcmd('clown',{'clowns','circus'},function(args, speaker)
 		s.baseSpeed = hum.WalkSpeed
 		hum.WalkSpeed = 16
 	end)
-	s.music = WackyState.sound(WackyState.pick(C.music), nil, 0, true)
+	s.music = WackyState.playlist(C.music, 0)
 	TweenService:Create(s.music, TweenInfo.new(2), {Volume = 0.5}):Play()
 	s.cc = Instance.new("ColorCorrectionEffect")
 	s.cc.Name = randomString()
@@ -23482,7 +23579,24 @@ NeverYieldRoom.rooms = {
 	{id = "game", name = "Game Room", icon = "\u{1F3AE}", dx = -1, dz = 0, floor = "walnut", wall = "navy", windows = {w = true, n = true}},
 	{id = "kitchen", name = "Kitchen", icon = "\u{1F373}", dx = 0, dz = 1, floor = "oak", wall = "sage", windows = {n = true, e = true}},
 }
-NeverYieldRoom.switchOn, NeverYieldRoom.switchOff = 9126027903, 9126027917 -- ProSoundEffects wall switch clicks (checked)
+NeverYieldRoom.switchSounds = {9126027903, 9126027917, 9126028623, 9126028575, 9126027988} -- ProSoundEffects wall switch clicks (checked)
+
+NeverYieldRoom.musicVolume = 0.3
+-- radio stations (APM / DistroKid official Roblox music, every id checked)
+NeverYieldRoom.stations = {
+	{id = "cozy", name = "Cozy Lo-fi", icon = "\u{2615}", tracks = {140722099430139, 140658234151287, 140628387917926, 140653878167561, 140131279666968, 89402602954424, 136228570470406, 119721983234750, 139564902452150}},
+	{id = "piano", name = "Chill Piano", icon = "\u{1F3B9}", tracks = {115582700793572, 81967684783948, 89034211968541, 130527983129834, 83830899716919, 86708081413181, 129969425141643, 136164021641103, 119863695341644, 129944554464434, 96727220396014}},
+	{id = "jazz", name = "Jazz Lounge", icon = "\u{1F3B7}", tracks = {1838888359, 1839217842, 1839224708, 1839217721, 1845756489, 1837062205, 1842422556, 1837248784}},
+	{id = "classical", name = "Classical", icon = "\u{1F3BB}", tracks = {1842155223, 1837263229, 1842155178, 1837474168, 1844309470, 1837283031, 1842150841, 1846627271}},
+	{id = "pop", name = "Pop", icon = "\u{1F3A4}", tracks = {1843327118, 1843325926, 1843415134, 1843296601, 1843318579, 1843325346, 1844422218, 1843414782}},
+	{id = "rock", name = "Rock", icon = "\u{1F3B8}", tracks = {1842688262, 1837780762, 1837965374, 1841496261, 1837217438, 1837146999, 1837096083, 1837217460}},
+	{id = "dance", name = "Dance & Disco", icon = "\u{1F57A}", tracks = {1837166873, 1837169004, 1838880936, 1837257944, 1839404854, 1843402979, 1843867406, 1842632498, 1846525060, 1846577895, 1846800001}},
+	{id = "country", name = "Country", icon = "\u{1F920}", tracks = {1837152501, 1842284208, 1837152820, 1837896469, 1837906511, 1843520756}},
+	{id = "hiphop", name = "Hip Hop", icon = "\u{1F3A7}", tracks = {1836515424, 1841134586, 1846687233, 1841134527, 1841134507, 1843269870, 1843270078, 1843269936}},
+	{id = "world", name = "World", icon = "\u{1F30D}", tracks = {1843296391, 1837204137, 1837203870, 1837266959, 1837266546, 1843296931, 1843332221, 1843332299}},
+	{id = "epic", name = "Epic Movie", icon = "\u{1F3AC}", tracks = {1837192468, 1844397736, 1844280917, 1837485023, 1844953679, 1843345561, 1842227851, 1843379622}},
+	{id = "off", name = "Off", icon = "\u{1F507}", tracks = {}},
+}
 
 NeverYieldRoom.rd = function(id)
 	return NeverYieldRoom.data.rooms[id]
@@ -25112,6 +25226,53 @@ NeverYieldRoom.catalog = {
 		add(Vector3.new(0.3, 0.4, 0.3), at(-0.3, 0.35, -0.15), C(160, 160, 170), M.Slate)
 		add(Vector3.new(0.15, 0.2, 0.15), at(-0.3, 0.62, -0.15), C(160, 160, 170), M.Slate)
 	end},
+	{id = "radio", name = "Retro Radio", build = function(add)
+		local body, chrome = C(170, 40, 45), C(210, 212, 218)
+		local box = add(Vector3.new(2.6, 1.5, 0.9), at(0, 0.85, 0), body, M.SmoothPlastic)
+		add(Vector3.new(2.62, 0.12, 0.92), at(0, 1.62, 0), chrome, M.Metal)
+		add(Vector3.new(2.62, 0.12, 0.92), at(0, 0.1, 0), chrome, M.Metal)
+		for _, x in ipairs({-0.8, 0.8}) do
+			add(Vector3.new(0.06, 0.85, 0.85), at(x, 0.85, -0.47) * CFrame.Angles(0, math.pi / 2, 0), C(35, 35, 40), M.Fabric, "Cylinder")
+			add(Vector3.new(0.07, 0.3, 0.3), at(x, 0.85, -0.49) * CFrame.Angles(0, math.pi / 2, 0), chrome, M.Metal, "Cylinder")
+		end
+		local dial = add(Vector3.new(0.6, 0.3, 0.05), at(0, 1.2, -0.46), C(255, 210, 120), M.Neon)
+		add(Vector3.new(0.03, 0.26, 0.06), at(0.1, 1.2, -0.48), C(200, 40, 40), M.SmoothPlastic)
+		for _, x in ipairs({-0.18, 0.18}) do
+			add(Vector3.new(0.12, 0.18, 0.18), at(x, 0.65, -0.47) * CFrame.Angles(0, math.pi / 2, 0), chrome, M.Metal, "Cylinder")
+		end
+		for _, x in ipairs({-1.0, 1.0}) do
+			add(Vector3.new(0.12, 0.5, 0.12), at(x, 1.9, 0), chrome, M.Metal)
+		end
+		add(Vector3.new(2.12, 0.14, 0.14), at(0, 2.15, 0), chrome, M.Metal)
+		add(Vector3.new(0.05, 1.6, 0.05), at(1.1, 2.4, 0.3) * CFrame.Angles(0, 0, -0.3), chrome, M.Metal)
+		local station = NeverYieldRoom.data and NeverYieldRoom.byId(NeverYieldRoom.stations, NeverYieldRoom.data.station)
+		local tune = Instance.new("ProximityPrompt")
+		tune.Name = "NYRadio"
+		tune.ActionText = "Next station"
+		tune.ObjectText = "Radio: " .. (station and station.name or "Off")
+		tune.HoldDuration = 0
+		tune.MaxActivationDistance = 9
+		tune.RequiresLineOfSight = false
+		tune.KeyboardKeyCode = Enum.KeyCode.E
+		tune.Parent = box
+		tune.Triggered:Connect(function()
+			local s = NeverYieldDoor.state
+			if s then NeverYieldRoom.nextStation(s) end
+		end)
+		local skip = Instance.new("ProximityPrompt")
+		skip.Name = "NYRadioSkip"
+		skip.ActionText = "Skip song"
+		skip.ObjectText = ""
+		skip.HoldDuration = 0
+		skip.MaxActivationDistance = 9
+		skip.RequiresLineOfSight = false
+		skip.KeyboardKeyCode = Enum.KeyCode.F
+		skip.Parent = dial
+		skip.Triggered:Connect(function()
+			local s = NeverYieldDoor.state
+			if s and s.music and NeverYieldRoom.data.station ~= "off" then WackyState.playlistNext(s.music) end
+		end)
+	end},
 }
 NeverYieldRoom.itemById = {}
 for _, item in ipairs(NeverYieldRoom.catalog) do
@@ -25207,6 +25368,7 @@ NeverYieldRoom.load = function()
 		data.floor, data.wall, data.mood, data.items = nil, nil, nil, nil
 	end
 	data.version = 2
+	if type(data.station) ~= "string" then data.station = "cozy" end
 	for _, def in ipairs(R.rooms) do
 		local rd = data.rooms[def.id]
 		if type(rd) ~= "table" then
@@ -25221,6 +25383,11 @@ NeverYieldRoom.load = function()
 			if type(rd[key]) ~= "string" then rd[key] = default end
 		end
 		if rd.lights == nil then rd.lights = true end
+	end
+	-- every house gets a radio by the front door once
+	if not data.radioAdded then
+		data.radioAdded = true
+		table.insert(data.rooms.living.items, {id = "radio", x = 8, y = 0, z = -17.5, r = 180})
 	end
 	R.data = data
 	return data
@@ -25700,7 +25867,7 @@ NeverYieldRoom.animate = function(s, dt)
 end
 
 -- curtains: a style per room (Edit > Style) and every window opens or closes on its own (E at the window)
-NeverYieldRoom.curtainSounds = {9114018343, 9114018394} -- ProSoundEffects curtain hardware rattle (checked)
+NeverYieldRoom.curtainSounds = {9114018343, 9114018394, 9114018534, 9114018967, 9114018240} -- ProSoundEffects curtain hardware rattle (checked)
 NeverYieldRoom.curtainStyles = {
 	{id = "terracotta", name = "Terracotta", color = {200, 110, 90}, mat = "Fabric"},
 	{id = "matchwalls", name = "Match the Walls", match = "wall"},
@@ -25790,6 +25957,54 @@ NeverYieldRoom.setCurtains = function(s, rs, closed, animate)
 		WackyState.sound(WackyState.pick(R.curtainSounds), nil, 0.6, false, 0.95 + math.random() * 0.1)
 		R.save()
 		if R.editing then pcall(R.refreshPanel, s) end
+	end
+end
+
+-- house music: the radio's station plays in every room (radios: E = next station, F = skip song; also Edit > Style)
+NeverYieldRoom.stationOrder = {"cozy", "piano", "jazz", "classical", "pop", "rock", "dance", "country", "hiphop", "world", "epic", "off"}
+
+NeverYieldRoom.nextStation = function(s)
+	local R = NeverYieldRoom
+	local current = R.data.station
+	for i, id in ipairs(R.stationOrder) do
+		if id == current then
+			R.setStation(s, R.stationOrder[i % #R.stationOrder + 1])
+			return
+		end
+	end
+	R.setStation(s, R.stationOrder[1])
+end
+
+NeverYieldRoom.setStation = function(s, id)
+	local R = NeverYieldRoom
+	local st = R.byId(R.stations, id)
+	R.data.station = st.id
+	if s.music then
+		if #st.tracks == 0 then
+			WackyState.fadeMusic(s.music, 0, 0.6)
+		else
+			WackyState.playlistSet(s.music, st.tracks)
+			if s.inside then WackyState.fadeMusic(s.music, R.musicVolume, 1) else WackyState.playlistPause(s.music, true) end
+		end
+	end
+	for _, rs in ipairs(s.roomList or {}) do
+		for _, d in ipairs(rs.model:GetDescendants()) do
+			if d:IsA("ProximityPrompt") and d.Name == "NYRadio" then d.ObjectText = "Radio: " .. st.name end
+		end
+	end
+	WackyState.sound(9118728158, nil, 0.5, false, 1.1) -- ProSoundEffects rotary switch click (checked)
+	notify('Radio', st.icon .. " " .. st.name, 3)
+	R.save()
+	if R.editing then pcall(R.refreshPanel, s) end
+end
+
+NeverYieldRoom.houseMusic = function(s, on)
+	local R = NeverYieldRoom
+	if not s.music then return end
+	if on and R.data.station ~= "off" then
+		WackyState.fadeMusic(s.music, R.musicVolume, 2)
+	else
+		WackyState.fadeMusic(s.music, 0, 1.5)
 	end
 end
 
@@ -25904,7 +26119,7 @@ NeverYieldRoom.toggleLights = function(s, rs, part)
 	local R = NeverYieldRoom
 	local data = R.rd(rs.id)
 	data.lights = data.lights == false
-	WackyState.sound(data.lights and R.switchOn or R.switchOff, part, 0.8, false, 0.95 + math.random() * 0.1)
+	WackyState.sound(WackyState.pick(R.switchSounds), part, 0.8, false, 0.95 + math.random() * 0.1)
 	R.applyLights(s, rs)
 	if NeverYieldAch and NeverYieldAch.data then
 		NeverYieldAch.flag("switchFlips", (NeverYieldAch.data.flags.switchFlips or 0) + 1)
@@ -26237,6 +26452,10 @@ NeverYieldRoom.refreshPanel = function(s)
 		local on = R.rd(s.room.id).lights ~= false
 		row("\u{1F4A1} Lights: " .. (on and "ON" or "OFF"), "same as flipping a light switch in this room", on and Color3.fromRGB(200, 160, 60) or Color3.fromRGB(60, 50, 110), function()
 			R.toggleLights(s, s.room)
+		end)
+		local station = R.byId(R.stations, R.data.station)
+		row("\u{1F4FB} Radio: " .. station.name, "click for the next station (radios: E = station, F = skip song)", Color3.fromRGB(150, 60, 70), function()
+			R.nextStation(s)
 		end)
 		local closed = R.allClosed(s.room)
 		row("All curtains: " .. (closed and "CLOSED" or "OPEN"), "or press E at a window for just that one", closed and Color3.fromRGB(150, 70, 60) or Color3.fromRGB(60, 50, 110), function()
@@ -26577,6 +26796,7 @@ NeverYieldDoor.enterMood = function(s)
 	cc.Parent = Lighting
 	s.room = s.rooms.living
 	NeverYieldRoom.applyMood(s, s.room)
+	NeverYieldRoom.houseMusic(s, true)
 	for _, snd in ipairs({{s.rain, 0.12}, {s.clock, 0.35}}) do
 		TweenService:Create(snd[1], TweenInfo.new(2), {Volume = snd[2]}):Play()
 	end
@@ -26590,6 +26810,7 @@ NeverYieldDoor.leaveMood = function(s)
 	WackyState.clear("room")
 	WackyState.envRestore("Atmosphere")
 	WackyState.lightRelease("room", 1)
+	NeverYieldRoom.houseMusic(s, false)
 	for _, snd in ipairs({s.rain, s.clock}) do
 		TweenService:Create(snd, TweenInfo.new(1.5), {Volume = 0}):Play()
 	end
@@ -26608,7 +26829,7 @@ NeverYieldDoor.close = function()
 	D.state = nil
 	NeverYieldAgartha.standUp()
 	WackyState.disconnect("roomdoor")
-	for _, obj in ipairs({s.homeDoor.model, s.roomDoor.model, s.model, s.homeWindow and s.homeWindow.screen, s.roomWindow.screen, s.rain, s.clock, s.hud}) do
+	for _, obj in ipairs({s.homeDoor.model, s.roomDoor.model, s.model, s.homeWindow and s.homeWindow.screen, s.roomWindow.screen, s.rain, s.clock, s.music, s.hud}) do
 		pcall(function() obj:Destroy() end)
 	end
 end
@@ -26660,6 +26881,8 @@ addcmd('door',{'room','myroom'},function(args, speaker)
 	s.roomWindow = D.makeWindow(homeView, Color3.fromRGB(160, 190, 230))
 	s.rain = WackyState.sound(D.rain, nil, 0, true)
 	s.clock = WackyState.sound(D.clock, nil, 0, true)
+	s.music = WackyState.playlist(R.byId(R.stations, R.data.station).tracks, 0)
+	WackyState.playlistPause(s.music, true)
 	D.state = s
 	R.save()
 	for _, door in ipairs({s.homeDoor, s.roomDoor}) do
@@ -26695,9 +26918,11 @@ addcmd('door',{'room','myroom'},function(args, speaker)
 					end
 				end
 			end
-			local here = getRoot(speaker.Character)
-			here = here and R.roomAt(s, here.Position)
+			local rootNow = getRoot(speaker.Character)
+			local here = rootNow and R.roomAt(s, rootNow.Position)
 			if here and here ~= s.room then R.enterRoom(s, here) end
+			-- left the house some other way (teleported, respawned, the Agartha portal...): music and lighting go back
+			if rootNow and not here and (rootNow.Position - s.origin).Magnitude > 160 then D.leaveMood(s) end
 		end
 		if R.animate then R.animate(s, dt) end
 		if s.homeWindow then D.updateWindow(s.homeWindow, s.homeDoor, s.roomDoor, -1, speaker.Character) end
@@ -26755,7 +26980,7 @@ end
 
 -- ==================== MIDAS & DIAMOND RUSH ====================
 WackyState.midasGold = Color3.fromRGB(255, 196, 48)
-WackyState.gemSounds = {9114619224, 9114618734, 9114618921, 9114619221} -- ProSoundEffects glass tinks
+WackyState.gemSounds = {9114619224, 9114618734, 9114618921, 9114619221, 9125447056} -- ProSoundEffects glass tinks
 WackyState.sparkleTexture = "rbxasset://textures/particles/sparkles_main.dds"
 
 WackyState.burst = function(parent, colorA, colorB, amount, speed)
@@ -26905,9 +27130,9 @@ addcmd('unmidas',{'nomidas','ungoldtouch'},function(args, speaker)
 end)
 
 -- Diamond Rush: diamonds rain from the sky, collect as many as you can before time runs out
-WackyState.diamondMusic = {9048374150, 111760324494890, 130511819535092, 123057834140134} -- APM / DistroKid official Roblox music
+WackyState.diamondMusic = {9048374150, 111760324494890, 130511819535092, 123057834140134, 130366303895413, 129336706957643, 126823401851369, 139870147662578, 135353806282218, 91293507178415, 110429634722289, 133333284252137, 100585407454746} -- APM / DistroKid official Roblox music
 WackyState.diamondSting = 1837770099
-WackyState.diamondStings = {1837770099, 1836473422, 9043656146, 1837762485, 1841739944} -- end-of-round jingles (APM official)
+WackyState.diamondStings = {1837770099, 1836473422, 9043656146, 1837762485, 1841739944, 1842141543, 9043656149, 1837762475, 9043196920} -- end-of-round jingles (APM official)
 WackyState.diamondBeep = 9113400139
 WackyState.diamondWhoosh = 9120710054
 WackyState.diamondTypes = {
@@ -28753,8 +28978,8 @@ NeverYieldPets.instantPrice = 150
 NeverYieldPets.ballPrice = 80
 NeverYieldPets.coinSound = 9114619224
 -- celebration jingles (APM official Roblox music); one is picked at random each time
-NeverYieldPets.hatchMusic = {1837762472, 1841605720, 9045505559, 1841814926}
-NeverYieldPets.levelMusic = {1836860398, 1839881844, 9043711287, 1842141584}
+NeverYieldPets.hatchMusic = {1837762472, 1841605720, 9045505559, 1841814926, 1836473422, 1842059835, 133000497392138}
+NeverYieldPets.levelMusic = {1836860398, 1839881844, 9043711287, 1842141584, 1844220041, 9043656146, 1841990283, 9043754128}
 
 NeverYieldPets.jingle = function(kind)
 	local settings = NeverYieldPets.data and NeverYieldPets.data.settings

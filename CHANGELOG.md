@@ -5,6 +5,7 @@ Versions before 1.11.3 were reconstructed from the Desktop `.bakN` backups (one 
 
 | Version | Date | Commands | Change |
 |---|---|---|---|
+| 1.27.0 | 10-10 | 634 | House music + Retro Radio (11 stations, E/F); Agartha: 22 calm piano/harp tracks with reverb; more tracks for clowns, Diamond Rush, jingles and sound effects; music never keeps playing after you leave Agartha or the house |
 | 1.26.1 | 10-10 | 634 | Light switches and other small items can be picked up in Edit mode (E-prompts hidden while decorating); Agartha pond: no more blocky terrain-water octagon, glass water with glints |
 | 1.26.0 | 10-10 | 634 | 38 detailed furniture items (89 total); 16 curtain styles incl. match walls/floor, each window opens alone; 2 windows per room; inner doors fill their opening + door stops; wall effects avoid doorways; Agartha sitting pose works on AnimationConstraint rigs |
 | 1.25.4 | 10-10 | 634 | Doors in every doorway between rooms (E to open/close, swing + creak); curtains slide shut per room (E at a window or Edit > Style), saved |
