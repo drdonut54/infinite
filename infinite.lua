@@ -1,4 +1,4 @@
--- NeverYield v1.27.0 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.27.1 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.27.0" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.27.1" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -25987,6 +25987,10 @@ NeverYieldRoom.setStation = function(s, id)
 			if s.inside then WackyState.fadeMusic(s.music, R.musicVolume, 1) else WackyState.playlistPause(s.music, true) end
 		end
 	end
+	-- the ticking clock fills the quiet only when the radio is off
+	if s.clock and s.inside then
+		TweenService:Create(s.clock, TweenInfo.new(1), {Volume = st.id == "off" and 0.35 or 0}):Play()
+	end
 	for _, rs in ipairs(s.roomList or {}) do
 		for _, d in ipairs(rs.model:GetDescendants()) do
 			if d:IsA("ProximityPrompt") and d.Name == "NYRadio" then d.ObjectText = "Radio: " .. st.name end
@@ -26797,7 +26801,7 @@ NeverYieldDoor.enterMood = function(s)
 	s.room = s.rooms.living
 	NeverYieldRoom.applyMood(s, s.room)
 	NeverYieldRoom.houseMusic(s, true)
-	for _, snd in ipairs({{s.rain, 0.12}, {s.clock, 0.35}}) do
+	for _, snd in ipairs({{s.rain, 0.12}, {s.clock, NeverYieldRoom.data.station == "off" and 0.35 or 0}}) do
 		TweenService:Create(snd[1], TweenInfo.new(2), {Volume = snd[2]}):Play()
 	end
 	NeverYieldRoom.hud(s)
