@@ -1,4 +1,4 @@
--- NeverYield v1.24.7 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.25.0 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.24.7" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.25.0" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -5324,7 +5324,7 @@ CMDs[#CMDs + 1] = {NAME = 'skipweather / nexttrack', DESC = 'Weather sounds chan
 CMDs[#CMDs + 1] = {NAME = 'fuckoff / unloadny', DESC = 'Completely unloads NeverYield: turns everything off, resets your speed, jump, gravity and camera to the game values, and removes the GUI'}
 CMDs[#CMDs + 1] = {NAME = 'END / theend', DESC = 'A black hole (only you see it) swallows the map and you, then takes you to a new server'}
 CMDs[#CMDs + 1] = {NAME = 'agartha / portal', DESC = 'Opens a sparking see-through gateway to Agartha, a peaceful floating island with a cottage and yard. It closes 5 s after you walk through; type portal again in Agartha to come back'}
-CMDs[#CMDs + 1] = {NAME = 'door / room', DESC = 'A door to YOUR room: open it to see inside, walk in, press Edit to place furniture, trophies and unlocks anywhere and pick floors, walls and lighting. It saves'}
+CMDs[#CMDs + 1] = {NAME = 'door / room', DESC = 'A door to YOUR house: living room, bedroom, game room and kitchen. Press Edit in any room to place furniture, lights and trophies and pick floors, walls and lighting; flip light switches with E. It saves'}
 CMDs[#CMDs + 1] = {NAME = 'undoor', DESC = 'Removes the door to your room (brings you back if you are inside)'}
 CMDs[#CMDs + 1] = {NAME = 'doordebug', DESC = 'Shows why the view through your room door is or is not showing'}
 CMDs[#CMDs + 1] = {NAME = 'roomreset', DESC = 'Puts your room back to the default layout (the old one is kept as a backup file)'}
@@ -23381,6 +23381,38 @@ NeverYieldDoor = {
 }
 NeverYieldRoom = {file = "NeverYield_room.json", W = 44, D = 40, H = 16, maxItems = 160, version = 0}
 
+-- the house: the living room in the middle and three more rooms through doorways, each with its own floor, walls,
+-- lighting, light switch and furniture
+NeverYieldRoom.rooms = {
+	{id = "living", name = "Living Room", icon = "\u{1F6CB}\u{FE0F}", dx = 0, dz = 0, floor = "oak", wall = "cream"},
+	{id = "bedroom", name = "Bedroom", icon = "\u{1F6CF}\u{FE0F}", dx = 1, dz = 0, floor = "carpet", wall = "blush"},
+	{id = "game", name = "Game Room", icon = "\u{1F3AE}", dx = -1, dz = 0, floor = "walnut", wall = "navy"},
+	{id = "kitchen", name = "Kitchen", icon = "\u{1F373}", dx = 0, dz = 1, floor = "oak", wall = "sage"},
+}
+NeverYieldRoom.switchOn, NeverYieldRoom.switchOff = 9126027903, 9126027917 -- ProSoundEffects wall switch clicks (checked)
+
+NeverYieldRoom.rd = function(id)
+	return NeverYieldRoom.data.rooms[id]
+end
+
+-- what a room has on each side: a doorway to the next room, the front door, or windows
+NeverYieldRoom.sideKind = function(def, side)
+	local dir = ({n = {0, 1}, s = {0, -1}, e = {1, 0}, w = {-1, 0}})[side]
+	for _, other in ipairs(NeverYieldRoom.rooms) do
+		if other.dx == def.dx + dir[1] and other.dz == def.dz + dir[2] then return "link" end
+	end
+	if def.id == "living" and side == "s" then return "entrance" end
+	return "window"
+end
+
+NeverYieldRoom.roomAt = function(s, pos)
+	local R = NeverYieldRoom
+	for _, rs in ipairs(s.roomList or {}) do
+		local rel = pos - rs.origin
+		if math.abs(rel.X) <= R.W / 2 + 1 and math.abs(rel.Z) <= R.D / 2 + 1 and rel.Y > -4 and rel.Y < R.H + 4 then return rs end
+	end
+end
+
 NeverYieldRoom.mat = function(name)
 	local ok, m = pcall(function() return Enum.Material[name] end)
 	return ok and m or Enum.Material.SmoothPlastic
@@ -23416,6 +23448,9 @@ NeverYieldRoom.moods = {
 	{id = "day", name = "Bright Day", clock = 13, bright = 2, ambient = {170, 170, 170}, lamp = {255, 245, 230}, lampBright = 0.8, sky = {{120, 190, 255}, {220, 240, 255}}},
 	{id = "night", name = "Night", clock = 0, bright = 0.2, ambient = {55, 55, 85}, lamp = {255, 190, 120}, lampBright = 1.1, sky = {{15, 20, 45}, {40, 30, 80}}},
 	{id = "party", name = "Party", clock = 0, bright = 0.2, ambient = {70, 50, 90}, lamp = {255, 80, 200}, lampBright = 1.8, sky = {{40, 10, 60}, {10, 30, 80}}, party = true, unlock = "trophy25"},
+	{id = "sunset", name = "Golden Hour", clock = 17.6, bright = 1.4, ambient = {150, 110, 80}, lamp = {255, 190, 120}, lampBright = 1.0, sky = {{255, 140, 70}, {255, 200, 120}}},
+	{id = "candle", name = "Candlelight", clock = 0, bright = 0.1, ambient = {85, 55, 35}, lamp = {255, 160, 80}, lampBright = 1.2, sky = {{20, 15, 35}, {50, 30, 60}}, unlock = "play24"},
+	{id = "movie", name = "Movie Night", clock = 0, bright = 0.05, ambient = {35, 40, 70}, lamp = {110, 140, 255}, lampBright = 0.4, sky = {{10, 15, 40}, {30, 20, 60}}, unlock = "freecam"},
 }
 
 NeverYieldRoom.byId = function(list, id)
@@ -23516,7 +23551,7 @@ NeverYieldRoom.catalog = {
 		add(Vector3.new(0.35, 0.5, 0.5), at(1.2, 1.95, 0.2) * up, C(240, 240, 235), M.SmoothPlastic, "Cylinder")
 		add(Vector3.new(1.2, 0.15, 0.9), at(-1, 1.78, -0.2) * CFrame.Angles(0, 0.3, 0), C(200, 60, 60), M.SmoothPlastic)
 	end},
-	{id = "sidetable", name = "Side Table", build = function(add)
+	{id = "sidetable", name = "Side Table", lamp = true, build = function(add)
 		add(Vector3.new(0.25, 1.9, 1.9), at(0, 2.2, 0) * up, C(120, 80, 50), M.Wood, "Cylinder")
 		add(Vector3.new(2.1, 0.3, 0.3), at(0, 1.05, 0) * up, C(90, 60, 40), M.Wood, "Cylinder")
 		add(Vector3.new(0.2, 1.2, 1.2), at(0, 0.1, 0) * up, C(90, 60, 40), M.Wood, "Cylinder")
@@ -23524,7 +23559,7 @@ NeverYieldRoom.catalog = {
 		add(Vector3.new(1.0, 0.7, 1.0), at(0, 3.2, 0), C(240, 225, 200), M.Fabric, "Ellipsoid", {Transparency = 0.15})
 		light(bulb, C(255, 200, 140), 12, 0.8)
 	end},
-	{id = "floorlamp", name = "Floor Lamp", build = function(add)
+	{id = "floorlamp", name = "Floor Lamp", lamp = true, build = function(add)
 		add(Vector3.new(0.25, 1.6, 1.6), at(0, 0.12, 0) * up, C(40, 35, 35), M.Metal, "Cylinder")
 		add(Vector3.new(5.6, 0.2, 0.2), at(0, 2.9, 0) * up, C(40, 35, 35), M.Metal, "Cylinder")
 		local bulb = add(Vector3.new(0.7, 0.7, 0.7), at(0, 5.6, 0), C(255, 220, 160), M.Neon, "Ball")
@@ -23650,7 +23685,7 @@ NeverYieldRoom.catalog = {
 		snd.Parent = flame
 		snd:Play()
 	end},
-	{id = "stringlights", name = "String Lights", unlock = "met100", build = function(add)
+	{id = "stringlights", name = "String Lights", unlock = "met100", lamp = true, build = function(add)
 		local colors = {C(255, 80, 80), C(255, 210, 80), C(80, 220, 120), C(80, 160, 255), C(220, 100, 255)}
 		for i = 0, 15 do
 			local x = -7.5 + i
@@ -23745,7 +23780,7 @@ NeverYieldRoom.catalog = {
 		add(Vector3.new(0.5, 2.6, 2.6), at(0, 0.75, 0) * up, C(255, 230, 240), M.Fabric, "Cylinder")
 		add(Vector3.new(0.6, 0.6, 0.6), at(0.6, 1.2, 0.3), C(255, 220, 60), M.SmoothPlastic, "Ball")
 	end},
-	{id = "lavalamp", name = "Lava Lamp", unlock = "effect1", build = function(add, model, rng)
+	{id = "lavalamp", name = "Lava Lamp", unlock = "effect1", lamp = true, build = function(add, model, rng)
 		add(Vector3.new(0.9, 1, 0.9), at(0, 0.5, 0), C(60, 60, 70), M.Metal)
 		local glass = add(Vector3.new(0.8, 2.6, 0.8), at(0, 2.3, 0), C(255, 120, 60), M.Glass, nil, {Transparency = 0.5})
 		for i = 1, 4 do
@@ -23754,7 +23789,7 @@ NeverYieldRoom.catalog = {
 		add(Vector3.new(0.6, 0.4, 0.6), at(0, 3.8, 0), C(60, 60, 70), M.Metal)
 		light(glass, C(255, 90, 140), 10, 0.9)
 	end},
-	{id = "moonlamp", name = "Moon Lamp", unlock = "moon", build = function(add)
+	{id = "moonlamp", name = "Moon Lamp", unlock = "moon", lamp = true, build = function(add)
 		add(Vector3.new(0.3, 1.4, 1.4), at(0, 0.15, 0) * up, C(40, 35, 35), M.Metal, "Cylinder")
 		local moon = add(Vector3.new(2.4, 2.4, 2.4), at(0, 1.6, 0), C(200, 185, 160), M.Slate, "Ball")
 		for _, x in ipairs({-0.45, 0.45}) do
@@ -23794,7 +23829,7 @@ NeverYieldRoom.catalog = {
 		add(Vector3.new(1, 2, 1), at(-1.5, 3.2, 0), gold, M.Foil)
 		add(Vector3.new(1, 2, 1), at(1.6, 4.1, 0) * CFrame.Angles(0, 0, math.rad(150)), gold, M.Foil)
 	end},
-	{id = "discoball", name = "Disco Ball", unlock = "trophy25", build = function(add)
+	{id = "discoball", name = "Disco Ball", unlock = "trophy25", lamp = true, build = function(add)
 		add(Vector3.new(0.06, 2.6, 0.06), at(0, 14.7, 0), C(200, 200, 200), M.Metal, nil, {CanCollide = false})
 		local ball = add(Vector3.new(2, 2, 2), at(0, 12.4, 0), C(230, 230, 240), M.Foil, "Ball", {Reflectance = 0.6, CanCollide = false})
 		local sparkle = Instance.new("ParticleEmitter")
@@ -23818,6 +23853,495 @@ NeverYieldRoom.catalog = {
 		for _, x in ipairs({-1.75, 1.75}) do add(Vector3.new(0.5, 1.4, 3), at(x, 3.1, 0), gold, M.Foil) end
 		for i = -1, 1 do add(Vector3.new(0.5, 0.9, 0.5), at(i * 1.1, 8, 1.5), gold, M.Foil, "Wedge") end
 		NeverYieldRoom.seat(seat, at(0, 2.5 + 1.5, 0), "Sit on the throne")
+	end},
+	-- ---------- v1.25.0: lights (wired to the room's light switch) ----------
+	{id = "lightswitch", name = "Light Switch", build = function(add)
+		local plate = add(Vector3.new(0.7, 1.1, 0.12), at(0, 4.2, 0.84), C(245, 242, 235), M.SmoothPlastic)
+		plate.Name = "NYSwitchPlate"
+		add(Vector3.new(0.5, 0.9, 0.06), at(0, 4.2, 0.77), C(228, 224, 216), M.SmoothPlastic)
+		local lever = add(Vector3.new(0.16, 0.34, 0.14), at(0, 4.3, 0.7) * CFrame.Angles(math.rad(-20), 0, 0), C(252, 252, 250), M.SmoothPlastic)
+		lever.Name = "NYSwitchLever"
+		for _, sy in ipairs({-0.42, 0.42}) do
+			add(Vector3.new(0.08, 0.08, 0.08), at(0, 4.2 + sy, 0.77), C(190, 185, 175), M.Metal, "Ball")
+		end
+		local prompt = Instance.new("ProximityPrompt")
+		prompt.Name = "NYSwitch"
+		prompt.ActionText = "Lights off"
+		prompt.ObjectText = "Light Switch"
+		prompt.HoldDuration = 0
+		prompt.MaxActivationDistance = 8
+		prompt.RequiresLineOfSight = false
+		prompt.KeyboardKeyCode = Enum.KeyCode.E
+		prompt.Parent = plate
+		prompt.Triggered:Connect(function()
+			local s = NeverYieldDoor.state
+			local rs = s and NeverYieldRoom.roomAt(s, plate.Position)
+			if rs then NeverYieldRoom.toggleLights(s, rs, plate) end
+		end)
+	end},
+	{id = "tablelamp", name = "Table Lamp", lamp = true, build = function(add)
+		local brass = C(200, 170, 90)
+		add(Vector3.new(0.12, 0.8, 0.8), at(0, 0.06, 0) * up, brass, M.Foil, "Cylinder")
+		add(Vector3.new(0.8, 1.1, 0.8), at(0, 0.65, 0), C(60, 140, 150), M.SmoothPlastic, "Ellipsoid", {Reflectance = 0.1})
+		add(Vector3.new(0.5, 0.14, 0.14), at(0, 1.4, 0) * up, brass, M.Foil, "Cylinder")
+		local bulb = add(Vector3.new(0.35, 0.35, 0.35), at(0, 1.75, 0), C(255, 230, 170), M.Neon, "Ball")
+		add(Vector3.new(0.9, 1.3, 1.3), at(0, 1.95, 0) * up, C(245, 230, 200), M.Fabric, "Cylinder", {Transparency = 0.15})
+		add(Vector3.new(0.03, 0.5, 0.03), at(0.3, 1.3, -0.3), brass, M.Foil)
+		add(Vector3.new(0.08, 0.08, 0.08), at(0.3, 1.03, -0.3), brass, M.Foil, "Ball")
+		light(bulb, C(255, 200, 140), 10, 0.8)
+	end},
+	{id = "sconce", name = "Wall Sconce", lamp = true, build = function(add)
+		local brass = C(200, 160, 80)
+		add(Vector3.new(0.7, 1.3, 0.12), at(0, 6.5, 0.84), brass, M.Foil, "Ellipsoid")
+		add(Vector3.new(0.12, 0.12, 0.7), at(0, 6.3, 0.48), brass, M.Foil)
+		add(Vector3.new(0.12, 0.3, 0.12), at(0, 6.4, 0.15), brass, M.Foil)
+		add(Vector3.new(0.45, 0.2, 0.45), at(0, 6.55, 0.15), brass, M.Foil, "Ellipsoid")
+		local bulb = add(Vector3.new(0.32, 0.4, 0.32), at(0, 6.8, 0.15), C(255, 225, 170), M.Neon, "Ellipsoid")
+		add(Vector3.new(0.85, 0.75, 0.85), at(0, 6.95, 0.15), C(255, 240, 215), M.Glass, "Ellipsoid", {Transparency = 0.35})
+		light(bulb, C(255, 200, 140), 14, 0.9)
+	end},
+	{id = "pendant", name = "Pendant Light", lamp = true, ceiling = true, build = function(add)
+		local H = NeverYieldRoom.H
+		local metal = C(40, 90, 70)
+		add(Vector3.new(0.15, 0.8, 0.8), at(0, H - 0.07, 0) * up, C(40, 40, 45), M.Metal, "Cylinder")
+		add(Vector3.new(0.06, 4, 0.06), at(0, H - 2, 0), C(30, 30, 30), M.SmoothPlastic)
+		add(Vector3.new(0.3, 0.32, 0.32), at(0, H - 4.1, 0) * up, C(40, 40, 45), M.Metal, "Cylinder")
+		for i = 0, 3 do
+			add(Vector3.new(0.18, 0.6 + i * 0.42, 0.6 + i * 0.42), at(0, H - 4.25 - i * 0.16, 0) * up, metal, M.Metal, "Cylinder")
+		end
+		add(Vector3.new(0.05, 1.82, 1.82), at(0, H - 4.75, 0) * up, C(230, 225, 210), M.Metal, "Cylinder", {Transparency = 0.6})
+		local bulb = add(Vector3.new(0.45, 0.45, 0.45), at(0, H - 4.85, 0), C(255, 225, 160), M.Neon, "Ball")
+		light(bulb, C(255, 200, 140), 16, 1)
+	end},
+	{id = "spotlight", name = "Ceiling Spotlight", lamp = true, ceiling = true, build = function(add)
+		local H = NeverYieldRoom.H
+		add(Vector3.new(0.12, 1.2, 1.2), at(0, H - 0.06, 0) * up, C(235, 235, 235), M.SmoothPlastic, "Cylinder")
+		add(Vector3.new(0.16, 0.85, 0.85), at(0, H - 0.1, 0) * up, C(60, 60, 65), M.Metal, "Cylinder")
+		local lens = add(Vector3.new(0.6, 0.06, 0.6), at(0, H - 0.2, 0), C(255, 245, 225), M.Neon)
+		local spot = Instance.new("SpotLight")
+		spot.Face = Enum.NormalId.Bottom
+		spot.Angle = 65
+		spot.Range = 22
+		spot.Brightness = 2
+		spot.Color = C(255, 235, 210)
+		spot.Shadows = true
+		spot.Parent = lens
+	end},
+	{id = "lantern", name = "Standing Lantern", lamp = true, build = function(add)
+		local iron = C(35, 35, 40)
+		add(Vector3.new(0.3, 1.4, 1.4), at(0, 0.15, 0) * up, iron, M.Metal, "Cylinder")
+		add(Vector3.new(4.2, 0.22, 0.22), at(0, 2.3, 0) * up, iron, M.Metal, "Cylinder")
+		add(Vector3.new(1.3, 0.15, 1.3), at(0, 4.45, 0), iron, M.Metal)
+		for _, cx in ipairs({-0.58, 0.58}) do
+			for _, cz in ipairs({-0.58, 0.58}) do
+				add(Vector3.new(0.1, 1.5, 0.1), at(cx, 5.25, cz), iron, M.Metal)
+			end
+		end
+		add(Vector3.new(1.1, 1.45, 1.1), at(0, 5.25, 0), C(255, 235, 200), M.Glass, nil, {Transparency = 0.6})
+		add(Vector3.new(0.25, 0.6, 0.25), at(0, 4.82, 0), C(250, 245, 230), M.SmoothPlastic)
+		local flame = add(Vector3.new(0.18, 0.32, 0.18), at(0, 5.3, 0), C(255, 200, 100), M.Neon, "Ellipsoid")
+		add(Vector3.new(0.45, 1.6, 1.6), at(0, 6.2, 0) * up, iron, M.Metal, "Cylinder")
+		add(Vector3.new(0.4, 0.9, 0.9), at(0, 6.6, 0) * up, iron, M.Metal, "Cylinder")
+		add(Vector3.new(0.35, 0.35, 0.35), at(0, 7.0, 0), iron, M.Metal, "Ball")
+		light(flame, C(255, 180, 100), 14, 1)
+	end},
+	{id = "chandelier", name = "Crystal Chandelier", lamp = true, ceiling = true, unlock = "play24", build = function(add)
+		local H = NeverYieldRoom.H
+		local gold = C(215, 175, 80)
+		add(Vector3.new(0.2, 1.4, 1.4), at(0, H - 0.1, 0) * up, gold, M.Foil, "Cylinder")
+		add(Vector3.new(0.12, 2.4, 0.12), at(0, H - 1.3, 0), gold, M.Foil)
+		add(Vector3.new(0.9, 1.2, 0.9), at(0, H - 2.9, 0), gold, M.Foil, "Ellipsoid")
+		add(Vector3.new(0.12, 3.9, 3.9), at(0, H - 3.35, 0) * up, gold, M.Foil, "Cylinder", {Transparency = 0.3})
+		for i = 0, 7 do
+			local a = i / 8 * math.pi * 2
+			local dx, dz = math.cos(a) * 1.9, math.sin(a) * 1.9
+			add(Vector3.new(2.0, 0.12, 0.12), at(dx / 2, H - 3.3, dz / 2) * CFrame.Angles(0, -a, 0), gold, M.Foil)
+			add(Vector3.new(0.38, 0.18, 0.38), at(dx, H - 3.25, dz), gold, M.Foil, "Ellipsoid")
+			add(Vector3.new(0.16, 0.5, 0.16), at(dx, H - 2.95, dz), C(250, 245, 230), M.SmoothPlastic)
+			local flame = add(Vector3.new(0.14, 0.26, 0.14), at(dx, H - 2.6, dz), C(255, 210, 120), M.Neon, "Ellipsoid")
+			add(Vector3.new(0.14, 0.38, 0.14), at(dx * 0.75, H - 3.8, dz * 0.75), C(220, 240, 255), M.Glass, "Ellipsoid", {Transparency = 0.2, Reflectance = 0.3})
+			if i % 2 == 0 then light(flame, C(255, 200, 140), 18, 0.7) end
+		end
+		for k = 1, 3 do
+			add(Vector3.new(0.26 - k * 0.04, 0.5, 0.26 - k * 0.04), at(0, H - 3.4 - k * 0.45, 0), C(220, 240, 255), M.Glass, "Ellipsoid", {Transparency = 0.15, Reflectance = 0.3})
+		end
+	end},
+	{id = "ledstrip", name = "RGB LED Strip", lamp = true, unlock = "styled", build = function(add)
+		add(Vector3.new(10.4, 0.3, 0.2), at(0, 12, 0.8), C(190, 195, 205), M.Metal)
+		for i = 0, 9 do
+			local seg = add(Vector3.new(1.0, 0.16, 0.08), at(-4.5 + i, 12, 0.68), Color3.fromHSV(0.75 + i * 0.025, 0.8, 1), M.Neon)
+			if i % 3 == 1 then light(seg, Color3.fromHSV(0.78 + i * 0.02, 0.7, 1), 12, 0.8) end
+		end
+	end},
+	-- ---------- v1.25.0: detailed furniture ----------
+	{id = "fridge", name = "Fridge", build = function(add)
+		local white, steel = C(236, 238, 240), C(190, 195, 200)
+		add(Vector3.new(3.4, 7.2, 2.6), at(0, 3.75, -0.45), white, M.SmoothPlastic)
+		add(Vector3.new(3.3, 0.3, 2.4), at(0, 0.15, -0.35), C(55, 55, 60), M.Metal)
+		add(Vector3.new(3.42, 0.06, 0.06), at(0, 5.0, -1.77), C(150, 150, 155), M.Metal)
+		for _, h in ipairs({{6.15, 1.4}, {3.3, 2.6}}) do
+			add(Vector3.new(0.14, h[2], 0.14), at(-1.4, h[1], -2.0), steel, M.Metal)
+			for _, e in ipairs({-1, 1}) do
+				add(Vector3.new(0.1, 0.1, 0.25), at(-1.4, h[1] + e * (h[2] / 2 - 0.1), -1.87), steel, M.Metal)
+			end
+		end
+		add(Vector3.new(0.9, 1.2, 0.08), at(0.75, 6.1, -1.78), C(45, 50, 60), M.SmoothPlastic)
+		add(Vector3.new(0.5, 0.12, 0.06), at(0.75, 6.55, -1.82), C(90, 200, 255), M.Neon)
+		add(Vector3.new(0.3, 0.3, 0.1), at(0.75, 5.8, -1.84), C(120, 125, 135), M.Metal)
+		for i, mc in ipairs({{255, 80, 80}, {80, 160, 255}, {255, 210, 60}, {120, 220, 120}}) do
+			add(Vector3.new(0.24, 0.24, 0.1), at(-0.85 + i * 0.38, 4.4 - (i % 2) * 0.25, -1.79), C(mc[1], mc[2], mc[3]), M.SmoothPlastic, "Ellipsoid")
+		end
+		add(Vector3.new(1.1, 1.4, 0.03), at(0.55, 3.2, -1.765) * CFrame.Angles(0, 0, 0.06), C(250, 250, 245), M.SmoothPlastic)
+		add(Vector3.new(0.5, 0.5, 0.03), at(0.75, 3.55, -1.78), C(255, 200, 60), M.SmoothPlastic, "Ellipsoid")
+		add(Vector3.new(0.95, 0.14, 0.03), at(0.55, 2.7, -1.78), C(90, 180, 90), M.SmoothPlastic)
+		add(Vector3.new(0.25, 0.45, 0.03), at(0.25, 2.98, -1.78), C(120, 80, 50), M.SmoothPlastic)
+		add(Vector3.new(0.5, 0.4, 0.03), at(0.25, 3.3, -1.78), C(60, 160, 60), M.SmoothPlastic, "Ellipsoid")
+	end},
+	{id = "stove", name = "Stove & Oven", build = function(add)
+		local steel, black = C(200, 203, 208), C(30, 30, 34)
+		add(Vector3.new(3.4, 3.4, 2.6), at(0, 1.75, -0.45), steel, M.Metal)
+		add(Vector3.new(3.4, 0.12, 2.6), at(0, 3.5, -0.45), black, M.SmoothPlastic)
+		for _, b in ipairs({{-0.8, -1.05}, {0.8, -1.05}, {-0.8, 0.15}, {0.8, 0.15}}) do
+			add(Vector3.new(0.06, 1.0, 1.0), at(b[1], 3.58, b[2]) * up, C(50, 50, 55), M.Metal, "Cylinder")
+			add(Vector3.new(0.07, 0.55, 0.55), at(b[1], 3.59, b[2]) * up, C(70, 70, 75), M.Metal, "Cylinder")
+		end
+		add(Vector3.new(0.05, 0.9, 0.9), at(-0.8, 3.63, -1.05) * up, C(255, 90, 30), M.Neon, "Cylinder")
+		add(Vector3.new(0.9, 1.05, 1.05), at(-0.8, 4.1, -1.05) * up, C(160, 165, 172), M.Metal, "Cylinder")
+		add(Vector3.new(0.06, 1.0, 1.0), at(-0.8, 4.57, -1.05) * up, C(110, 115, 120), M.Metal, "Cylinder")
+		for _, side in ipairs({-1, 1}) do
+			add(Vector3.new(0.3, 0.1, 0.12), at(-0.8 + side * 0.65, 4.4, -1.05), black, M.SmoothPlastic)
+		end
+		add(Vector3.new(3.4, 0.9, 0.3), at(0, 3.95, 0.7), steel, M.Metal)
+		for i = 0, 3 do
+			add(Vector3.new(0.15, 0.28, 0.28), at(-1.2 + i * 0.8, 3.95, 0.48) * CFrame.Angles(0, math.pi / 2, 0), black, M.SmoothPlastic, "Cylinder")
+		end
+		add(Vector3.new(0.6, 0.22, 0.05), at(0, 4.2, 0.53), C(80, 255, 140), M.Neon)
+		add(Vector3.new(3.0, 2.2, 0.1), at(0, 1.6, -1.78), C(185, 188, 193), M.Metal)
+		add(Vector3.new(2.0, 0.08, 0.04), at(0, 1.35, -1.82), C(255, 120, 40), M.Neon)
+		add(Vector3.new(2.2, 1.2, 0.06), at(0, 1.75, -1.86), C(25, 20, 18), M.Glass, nil, {Transparency = 0.35})
+		add(Vector3.new(2.6, 0.14, 0.14), at(0, 2.85, -2.02), steel, M.Metal, "Cylinder")
+		for _, side in ipairs({-1, 1}) do
+			add(Vector3.new(0.1, 0.1, 0.22), at(side * 1.15, 2.85, -1.9), steel, M.Metal)
+		end
+		add(Vector3.new(3.0, 0.4, 0.06), at(0, 0.3, -1.78), C(170, 173, 178), M.Metal)
+	end},
+	{id = "counter", name = "Kitchen Counter", build = function(add)
+		local wood, top, steel = C(235, 230, 220), C(60, 60, 66), C(200, 205, 210)
+		add(Vector3.new(6, 3.2, 2.4), at(0, 1.7, -0.35), wood, M.Wood)
+		add(Vector3.new(5.9, 0.3, 2.2), at(0, 0.15, -0.25), C(50, 45, 40), M.Wood)
+		add(Vector3.new(6.2, 0.25, 2.6), at(0, 3.42, -0.45), top, M.Marble)
+		add(Vector3.new(6.2, 1.2, 0.12), at(0, 4.15, 0.79), C(225, 235, 240), M.Marble)
+		for i, x in ipairs({-2.2, -0.75, 0.75, 2.2}) do
+			add(Vector3.new(1.3, 1.9, 0.08), at(x, 1.35, -1.58), wood:Lerp(Color3.new(1, 1, 1), 0.3), M.Wood)
+			add(Vector3.new(1.3, 0.6, 0.08), at(x, 2.85, -1.58), wood:Lerp(Color3.new(1, 1, 1), 0.3), M.Wood)
+			add(Vector3.new(0.08, 0.45, 0.1), at(x + (i % 2 == 0 and -0.5 or 0.5), 1.85, -1.66), C(60, 60, 60), M.Metal)
+			add(Vector3.new(0.5, 0.08, 0.1), at(x, 2.85, -1.66), C(60, 60, 60), M.Metal)
+		end
+		add(Vector3.new(2.2, 0.06, 1.4), at(-1.2, 3.56, -0.45), C(175, 180, 186), M.Metal)
+		add(Vector3.new(1.9, 0.08, 1.15), at(-1.2, 3.575, -0.45), C(95, 100, 106), M.Metal)
+		add(Vector3.new(0.6, 0.16, 0.16), at(-1.2, 3.85, 0.45) * up, steel, M.Metal, "Cylinder")
+		add(Vector3.new(0.12, 0.12, 0.8), at(-1.2, 4.15, 0.1), steel, M.Metal)
+		add(Vector3.new(0.12, 0.28, 0.12), at(-1.2, 4.02, -0.27), steel, M.Metal)
+		add(Vector3.new(0.4, 0.08, 0.08), at(-0.85, 4.2, 0.45), steel, M.Metal)
+		add(Vector3.new(1.4, 0.1, 0.9), at(1.6, 3.6, -0.6) * CFrame.Angles(0, 0.2, 0), C(170, 120, 70), M.Wood)
+		add(Vector3.new(0.35, 1.0, 1.0), at(1.8, 3.72, 0.2) * up, C(240, 240, 240), M.SmoothPlastic, "Cylinder")
+		for _, f in ipairs({{1.65, 0.1, {200, 30, 40}}, {1.95, 0.25, {255, 150, 30}}, {1.8, 0.4, {120, 200, 60}}}) do
+			add(Vector3.new(0.32, 0.32, 0.32), at(f[1], 4.02, f[2]), C(f[3][1], f[3][2], f[3][3]), M.SmoothPlastic, "Ball")
+		end
+		add(Vector3.new(0.7, 0.18, 0.2), at(1.9, 4.05, 0.05) * CFrame.Angles(0, 0.4, 0.3), C(250, 220, 60), M.SmoothPlastic, "Ellipsoid")
+	end},
+	{id = "diningset", name = "Dining Set", build = function(add)
+		local wood, cloth = C(120, 80, 50), C(200, 60, 60)
+		add(Vector3.new(6, 0.3, 3.6), at(0, 3.0, 0), wood, M.Wood)
+		for _, x in ipairs({-2.7, 2.7}) do
+			for _, z in ipairs({-1.5, 1.5}) do
+				add(Vector3.new(0.3, 2.85, 0.3), at(x, 1.42, z), wood, M.Wood)
+			end
+		end
+		add(Vector3.new(5.6, 0.04, 1.2), at(0, 3.17, 0), cloth, M.Fabric)
+		add(Vector3.new(0.5, 0.9, 0.5), at(0, 3.6, 0), C(120, 170, 220), M.Glass, "Ellipsoid", {Transparency = 0.2})
+		for i = 1, 5 do
+			local a = i / 5 * math.pi * 2
+			add(Vector3.new(0.04, 0.7, 0.04), at(math.cos(a) * 0.1, 4.2, math.sin(a) * 0.1), C(60, 140, 60), M.SmoothPlastic)
+			add(Vector3.new(0.3, 0.3, 0.3), at(math.cos(a) * 0.2, 4.6, math.sin(a) * 0.2), Color3.fromHSV(i / 5, 0.6, 1), M.SmoothPlastic, "Ball")
+		end
+		for _, ch in ipairs({{-1.5, -2.6, 180}, {1.5, -2.6, 180}, {-1.5, 2.6, 0}, {1.5, 2.6, 0}}) do
+			local cf = at(ch[1], 0, ch[2]) * CFrame.Angles(0, math.rad(ch[3]), 0)
+			local seat = add(Vector3.new(1.8, 0.25, 1.7), cf * at(0, 1.9, 0), wood, M.Wood)
+			add(Vector3.new(1.6, 0.15, 1.5), cf * at(0, 2.08, 0), cloth, M.Fabric)
+			for _, lx in ipairs({-0.75, 0.75}) do
+				for _, lz in ipairs({-0.7, 0.7}) do
+					add(Vector3.new(0.2, 1.8, 0.2), cf * at(lx, 0.9, lz), wood, M.Wood)
+				end
+			end
+			add(Vector3.new(1.8, 2.4, 0.2), cf * at(0, 3.2, 0.8), wood, M.Wood)
+			add(Vector3.new(0.05, 0.9, 0.9), at(ch[1], 3.17, ch[2] * 0.45) * up, C(245, 245, 245), M.SmoothPlastic, "Cylinder")
+			NeverYieldRoom.seat(seat, cf * at(0, 2.2 + 1.5, -0.1), "Sit")
+		end
+	end},
+	{id = "barstool", name = "Bar Stool", build = function(add)
+		local chrome = C(210, 215, 222)
+		add(Vector3.new(0.15, 1.4, 1.4), at(0, 0.08, 0) * up, chrome, M.Metal, "Cylinder")
+		add(Vector3.new(2.8, 0.25, 0.25), at(0, 1.55, 0) * up, chrome, M.Metal, "Cylinder")
+		add(Vector3.new(0.1, 1.2, 1.2), at(0, 1.1, 0) * up, chrome, M.Metal, "Cylinder")
+		local seat = add(Vector3.new(0.45, 1.6, 1.6), at(0, 3.15, 0) * up, C(180, 40, 50), M.Fabric, "Cylinder")
+		NeverYieldRoom.seat(seat, at(0, 3.4 + 1.5, 0), "Sit")
+	end},
+	{id = "wardrobe", name = "Wardrobe", build = function(add)
+		local wood, brass = C(130, 85, 55), C(205, 165, 80)
+		add(Vector3.new(5, 8.4, 2.4), at(0, 4.5, -0.35), wood, M.Wood)
+		add(Vector3.new(5.4, 0.4, 2.7), at(0, 8.85, -0.4), wood:Lerp(Color3.new(0, 0, 0), 0.15), M.Wood)
+		for _, x in ipairs({-2.2, 2.2}) do
+			add(Vector3.new(0.4, 0.3, 0.4), at(x, 0.15, -1.2), wood:Lerp(Color3.new(0, 0, 0), 0.2), M.Wood)
+		end
+		for _, side in ipairs({-1, 1}) do
+			add(Vector3.new(2.35, 7.6, 0.1), at(side * 1.22, 4.6, -1.6), wood:Lerp(Color3.new(1, 1, 1), 0.08), M.Wood)
+			for _, py in ipairs({6.4, 2.9}) do
+				add(Vector3.new(1.8, 3.0, 0.06), at(side * 1.22, py, -1.66), wood:Lerp(Color3.new(0, 0, 0), 0.1), M.Wood)
+			end
+			add(Vector3.new(0.1, 0.7, 0.12), at(side * 0.25, 4.7, -1.72), brass, M.Foil)
+		end
+	end},
+	{id = "dresser", name = "Dresser & Mirror", build = function(add)
+		local wood, trim, brass = C(240, 235, 225), C(170, 120, 80), C(205, 165, 80)
+		add(Vector3.new(5, 3.2, 2), at(0, 1.8, -0.15), wood, M.Wood)
+		add(Vector3.new(5.2, 0.2, 2.2), at(0, 3.5, -0.2), trim, M.Wood)
+		for _, cx in ipairs({-1.2, 1.2}) do
+			for r = 0, 2 do
+				add(Vector3.new(2.2, 0.85, 0.08), at(cx, 0.8 + r * 0.95, -1.18), wood:Lerp(Color3.new(1, 1, 1), 0.3), M.Wood)
+				add(Vector3.new(0.2, 0.2, 0.2), at(cx, 0.8 + r * 0.95, -1.27), brass, M.Foil, "Ball")
+			end
+		end
+		for _, x in ipairs({-2.3, 2.3}) do
+			add(Vector3.new(0.3, 0.25, 0.3), at(x, 0.12, -0.9), trim, M.Wood)
+		end
+		add(Vector3.new(3.4, 3.6, 0.2), at(0, 5.6, 0.72), trim, M.Wood)
+		add(Vector3.new(3.0, 3.2, 0.06), at(0, 5.6, 0.6), C(210, 225, 235), M.Glass, nil, {Reflectance = 0.5})
+		add(Vector3.new(0.3, 0.55, 0.3), at(-1.6, 3.88, -0.6), C(255, 150, 200), M.Glass, "Ellipsoid", {Transparency = 0.2})
+		add(Vector3.new(0.12, 0.15, 0.12), at(-1.6, 4.2, -0.6), brass, M.Foil)
+		add(Vector3.new(0.25, 0.4, 0.25), at(-1.2, 3.8, -0.5), C(150, 200, 255), M.Glass, nil, {Transparency = 0.2})
+		add(Vector3.new(1.0, 0.45, 0.7), at(1.4, 3.83, -0.4), C(150, 40, 60), M.Fabric)
+		add(Vector3.new(1.02, 0.08, 0.72), at(1.4, 4.0, -0.4), brass, M.Foil)
+	end},
+	{id = "nightstand", name = "Nightstand", lamp = true, build = function(add)
+		local wood, brass = C(150, 105, 70), C(205, 165, 80)
+		add(Vector3.new(2.2, 2.2, 2.0), at(0, 1.3, -0.15), wood, M.Wood)
+		add(Vector3.new(2.3, 0.15, 2.1), at(0, 2.47, -0.15), wood:Lerp(Color3.new(0, 0, 0), 0.2), M.Wood)
+		add(Vector3.new(1.9, 0.7, 0.08), at(0, 1.8, -1.18), wood:Lerp(Color3.new(1, 1, 1), 0.15), M.Wood)
+		add(Vector3.new(0.18, 0.18, 0.18), at(0, 1.8, -1.26), brass, M.Foil, "Ball")
+		for _, x in ipairs({-0.95, 0.95}) do
+			for _, z in ipairs({-1.0, 0.7}) do
+				add(Vector3.new(0.2, 0.3, 0.2), at(x, 0.1, z), wood, M.Wood)
+			end
+		end
+		add(Vector3.new(0.6, 0.7, 0.6), at(-0.4, 2.9, 0.1), C(200, 120, 160), M.SmoothPlastic, "Ellipsoid")
+		local bulb = add(Vector3.new(0.3, 0.3, 0.3), at(-0.4, 3.4, 0.1), C(255, 230, 170), M.Neon, "Ball")
+		add(Vector3.new(0.7, 1.0, 1.0), at(-0.4, 3.55, 0.1) * up, C(250, 235, 210), M.Fabric, "Cylinder", {Transparency = 0.15})
+		add(Vector3.new(0.9, 0.18, 0.65), at(0.5, 2.63, -0.4) * CFrame.Angles(0, 0.3, 0), C(60, 90, 160), M.SmoothPlastic)
+		light(bulb, C(255, 200, 140), 9, 0.7)
+	end},
+	{id = "grandfatherclock", name = "Grandfather Clock", build = function(add)
+		local wood, brass, black = C(110, 60, 35), C(215, 175, 80), C(20, 20, 20)
+		add(Vector3.new(2.2, 1.6, 1.6), at(0, 0.8, 0.05), wood, M.Wood)
+		add(Vector3.new(1.7, 4.4, 1.3), at(0, 3.8, 0.2), wood, M.Wood)
+		add(Vector3.new(1.2, 3.6, 0.06), at(0, 3.8, -0.48), C(200, 220, 230), M.Glass, nil, {Transparency = 0.6})
+		add(Vector3.new(0.06, 2.4, 0.06), at(0, 4.3, -0.2), brass, M.Foil)
+		add(Vector3.new(0.12, 0.65, 0.65), at(0, 3.0, -0.2) * CFrame.Angles(0, math.pi / 2, 0), brass, M.Foil, "Cylinder")
+		for _, x in ipairs({-0.4, 0.4}) do
+			add(Vector3.new(1.0, 0.25, 0.25), at(x, 4.6, 0.1) * up, brass, M.Foil, "Cylinder")
+			add(Vector3.new(0.03, 1.0, 0.03), at(x, 5.6, 0.1), brass, M.Foil)
+		end
+		add(Vector3.new(2.2, 2.2, 1.7), at(0, 7.1, 0), wood, M.Wood)
+		add(Vector3.new(0.08, 1.75, 1.75), at(0, 7.1, -0.84) * CFrame.Angles(0, math.pi / 2, 0), brass, M.Foil, "Cylinder")
+		add(Vector3.new(0.1, 1.5, 1.5), at(0, 7.1, -0.86) * CFrame.Angles(0, math.pi / 2, 0), C(245, 240, 225), M.SmoothPlastic, "Cylinder")
+		for i = 0, 11 do
+			local a = i / 12 * math.pi * 2
+			add(Vector3.new(0.07, 0.07, 0.03), at(math.sin(a) * 0.6, 7.1 + math.cos(a) * 0.6, -0.92), black, M.SmoothPlastic)
+		end
+		add(Vector3.new(0.06, 0.55, 0.03), at(0, 7.33, -0.94), black, M.SmoothPlastic)
+		add(Vector3.new(0.4, 0.05, 0.03), at(0.18, 7.1, -0.94) * CFrame.Angles(0, 0, 0.5), black, M.SmoothPlastic)
+		add(Vector3.new(2.4, 0.3, 1.8), at(0, 8.35, 0), wood, M.Wood)
+		for _, x in ipairs({-1, 0, 1}) do
+			add(Vector3.new(0.25, 0.25, 0.25), at(x, 8.65, -0.3), brass, M.Foil, "Ball")
+		end
+	end},
+	{id = "pooltable", name = "Pool Table", unlock = "kill100", build = function(add)
+		local wood, felt = C(95, 55, 30), C(30, 120, 70)
+		add(Vector3.new(9.0, 0.6, 5.0), at(0, 2.7, 0), wood, M.Wood)
+		add(Vector3.new(8.0, 0.1, 4.0), at(0, 3.05, 0), felt, M.Fabric)
+		for _, z in ipairs({-2.25, 2.25}) do
+			add(Vector3.new(9.0, 0.35, 0.5), at(0, 3.17, z), wood, M.Wood)
+		end
+		for _, x in ipairs({-4.25, 4.25}) do
+			add(Vector3.new(0.5, 0.35, 5.0), at(x, 3.17, 0), wood, M.Wood)
+		end
+		for _, x in ipairs({-4.0, 0, 4.0}) do
+			for _, z in ipairs({-1.95, 1.95}) do
+				add(Vector3.new(0.12, 0.45, 0.45), at(x, 3.13, z) * up, C(15, 15, 15), M.SmoothPlastic, "Cylinder")
+			end
+		end
+		for _, x in ipairs({-3.8, 3.8}) do
+			for _, z in ipairs({-1.9, 1.9}) do
+				add(Vector3.new(2.4, 0.6, 0.6), at(x, 1.2, z) * up, wood, M.Wood, "Cylinder")
+			end
+		end
+		for i = -3, 3 do
+			for _, z in ipairs({-2.27, 2.27}) do
+				add(Vector3.new(0.08, 0.04, 0.08), at(i * 1.1, 3.36, z), C(240, 235, 220), M.SmoothPlastic)
+			end
+		end
+		local colors = {{250, 210, 40}, {40, 80, 200}, {210, 40, 40}, {110, 40, 150}, {255, 130, 30}, {30, 140, 60}, {130, 30, 40}, {15, 15, 15},
+			{250, 230, 120}, {120, 150, 230}, {240, 120, 120}, {170, 120, 210}, {255, 190, 120}, {110, 200, 130}, {190, 100, 110}}
+		local n = 0
+		for row = 0, 4 do
+			for k = 0, row do
+				n = n + 1
+				add(Vector3.new(0.28, 0.28, 0.28), at(1.8 + row * 0.25, 3.24, (k - row / 2) * 0.29), C(colors[n][1], colors[n][2], colors[n][3]), M.SmoothPlastic, "Ball", {Reflectance = 0.1})
+			end
+		end
+		add(Vector3.new(0.28, 0.28, 0.28), at(-2.2, 3.24, 0), C(250, 250, 245), M.SmoothPlastic, "Ball", {Reflectance = 0.1})
+		add(Vector3.new(5.5, 0.09, 0.09), at(-0.5, 3.18, 1.2) * CFrame.Angles(0, 0.15, 0), C(200, 160, 110), M.Wood, "Cylinder")
+		add(Vector3.new(0.15, 0.15, 0.15), at(4.2, 3.42, 2.2), C(60, 120, 220), M.SmoothPlastic)
+	end},
+	{id = "piano", name = "Grand Piano", unlock = "variety25", build = function(add)
+		local black, white = C(20, 20, 24), C(245, 245, 240)
+		add(Vector3.new(5.0, 1.3, 3.0), at(0, 3.1, 0), black, M.SmoothPlastic, nil, {Reflectance = 0.15})
+		add(Vector3.new(4.6, 1.3, 4.4), at(0.3, 3.1, 1.6), black, M.SmoothPlastic, "Ellipsoid", {Reflectance = 0.15})
+		add(Vector3.new(5.0, 0.4, 1.0), at(0, 2.8, -1.9), black, M.SmoothPlastic)
+		add(Vector3.new(4.6, 0.12, 0.8), at(0, 3.06, -1.95), white, M.SmoothPlastic)
+		local pattern = {true, true, false, true, true, true, false}
+		for i = 0, 25 do
+			if pattern[i % 7 + 1] then
+				add(Vector3.new(0.09, 0.08, 0.5), at(-2.15 + i * 0.172, 3.15, -1.8), black, M.SmoothPlastic)
+			end
+		end
+		add(Vector3.new(4.6, 0.5, 0.1), at(0, 3.35, -1.4), black, M.SmoothPlastic)
+		add(Vector3.new(4.6, 0.1, 4.2), at(0.51, 4.95, 1.0) * CFrame.Angles(0, 0, math.rad(-30)), black, M.SmoothPlastic, nil, {Reflectance = 0.15})
+		add(Vector3.new(0.08, 1.6, 0.08), at(-1.2, 4.3, 1.0) * CFrame.Angles(0, 0, math.rad(-10)), black, M.SmoothPlastic)
+		add(Vector3.new(2.0, 0.9, 0.08), at(0, 4.0, -1.1) * CFrame.Angles(math.rad(-15), 0, 0), black, M.SmoothPlastic)
+		add(Vector3.new(1.4, 0.7, 0.03), at(0, 4.05, -1.16) * CFrame.Angles(math.rad(-15), 0, 0), white, M.SmoothPlastic)
+		for _, leg in ipairs({{-2.1, -1.2}, {2.1, -1.2}, {0.6, 3.3}}) do
+			add(Vector3.new(0.4, 2.5, 0.4), at(leg[1], 1.25, leg[2]), black, M.SmoothPlastic)
+		end
+		add(Vector3.new(0.12, 1.6, 0.3), at(0, 0.9, -0.9), black, M.SmoothPlastic)
+		for _, x in ipairs({-0.25, 0, 0.25}) do
+			add(Vector3.new(0.1, 0.06, 0.35), at(x, 0.15, -1.1), C(215, 175, 80), M.Foil)
+		end
+		local bench = add(Vector3.new(3, 0.4, 1.3), at(0, 1.9, -3.4), black, M.SmoothPlastic)
+		add(Vector3.new(2.9, 0.15, 1.2), at(0, 2.15, -3.4), C(40, 30, 30), M.Fabric)
+		for _, x in ipairs({-1.3, 1.3}) do
+			for _, z in ipairs({-3.9, -2.9}) do
+				add(Vector3.new(0.2, 1.7, 0.2), at(x, 0.85, z), black, M.SmoothPlastic)
+			end
+		end
+		NeverYieldRoom.seat(bench, at(0, 2.25 + 1.5, -3.4) * CFrame.Angles(0, math.pi, 0), "Play")
+	end},
+	{id = "foosball", name = "Foosball Table", unlock = "clownruns", build = function(add)
+		local wood, steel = C(60, 40, 30), C(200, 205, 210)
+		add(Vector3.new(6, 0.2, 3.6), at(0, 2.6, 0), wood, M.Wood)
+		add(Vector3.new(5.6, 0.06, 3.2), at(0, 2.73, 0), C(40, 140, 60), M.SmoothPlastic)
+		add(Vector3.new(0.05, 0.02, 3.2), at(0, 2.77, 0), C(250, 250, 250), M.SmoothPlastic)
+		for _, z in ipairs({-1.7, 1.7}) do
+			add(Vector3.new(6, 0.8, 0.2), at(0, 3.1, z), wood, M.Wood)
+		end
+		for _, x in ipairs({-2.9, 2.9}) do
+			add(Vector3.new(0.2, 0.8, 3.6), at(x, 3.1, 0), wood, M.Wood)
+			add(Vector3.new(0.22, 0.4, 1.0), at(x, 2.95, 0), C(15, 15, 15), M.SmoothPlastic)
+		end
+		for _, x in ipairs({-2.6, 2.6}) do
+			for _, z in ipairs({-1.5, 1.5}) do
+				add(Vector3.new(0.35, 2.5, 0.35), at(x, 1.25, z), wood, M.Wood)
+			end
+		end
+		local counts = {1, 2, 3, 5, 5, 3, 2, 1}
+		local red, blue = C(220, 50, 50), C(50, 90, 220)
+		local team = {red, red, blue, red, blue, red, blue, blue}
+		for i, count in ipairs(counts) do
+			local x = -2.45 + (i - 1) * 0.7
+			local side = (team[i] == red) and -1 or 1
+			add(Vector3.new(5.0, 0.08, 0.08), at(x, 3.25, 0) * CFrame.Angles(0, math.pi / 2, 0), steel, M.Metal, "Cylinder")
+			add(Vector3.new(0.6, 0.18, 0.18), at(x, 3.25, side * 2.6) * CFrame.Angles(0, math.pi / 2, 0), C(20, 20, 20), M.SmoothPlastic, "Cylinder")
+			for k = 1, count do
+				local z = (k - (count + 1) / 2) * (2.8 / (count + 1)) * (count > 1 and 1.4 or 1)
+				add(Vector3.new(0.16, 0.5, 0.25), at(x, 3.0, z), team[i], M.SmoothPlastic)
+				add(Vector3.new(0.18, 0.18, 0.18), at(x, 3.38, z), C(255, 220, 180), M.SmoothPlastic, "Ball")
+			end
+		end
+		add(Vector3.new(0.2, 0.2, 0.2), at(0.3, 2.86, 0.4), C(250, 250, 250), M.SmoothPlastic, "Ball")
+	end},
+	{id = "telescope", name = "Telescope", unlock = "games100", build = function(add)
+		local brass, tubeColor = C(205, 165, 80), C(30, 50, 110)
+		local top = Vector3.new(0, 3.4, 0)
+		for i = 0, 2 do
+			local a = i / 3 * math.pi * 2 + 0.5
+			local foot = Vector3.new(math.cos(a) * 1.2, 0, math.sin(a) * 1.2)
+			local mid = (foot + top) / 2
+			add(Vector3.new(0.12, (top - foot).Magnitude, 0.12), CFrame.lookAt(mid, top) * CFrame.Angles(-math.pi / 2, 0, 0), brass, M.Foil)
+		end
+		add(Vector3.new(0.5, 0.5, 0.5), at(0, 3.5, 0), brass, M.Foil, "Ball")
+		local tube = at(0, 3.8, 0) * CFrame.Angles(math.rad(35), 0, 0)
+		local along = CFrame.Angles(0, math.pi / 2, 0)
+		add(Vector3.new(4.0, 0.55, 0.55), tube * CFrame.new(0, 0, -0.9) * along, tubeColor, M.SmoothPlastic, "Cylinder", {Reflectance = 0.15})
+		for _, z in ipairs({-2.75, 0.95}) do
+			add(Vector3.new(0.18, 0.62, 0.62), tube * CFrame.new(0, 0, z) * along, brass, M.Foil, "Cylinder")
+		end
+		add(Vector3.new(0.05, 0.45, 0.45), tube * CFrame.new(0, 0, -2.88) * along, C(120, 170, 220), M.Glass, "Cylinder", {Reflectance = 0.4})
+		add(Vector3.new(0.5, 0.2, 0.2), tube * CFrame.new(0, 0, 1.25) * along, C(20, 20, 20), M.SmoothPlastic, "Cylinder")
+		add(Vector3.new(1.2, 0.16, 0.16), tube * CFrame.new(0, 0.42, -0.6) * along, tubeColor, M.SmoothPlastic, "Cylinder")
+		add(Vector3.new(0.1, 0.25, 0.1), tube * CFrame.new(0, 0.3, -0.6), brass, M.Foil)
+	end},
+	{id = "guitar", name = "Guitar on Stand", unlock = "breakdance", build = function(add)
+		local body, dark, silver = C(190, 110, 50), C(70, 40, 25), C(210, 210, 215)
+		add(Vector3.new(1.6, 0.12, 1.2), at(0, 0.06, 0.1), C(25, 25, 25), M.Metal)
+		for _, x in ipairs({-0.6, 0.6}) do
+			add(Vector3.new(0.12, 0.8, 0.12), at(x, 0.45, -0.15), C(25, 25, 25), M.Metal)
+		end
+		add(Vector3.new(0.12, 3.6, 0.12), at(0, 1.9, 0.75) * CFrame.Angles(math.rad(12), 0, 0), C(25, 25, 25), M.Metal)
+		local g = at(0, 0, 0.1) * CFrame.Angles(math.rad(12), 0, 0)
+		add(Vector3.new(1.9, 2.0, 0.5), g * at(0, 1.35, 0), body, M.Wood, "Ellipsoid")
+		add(Vector3.new(1.5, 1.5, 0.5), g * at(0, 2.55, 0), body, M.Wood, "Ellipsoid")
+		add(Vector3.new(0.5, 0.5, 0.05), g * at(0, 2.25, -0.24), C(15, 10, 8), M.SmoothPlastic, "Ellipsoid")
+		add(Vector3.new(0.8, 0.12, 0.06), g * at(0, 1.4, -0.26), dark, M.Wood)
+		add(Vector3.new(0.3, 2.6, 0.18), g * at(0, 4.4, 0.05), dark, M.Wood)
+		for i = 1, 8 do
+			add(Vector3.new(0.3, 0.03, 0.04), g * at(0, 3.35 + i * 0.25, -0.05), silver, M.Metal)
+		end
+		add(Vector3.new(0.42, 0.7, 0.14), g * at(0, 6.0, 0.08), dark, M.Wood)
+		for i = 0, 2 do
+			for _, side in ipairs({-1, 1}) do
+				add(Vector3.new(0.14, 0.06, 0.06), g * at(side * 0.28, 5.8 + i * 0.2, 0.08), silver, M.Metal)
+			end
+		end
+		for i = 0, 5 do
+			add(Vector3.new(0.02, 4.25, 0.02), g * at(-0.1 + i * 0.04, 3.52, -0.2), silver, M.Metal)
+		end
+	end},
+	{id = "vending", name = "Vending Machine", unlock = "tycoon", build = function(add)
+		local red = C(200, 30, 40)
+		add(Vector3.new(3.6, 7.0, 2.05), at(0, 3.5, -0.175), red, M.SmoothPlastic)
+		add(Vector3.new(1.1, 7.0, 0.5), at(1.25, 3.5, -1.45), red, M.SmoothPlastic)
+		add(Vector3.new(2.5, 1.5, 0.5), at(-0.55, 0.75, -1.45), red, M.SmoothPlastic)
+		add(Vector3.new(2.5, 0.5, 0.5), at(-0.55, 6.75, -1.45), red, M.SmoothPlastic)
+		add(Vector3.new(0.2, 7.0, 0.5), at(-1.7, 3.5, -1.45), red, M.SmoothPlastic)
+		local back = add(Vector3.new(2.1, 5.0, 0.05), at(-0.55, 4.0, -1.23), C(240, 240, 255), M.Neon)
+		for k = 0, 3 do
+			add(Vector3.new(2.1, 0.06, 0.45), at(-0.55, 1.95 + k * 1.2, -1.45), C(160, 165, 170), M.Metal)
+			for j = 0, 4 do
+				add(Vector3.new(0.5, 0.28, 0.28), at(-1.35 + j * 0.4, 2.25 + k * 1.2, -1.45) * up, Color3.fromHSV((k * 0.27 + j * 0.05) % 1, 0.75, 0.95), M.Foil, "Cylinder")
+			end
+		end
+		add(Vector3.new(2.1, 5.0, 0.06), at(-0.55, 4.0, -1.68), C(200, 225, 240), M.Glass, nil, {Transparency = 0.55})
+		add(Vector3.new(0.8, 0.35, 0.06), at(1.25, 5.8, -1.72), C(80, 255, 120), M.Neon)
+		for r = 0, 2 do
+			for c = 0, 2 do
+				add(Vector3.new(0.18, 0.18, 0.06), at(1.05 + c * 0.22, 4.9 - r * 0.24, -1.72), C(220, 220, 225), M.SmoothPlastic)
+			end
+		end
+		add(Vector3.new(0.12, 0.4, 0.06), at(1.25, 4.0, -1.72), C(20, 20, 20), M.SmoothPlastic)
+		add(Vector3.new(0.6, 0.12, 0.06), at(1.25, 3.4, -1.72), C(20, 20, 20), M.SmoothPlastic)
+		add(Vector3.new(1.8, 0.6, 0.06), at(-0.55, 0.8, -1.72), C(20, 20, 20), M.SmoothPlastic)
+		add(Vector3.new(3.6, 0.8, 0.1), at(0, 7.4, -1.25), C(255, 240, 240), M.Neon)
+		light(back, C(230, 235, 255), 10, 0.8)
 	end},
 }
 NeverYieldRoom.itemById = {}
@@ -23858,6 +24382,11 @@ NeverYieldRoom.build = function(id, cf)
 		local ok, err = pcall(item.build, add, model, Random.new(seed))
 		if not ok then warn("[NeverYield room] " .. id .. ": " .. tostring(err)) end
 		model.WorldPivot = CFrame.new()
+		if item.lamp then
+			for _, d in ipairs(model:GetDescendants()) do
+				if d:IsA("BasePart") and d.Material == Enum.Material.Neon then d:SetAttribute("NYBulb", true) end
+			end
+		end
 	end
 	model:PivotTo(cf)
 	return model
@@ -23865,50 +24394,124 @@ end
 
 -- ---------- save ----------
 NeverYieldRoom.defaultItems = {
-	{id = "rug", x = 0, y = 0, z = 3, r = 0}, {id = "coffeetable", x = 0, y = 0, z = 3, r = 0}, {id = "sofa", x = 0, y = 0, z = 9, r = 0},
-	{id = "armchair", x = -7, y = 0, z = 3, r = -90}, {id = "armchair", x = 7, y = 0, z = 3, r = 90}, {id = "floorlamp", x = -5, y = 0, z = 10.5, r = 0},
-	{id = "sidetable", x = 5, y = 0, z = 10, r = 0}, {id = "bookshelf", x = -14, y = 0, z = 18.9, r = 0}, {id = "trophyshelf", x = 11, y = 0, z = 18.9, r = 0},
-	{id = "plant", x = 19.5, y = 0, z = 17.5, r = 0}, {id = "plant", x = -19.5, y = 0, z = 17.5, r = 0}, {id = "bed", x = 16.5, y = 0, z = -10, r = 90},
-	{id = "pedestal", x = -12, y = 0, z = -12, r = 0},
+	living = {
+		{id = "rug", x = 0, y = 0, z = 3, r = 0}, {id = "coffeetable", x = 0, y = 0, z = 3, r = 0}, {id = "sofa", x = 0, y = 0, z = 9, r = 0},
+		{id = "armchair", x = -7, y = 0, z = 3, r = -90}, {id = "armchair", x = 7, y = 0, z = 3, r = 90}, {id = "floorlamp", x = -5, y = 0, z = 10.5, r = 0},
+		{id = "sidetable", x = 5, y = 0, z = 10, r = 0}, {id = "bookshelf", x = -14, y = 0, z = 18.9, r = 0}, {id = "trophyshelf", x = 11, y = 0, z = 18.9, r = 0},
+		{id = "plant", x = 19.5, y = 0, z = 17.5, r = 0}, {id = "plant", x = -19.5, y = 0, z = 17.5, r = 0}, {id = "bed", x = 16.5, y = 0, z = -10, r = 90},
+		{id = "pedestal", x = -12, y = 0, z = -12, r = 0}, {id = "lightswitch", x = -4.2, y = 0, z = -19.1, r = 180},
+	},
+	bedroom = {
+		{id = "bed", x = 0, y = 0, z = 15.5, r = 0}, {id = "nightstand", x = 4.6, y = 0, z = 19.1, r = 0}, {id = "nightstand", x = -4.6, y = 0, z = 19.1, r = 0},
+		{id = "wardrobe", x = -15, y = 0, z = 19.1, r = 0}, {id = "dresser", x = 21.1, y = 0, z = 0, r = 90}, {id = "rug", x = 0, y = 0, z = 5, r = 0},
+		{id = "armchair", x = -15, y = 0, z = -12, r = 45}, {id = "lightswitch", x = -21.1, y = 0, z = -4.5, r = -90},
+	},
+	game = {
+		{id = "rug", x = 0, y = 0, z = 12, r = 0}, {id = "sofa", x = 0, y = 0, z = 18.2, r = 0}, {id = "coffeetable", x = 0, y = 0, z = 13, r = 0},
+		{id = "floorlamp", x = -5.5, y = 0, z = 18.5, r = 0}, {id = "plant", x = -19.5, y = 0, z = 17.5, r = 0}, {id = "barstool", x = -12, y = 0, z = -10, r = 0},
+		{id = "barstool", x = -9, y = 0, z = -10, r = 0}, {id = "lightswitch", x = 21.1, y = 0, z = -4.5, r = 90},
+	},
+	kitchen = {
+		{id = "fridge", x = -17, y = 0, z = 19.1, r = 0}, {id = "stove", x = -12.5, y = 0, z = 19.1, r = 0}, {id = "counter", x = -6.5, y = 0, z = 19.1, r = 0},
+		{id = "barstool", x = -8, y = 0, z = 15.5, r = 0}, {id = "barstool", x = -5, y = 0, z = 15.5, r = 0}, {id = "diningset", x = 7, y = 0, z = -3, r = 0},
+		{id = "pendant", x = 7, y = 0, z = -3, r = 0}, {id = "plant", x = 19.5, y = 0, z = 17.5, r = 0}, {id = "lightswitch", x = -4.5, y = 0, z = -19.1, r = 180},
+	},
 }
 
 NeverYieldRoom.load = function()
+	local R = NeverYieldRoom
 	local data
 	pcall(function()
-		if isfile and isfile(NeverYieldRoom.file) then
-			local ok, decoded = pcall(function() return HttpService:JSONDecode(readfile(NeverYieldRoom.file)) end)
+		if isfile and isfile(R.file) then
+			local ok, decoded = pcall(function() return HttpService:JSONDecode(readfile(R.file)) end)
 			if ok and type(decoded) == "table" then data = decoded end
 		end
 	end)
-	if not data then
-		data = {version = 1, floor = "oak", wall = "cream", mood = "warm", items = {}}
-		for _, it in ipairs(NeverYieldRoom.defaultItems) do
-			table.insert(data.items, {id = it.id, x = it.x, y = it.y, z = it.z, r = it.r})
+	data = data or {}
+	if type(data.rooms) ~= "table" then
+		-- older saves had one room: it becomes the living room (with a light switch by the front door)
+		data.rooms = {}
+		if type(data.items) == "table" then
+			table.insert(data.items, {id = "lightswitch", x = -4.2, y = 0, z = -19.1, r = 180})
+			data.rooms.living = {floor = data.floor, wall = data.wall, mood = data.mood, items = data.items}
 		end
+		data.floor, data.wall, data.mood, data.items = nil, nil, nil, nil
 	end
-	if type(data.items) ~= "table" then data.items = {} end
-	for _, key in ipairs({"floor", "wall", "mood"}) do
-		if type(data[key]) ~= "string" then data[key] = ({floor = "oak", wall = "cream", mood = "warm"})[key] end
+	data.version = 2
+	for _, def in ipairs(R.rooms) do
+		local rd = data.rooms[def.id]
+		if type(rd) ~= "table" then
+			rd = {items = {}}
+			for _, it in ipairs(R.defaultItems[def.id] or {}) do
+				table.insert(rd.items, {id = it.id, x = it.x, y = it.y, z = it.z, r = it.r})
+			end
+			data.rooms[def.id] = rd
+		end
+		if type(rd.items) ~= "table" then rd.items = {} end
+		for key, default in pairs({floor = def.floor, wall = def.wall, mood = "warm"}) do
+			if type(rd[key]) ~= "string" then rd[key] = default end
+		end
+		if rd.lights == nil then rd.lights = true end
 	end
-	NeverYieldRoom.data = data
+	R.data = data
 	return data
 end
 
 NeverYieldRoom.save = function()
-	local data = NeverYieldRoom.data
+	local R = NeverYieldRoom
+	local data = R.data
 	if not data then return end
 	local ok, encoded = pcall(function() return HttpService:JSONEncode(data) end)
-	if ok and encoded then pcall(writefile, NeverYieldRoom.file, encoded) end
-	NeverYieldRoom.version = NeverYieldRoom.version + 1
-	if NeverYieldAch and NeverYieldAch.flag then NeverYieldAch.flag("roomItems", #data.items) end
+	if ok and encoded then pcall(writefile, R.file, encoded) end
+	R.version = R.version + 1
+	if NeverYieldAch and NeverYieldAch.flag then
+		local total, decorated, party = 0, 0, false
+		for _, def in ipairs(R.rooms) do
+			local rd = data.rooms[def.id]
+			if rd then
+				total = total + #rd.items
+				if #rd.items >= 12 then decorated = decorated + 1 end
+				if rd.mood == "party" then party = true end
+			end
+		end
+		NeverYieldAch.flag("roomItems", total)
+		NeverYieldAch.flag("roomsDecorated", decorated)
+		if party then NeverYieldAch.flag("partyRoom", true) end
+	end
 end
 
 -- ---------- the room ----------
-NeverYieldRoom.buildShell = function(s)
+-- one wall with openings {centre, width, bottom, top}; axis "x" runs along X at z = fixed, "z" along Z at x = fixed
+NeverYieldRoom.wallRun = function(shell, A, axis, fixed, a0, a1, openings, color, mat, H)
+	local P = NeverYieldAgartha.part
+	local function piece(from, to, y0, y1)
+		if to - from < 0.05 or y1 - y0 < 0.05 then return end
+		local mid, len = (from + to) / 2, to - from
+		if axis == "x" then
+			P(shell, Vector3.new(len, y1 - y0, 1), A(mid, (y0 + y1) / 2, fixed), color, mat)
+		else
+			P(shell, Vector3.new(1, y1 - y0, len), A(fixed, (y0 + y1) / 2, mid), color, mat)
+		end
+	end
+	local sorted = {}
+	for _, o in ipairs(openings) do table.insert(sorted, o) end
+	table.sort(sorted, function(p, q) return p[1] < q[1] end)
+	local cursor = a0
+	for _, o in ipairs(sorted) do
+		local l, r = o[1] - o[2] / 2, o[1] + o[2] / 2
+		piece(cursor, l, 0, H)
+		piece(l, r, 0, o[3])
+		piece(l, r, o[4], H)
+		cursor = r
+	end
+	piece(cursor, a1, 0, H)
+end
+
+NeverYieldRoom.buildShell = function(s, rs)
 	local R = NeverYieldRoom
-	local data = R.data
-	local O = s.origin
-	if s.shell then s.shell:Destroy() end
+	local data = R.rd(rs.id)
+	local O = rs.origin
+	if rs.shell then rs.shell:Destroy() end
 	local shell = Instance.new("Model")
 	shell.Name = randomString()
 	local P = NeverYieldAgartha.part
@@ -23917,6 +24520,7 @@ NeverYieldRoom.buildShell = function(s)
 	local wall = R.byId(R.walls, data.wall)
 	local W, D, Hh = R.W, R.D, R.H
 	local hw, hd = W / 2, D / 2
+	rs.anim, rs.sky, rs.lamps, rs.walls = {}, {}, {}, {}
 	-- floor
 	P(shell, Vector3.new(W + 2, 1, D + 2), A(0, -0.5, 0), R.rgb(floor.color), R.mat(floor.mat))
 	if floor.checker then
@@ -23928,109 +24532,213 @@ NeverYieldRoom.buildShell = function(s)
 			end
 		end
 	end
-	-- walls with window holes (east/west) and the doorway (south)
+	-- walls: doorways to the other rooms, the front door, windows on the outside walls
 	local wc, wm = R.rgb(wall.color), R.mat(wall.mat)
-	local function wallPiece(size, cf) return P(shell, size, cf, wc, wm) end
-	for _, side in ipairs({-1, 1}) do
-		local x = side * (hw + 0.5)
-		wallPiece(Vector3.new(1, 4, D), A(x, 2, 0))
-		wallPiece(Vector3.new(1, Hh - 11, D), A(x, 11 + (Hh - 11) / 2, 0))
-		for _, seg in ipairs({{-hd, -11}, {-5, 5}, {11, hd}}) do
-			wallPiece(Vector3.new(1, 7, seg[2] - seg[1]), A(x, 7.5, (seg[1] + seg[2]) / 2))
-		end
-		for _, wz in ipairs({-8, 8}) do
-			P(shell, Vector3.new(0.2, 7, 6), A(x, 7.5, wz), C(200, 225, 255), M.Glass, nil, {Transparency = 0.7})
-			P(shell, Vector3.new(0.5, 0.4, 6.6), A(x - side * 0.3, 3.9, wz), C(240, 235, 225), M.Wood)
-			P(shell, Vector3.new(0.4, 0.4, 6.6), A(x - side * 0.3, 11.1, wz), C(240, 235, 225), M.Wood)
-			P(shell, Vector3.new(0.3, 7, 0.3), A(x - side * 0.3, 7.5, wz), C(240, 235, 225), M.Wood)
-			for _, cz in ipairs({-3.6, 3.6}) do
-				P(shell, Vector3.new(0.3, 8.2, 1.4), A(x - side * 0.8, 7.6, wz + cz), C(200, 110, 90), M.Fabric)
-			end
-			P(shell, Vector3.new(0.2, 0.2, 9), A(x - side * 0.8, 11.8, wz), C(80, 60, 40), M.Wood, "Cylinder", {CFrame = A(x - side * 0.8, 11.8, wz) * CFrame.Angles(0, math.pi / 2, 0)})
-		end
-	end
-	wallPiece(Vector3.new(W + 2, Hh, 1), A(0, Hh / 2, hd + 0.5))
-	local dw = NeverYieldDoor.width / 2 + 0.6
-	wallPiece(Vector3.new(hw - dw + 1, Hh, 1), A(-(dw + (hw - dw + 1) / 2), Hh / 2, -hd - 0.5))
-	wallPiece(Vector3.new(hw - dw + 1, Hh, 1), A(dw + (hw - dw + 1) / 2, Hh / 2, -hd - 0.5))
-	wallPiece(Vector3.new(dw * 2, Hh - 8.2, 1), A(0, 8.2 + (Hh - 8.2) / 2, -hd - 0.5))
-	-- baseboards, crown moulding, ceiling and beams
 	local trim = wall.trim and R.rgb(wall.trim) or C(245, 240, 230)
 	local trimMat = wall.trim and M.Neon or M.Wood
-	for _, b in ipairs({{Vector3.new(W, 0.6, 0.3), A(0, 0.3, hd - 0.15)}, {Vector3.new(0.3, 0.6, D), A(-hw + 0.15, 0.3, 0)}, {Vector3.new(0.3, 0.6, D), A(hw - 0.15, 0.3, 0)},
-		{Vector3.new(W, 0.5, 0.4), A(0, Hh - 0.25, hd - 0.2)}, {Vector3.new(0.4, 0.5, D), A(-hw + 0.2, Hh - 0.25, 0)}, {Vector3.new(0.4, 0.5, D), A(hw - 0.2, Hh - 0.25, 0)}}) do
-		P(shell, b[1], b[2], trim, trimMat)
+	local frameColor = C(240, 235, 225)
+	for _, side in ipairs({"n", "s", "e", "w"}) do
+		local kind = R.sideKind(rs.def, side)
+		local alongX = side == "n" or side == "s"
+		local sign = (side == "n" or side == "e") and 1 or -1
+		local fixed = sign * ((alongX and hd or hw) + 0.5)
+		local half = alongX and hw + 1 or hd
+		local openings
+		if kind == "link" then
+			openings = {{0, 6, 0, 9.5}}
+		elseif kind == "entrance" then
+			openings = {{0, (NeverYieldDoor.width / 2 + 0.6) * 2, 0, 8.2}, {-13, 6, 4, 11}, {13, 6, 4, 11}}
+		else
+			local spot = alongX and 10 or 8
+			openings = {{-spot, 6, 4, 11}, {spot, 6, 4, 11}}
+		end
+		R.wallRun(shell, A, alongX and "x" or "z", fixed, -half, half, openings, wc, wm, Hh)
+		-- a frame on the wall's centre line: X runs along the wall, Z points into the room
+		local along = ({n = Vector3.new(-1, 0, 0), s = Vector3.new(1, 0, 0), e = Vector3.new(0, 0, 1), w = Vector3.new(0, 0, -1)})[side]
+		local base = CFrame.fromMatrix(O + (alongX and Vector3.new(0, 0, fixed) or Vector3.new(fixed, 0, 0)), along, Vector3.new(0, 1, 0))
+		local function F(size, u, y, v, color, mat, shape, props)
+			return P(shell, size, base * CFrame.new(u, y, v), color, mat, shape, props)
+		end
+		rs.walls[side] = {base = base, openings = openings, kind = kind, half = alongX and hw or hd}
+		for _, o in ipairs(openings) do
+			local u, w, y0, y1 = o[1], o[2], o[3], o[4]
+			if y0 > 0 then
+				F(Vector3.new(w, y1 - y0, 0.2), u, (y0 + y1) / 2, 0, C(200, 225, 255), M.Glass, nil, {Transparency = 0.7})
+				F(Vector3.new(w + 0.6, 0.4, 0.5), u, y0 - 0.1, 0.3, frameColor, M.Wood)
+				F(Vector3.new(w + 0.6, 0.4, 0.4), u, y1 + 0.1, 0.3, frameColor, M.Wood)
+				F(Vector3.new(0.3, y1 - y0, 0.3), u, (y0 + y1) / 2, 0.3, frameColor, M.Wood)
+				for _, cz in ipairs({-1, 1}) do
+					F(Vector3.new(1.4, y1 - y0 + 1.2, 0.3), u + cz * (w / 2 + 0.6), (y0 + y1) / 2 + 0.1, 0.8, C(200, 110, 90), M.Fabric)
+				end
+				F(Vector3.new(w + 3, 0.2, 0.2), u, y1 + 0.8, 0.8, C(80, 60, 40), M.Wood, "Cylinder")
+			elseif kind == "link" then
+				for _, edge in ipairs({-1, 1}) do
+					F(Vector3.new(0.35, y1 + 0.3, 0.3), u + edge * (w / 2 + 0.17), (y1 + 0.3) / 2, 0.62, trim, trimMat)
+				end
+				F(Vector3.new(w + 0.7, 0.4, 0.3), u, y1 + 0.2, 0.62, trim, trimMat)
+			end
+		end
+		-- the view out of the windows: a sky and soft hills
+		if kind ~= "link" then
+			for i = 0, 3 do
+				local band = F(Vector3.new(40, 6, 0.5), 0, 2 + i * 6, -18, C(255, 150, 90), M.Neon, nil, {CanCollide = false, CastShadow = false})
+				table.insert(rs.sky, {part = band, t = i / 3})
+			end
+			for i = -1, 1 do
+				F(Vector3.new(14, 10, 12), i * 12, -2, -14, C(70, 120, 70), M.Grass, "Ellipsoid", {CanCollide = false})
+			end
+		end
+		-- baseboard (broken at doorways) and crown moulding
+		local inner = alongX and hw or hd
+		local cursor = -inner
+		local runs = {}
+		for _, o in ipairs(openings) do
+			if o[3] == 0 then
+				table.insert(runs, {cursor, o[1] - o[2] / 2})
+				cursor = o[1] + o[2] / 2
+			end
+		end
+		table.insert(runs, {cursor, inner})
+		for _, run in ipairs(runs) do
+			if run[2] - run[1] > 0.1 then
+				F(Vector3.new(run[2] - run[1], 0.6, 0.3), (run[1] + run[2]) / 2, 0.3, 0.65, trim, trimMat)
+			end
+		end
+		F(Vector3.new(inner * 2, 0.5, 0.4), 0, Hh - 0.25, 0.7, trim, trimMat)
 	end
+	-- ceiling, beams and pendant lights (on the light switch)
 	P(shell, Vector3.new(W + 2, 1, D + 2), A(0, Hh + 0.5, 0), C(235, 228, 215), R.mat("Plaster"))
 	for i = -2, 2 do
 		P(shell, Vector3.new(W, 0.9, 1), A(0, Hh - 0.45, i * 8), C(120, 85, 55), M.Wood)
 	end
-	-- pendant lights
-	s.lamps = {}
 	for _, px in ipairs({-10, 10}) do
 		for _, pz in ipairs({-8, 8}) do
 			P(shell, Vector3.new(0.08, 2, 0.08), A(px, Hh - 1, pz), C(30, 30, 30), M.Metal, nil, {CanCollide = false})
 			P(shell, Vector3.new(1.8, 1, 1.8), A(px, Hh - 2.4, pz), C(40, 35, 30), M.Metal, "Ellipsoid", {CanCollide = false})
 			local bulb = P(shell, Vector3.new(0.7, 0.7, 0.7), A(px, Hh - 2.85, pz), C(255, 220, 160), M.Neon, "Ball", {CanCollide = false})
 			local l = light(bulb, C(255, 200, 140), 26, 1)
-			table.insert(s.lamps, {bulb = bulb, light = l})
+			table.insert(rs.lamps, {bulb = bulb, light = l})
 		end
 	end
-	-- the view out of the windows: a sky and soft hills
-	s.sky = {}
-	for _, side in ipairs({-1, 1}) do
-		for i = 0, 3 do
-			local band = P(shell, Vector3.new(0.5, 6, 60), A(side * (hw + 18), 2 + i * 6, 0), C(255, 150, 90), M.Neon, nil, {CanCollide = false, CastShadow = false})
-			table.insert(s.sky, {part = band, t = i / 3})
-		end
-		for i = 1, 4 do
-			P(shell, Vector3.new(14, 10, 24), A(side * (hw + 14), -2, -24 + i * 12), C(70, 120, 70), M.Grass, "Ellipsoid", {CanCollide = false})
-		end
-	end
-	shell.Parent = s.model
-	s.shell = shell
-	R.applyMood(s)
+	shell.Parent = rs.model
+	rs.shell = shell
+	if R.decorate then R.decorate(s, rs, shell, floor, wall) end
+	R.applyMood(s, rs)
 end
 
-NeverYieldRoom.applyMood = function(s)
+-- lamps follow the room's lights; the room you stand in also sets the game's lighting
+NeverYieldRoom.applyMood = function(s, rs)
 	local R = NeverYieldRoom
-	local mood = R.byId(R.moods, R.data.mood)
-	for _, lamp in ipairs(s.lamps or {}) do
+	local data = R.rd(rs.id)
+	local mood = R.byId(R.moods, data.mood)
+	local on = data.lights ~= false
+	for _, lamp in ipairs(rs.lamps or {}) do
 		lamp.light.Color = R.rgb(mood.lamp)
 		lamp.light.Brightness = mood.lampBright
-		lamp.bulb.Color = R.rgb(mood.lamp):Lerp(Color3.new(1, 1, 1), 0.4)
+		lamp.light.Enabled = on
+		lamp.bulb.Color = on and R.rgb(mood.lamp):Lerp(Color3.new(1, 1, 1), 0.4) or Color3.fromRGB(110, 105, 95)
+		lamp.bulb.Material = on and Enum.Material.Neon or Enum.Material.Glass
 	end
-	for _, band in ipairs(s.sky or {}) do
+	for _, band in ipairs(rs.sky or {}) do
 		band.part.Color = R.rgb(mood.sky[1]):Lerp(R.rgb(mood.sky[2]), band.t)
 	end
-	if s.inside then
-		Lighting.ClockTime, Lighting.Brightness = mood.clock, mood.bright
-		Lighting.Ambient, Lighting.OutdoorAmbient = R.rgb(mood.ambient), R.rgb(mood.ambient)
+	if s.inside and s.room == rs then
+		local ambient = R.rgb(mood.ambient)
+		if not on then ambient = ambient:Lerp(Color3.new(0, 0, 0), 0.7) end
+		Lighting.ClockTime = mood.clock
+		Lighting.Brightness = on and mood.bright or mood.bright * 0.35
+		Lighting.Ambient, Lighting.OutdoorAmbient = ambient, ambient
 	end
 end
 
-NeverYieldRoom.placeAll = function(s)
+NeverYieldRoom.setItemLights = function(model, on)
+	for _, d in ipairs(model:GetDescendants()) do
+		if d:IsA("Light") then
+			d.Enabled = on
+		elseif d:IsA("BasePart") and d:GetAttribute("NYBulb") then
+			d.Material = on and Enum.Material.Neon or Enum.Material.Glass
+		end
+	end
+end
+
+NeverYieldRoom.poseSwitch = function(model, on)
+	local plate = model:FindFirstChild("NYSwitchPlate", true)
+	local lever = model:FindFirstChild("NYSwitchLever", true)
+	if plate and lever then
+		lever.CFrame = plate.CFrame * CFrame.new(0, on and 0.1 or -0.1, -0.14) * CFrame.Angles(math.rad(on and -20 or 20), 0, 0)
+	end
+	local prompt = plate and plate:FindFirstChild("NYSwitch")
+	if prompt then prompt.ActionText = on and "Lights off" or "Lights on" end
+end
+
+NeverYieldRoom.applyLights = function(s, rs)
 	local R = NeverYieldRoom
-	if s.items then s.items:Destroy() end
+	local on = R.rd(rs.id).lights ~= false
+	for _, rec in ipairs(rs.placed or {}) do
+		local item = R.itemById[rec.entry.id]
+		if item and item.lamp then R.setItemLights(rec.model, on) end
+		if item and item.id == "lightswitch" then R.poseSwitch(rec.model, on) end
+	end
+	R.applyMood(s, rs)
+end
+
+-- every light switch (and the Lights button) turns all of that room's lights on or off
+NeverYieldRoom.toggleLights = function(s, rs, part)
+	local R = NeverYieldRoom
+	local data = R.rd(rs.id)
+	data.lights = data.lights == false
+	WackyState.sound(data.lights and R.switchOn or R.switchOff, part, 0.8, false, 0.95 + math.random() * 0.1)
+	R.applyLights(s, rs)
+	if NeverYieldAch and NeverYieldAch.data then
+		NeverYieldAch.flag("switchFlips", (NeverYieldAch.data.flags.switchFlips or 0) + 1)
+	end
+	R.save()
+	if R.editing then pcall(R.refreshPanel, s) end
+end
+
+-- walking into another room: its lighting, and the editor works on it
+NeverYieldRoom.enterRoom = function(s, rs)
+	local R = NeverYieldRoom
+	if R.editing then
+		R.cancelPlace(s)
+		R.select(s, nil)
+	end
+	s.room = rs
+	R.applyMood(s, rs)
+	if s.roomLabel then s.roomLabel.Text = rs.def.icon .. " " .. rs.def.name end
+	if R.editing then
+		R.refreshPanel(s)
+		R.setHint(s)
+	end
+end
+
+NeverYieldRoom.placeAll = function(s, rs)
+	local R = NeverYieldRoom
+	if rs.items then rs.items:Destroy() end
 	local folder = Instance.new("Model")
 	folder.Name = randomString()
-	folder.Parent = s.model
-	s.items = folder
-	s.placed = {}
-	for _, entry in ipairs(R.data.items) do
-		R.spawnItem(s, entry)
+	folder.Parent = rs.model
+	rs.items = folder
+	rs.placed = {}
+	for _, entry in ipairs(R.rd(rs.id).items) do
+		R.spawnItem(s, rs, entry)
 	end
 end
 
-NeverYieldRoom.entryCF = function(s, entry)
-	return CFrame.new(s.origin + Vector3.new(entry.x, entry.y, entry.z)) * CFrame.Angles(0, math.rad(entry.r or 0), 0)
+NeverYieldRoom.entryCF = function(rs, entry)
+	return CFrame.new(rs.origin + Vector3.new(entry.x, entry.y, entry.z)) * CFrame.Angles(0, math.rad(entry.r or 0), 0)
 end
 
-NeverYieldRoom.spawnItem = function(s, entry)
-	local model = NeverYieldRoom.build(entry.id, NeverYieldRoom.entryCF(s, entry))
+NeverYieldRoom.spawnItem = function(s, rs, entry)
+	local R = NeverYieldRoom
+	local model = R.build(entry.id, R.entryCF(rs, entry))
 	if not model then return end
-	model.Parent = s.items
-	table.insert(s.placed, {entry = entry, model = model})
+	model.Parent = rs.items
+	table.insert(rs.placed, {entry = entry, model = model})
+	local item = R.itemById[entry.id]
+	local on = R.rd(rs.id).lights ~= false
+	if item and item.lamp and not on then R.setItemLights(model, false) end
+	if item and item.id == "lightswitch" then R.poseSwitch(model, on) end
 	return model
 end
 
@@ -24052,7 +24760,7 @@ NeverYieldRoom.hud = function(s)
 	local bar = Instance.new("Frame")
 	bar.AnchorPoint = Vector2.new(0.5, 1)
 	bar.Position = UDim2.new(0.5, 0, 1, -16)
-	bar.Size = UDim2.new(0, 330, 0, 46)
+	bar.Size = UDim2.new(0, 500, 0, 46)
 	bar.BackgroundTransparency = 1
 	bar.Parent = screen
 	s.editButton = P.button(bar, "\u{1F6E0}\u{FE0F} Edit Room", UDim2.new(0, 0, 0, 0), UDim2.new(0, 160, 0, 44), Color3.fromRGB(255, 150, 70), function()
@@ -24062,6 +24770,11 @@ NeverYieldRoom.hud = function(s)
 	P.button(bar, "\u{1F3C6} Achievements", UDim2.new(0, 170, 0, 0), UDim2.new(0, 160, 0, 44), Color3.fromRGB(80, 70, 150), function()
 		NeverYieldAch.open()
 	end).TextSize = 16
+	P.button(bar, "\u{1F4A1} Lights", UDim2.new(0, 340, 0, 0), UDim2.new(0, 160, 0, 44), Color3.fromRGB(200, 160, 60), function()
+		R.toggleLights(s, s.room)
+	end).TextSize = 16
+	s.roomLabel = P.label(screen, {AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 58), Size = UDim2.new(0, 320, 0, 28),
+		Font = Enum.Font.FredokaOne, TextSize = 22, TextStrokeTransparency = 0.4, Text = s.room.def.icon .. " " .. s.room.def.name})
 end
 
 NeverYieldRoom.startEdit = function(s)
@@ -24082,7 +24795,7 @@ NeverYieldRoom.startEdit = function(s)
 	g.Color = ColorSequence.new(Color3.fromRGB(255, 170, 90), Color3.fromRGB(255, 120, 200))
 	panel.Parent = s.hud
 	s.panel = panel
-	P.label(panel, {Position = UDim2.new(0, 14, 0, 6), Size = UDim2.new(1, -28, 0, 30), Font = Enum.Font.FredokaOne, TextSize = 22,
+	s.panelTitle = P.label(panel, {Position = UDim2.new(0, 14, 0, 6), Size = UDim2.new(1, -28, 0, 30), Font = Enum.Font.FredokaOne, TextSize = 22,
 		TextXAlignment = Enum.TextXAlignment.Left, Text = "\u{1F6CB}\u{FE0F} DECORATE"})
 	s.hint = P.label(panel, {Position = UDim2.new(0, 14, 1, -58), Size = UDim2.new(1, -28, 0, 52), TextSize = 11, TextWrapped = true,
 		TextColor3 = Color3.fromRGB(210, 200, 240), Text = ""})
@@ -24127,7 +24840,7 @@ NeverYieldRoom.startEdit = function(s)
 		local cam = workspace.CurrentCamera
 		local m = UserInputService:GetMouseLocation()
 		local ray = cam:ViewportPointToRay(m.X, m.Y)
-		params.FilterDescendantsInstances = {s.shell, s.items}
+		params.FilterDescendantsInstances = {s.room.shell, s.room.items}
 		return workspace:Raycast(ray.Origin, ray.Direction * 300, params)
 	end
 	s.aim = aim
@@ -24136,22 +24849,24 @@ NeverYieldRoom.startEdit = function(s)
 		if not pl then return end
 		local hit = aim()
 		if not hit then return end
-		local rel = hit.Position - s.origin
+		local rel = hit.Position - s.room.origin
 		local x, y, z = rel.X, rel.Y, rel.Z
 		local rot = pl.rot
 		if hit.Normal.Y < 0.5 and not NeverYieldRoom.isTrophy(pl.id) then
 			-- on a wall: stand at its foot, facing out of the wall
 			x, z = x + hit.Normal.X * 0.9, z + hit.Normal.Z * 0.9
 			y = 0
-			rot = math.deg(math.atan2(-hit.Normal.X, -hit.Normal.Z)) + 180
+			rot = math.deg(math.atan2(-hit.Normal.X, -hit.Normal.Z))
 		elseif hit.Normal.Y < 0.5 then
 			y = math.max(0, y - 1)
 		end
+		local placingItem = R.itemById[pl.id]
+		if placingItem and placingItem.ceiling then y = 0 end
 		x = math.clamp(math.floor(x * 2 + 0.5) / 2, -R.W / 2 + 0.5, R.W / 2 - 0.5)
 		z = math.clamp(math.floor(z * 2 + 0.5) / 2, -R.D / 2 + 0.5, R.D / 2 - 0.5)
 		y = math.clamp(y, 0, R.H - 1)
 		pl.x, pl.y, pl.z, pl.r = x, y, z, rot
-		pl.ghost:PivotTo(CFrame.new(s.origin + Vector3.new(x, y, z)) * CFrame.Angles(0, math.rad(rot), 0))
+		pl.ghost:PivotTo(CFrame.new(s.room.origin + Vector3.new(x, y, z)) * CFrame.Angles(0, math.rad(rot), 0))
 	end))
 	WackyState.connect("roomEditInput", UserInputService.InputBegan:Connect(function(input, processed)
 		if processed then return end
@@ -24162,7 +24877,7 @@ NeverYieldRoom.startEdit = function(s)
 				local hit = aim()
 				local found
 				if hit then
-					for _, rec in ipairs(s.placed) do
+					for _, rec in ipairs(s.room.placed) do
 						if hit.Instance:IsDescendantOf(rec.model) then found = rec break end
 					end
 				end
@@ -24191,7 +24906,7 @@ NeverYieldRoom.setHint = function(s)
 	elseif s.selected then
 		s.hint.Text = "Selected " .. NeverYieldRoom.itemName(s.selected.entry.id) .. ": M moves it, R rotates, X deletes."
 	else
-		s.hint.Text = "Pick something from the list to place it, or click anything in your room to move, rotate or delete it. (" .. #NeverYieldRoom.data.items .. "/" .. NeverYieldRoom.maxItems .. " items)"
+		s.hint.Text = "Pick something from the list to place it, or click anything in this room to move, rotate or delete it. Walk into another room to decorate it. (" .. #NeverYieldRoom.rd(s.room.id).items .. "/" .. NeverYieldRoom.maxItems .. " items)"
 	end
 end
 
@@ -24216,6 +24931,7 @@ NeverYieldRoom.refreshPanel = function(s)
 	for id, b in pairs(s.tabButtons) do
 		b.BackgroundColor3 = id == s.tab and Color3.fromRGB(255, 150, 70) or Color3.fromRGB(60, 50, 110)
 	end
+	if s.panelTitle then s.panelTitle.Text = s.room.def.icon .. " " .. s.room.def.name:upper() end
 	for _, c in ipairs(s.list:GetChildren()) do c:Destroy() end
 	local y = 0
 	local function row(title, sub, color, onClick, locked)
@@ -24241,7 +24957,9 @@ NeverYieldRoom.refreshPanel = function(s)
 		end
 	elseif s.tab == "trophies" then
 		local placed = {}
-		for _, entry in ipairs(R.data.items) do placed[entry.id] = true end
+		for _, def in ipairs(R.rooms) do
+			for _, entry in ipairs(R.rd(def.id).items) do placed[entry.id] = true end
+		end
 		local any = false
 		for _, d in ipairs(NeverYieldAch.defs) do
 			if NeverYieldAch.has(d.id) then
@@ -24251,7 +24969,7 @@ NeverYieldRoom.refreshPanel = function(s)
 				row("\u{1F3C6} " .. d.name, tier.name .. (placed[id] and "  -  in your room" or "  -  click to place"),
 					placed[id] and Color3.fromRGB(40, 34, 60) or Color3.fromRGB(60, 50, 110), function()
 						if placed[id] then
-							notify('Room', 'That trophy is already in your room. Click it to move it.')
+							notify('Room', 'That trophy is already in your house. Click it to move it.')
 							return
 						end
 						R.startPlace(s, id, 0)
@@ -24268,14 +24986,14 @@ NeverYieldRoom.refreshPanel = function(s)
 			y = y + 24
 			for _, entry in ipairs(list) do
 				local open = R.unlocked(entry)
-				local current = R.data[key] == entry.id
+				local current = R.rd(s.room.id)[key] == entry.id
 				row((open and "" or "\u{1F512} ") .. entry.name .. (current and "  \u{2714}" or ""), open and (current and "in use" or "click to use") or ("unlock: " .. R.unlockName(entry)),
 					current and Color3.fromRGB(255, 150, 70) or (open and Color3.fromRGB(60, 50, 110) or Color3.fromRGB(40, 34, 60)), function()
 						if not open then
 							notify('Room', 'Unlock the "' .. R.unlockName(entry) .. '" achievement first.')
 							return
 						end
-						R.data[key] = entry.id
+						R.rd(s.room.id)[key] = entry.id
 						apply()
 						R.save()
 						R.refreshPanel(s)
@@ -24283,9 +25001,14 @@ NeverYieldRoom.refreshPanel = function(s)
 			end
 			y = y + 6
 		end
-		group("FLOOR", R.floors, "floor", function() R.buildShell(s) end)
-		group("WALLS", R.walls, "wall", function() R.buildShell(s) end)
-		group("LIGHTING", R.moods, "mood", function() R.applyMood(s) end)
+		local on = R.rd(s.room.id).lights ~= false
+		row("\u{1F4A1} Lights: " .. (on and "ON" or "OFF"), "same as flipping a light switch in this room", on and Color3.fromRGB(200, 160, 60) or Color3.fromRGB(60, 50, 110), function()
+			R.toggleLights(s, s.room)
+		end)
+		y = y + 6
+		group("FLOOR", R.floors, "floor", function() R.buildShell(s, s.room) end)
+		group("WALLS", R.walls, "wall", function() R.buildShell(s, s.room) end)
+		group("LIGHTING", R.moods, "mood", function() R.applyMood(s, s.room) end)
 	end
 	s.list.CanvasSize = UDim2.new(0, 0, 0, y)
 end
@@ -24310,11 +25033,11 @@ NeverYieldRoom.startPlace = function(s, id, rot, moving)
 	local R = NeverYieldRoom
 	R.cancelPlace(s)
 	R.select(s, nil)
-	if not moving and #R.data.items >= R.maxItems then
-		notify('Room', 'Your room is full (' .. R.maxItems .. ' things). Delete something first.')
+	if not moving and #R.rd(s.room.id).items >= R.maxItems then
+		notify('Room', 'This room is full (' .. R.maxItems .. ' things). Delete something first.')
 		return
 	end
-	local ghost = R.build(id, CFrame.new(s.origin))
+	local ghost = R.build(id, CFrame.new(s.room.origin))
 	if not ghost then return end
 	R.ghostOf(ghost)
 	ghost.Parent = workspace
@@ -24329,8 +25052,8 @@ NeverYieldRoom.cancelPlace = function(s)
 	pcall(function() pl.ghost:Destroy() end)
 	-- a moved item that was not put down goes back where it was
 	if pl.moving then
-		table.insert(NeverYieldRoom.data.items, pl.moving)
-		NeverYieldRoom.spawnItem(s, pl.moving)
+		table.insert(NeverYieldRoom.rd(s.room.id).items, pl.moving)
+		NeverYieldRoom.spawnItem(s, s.room, pl.moving)
 	end
 	NeverYieldRoom.setHint(s)
 end
@@ -24343,8 +25066,8 @@ NeverYieldRoom.confirmPlace = function(s)
 	pl.moving = nil
 	s.placing = nil
 	pcall(function() pl.ghost:Destroy() end)
-	table.insert(R.data.items, entry)
-	local model = R.spawnItem(s, entry)
+	table.insert(R.rd(s.room.id).items, entry)
+	local model = R.spawnItem(s, s.room, entry)
 	if model then WackyState.sound(NeverYieldDoor.place, model:FindFirstChildWhichIsA("BasePart"), 0.7, false, 0.9 + math.random() * 0.2) end
 	R.save()
 	R.setHint(s)
@@ -24370,11 +25093,12 @@ end
 
 NeverYieldRoom.removeRecord = function(s, rec)
 	local R = NeverYieldRoom
-	for i, e in ipairs(R.data.items) do
-		if e == rec.entry then table.remove(R.data.items, i) break end
+	local items = R.rd(s.room.id).items
+	for i, e in ipairs(items) do
+		if e == rec.entry then table.remove(items, i) break end
 	end
-	for i, r in ipairs(s.placed) do
-		if r == rec then table.remove(s.placed, i) break end
+	for i, r in ipairs(s.room.placed) do
+		if r == rec then table.remove(s.room.placed, i) break end
 	end
 	pcall(function() rec.model:Destroy() end)
 end
@@ -24394,7 +25118,7 @@ NeverYieldRoom.rotateSelected = function(s)
 	local rec = s.selected
 	if not rec then return end
 	rec.entry.r = ((rec.entry.r or 0) + 45) % 360
-	rec.model:PivotTo(NeverYieldRoom.entryCF(s, rec.entry))
+	rec.model:PivotTo(NeverYieldRoom.entryCF(s.room, rec.entry))
 	NeverYieldRoom.save()
 end
 
@@ -24570,9 +25294,13 @@ NeverYieldDoor.refreshView = function(s)
 	if s.viewVersion == NeverYieldRoom.version and s.homeWindow then return end
 	s.viewVersion = NeverYieldRoom.version
 	if s.homeWindow then pcall(function() s.homeWindow.screen:Destroy() end) end
-	local view = s.model:Clone()
+	local view = s.rooms.living.model:Clone()
 	for _, d in ipairs(view:GetDescendants()) do
-		if d:IsA("ParticleEmitter") or d:IsA("Light") or d:IsA("ProximityPrompt") or d:IsA("Sound") or d:IsA("Fire") or d:IsA("Highlight") then d:Destroy() end
+		if d:IsA("ParticleEmitter") or d:IsA("Light") or d:IsA("ProximityPrompt") or d:IsA("Sound") or d:IsA("Fire") or d:IsA("Highlight") then
+			d:Destroy()
+		elseif d:IsA("BasePart") and d.Size.Magnitude < 0.5 then
+			d:Destroy()
+		end
 	end
 	s.homeWindow = NeverYieldDoor.makeWindow(view, Color3.fromRGB(60, 45, 35))
 end
@@ -24609,7 +25337,8 @@ NeverYieldDoor.enterMood = function(s)
 	local cc = WackyState.track("room", Instance.new("ColorCorrectionEffect"))
 	cc.Saturation, cc.Contrast, cc.TintColor = 0.05, 0.05, Color3.fromRGB(255, 245, 232)
 	cc.Parent = Lighting
-	NeverYieldRoom.applyMood(s)
+	s.room = s.rooms.living
+	NeverYieldRoom.applyMood(s, s.room)
 	for _, snd in ipairs({{s.rain, 0.12}, {s.clock, 0.35}}) do
 		TweenService:Create(snd[1], TweenInfo.new(2), {Volume = snd[2]}):Play()
 	end
@@ -24673,8 +25402,18 @@ addcmd('door',{'room','myroom'},function(args, speaker)
 	s.model = Instance.new("Model")
 	s.model.Name = randomString()
 	s.model.Parent = workspace
-	R.buildShell(s)
-	R.placeAll(s)
+	s.rooms, s.roomList = {}, {}
+	for _, def in ipairs(R.rooms) do
+		local rs = {id = def.id, def = def, origin = s.origin + Vector3.new(def.dx * (R.W + 2), 0, def.dz * (R.D + 2))}
+		rs.model = Instance.new("Model")
+		rs.model.Name = randomString()
+		rs.model.Parent = s.model
+		s.rooms[def.id] = rs
+		table.insert(s.roomList, rs)
+		R.buildShell(s, rs)
+		R.placeAll(s, rs)
+	end
+	s.room = s.rooms.living
 	local roomPos = s.origin + Vector3.new(0, D.height / 2, -R.D / 2 - 0.5)
 	local roomCF = CFrame.lookAt(roomPos, roomPos - Vector3.new(0, 0, 1))
 	local homeView = NeverYieldAgartha.snapshot(doorPos, 200, 500, homeCF)
@@ -24705,15 +25444,24 @@ addcmd('door',{'room','myroom'},function(args, speaker)
 			s.closeAt = nil
 			D.setOpen(s, false)
 		end
-		-- party lighting cycles colours
-		if s.inside and R.data.mood == "party" then
+		-- party lighting cycles colours; the room you stand in sets the lighting
+		if s.inside then
 			hue = (hue + dt * 0.15) % 1
-			for i, lamp in ipairs(s.lamps or {}) do
-				local c = Color3.fromHSV((hue + i * 0.25) % 1, 0.8, 1)
-				lamp.light.Color = c
-				lamp.bulb.Color = c
+			for _, rs in ipairs(s.roomList) do
+				local rd = R.rd(rs.id)
+				if rd.mood == "party" and rd.lights ~= false then
+					for i, lamp in ipairs(rs.lamps or {}) do
+						local c = Color3.fromHSV((hue + i * 0.25) % 1, 0.8, 1)
+						lamp.light.Color = c
+						lamp.bulb.Color = c
+					end
+				end
 			end
+			local here = getRoot(speaker.Character)
+			here = here and R.roomAt(s, here.Position)
+			if here and here ~= s.room then R.enterRoom(s, here) end
 		end
+		if R.animate then R.animate(s, dt) end
 		if s.homeWindow then D.updateWindow(s.homeWindow, s.homeDoor, s.roomDoor, -1, speaker.Character) end
 		D.updateWindow(s.roomWindow, s.roomDoor, s.homeDoor, 1, speaker.Character)
 		local r = getRoot(speaker.Character)
@@ -24733,7 +25481,7 @@ addcmd('door',{'room','myroom'},function(args, speaker)
 			lastSide[key] = side
 		end
 	end))
-	notify('Door', 'Your door is here. Open it to see your room, walk in, and press Edit to decorate. (undoor removes it)', 8)
+	notify('Door', 'Your door is here. Open it to visit your house: living room, bedroom, game room and kitchen. Press Edit inside to decorate, flip a light switch with E. (undoor removes it)', 10)
 end)
 
 addcmd('doordebug',{'roomdebug'},function(args, speaker)
