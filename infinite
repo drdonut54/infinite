@@ -583,7 +583,7 @@ function makeSettingsButton(name,iconID,off)
 	return button
 end
 
-ColorsButton = makeSettingsButton("Edit Theme",getcustomasset("infiniteyield/assets/edittheme.png"))
+ColorsButton = makeSettingsButton("Theme Studio",getcustomasset("infiniteyield/assets/edittheme.png"))
 ColorsButton.Position = UDim2.new(0, 5, 0, 55)
 ColorsButton.Size = UDim2.new(1, -10, 0, 25)
 ColorsButton.Name = "Colors"
@@ -3743,7 +3743,7 @@ function updateColors(color,ctype)
 end
 
 local colorpickerOpen = false
-ColorsButton.MouseButton1Click:Connect(function()
+function NeverYieldOpenColorPicker()
 	cache_currentShade1 = currentShade1
 	cache_currentShade2 = currentShade2
 	cache_currentShade3 = currentShade3
@@ -4146,7 +4146,7 @@ ColorsButton.MouseButton1Click:Connect(function()
 		picker:TweenPosition(UDim2.new(0.5, -219, 0, 100), "InOut", "Quart", 0.5, true, nil)
 
 		local Npicker = ColorPicker.new()
-		Npicker.Confirm = function(self,color,ctype) updateColors(color,ctype) wait() updatesaves() end
+		Npicker.Confirm = function(self,color,ctype) updateColors(color,ctype) pcall(function() NeverYieldTheme.selected = "custom" NeverYieldTheme.active = nil writefile("NeverYield_theme.txt", "custom", true) end) wait() updatesaves() end
 		Npicker.Cancel = function(self)
 			updateColors(cache_currentShade1,shade1)
 			updateColors(cache_currentShade2,shade2)
@@ -4169,6 +4169,14 @@ ColorsButton.MouseButton1Click:Connect(function()
 		end
 	else
 		picker:TweenPosition(UDim2.new(0.5, -219, 0, 100), "InOut", "Quart", 0.5, true, nil)
+	end
+end
+
+ColorsButton.MouseButton1Click:Connect(function()
+	local ok, err = pcall(function() NeverYieldTheme.openStudio() end)
+	if not ok then
+		pcall(NeverYieldTheme.closeStudio)
+		notify('Theme Studio', 'Could not open: ' .. tostring(err))
 	end
 end)
 
@@ -5278,10 +5286,81 @@ CMDs[#CMDs + 1] = {NAME = 'joke', DESC = 'Tells a terrible joke'}
 CMDs[#CMDs + 1] = {NAME = 'wouldyourather / wyr', DESC = 'Asks a would-you-rather question'}
 CMDs[#CMDs + 1] = {NAME = 'stopwatch / timer', DESC = 'Starts / stops a stopwatch'}
 CMDs[#CMDs + 1] = {NAME = 'neveryield / about', DESC = 'Shows NeverYield info'}
-CMDs[#CMDs + 1] = {NAME = 'theme [space/nebula/galaxy/void/cosmic/classic]', DESC = 'Switches the GUI color theme (saved)'}
+CMDs[#CMDs + 1] = {NAME = 'themes / themestudio', DESC = 'Opens the animated Theme Studio (also in Settings)'}
+CMDs[#CMDs + 1] = {NAME = 'theme [name]', DESC = 'auto, space, nebula, galaxy, void, cosmic, christmas, halloween, newyear, lunarnewyear, valentines, stpatricks, easter, fourthofjuly, thanksgiving, hanukkah, diwali, classic, custom'}
+CMDs[#CMDs + 1] = {NAME = 'autotheme / holidaytheme', DESC = 'Automatically wear the holiday theme for today'}
 CMDs[#CMDs + 1] = {NAME = 'spacemode / space', DESC = 'Purple space lighting, floating stars and low gravity'}
 CMDs[#CMDs + 1] = {NAME = 'unspacemode / unspace', DESC = 'Comes back down to Earth'}
 CMDs[#CMDs + 1] = {NAME = 'portal / reopen', DESC = 'Replays the NeverYield portal opening animation'}
+CMDs[#CMDs + 1] = {NAME = '', DESC = ''}
+CMDs[#CMDs + 1] = {NAME = '--- LIMBS ---', DESC = 'Limb effects stack! Optional [speed] multiplier on each'}
+CMDs[#CMDs + 1] = {NAME = 'flail [speed]', DESC = 'Arms, legs and head flail around randomly'}
+CMDs[#CMDs + 1] = {NAME = 'windmill [speed]', DESC = 'Arms spin like windmills'}
+CMDs[#CMDs + 1] = {NAME = 'jelly / noodle [speed]', DESC = 'Every joint wobbles like jelly'}
+CMDs[#CMDs + 1] = {NAME = 'wobblylegs / jellylegs [speed]', DESC = 'Noodle legs'}
+CMDs[#CMDs + 1] = {NAME = 'headspin / owl [speed]', DESC = 'Your head spins around'}
+CMDs[#CMDs + 1] = {NAME = 'headbang [speed]', DESC = 'Rock out'}
+CMDs[#CMDs + 1] = {NAME = 'exorcist', DESC = 'Head turned backwards, twitching'}
+CMDs[#CMDs + 1] = {NAME = 'paranoid / lookaround', DESC = 'Nervously looks around'}
+CMDs[#CMDs + 1] = {NAME = 'sleepy / nod', DESC = 'Head droops and nods off'}
+CMDs[#CMDs + 1] = {NAME = 'tpose', DESC = 'Assert dominance'}
+CMDs[#CMDs + 1] = {NAME = 'scarecrow', DESC = 'Arms out, head tilted'}
+CMDs[#CMDs + 1] = {NAME = 'zombie / zombiearms', DESC = 'Arms straight out in front'}
+CMDs[#CMDs + 1] = {NAME = 'superman / supermanpose', DESC = 'Arms up over your head (try with fly)'}
+CMDs[#CMDs + 1] = {NAME = 'wave / waving', DESC = 'Wave hello'}
+CMDs[#CMDs + 1] = {NAME = 'hooray / armsup', DESC = 'Both arms up celebrating'}
+CMDs[#CMDs + 1] = {NAME = 'chicken / flap', DESC = 'Flap your wings and peck'}
+CMDs[#CMDs + 1] = {NAME = 'robot / robotdance', DESC = 'Snappy robot poses'}
+CMDs[#CMDs + 1] = {NAME = 'dab', DESC = 'Dab'}
+CMDs[#CMDs + 1] = {NAME = 'propeller / propellerarms', DESC = 'Arms spin around like propellers'}
+CMDs[#CMDs + 1] = {NAME = 'airguitar / shred', DESC = 'Shred on an invisible guitar'}
+CMDs[#CMDs + 1] = {NAME = 'boxing / shadowbox', DESC = 'Throw punches'}
+CMDs[#CMDs + 1] = {NAME = 'limbchaos / possessed', DESC = 'Every joint spins in a different direction'}
+CMDs[#CMDs + 1] = {NAME = 'lean / smoothcriminal [amount]', DESC = 'Lean forward like a smooth criminal'}
+CMDs[#CMDs + 1] = {NAME = 'twist / twerk', DESC = 'Twist your body side to side'}
+CMDs[#CMDs + 1] = {NAME = 'headstand / upsidedownme', DESC = 'Flip your body upside down'}
+CMDs[#CMDs + 1] = {NAME = 'breakdance / bboy', DESC = 'Upside down headspin breakdance'}
+CMDs[#CMDs + 1] = {NAME = 'randomlimbs / randompose', DESC = 'Turns on a random limb effect'}
+CMDs[#CMDs + 1] = {NAME = 'un<effect>  (e.g. unflail)', DESC = 'Turns off one limb effect'}
+CMDs[#CMDs + 1] = {NAME = 'unlimbs / resetlimbs', DESC = 'Turns off all limb effects'}
+CMDs[#CMDs + 1] = {NAME = '--- MOVEMENT ---', DESC = ''}
+CMDs[#CMDs + 1] = {NAME = 'crabwalk / sidewalk', DESC = 'Walk sideways like a crab'}
+CMDs[#CMDs + 1] = {NAME = 'uncrabwalk', DESC = 'Walk normally'}
+CMDs[#CMDs + 1] = {NAME = 'zigzag [strength]', DESC = 'Zig-zag while you walk'}
+CMDs[#CMDs + 1] = {NAME = 'unzigzag', DESC = 'Walk straight'}
+CMDs[#CMDs + 1] = {NAME = 'slide / penguin [speed]', DESC = 'Belly slide, steer with movement keys'}
+CMDs[#CMDs + 1] = {NAME = 'unslide', DESC = 'Stand back up'}
+CMDs[#CMDs + 1] = {NAME = 'tornado / twister [radius]', DESC = 'Spin around in a rising tornado'}
+CMDs[#CMDs + 1] = {NAME = 'untornado', DESC = 'Touch down'}
+CMDs[#CMDs + 1] = {NAME = 'ascend / heaven [speed]', DESC = 'Float up in a beam of light'}
+CMDs[#CMDs + 1] = {NAME = 'unascend', DESC = 'Come back down'}
+CMDs[#CMDs + 1] = {NAME = 'antigravity / floatup [seconds]', DESC = 'Float upward for a few seconds'}
+CMDs[#CMDs + 1] = {NAME = 'dash [power]', DESC = 'Quick dash in the direction you move'}
+CMDs[#CMDs + 1] = {NAME = 'blink [studs]', DESC = 'Teleport a few studs forward'}
+CMDs[#CMDs + 1] = {NAME = 'multijump / doublejump [count]', DESC = 'Extra jumps in mid-air'}
+CMDs[#CMDs + 1] = {NAME = 'unmultijump', DESC = 'Back to one jump'}
+CMDs[#CMDs + 1] = {NAME = 'shiftsprint / sprint [speed]', DESC = 'Hold Left Shift to sprint'}
+CMDs[#CMDs + 1] = {NAME = 'unshiftsprint / unsprint', DESC = 'Turns off shift sprint'}
+CMDs[#CMDs + 1] = {NAME = 'spinjump', DESC = 'Spin every time you jump'}
+CMDs[#CMDs + 1] = {NAME = 'unspinjump', DESC = 'Stop spin jumping'}
+CMDs[#CMDs + 1] = {NAME = 'flipjump', DESC = 'Backflip every time you jump'}
+CMDs[#CMDs + 1] = {NAME = 'unflipjump', DESC = 'Stop flip jumping'}
+CMDs[#CMDs + 1] = {NAME = 'bouncy / trampoline [bounciness]', DESC = 'Bounce back up when you land from high'}
+CMDs[#CMDs + 1] = {NAME = 'unbouncy', DESC = 'Stop bouncing'}
+CMDs[#CMDs + 1] = {NAME = '--- SCREEN & FUN ---', DESC = ''}
+CMDs[#CMDs + 1] = {NAME = 'countdown [seconds]', DESC = 'Big on-screen countdown'}
+CMDs[#CMDs + 1] = {NAME = 'screentext / bigtext [text]', DESC = 'Big rainbow text on your screen'}
+CMDs[#CMDs + 1] = {NAME = 'emojirain [emoji] [count]', DESC = 'Emojis rain down your screen'}
+CMDs[#CMDs + 1] = {NAME = 'letterbox / cinemabars', DESC = 'Movie-style black bars'}
+CMDs[#CMDs + 1] = {NAME = 'unletterbox', DESC = 'Removes the black bars'}
+CMDs[#CMDs + 1] = {NAME = 'selfie / selfiecam', DESC = 'Camera turns around to face you'}
+CMDs[#CMDs + 1] = {NAME = 'unselfie', DESC = 'Normal camera'}
+CMDs[#CMDs + 1] = {NAME = 'rainbowui / rgbui', DESC = 'The NeverYield GUI cycles through colors'}
+CMDs[#CMDs + 1] = {NAME = 'unrainbowui', DESC = 'Restores your GUI colors'}
+CMDs[#CMDs + 1] = {NAME = 'hud / statsdisplay', DESC = 'Shows FPS, speed and position on screen'}
+CMDs[#CMDs + 1] = {NAME = 'unhud', DESC = 'Hides the stats display'}
+CMDs[#CMDs + 1] = {NAME = 'calc / math [expression]', DESC = 'Calculator, e.g. calc (5+3)*2'}
+CMDs[#CMDs + 1] = {NAME = 'randomplayer / pickplayer', DESC = 'Picks a random player in the server'}
 -- wait()
 
 for i = 1, #CMDs do
@@ -13709,6 +13788,7 @@ end)
 addcmd('unorbitcam',{'uncinematic'},function(args, speaker)
 	if not WackyState.binds.orbitcam then return end
 	WackyState.unbindCam("orbitcam")
+	if WackyState.binds.selfie then return end
 	local cam = workspace.CurrentCamera
 	cam.CameraType = Enum.CameraType.Custom
 	local hum = speaker.Character and speaker.Character:FindFirstChildOfClass("Humanoid")
@@ -14235,7 +14315,7 @@ addcmd('unwacky',{'stopwacky','unchaos'},function(args, speaker)
 end)
 
 addcmd('wacky',{'wackyhelp'},function(args, speaker)
-	notify('Wacky Commands', 'disco, rainbowchar, ghost, drunk, earthquake, camroll, vertigo, orbitcam, filter, weather, confetti, dancefloor, moongravity, pogo, moonwalk, backflip, frontflip, barrelroll, rocket, jetpack, helicopter, trail, partyfx, beyblade, magic8ball, coinflip, roll, fortune, compliment, roastme, skin, aura, halo, pet, nuke, fireworks, timelapse, sunset, flashlight, horror, matrix, flop, zoomies, joke, wouldyourather, stopwatch, chaos, unwacky', 20)
+	notify('Wacky Commands', 'Open the command list and scroll to the bottom for every wacky command: party effects, limbs (flail, windmill, robot, dab, tpose...), movement (slide, tornado, multijump, sprint...), camera, screen fun, chaos and unwacky.', 12)
 end)
 -- ================== END WACKY COMMANDS ==================
 
@@ -14697,25 +14777,19 @@ NeverYieldThemes = {
 }
 
 addcmd('theme',{'nytheme'},function(args, speaker)
-	local names = {}
-	for k in pairs(NeverYieldThemes) do
-		table.insert(names, k)
-	end
-	table.sort(names)
-	local choice = args[1] and args[1]:lower() or "space"
-	local t = NeverYieldThemes[choice]
-	if not t then
-		notify('Theme', 'Unknown theme. Try: ' .. table.concat(names, ', '))
+	local choice = args[1] and args[1]:lower() or "auto"
+	if choice == "custom" then
+		NeverYieldTheme.openStudio("custom")
 		return
 	end
-	updateColors(t[1], shade1)
-	updateColors(t[2], shade2)
-	updateColors(t[3], shade3)
-	updateColors(t[4], text1)
-	updateColors(t[5], text2)
-	updateColors(t[6], scroll)
-	updatesaves()
-	notify('Theme', 'Switched to the ' .. choice .. ' theme.')
+	local ok, theme = NeverYieldTheme.apply(choice, true)
+	if not ok then
+		local ids = {}
+		for _, t in ipairs(NeverYieldTheme.list) do table.insert(ids, t.id) end
+		notify('Theme', 'Unknown theme. Try: ' .. table.concat(ids, ', ') .. ' (or type themes)')
+		return
+	end
+	notify('Theme', theme.icon .. ' ' .. theme.name .. ' theme applied.')
 end)
 
 WackyState.weather.stars = {Color = Color3.new(1, 1, 1), Rate = 150, Speed = NumberRange.new(0.5, 2), Size = 0.2, Lifetime = 10, Light = 1, Spread = 180}
@@ -14764,6 +14838,1713 @@ table.insert(WackyState.undoList, 'unspacemode')
 addcmd('portal',{'reopen'},function(args, speaker)
 	task.spawn(NeverYieldPortal.open)
 end)
+
+-- ==================== WACKY COMMANDS 3: LIMBS, MOVEMENT, FUN ====================
+-- Limb engine: effects return rotations (in the parent part's space, around the joint)
+-- that override Motor6D.Transform every physics step. Works on R6 and R15.
+WackyState.limbFx = {}
+WackyState.limbActive = {}
+WackyState.limbTouched = setmetatable({}, {__mode = "k"})
+WackyState.jointRoles = {
+	rightshoulder = "rs", leftshoulder = "ls", righthip = "rh", lefthip = "lh",
+	neck = "neck", waist = "waist", rootjoint = "root", root = "root",
+	rightelbow = "re", leftelbow = "le", rightknee = "rk", leftknee = "lk"
+}
+
+WackyState.getJoints = function(char)
+	local cache = WackyState.jointCache
+	if WackyState.jointChar == char and cache and cache.neck and cache.neck.motor.Parent and cache.rs and cache.rs.motor.Parent then
+		return cache
+	end
+	local joints = {}
+	for _, motor in ipairs(char:GetDescendants()) do
+		if motor:IsA("Motor6D") then
+			local role = WackyState.jointRoles[(motor.Name:gsub(" ", "")):lower()]
+			if role and not joints[role] then
+				local r0 = motor.C0 - motor.C0.Position
+				joints[role] = {motor = motor, r0 = r0, r0inv = r0:Inverse()}
+			end
+		end
+	end
+	if joints.neck and joints.rs then
+		WackyState.jointChar = char
+		WackyState.jointCache = joints
+	end
+	return joints
+end
+
+WackyState.limbStep = function()
+	local char = Players.LocalPlayer.Character
+	if not char then return end
+	local joints = WackyState.getJoints(char)
+	local t = tick()
+	local poses = {}
+	for name, speed in pairs(WackyState.limbActive) do
+		local ok, result = pcall(WackyState.limbFx[name], t, speed)
+		if ok and result then
+			for role, q in pairs(result) do
+				poses[role] = poses[role] and (poses[role] * q) or q
+			end
+		end
+	end
+	for role, q in pairs(poses) do
+		local joint = joints[role]
+		if joint and joint.motor.Parent then
+			joint.motor.Transform = joint.r0inv * q * joint.r0
+			WackyState.limbTouched[joint.motor] = true
+		end
+	end
+end
+
+WackyState.limbOn = function(name, speedArg)
+	WackyState.limbActive[name] = WackyState.num(speedArg, 1)
+	if not WackyState.conns.limbs then
+		WackyState.connect("limbs", RunService.Stepped:Connect(WackyState.limbStep))
+	end
+end
+
+WackyState.limbOff = function(name)
+	if name then
+		WackyState.limbActive[name] = nil
+	else
+		WackyState.limbActive = {}
+	end
+	for motor in pairs(WackyState.limbTouched) do
+		pcall(function() motor.Transform = CFrame.new() end)
+	end
+	WackyState.limbTouched = setmetatable({}, {__mode = "k"})
+	if next(WackyState.limbActive) == nil then
+		WackyState.disconnect("limbs")
+	end
+end
+
+-- Axis guide (parent part space): +X rotation swings a hanging limb forward,
+-- +Z rotation raises the right arm out to the side (use -Z for the left arm),
+-- +Y rotation turns left/right, -X on the neck nods the head forward.
+WackyState.limbFx.flail = function(t, s)
+	local function n(seed, amp) return math.noise(t * 3 * s, seed) * amp end
+	return {
+		rs = CFrame.Angles(n(1.1, 6), n(2.2, 3), n(3.3, 6)),
+		ls = CFrame.Angles(n(4.4, 6), n(5.5, 3), n(6.6, 6)),
+		rh = CFrame.Angles(n(7.7, 3), 0, n(8.8, 2)),
+		lh = CFrame.Angles(n(9.9, 3), 0, n(10.1, 2)),
+		neck = CFrame.Angles(n(11.2, 1.5), n(12.3, 2), 0),
+	}
+end
+
+WackyState.limbFx.windmill = function(t, s)
+	return {rs = CFrame.Angles(t * 8 * s, 0, 0), ls = CFrame.Angles(t * 8 * s + math.pi, 0, 0)}
+end
+
+WackyState.limbFx.jelly = function(t, s)
+	local poses = {}
+	for i, role in ipairs({"rs", "ls", "rh", "lh", "neck", "waist", "re", "le", "rk", "lk"}) do
+		poses[role] = CFrame.Angles(math.sin(t * 6 * s + i) * 0.5, 0, math.cos(t * 5 * s + i * 1.7) * 0.4)
+	end
+	return poses
+end
+
+WackyState.limbFx.wobblylegs = function(t, s)
+	return {
+		rh = CFrame.Angles(math.sin(t * 9 * s) * 0.9, 0, math.cos(t * 7 * s) * 0.6),
+		lh = CFrame.Angles(math.sin(t * 9 * s + 2) * 0.9, 0, math.cos(t * 7 * s + 1) * 0.6),
+		rk = CFrame.Angles(math.sin(t * 11 * s) * 1.2, 0, 0),
+		lk = CFrame.Angles(math.sin(t * 11 * s + 1) * 1.2, 0, 0),
+	}
+end
+
+WackyState.limbFx.headspin = function(t, s)
+	return {neck = CFrame.Angles(0, t * 10 * s, 0)}
+end
+
+WackyState.limbFx.headbang = function(t, s)
+	return {neck = CFrame.Angles(-math.abs(math.sin(t * 8 * s)) * 0.8 + 0.2, 0, 0)}
+end
+
+WackyState.limbFx.exorcist = function(t, s)
+	return {neck = CFrame.Angles(0, math.pi + math.sin(t * 25 * s) * 0.15, math.sin(t * 13 * s) * 0.1)}
+end
+
+WackyState.limbFx.paranoid = function(t, s)
+	return {neck = CFrame.Angles(math.noise(t * 4 * s, 1.3) * 0.4, math.sin(t * 1.7 * s) * 1.2 + math.noise(t * 6, 2.1) * 0.3, 0)}
+end
+
+WackyState.limbFx.sleepy = function(t, s)
+	return {neck = CFrame.Angles(-0.5 - math.sin(t * 1.2 * s) * 0.25, 0, 0.15)}
+end
+
+WackyState.limbFx.tpose = function(t, s)
+	return {rs = CFrame.Angles(0, 0, math.pi / 2), ls = CFrame.Angles(0, 0, -math.pi / 2)}
+end
+
+WackyState.limbFx.scarecrow = function(t, s)
+	return {
+		rs = CFrame.Angles(0, 0, 1.45), ls = CFrame.Angles(0, 0, -1.45),
+		neck = CFrame.Angles(-0.3, 0, 0.45 + math.sin(t * 2 * s) * 0.05),
+		rh = CFrame.Angles(0, 0, -0.05), lh = CFrame.Angles(0, 0, 0.05),
+	}
+end
+
+WackyState.limbFx.zombie = function(t, s)
+	return {
+		rs = CFrame.Angles(math.pi / 2 + math.sin(t * 2 * s) * 0.1, 0, 0),
+		ls = CFrame.Angles(math.pi / 2 + math.sin(t * 2 * s + 1) * 0.1, 0, 0),
+		neck = CFrame.Angles(0, 0, math.sin(t * 1.5 * s) * 0.3),
+	}
+end
+
+WackyState.limbFx.superman = function(t, s)
+	return {rs = CFrame.Angles(math.pi * 0.95, 0, 0.1), ls = CFrame.Angles(math.pi * 0.95, 0, -0.1)}
+end
+
+WackyState.limbFx.wave = function(t, s)
+	return {rs = CFrame.Angles(0, 0, 2.6 + math.sin(t * 8 * s) * 0.35)}
+end
+
+WackyState.limbFx.hooray = function(t, s)
+	local bounce = math.sin(t * 6 * s) * 0.15
+	return {rs = CFrame.Angles(0, 0, math.pi - 0.35 + bounce), ls = CFrame.Angles(0, 0, -(math.pi - 0.35 + bounce))}
+end
+
+WackyState.limbFx.chicken = function(t, s)
+	local flap = (math.sin(t * 14 * s) + 1) * 0.35
+	return {
+		rs = CFrame.Angles(0, 0, 0.3 + flap), ls = CFrame.Angles(0, 0, -(0.3 + flap)),
+		re = CFrame.Angles(0, 0, -0.9), le = CFrame.Angles(0, 0, 0.9),
+		neck = CFrame.Angles(-math.max(0, math.sin(t * 7 * s)) * 0.5, 0, 0),
+	}
+end
+
+WackyState.robotPose = {}
+WackyState.robotLast = 0
+WackyState.limbFx.robot = function(t, s)
+	if t - WackyState.robotLast > 0.35 / s then
+		WackyState.robotLast = t
+		local function q() return math.rad(45 * math.random(-2, 2)) end
+		WackyState.robotPose = {
+			rs = CFrame.Angles(q(), 0, math.abs(q())), ls = CFrame.Angles(q(), 0, -math.abs(q())),
+			neck = CFrame.Angles(0, q() * 0.5, 0), re = CFrame.Angles(math.abs(q()), 0, 0), le = CFrame.Angles(math.abs(q()), 0, 0),
+		}
+	end
+	return WackyState.robotPose
+end
+
+WackyState.limbFx.dab = function(t, s)
+	return {
+		rs = CFrame.Angles(0.4, 0, 2.3),
+		ls = CFrame.Angles(1.6, 0.6, -1.1),
+		le = CFrame.Angles(1.4, 0, 0),
+		neck = CFrame.Angles(-0.55, 0.5, 0),
+	}
+end
+
+WackyState.limbFx.propeller = function(t, s)
+	local spin = CFrame.Angles(0, t * 15 * s, 0)
+	return {rs = spin * CFrame.Angles(0, 0, math.pi / 2), ls = spin * CFrame.Angles(0, 0, -math.pi / 2)}
+end
+
+WackyState.limbFx.airguitar = function(t, s)
+	return {
+		rs = CFrame.Angles(0.7 + math.sin(t * 22 * s) * 0.35, 0, 0.2),
+		ls = CFrame.Angles(1.3, 0, -0.5),
+		neck = CFrame.Angles(-math.abs(math.sin(t * 4 * s)) * 0.4, 0, 0),
+	}
+end
+
+WackyState.limbFx.boxing = function(t, s)
+	local p = math.sin(t * 9 * s)
+	return {
+		rs = CFrame.Angles(0.9 + math.max(0, p) * 0.7, 0, 0.1),
+		ls = CFrame.Angles(0.9 + math.max(0, -p) * 0.7, 0, -0.1),
+		re = CFrame.Angles(1.2 - math.max(0, p) * 1.1, 0, 0),
+		le = CFrame.Angles(1.2 - math.max(0, -p) * 1.1, 0, 0),
+		neck = CFrame.Angles(0, math.sin(t * 3 * s) * 0.2, 0),
+	}
+end
+
+WackyState.limbFx.limbchaos = function(t, s)
+	local poses = {}
+	for i, role in ipairs({"rs", "ls", "rh", "lh", "neck", "re", "le", "rk", "lk"}) do
+		poses[role] = CFrame.Angles(t * (2 + i) * s, t * (3 + i * 0.5) * s, t * (1 + i * 0.7) * s)
+	end
+	return poses
+end
+
+WackyState.limbFx.lean = function(t, s)
+	return {root = CFrame.Angles(-math.rad(35 * s), 0, 0)}
+end
+
+WackyState.limbFx.twist = function(t, s)
+	return {waist = CFrame.Angles(0, math.sin(t * 6 * s) * 1.2, 0), root = CFrame.Angles(0, math.sin(t * 6 * s) * 0.6, 0)}
+end
+
+WackyState.limbFx.headstand = function(t, s)
+	return {root = CFrame.Angles(math.pi, 0, 0)}
+end
+
+WackyState.limbFx.breakdance = function(t, s)
+	return {
+		root = CFrame.Angles(math.pi, t * 8 * s, 0),
+		rh = CFrame.Angles(math.sin(t * 10 * s) * 1.2, 0, 0.8), lh = CFrame.Angles(-math.sin(t * 10 * s) * 1.2, 0, -0.8),
+	}
+end
+
+addcmd('flail',{'flailarms'},function(args, speaker) WackyState.limbOn('flail', args[1]) end)
+addcmd('unflail',{'noflail'},function(args, speaker) WackyState.limbOff('flail') end)
+addcmd('windmill',{},function(args, speaker) WackyState.limbOn('windmill', args[1]) end)
+addcmd('unwindmill',{'nowindmill'},function(args, speaker) WackyState.limbOff('windmill') end)
+addcmd('jelly',{'noodle'},function(args, speaker) WackyState.limbOn('jelly', args[1]) end)
+addcmd('unjelly',{'unnoodle'},function(args, speaker) WackyState.limbOff('jelly') end)
+addcmd('wobblylegs',{'jellylegs'},function(args, speaker) WackyState.limbOn('wobblylegs', args[1]) end)
+addcmd('unwobblylegs',{'unjellylegs'},function(args, speaker) WackyState.limbOff('wobblylegs') end)
+addcmd('headspin',{'owl'},function(args, speaker) WackyState.limbOn('headspin', args[1]) end)
+addcmd('unheadspin',{'unowl'},function(args, speaker) WackyState.limbOff('headspin') end)
+addcmd('headbang',{},function(args, speaker) WackyState.limbOn('headbang', args[1]) end)
+addcmd('unheadbang',{'noheadbang'},function(args, speaker) WackyState.limbOff('headbang') end)
+addcmd('exorcist',{},function(args, speaker) WackyState.limbOn('exorcist', args[1]) end)
+addcmd('unexorcist',{'noexorcist'},function(args, speaker) WackyState.limbOff('exorcist') end)
+addcmd('paranoid',{'lookaround'},function(args, speaker) WackyState.limbOn('paranoid', args[1]) end)
+addcmd('unparanoid',{'unlookaround'},function(args, speaker) WackyState.limbOff('paranoid') end)
+addcmd('sleepy',{'nod'},function(args, speaker) WackyState.limbOn('sleepy', args[1]) end)
+addcmd('unsleepy',{'unnod'},function(args, speaker) WackyState.limbOff('sleepy') end)
+addcmd('tpose',{},function(args, speaker) WackyState.limbOn('tpose', args[1]) end)
+addcmd('untpose',{'notpose'},function(args, speaker) WackyState.limbOff('tpose') end)
+addcmd('scarecrow',{},function(args, speaker) WackyState.limbOn('scarecrow', args[1]) end)
+addcmd('unscarecrow',{'noscarecrow'},function(args, speaker) WackyState.limbOff('scarecrow') end)
+addcmd('zombie',{'zombiearms'},function(args, speaker) WackyState.limbOn('zombie', args[1]) end)
+addcmd('unzombie',{'unzombiearms'},function(args, speaker) WackyState.limbOff('zombie') end)
+addcmd('superman',{'supermanpose'},function(args, speaker) WackyState.limbOn('superman', args[1]) end)
+addcmd('unsuperman',{'unsupermanpose'},function(args, speaker) WackyState.limbOff('superman') end)
+addcmd('wave',{'waving'},function(args, speaker) WackyState.limbOn('wave', args[1]) end)
+addcmd('unwave',{'nowave'},function(args, speaker) WackyState.limbOff('wave') end)
+addcmd('hooray',{'armsup'},function(args, speaker) WackyState.limbOn('hooray', args[1]) end)
+addcmd('unhooray',{'unarmsup'},function(args, speaker) WackyState.limbOff('hooray') end)
+addcmd('chicken',{'flap'},function(args, speaker) WackyState.limbOn('chicken', args[1]) end)
+addcmd('unchicken',{'unflap'},function(args, speaker) WackyState.limbOff('chicken') end)
+addcmd('robot',{'robotdance'},function(args, speaker) WackyState.limbOn('robot', args[1]) end)
+addcmd('unrobot',{'unrobotdance'},function(args, speaker) WackyState.limbOff('robot') end)
+addcmd('dab',{},function(args, speaker) WackyState.limbOn('dab', args[1]) end)
+addcmd('undab',{'nodab'},function(args, speaker) WackyState.limbOff('dab') end)
+addcmd('propeller',{'propellerarms'},function(args, speaker) WackyState.limbOn('propeller', args[1]) end)
+addcmd('unpropeller',{'unpropellerarms'},function(args, speaker) WackyState.limbOff('propeller') end)
+addcmd('airguitar',{'shred'},function(args, speaker) WackyState.limbOn('airguitar', args[1]) end)
+addcmd('unairguitar',{'unshred'},function(args, speaker) WackyState.limbOff('airguitar') end)
+addcmd('boxing',{'shadowbox'},function(args, speaker) WackyState.limbOn('boxing', args[1]) end)
+addcmd('unboxing',{'unshadowbox'},function(args, speaker) WackyState.limbOff('boxing') end)
+addcmd('limbchaos',{'possessed'},function(args, speaker) WackyState.limbOn('limbchaos', args[1]) end)
+addcmd('unlimbchaos',{'unpossessed'},function(args, speaker) WackyState.limbOff('limbchaos') end)
+addcmd('lean',{'smoothcriminal'},function(args, speaker) WackyState.limbOn('lean', args[1]) end)
+addcmd('unlean',{'nolean'},function(args, speaker) WackyState.limbOff('lean') end)
+addcmd('twist',{'twerk'},function(args, speaker) WackyState.limbOn('twist', args[1]) end)
+addcmd('untwist',{'untwerk'},function(args, speaker) WackyState.limbOff('twist') end)
+addcmd('headstand',{'upsidedownme'},function(args, speaker) WackyState.limbOn('headstand', args[1]) end)
+addcmd('unheadstand',{'unupsidedownme'},function(args, speaker) WackyState.limbOff('headstand') end)
+addcmd('breakdance',{'bboy'},function(args, speaker) WackyState.limbOn('breakdance', args[1]) end)
+addcmd('unbreakdance',{'unbboy'},function(args, speaker) WackyState.limbOff('breakdance') end)
+
+addcmd('randomlimbs',{'randompose'},function(args, speaker)
+	local names = {}
+	for name in pairs(WackyState.limbFx) do
+		table.insert(names, name)
+	end
+	local pick = WackyState.pick(names)
+	WackyState.limbOn(pick, args[1])
+	notify('Limbs', 'Your body chose: ' .. pick)
+end)
+
+addcmd('unlimbs',{'resetlimbs','nolimbfx'},function(args, speaker)
+	WackyState.limbOff()
+end)
+
+-- Movement
+WackyState.humRoot = function(speaker)
+	local char = speaker.Character
+	return char and char:FindFirstChildOfClass("Humanoid"), getRoot(char)
+end
+
+addcmd('crabwalk',{'sidewalk'},function(args, speaker)
+	WackyState.connect("crabwalk", RunService.Heartbeat:Connect(function()
+		local hum, root = WackyState.humRoot(speaker)
+		if not hum or not root then return end
+		hum.AutoRotate = false
+		local dir = hum.MoveDirection
+		if dir.Magnitude > 0.1 then
+			local pos = root.Position
+			root.CFrame = CFrame.lookAt(pos, pos + Vector3.new(-dir.Z, 0, dir.X))
+		end
+	end))
+	notify('Crab Walk', 'Scuttle scuttle. Use uncrabwalk to walk normally.')
+end)
+
+addcmd('uncrabwalk',{'unsidewalk'},function(args, speaker)
+	if not WackyState.conns.crabwalk then return end
+	WackyState.disconnect("crabwalk")
+	local hum = WackyState.humRoot(speaker)
+	if hum then hum.AutoRotate = true end
+end)
+
+addcmd('zigzag',{},function(args, speaker)
+	local strength = WackyState.num(args[1], 3)
+	WackyState.connect("zigzag", RunService.Heartbeat:Connect(function()
+		local hum, root = WackyState.humRoot(speaker)
+		if not hum or not root then return end
+		local dir = hum.MoveDirection
+		if dir.Magnitude > 0.1 then
+			root.AssemblyLinearVelocity = root.AssemblyLinearVelocity + Vector3.new(-dir.Z, 0, dir.X) * math.sin(tick() * 10) * strength
+		end
+	end))
+end)
+
+addcmd('unzigzag',{'nozigzag'},function(args, speaker)
+	WackyState.disconnect("zigzag")
+end)
+
+addcmd('slide',{'penguin','bellyslide'},function(args, speaker)
+	local hum, root = WackyState.humRoot(speaker)
+	if not hum or not root then return end
+	local speed = WackyState.num(args[1], 45)
+	local last = root.CFrame.LookVector * Vector3.new(1, 0, 1)
+	if last.Magnitude < 0.1 then last = Vector3.new(0, 0, -1) end
+	last = last.Unit
+	hum.PlatformStand = true
+	WackyState.connect("slide", RunService.Heartbeat:Connect(function()
+		local h, r = WackyState.humRoot(speaker)
+		if not h or not r then return end
+		h.PlatformStand = true
+		if h.MoveDirection.Magnitude > 0.1 then
+			last = h.MoveDirection.Unit
+		end
+		local pos = r.Position
+		r.CFrame = CFrame.lookAt(pos, pos + last) * CFrame.Angles(-math.pi / 2, 0, 0)
+		r.AssemblyLinearVelocity = Vector3.new(last.X * speed, r.AssemblyLinearVelocity.Y, last.Z * speed)
+		r.AssemblyAngularVelocity = Vector3.zero
+	end))
+	notify('Belly Slide', 'Wheee! Steer with your movement keys. Use unslide to stand up.')
+end)
+
+addcmd('unslide',{'unpenguin','unbellyslide'},function(args, speaker)
+	if not WackyState.conns.slide then return end
+	WackyState.disconnect("slide")
+	local hum, root = WackyState.humRoot(speaker)
+	if hum then
+		hum.PlatformStand = false
+		hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+	end
+	if root then
+		local facing = root.CFrame.UpVector * Vector3.new(1, 0, 1)
+		if facing.Magnitude < 0.1 then facing = Vector3.new(0, 0, -1) end
+		local pos = root.Position + Vector3.new(0, 2, 0)
+		root.CFrame = CFrame.lookAt(pos, pos + facing.Unit)
+	end
+end)
+
+addcmd('tornado',{'twister'},function(args, speaker)
+	local hum, root = WackyState.humRoot(speaker)
+	if not root then return end
+	WackyState.disconnect("tornado")
+	WackyState.clear("tornado")
+	local radius = WackyState.num(args[1], 8)
+	local spin = WackyState.track("tornado", Instance.new("BodyAngularVelocity"))
+	spin.Name = randomString()
+	spin.MaxTorque = Vector3.new(0, math.huge, 0)
+	spin.AngularVelocity = Vector3.new(0, 30, 0)
+	spin.Parent = root
+	local move = WackyState.track("tornado", Instance.new("BodyVelocity"))
+	move.Name = randomString()
+	move.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+	move.Parent = root
+	WackyState.connect("tornado", RunService.Heartbeat:Connect(function()
+		local t = tick()
+		move.Velocity = Vector3.new(-math.sin(t * 3) * radius * 3, math.sin(t * 2) * 4, math.cos(t * 3) * radius * 3)
+	end))
+	notify('Tornado', 'You are the storm now. Use untornado to touch down.')
+end)
+
+addcmd('untornado',{'untwister'},function(args, speaker)
+	WackyState.disconnect("tornado")
+	WackyState.clear("tornado")
+end)
+
+addcmd('ascend',{'heaven'},function(args, speaker)
+	local hum, root = WackyState.humRoot(speaker)
+	if not root then return end
+	WackyState.disconnect("ascend")
+	WackyState.clear("ascend")
+	local beam = WackyState.track("ascend", Instance.new("Part"))
+	beam.Name = randomString()
+	beam.Anchored = true
+	beam.CanCollide = false
+	beam.CanQuery = false
+	beam.CanTouch = false
+	beam.Shape = Enum.PartType.Cylinder
+	beam.Material = Enum.Material.Neon
+	beam.Color = Color3.fromRGB(255, 245, 200)
+	beam.Transparency = 0.6
+	beam.Size = Vector3.new(400, 8, 8)
+	beam.Parent = workspace
+	local lift = WackyState.track("ascend", Instance.new("BodyVelocity"))
+	lift.Name = randomString()
+	lift.MaxForce = Vector3.new(0, math.huge, 0)
+	lift.Velocity = Vector3.new(0, WackyState.num(args[1], 6), 0)
+	lift.Parent = root
+	WackyState.connect("ascend", RunService.Heartbeat:Connect(function()
+		local r = getRoot(speaker.Character)
+		if r then
+			beam.CFrame = CFrame.new(r.Position.X, r.Position.Y + 150, r.Position.Z) * CFrame.Angles(0, 0, math.pi / 2)
+		end
+	end))
+	local glow = WackyState.track("ascend", Instance.new("ParticleEmitter"))
+	glow.Name = randomString()
+	glow.Rate = 60
+	glow.Speed = NumberRange.new(1, 3)
+	glow.SpreadAngle = Vector2.new(180, 180)
+	glow.Lifetime = NumberRange.new(1, 1.8)
+	glow.Acceleration = Vector3.new(0, 4, 0)
+	glow.Size = NumberSequence.new(0.8, 0)
+	glow.Transparency = NumberSequence.new(0.2, 1)
+	glow.LightEmission = 1
+	glow.Color = ColorSequence.new(Color3.fromRGB(255, 245, 200))
+	glow.Parent = root
+	notify('Ascend', 'You are being called upward... Use unascend to come back.')
+end)
+
+addcmd('unascend',{'unheaven'},function(args, speaker)
+	if not WackyState.conns.ascend then return end
+	WackyState.disconnect("ascend")
+	WackyState.clear("ascend")
+end)
+
+addcmd('antigravity',{'floatup'},function(args, speaker)
+	local hum, root = WackyState.humRoot(speaker)
+	if not root then return end
+	WackyState.clear("antigravity")
+	local force = WackyState.track("antigravity", Instance.new("BodyForce"))
+	force.Name = randomString()
+	force.Force = Vector3.new(0, root.AssemblyMass * workspace.Gravity * 1.15, 0)
+	force.Parent = root
+	task.delay(WackyState.num(args[1], 4), function()
+		pcall(function() force:Destroy() end)
+	end)
+end)
+
+addcmd('dash',{},function(args, speaker)
+	local hum, root = WackyState.humRoot(speaker)
+	if not root then return end
+	local dir = (hum and hum.MoveDirection.Magnitude > 0.1) and hum.MoveDirection or root.CFrame.LookVector
+	local power = WackyState.num(args[1], 120)
+	root.AssemblyLinearVelocity = Vector3.new(dir.X * power, root.AssemblyLinearVelocity.Y + 10, dir.Z * power)
+	local trail = Instance.new("Fire")
+	trail.Name = randomString()
+	trail.Size = 4
+	trail.Color = Color3.fromRGB(170, 90, 255)
+	trail.SecondaryColor = Color3.fromRGB(110, 200, 255)
+	trail.Parent = root
+	Services.Debris:AddItem(trail, 0.6)
+end)
+
+addcmd('blink',{'blinkforward'},function(args, speaker)
+	local hum, root = WackyState.humRoot(speaker)
+	if not root then return end
+	root.CFrame = root.CFrame + root.CFrame.LookVector * WackyState.num(args[1], 10)
+end)
+
+addcmd('multijump',{'doublejump'},function(args, speaker)
+	local extra = math.max(1, math.floor(WackyState.num(args[1], 1)))
+	local used, lastJump = 0, 0
+	WackyState.connect("multijumpLand", RunService.Heartbeat:Connect(function()
+		local hum = WackyState.humRoot(speaker)
+		if hum and hum.FloorMaterial ~= Enum.Material.Air then
+			used = 0
+		end
+	end))
+	WackyState.connect("multijump", UserInputService.JumpRequest:Connect(function()
+		local hum, root = WackyState.humRoot(speaker)
+		if not hum or not root then return end
+		if hum.FloorMaterial ~= Enum.Material.Air then
+			lastJump = tick()
+			return
+		end
+		if used >= extra or tick() - lastJump < 0.25 then return end
+		used = used + 1
+		lastJump = tick()
+		local v = root.AssemblyLinearVelocity
+		root.AssemblyLinearVelocity = Vector3.new(v.X, 50, v.Z)
+	end))
+	notify('Multi Jump', 'You can now jump ' .. extra .. ' extra time(s) in the air.')
+end)
+
+addcmd('unmultijump',{'undoublejump'},function(args, speaker)
+	WackyState.disconnect("multijump")
+	WackyState.disconnect("multijumpLand")
+end)
+
+addcmd('shiftsprint',{'sprint'},function(args, speaker)
+	local sprintSpeed = WackyState.num(args[1], 32)
+	WackyState.connect("sprintDown", UserInputService.InputBegan:Connect(function(input, processed)
+		if processed or input.KeyCode ~= Enum.KeyCode.LeftShift then return end
+		local hum = WackyState.humRoot(speaker)
+		if hum and not WackyState.sprintOld then
+			WackyState.sprintOld = hum.WalkSpeed
+			hum.WalkSpeed = sprintSpeed
+		end
+	end))
+	WackyState.connect("sprintUp", UserInputService.InputEnded:Connect(function(input)
+		if input.KeyCode ~= Enum.KeyCode.LeftShift then return end
+		local hum = WackyState.humRoot(speaker)
+		if hum and WackyState.sprintOld then
+			hum.WalkSpeed = WackyState.sprintOld
+		end
+		WackyState.sprintOld = nil
+	end))
+	notify('Sprint', 'Hold Left Shift to sprint at speed ' .. sprintSpeed .. '.')
+end)
+
+addcmd('unshiftsprint',{'unsprint'},function(args, speaker)
+	WackyState.disconnect("sprintDown")
+	WackyState.disconnect("sprintUp")
+	local hum = WackyState.humRoot(speaker)
+	if hum and WackyState.sprintOld then
+		hum.WalkSpeed = WackyState.sprintOld
+	end
+	WackyState.sprintOld = nil
+end)
+
+-- Jump tricks: watch for the moment a jump starts
+WackyState.onJump = function(key, callback)
+	local hooked, stateConn = nil, nil
+	WackyState.connect(key, RunService.Heartbeat:Connect(function()
+		local hum = WackyState.humRoot(Players.LocalPlayer)
+		if hum and hum ~= hooked then
+			if stateConn then stateConn:Disconnect() end
+			hooked = hum
+			stateConn = hum.StateChanged:Connect(function(_, new)
+				if not WackyState.conns[key] then
+					stateConn:Disconnect()
+					return
+				end
+				if new == Enum.HumanoidStateType.Jumping then
+					local h, root = WackyState.humRoot(Players.LocalPlayer)
+					if h and root then
+						callback(h, root)
+					end
+				end
+			end)
+		end
+	end))
+end
+
+addcmd('spinjump',{},function(args, speaker)
+	WackyState.onJump("spinjump", function(hum, root)
+		task.spawn(function()
+			local turned = 0
+			hum.AutoRotate = false
+			while turned < math.pi * 2 and root.Parent do
+				local dt = RunService.Heartbeat:Wait()
+				local step = math.min(math.pi * 2 - turned, dt * math.pi * 2 / 0.4)
+				turned = turned + step
+				root.CFrame = root.CFrame * CFrame.Angles(0, step, 0)
+			end
+			if not WackyState.conns.moonwalk and not WackyState.conns.crabwalk then
+				pcall(function() hum.AutoRotate = true end)
+			end
+		end)
+	end)
+end)
+
+addcmd('unspinjump',{'nospinjump'},function(args, speaker)
+	WackyState.disconnect("spinjump")
+end)
+
+addcmd('flipjump',{},function(args, speaker)
+	WackyState.onJump("flipjump", function(hum, root)
+		WackyState.flip(speaker, Vector3.new(1, 0, 0), 1)
+	end)
+end)
+
+addcmd('unflipjump',{'noflipjump'},function(args, speaker)
+	WackyState.disconnect("flipjump")
+end)
+
+addcmd('bouncy',{'trampoline'},function(args, speaker)
+	local bounciness = WackyState.num(args[1], 0.8)
+	local lastVy = 0
+	WackyState.connect("bouncy", RunService.Heartbeat:Connect(function()
+		local hum, root = WackyState.humRoot(speaker)
+		if not hum or not root then return end
+		local vy = root.AssemblyLinearVelocity.Y
+		if hum.FloorMaterial ~= Enum.Material.Air and lastVy < -25 then
+			local v = root.AssemblyLinearVelocity
+			root.AssemblyLinearVelocity = Vector3.new(v.X, -lastVy * bounciness, v.Z)
+			vy = 0
+		end
+		lastVy = vy
+	end))
+	notify('Bouncy', 'Boing! Jump off something tall. Use unbouncy to stop.')
+end)
+
+addcmd('unbouncy',{'untrampoline'},function(args, speaker)
+	WackyState.disconnect("bouncy")
+end)
+
+-- On-screen fun (only you see these)
+WackyState.overlay = function()
+	if WackyState.screen and WackyState.screen.Parent then
+		return WackyState.screen
+	end
+	local screen = Instance.new("ScreenGui")
+	screen.Name = randomString()
+	screen.IgnoreGuiInset = true
+	screen.ResetOnSpawn = false
+	screen.DisplayOrder = 999999
+	local ok = pcall(function()
+		screen.Parent = gethui and gethui() or COREGUI
+	end)
+	if not ok then
+		screen.Parent = Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")
+	end
+	WackyState.screen = screen
+	return screen
+end
+
+WackyState.bigLabel = function(text, color)
+	local label = Instance.new("TextLabel")
+	label.Name = randomString()
+	label.AnchorPoint = Vector2.new(0.5, 0.5)
+	label.Position = UDim2.new(0.5, 0, 0.4, 0)
+	label.Size = UDim2.new(0.8, 0, 0.2, 0)
+	label.BackgroundTransparency = 1
+	label.Font = Enum.Font.FredokaOne
+	label.TextScaled = true
+	label.Text = text
+	label.TextColor3 = color or Color3.new(1, 1, 1)
+	label.TextStrokeTransparency = 0
+	label.TextStrokeColor3 = Color3.fromRGB(40, 0, 70)
+	label.Parent = WackyState.overlay()
+	return label
+end
+
+addcmd('countdown',{},function(args, speaker)
+	local from = math.clamp(math.floor(WackyState.num(args[1], 3)), 1, 60)
+	task.spawn(function()
+		for i = from, 0, -1 do
+			local label = WackyState.bigLabel(i == 0 and "GO!" or tostring(i), i == 0 and Color3.fromRGB(120, 255, 140) or Color3.new(1, 1, 1))
+			local scale = Instance.new("UIScale")
+			scale.Scale = 1.6
+			scale.Parent = label
+			TweenService:Create(scale, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+			task.wait(0.8)
+			TweenService:Create(label, TweenInfo.new(0.2), {TextTransparency = 1, TextStrokeTransparency = 1}):Play()
+			Services.Debris:AddItem(label, 0.3)
+			task.wait(0.2)
+		end
+	end)
+end)
+
+addcmd('screentext',{'bigtext'},function(args, speaker)
+	local text = getstring(1, args)
+	if text == "" then text = "NEVERYIELD" end
+	local label = WackyState.bigLabel(text)
+	task.spawn(function()
+		local start = tick()
+		while tick() - start < 3 and label.Parent do
+			label.TextColor3 = WackyState.rainbow(0.8)
+			RunService.RenderStepped:Wait()
+		end
+		TweenService:Create(label, TweenInfo.new(0.4), {TextTransparency = 1, TextStrokeTransparency = 1}):Play()
+		Services.Debris:AddItem(label, 0.5)
+	end)
+end)
+
+WackyState.emojis = {"🎉", "✨", "🔥", "💜", "🚀", "🌌", "😂", "🍕", "⭐", "🦆", "👾", "🍩"}
+
+addcmd('emojirain',{'emojis'},function(args, speaker)
+	local chosen = args[1]
+	local count = math.clamp(math.floor(WackyState.num(args[2], 40)), 1, 200)
+	if chosen and isNumber(chosen) then
+		count = math.clamp(math.floor(tonumber(chosen)), 1, 200)
+		chosen = nil
+	end
+	local screen = WackyState.overlay()
+	for i = 1, count do
+		task.delay(math.random() * 2, function()
+			local label = Instance.new("TextLabel")
+			label.Name = randomString()
+			label.BackgroundTransparency = 1
+			label.Size = UDim2.new(0, 40, 0, 40)
+			label.TextScaled = true
+			label.Text = chosen or WackyState.pick(WackyState.emojis)
+			label.Position = UDim2.new(math.random(), -20, 0, -50)
+			label.Rotation = math.random(-30, 30)
+			label.Parent = screen
+			local fall = TweenService:Create(label, TweenInfo.new(2 + math.random() * 2, Enum.EasingStyle.Linear), {
+				Position = UDim2.new(label.Position.X.Scale, -20, 1, 50),
+				Rotation = label.Rotation + math.random(-180, 180),
+			})
+			fall:Play()
+			fall.Completed:Connect(function() label:Destroy() end)
+		end)
+	end
+end)
+
+addcmd('letterbox',{'cinemabars'},function(args, speaker)
+	WackyState.clear("letterbox")
+	local screen = WackyState.overlay()
+	for _, top in ipairs({true, false}) do
+		local bar = WackyState.track("letterbox", Instance.new("Frame"))
+		bar.Name = randomString()
+		bar.BorderSizePixel = 0
+		bar.BackgroundColor3 = Color3.new(0, 0, 0)
+		bar.AnchorPoint = Vector2.new(0, top and 0 or 1)
+		bar.Position = UDim2.new(0, 0, top and 0 or 1, 0)
+		bar.Size = UDim2.new(1, 0, 0, 0)
+		bar.Parent = screen
+		TweenService:Create(bar, TweenInfo.new(0.6, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0.12, 0)}):Play()
+	end
+end)
+
+addcmd('unletterbox',{'uncinemabars'},function(args, speaker)
+	WackyState.clear("letterbox")
+end)
+
+addcmd('selfie',{'selfiecam'},function(args, speaker)
+	workspace.CurrentCamera.CameraType = Enum.CameraType.Scriptable
+	WackyState.bindCam("selfie", function()
+		local head = speaker.Character and speaker.Character:FindFirstChild("Head")
+		if not head then return end
+		local camPos = (head.CFrame * CFrame.new(0.6, 0.4, -4.5)).Position
+		workspace.CurrentCamera.CFrame = CFrame.lookAt(camPos, head.Position)
+	end)
+	notify('Selfie', 'Say cheese! Use unselfie to put the phone away.')
+end)
+
+addcmd('unselfie',{'unselfiecam'},function(args, speaker)
+	if not WackyState.binds.selfie then return end
+	WackyState.unbindCam("selfie")
+	if WackyState.binds.orbitcam then return end
+	local cam = workspace.CurrentCamera
+	cam.CameraType = Enum.CameraType.Custom
+	local hum = WackyState.humRoot(speaker)
+	if hum then cam.CameraSubject = hum end
+end)
+
+addcmd('rainbowui',{'rgbui'},function(args, speaker)
+	if WackyState.conns.rainbowui then return end
+	WackyState.saved.ui = {currentShade1, currentShade2, currentShade3}
+	local last = 0
+	WackyState.connect("rainbowui", RunService.Heartbeat:Connect(function()
+		if tick() - last < 0.08 then return end
+		last = tick()
+		local h = (tick() * 0.15) % 1
+		updateColors(Color3.fromHSV(h, 0.7, 0.18), shade1)
+		updateColors(Color3.fromHSV(h, 0.7, 0.3), shade2)
+		updateColors(Color3.fromHSV(h, 0.7, 0.65), shade3)
+	end))
+end)
+
+addcmd('unrainbowui',{'unrgbui'},function(args, speaker)
+	if not WackyState.conns.rainbowui then return end
+	WackyState.disconnect("rainbowui")
+	local s = WackyState.saved.ui
+	if s then
+		updateColors(s[1], shade1)
+		updateColors(s[2], shade2)
+		updateColors(s[3], shade3)
+		WackyState.saved.ui = nil
+	end
+end)
+
+addcmd('hud',{'statsdisplay'},function(args, speaker)
+	WackyState.disconnect("hud")
+	WackyState.clear("hud")
+	local label = WackyState.track("hud", Instance.new("TextLabel"))
+	label.Name = randomString()
+	label.Position = UDim2.new(0, 12, 0, 60)
+	label.Size = UDim2.new(0, 220, 0, 66)
+	label.BackgroundColor3 = Color3.fromRGB(16, 10, 34)
+	label.BackgroundTransparency = 0.25
+	label.TextColor3 = Color3.fromRGB(236, 224, 255)
+	label.Font = Enum.Font.Code
+	label.TextSize = 14
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.TextYAlignment = Enum.TextYAlignment.Top
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 8)
+	corner.Parent = label
+	local pad = Instance.new("UIPadding")
+	pad.PaddingLeft = UDim.new(0, 8)
+	pad.PaddingTop = UDim.new(0, 6)
+	pad.Parent = label
+	label.Parent = WackyState.overlay()
+	local frames, last = 0, tick()
+	WackyState.connect("hud", RunService.RenderStepped:Connect(function()
+		frames = frames + 1
+		local now = tick()
+		if now - last < 0.25 then return end
+		local fps = math.floor(frames / (now - last) + 0.5)
+		frames, last = 0, now
+		local root = getRoot(speaker.Character)
+		local speed, pos = 0, Vector3.zero
+		if root then
+			speed = (root.AssemblyLinearVelocity * Vector3.new(1, 0, 1)).Magnitude
+			pos = root.Position
+		end
+		label.Text = string.format("FPS: %d\nSpeed: %.1f studs/s\nPos: %d, %d, %d", fps, speed, pos.X, pos.Y, pos.Z)
+	end))
+end)
+
+addcmd('unhud',{'unstatsdisplay'},function(args, speaker)
+	WackyState.disconnect("hud")
+	WackyState.clear("hud")
+end)
+
+addcmd('calc',{'calculate','math'},function(args, speaker)
+	local expr = getstring(1, args)
+	if expr == "" or not expr:match("^[%d%s%+%-%*/%%%^%.%(%)]+$") then
+		notify('Calculator', 'Only numbers and + - * / % ^ ( ) are allowed.')
+		return
+	end
+	local fn = loadstring("return " .. expr)
+	local ok, result = pcall(function() return fn and fn() end)
+	if ok and result ~= nil then
+		notify('Calculator', expr .. ' = ' .. tostring(result))
+	else
+		notify('Calculator', 'That math does not compute.')
+	end
+end)
+
+addcmd('randomplayer',{'pickplayer'},function(args, speaker)
+	local list = Players:GetPlayers()
+	local p = WackyState.pick(list)
+	notify('Random Player', 'The chosen one is ' .. p.DisplayName .. ' (@' .. p.Name .. ')')
+end)
+
+for _, cmd in ipairs({'flail', 'windmill', 'jelly', 'headspin', 'exorcist', 'tpose', 'zombie', 'chicken', 'robot', 'dab',
+	'propeller', 'airguitar', 'boxing', 'limbchaos', 'breakdance', 'randomlimbs', 'crabwalk', 'zigzag', 'slide',
+	'tornado', 'ascend', 'antigravity', 'dash', 'spinjump', 'flipjump', 'bouncy', 'countdown 3', 'emojirain',
+	'screentext CHAOS', 'letterbox', 'selfie', 'rainbowui'}) do
+	table.insert(WackyState.chaosList, cmd)
+end
+for _, cmd in ipairs({'unlimbs', 'uncrabwalk', 'unzigzag', 'unslide', 'untornado', 'unascend', 'unmultijump',
+	'unshiftsprint', 'unspinjump', 'unflipjump', 'unbouncy', 'unletterbox', 'unselfie', 'unrainbowui'}) do
+	table.insert(WackyState.undoList, cmd)
+end
+-- ================== END WACKY COMMANDS 3 ==================
+
+-- ==================== NEVERYIELD THEME STUDIO ====================
+NeverYieldTheme = {selected = "space", lastSpawn = 0, cards = {}}
+
+NeverYieldTheme.rgb = function(c)
+	return Color3.fromRGB(c[1], c[2], c[3])
+end
+
+NeverYieldTheme.list = {
+	{id = "auto", name = "Auto Holiday", icon = "📅", desc = "Wears whichever holiday theme matches today's date (Deep Space otherwise)."},
+	{id = "space", name = "Deep Space", icon = "🌌", mode = "twinkle", rate = 3,
+		desc = "The original NeverYield look. Twinkling stars and a purple portal rim.",
+		colors = {{16, 10, 34}, {32, 18, 64}, {86, 50, 160}, {236, 224, 255}, {0, 0, 0}, {140, 90, 235}},
+		rim = {{170, 90, 255}, {255, 120, 230}, {110, 200, 255}}, particles = {"✦", "⋆", "✧"}},
+	{id = "nebula", name = "Nebula", icon = "🌠", mode = "twinkle", rate = 4,
+		desc = "Hot pink star clouds swirling around the rim.",
+		colors = {{30, 8, 36}, {58, 16, 70}, {170, 60, 170}, {255, 220, 250}, {0, 0, 0}, {230, 100, 220}},
+		rim = {{255, 80, 200}, {160, 60, 255}, {255, 160, 120}}, particles = {"✦", "✧", "•"}},
+	{id = "galaxy", name = "Galaxy", icon = "🪐", mode = "drift", rate = 1,
+		desc = "Deep blue galaxy with planets drifting past.",
+		colors = {{10, 12, 40}, {22, 26, 78}, {70, 80, 190}, {220, 230, 255}, {0, 0, 0}, {110, 140, 255}},
+		rim = {{90, 120, 255}, {200, 120, 255}, {120, 230, 255}}, particles = {"🪐", "✦", "🌑", "☄️"}},
+	{id = "void", name = "The Void", icon = "🕳️", mode = "rise", rate = 2,
+		desc = "Almost pitch black. Something is rising out of the dark.",
+		colors = {{6, 4, 12}, {14, 10, 24}, {60, 36, 110}, {200, 180, 255}, {0, 0, 0}, {110, 70, 200}},
+		rim = {{60, 20, 120}, {140, 60, 255}, {20, 0, 40}}, particles = {"•", "∘", "·"}},
+	{id = "cosmic", name = "Cosmic Ocean", icon = "☄️", mode = "fall", rate = 2,
+		desc = "Teal starlight with comets streaking down.",
+		colors = {{8, 22, 38}, {14, 40, 66}, {40, 130, 170}, {210, 250, 255}, {0, 0, 0}, {80, 210, 230}},
+		rim = {{60, 220, 255}, {40, 120, 255}, {160, 255, 240}}, particles = {"☄️", "✦", "✧"}},
+	{id = "christmas", name = "Christmas", icon = "🎄", mode = "fall", rate = 4, candy = true,
+		desc = "Snow falling over a candy cane portal rim.",
+		colors = {{14, 40, 24}, {24, 64, 38}, {190, 40, 50}, {255, 245, 235}, {0, 0, 0}, {220, 60, 60}},
+		rim = {{230, 40, 50}, {255, 255, 255}, {40, 170, 70}}, particles = {"❄️", "❄", "✨", "🎁", "⛄"}},
+	{id = "halloween", name = "Halloween", icon = "🎃", mode = "drift", rate = 2, fx = "flicker",
+		desc = "Bats and ghosts drifting past a flickering, haunted rim.",
+		colors = {{18, 8, 22}, {36, 14, 40}, {230, 110, 20}, {255, 220, 180}, {0, 0, 0}, {255, 140, 30}},
+		rim = {{255, 120, 0}, {120, 30, 160}, {40, 255, 80}}, particles = {"🦇", "🎃", "👻", "🕸️", "🦇"}},
+	{id = "newyear", name = "New Year", icon = "🎆", mode = "burst", rate = 1,
+		desc = "Black and gold with confetti popping everywhere.",
+		colors = {{10, 10, 14}, {26, 24, 34}, {212, 175, 55}, {255, 248, 225}, {0, 0, 0}, {240, 200, 80}},
+		rim = {{255, 215, 90}, {255, 255, 255}, {200, 160, 40}}, particles = {"🎉", "✨", "🎊", "🥂"}},
+	{id = "lunarnewyear", name = "Lunar New Year", icon = "🧧", mode = "rise", rate = 2, fx = "glow",
+		desc = "Red and gold with lanterns floating up.",
+		colors = {{60, 6, 10}, {110, 14, 20}, {230, 180, 40}, {255, 235, 190}, {0, 0, 0}, {250, 200, 60}},
+		rim = {{255, 40, 40}, {255, 210, 60}, {255, 120, 0}}, particles = {"🏮", "🧧", "🐉", "✨"}},
+	{id = "valentines", name = "Valentine's", icon = "💘", mode = "rise", rate = 3, fx = "heartbeat",
+		desc = "Hearts floating up while the rim beats like a heart.",
+		colors = {{52, 10, 30}, {90, 20, 52}, {240, 90, 150}, {255, 225, 238}, {0, 0, 0}, {255, 120, 170}},
+		rim = {{255, 80, 140}, {255, 170, 200}, {200, 40, 90}}, particles = {"💖", "💕", "💘", "🌹"}},
+	{id = "stpatricks", name = "St. Patrick's", icon = "☘️", mode = "fall", rate = 3,
+		desc = "Lucky clovers, gold coins and a rainbow-gold rim.",
+		colors = {{8, 36, 16}, {16, 62, 28}, {60, 180, 80}, {225, 255, 225}, {0, 0, 0}, {80, 220, 100}},
+		rim = {{40, 200, 80}, {255, 215, 60}, {140, 255, 140}}, particles = {"☘️", "🍀", "🪙", "🌈"}},
+	{id = "easter", name = "Easter", icon = "🐣", mode = "fall", rate = 3,
+		desc = "Soft pastels with eggs, bunnies and blossoms.",
+		colors = {{52, 40, 70}, {78, 62, 104}, {170, 140, 230}, {255, 250, 235}, {0, 0, 0}, {180, 230, 200}},
+		rim = {{255, 190, 220}, {190, 230, 255}, {255, 245, 170}, {190, 255, 200}}, particles = {"🥚", "🐰", "🌸", "🐣"}},
+	{id = "fourthofjuly", name = "Fourth of July", icon = "🎇", mode = "burst", rate = 1.2,
+		desc = "Red, white and blue with fireworks bursting.",
+		colors = {{10, 16, 46}, {20, 30, 80}, {200, 30, 45}, {255, 255, 255}, {0, 0, 0}, {220, 60, 70}},
+		rim = {{230, 40, 50}, {255, 255, 255}, {40, 80, 220}}, particles = {"🎆", "🎇", "⭐", "✨"}},
+	{id = "thanksgiving", name = "Thanksgiving", icon = "🦃", mode = "fall", rate = 3,
+		desc = "Warm autumn colors with leaves tumbling down.",
+		colors = {{40, 20, 8}, {70, 38, 16}, {210, 120, 40}, {255, 235, 205}, {0, 0, 0}, {230, 140, 50}},
+		rim = {{220, 110, 30}, {180, 40, 20}, {240, 190, 60}}, particles = {"🍂", "🍁", "🦃", "🥧"}},
+	{id = "hanukkah", name = "Hanukkah", icon = "🕎", mode = "rise", rate = 2, fx = "candle",
+		desc = "Blue and silver with a softly glowing candle-light rim.",
+		colors = {{8, 18, 50}, {16, 34, 86}, {90, 140, 230}, {235, 242, 255}, {0, 0, 0}, {170, 190, 220}},
+		rim = {{70, 120, 255}, {220, 225, 235}, {140, 180, 255}}, particles = {"✡️", "🕎", "✨"}},
+	{id = "diwali", name = "Diwali", icon = "🪔", mode = "rise", rate = 3, fx = "candle",
+		desc = "Festival of lights: glowing lamps and sparkles.",
+		colors = {{40, 10, 40}, {72, 20, 64}, {240, 150, 30}, {255, 240, 210}, {0, 0, 0}, {255, 170, 50}},
+		rim = {{255, 160, 0}, {220, 40, 160}, {255, 220, 90}}, particles = {"🪔", "✨", "🎇"}},
+	{id = "classic", name = "Classic", icon = "⬛", desc = "The original grey Infinite Yield colors, no effects.",
+		colors = {{36, 36, 37}, {46, 46, 47}, {78, 78, 79}, {255, 255, 255}, {0, 0, 0}, {78, 78, 79}},
+		rim = {{120, 120, 125}, {200, 200, 205}, {120, 120, 125}}},
+	{id = "custom", name = "Custom Colors", icon = "🎨", desc = "Open the color picker and make your own."},
+}
+
+NeverYieldTheme.byId = {}
+for _, theme in ipairs(NeverYieldTheme.list) do
+	NeverYieldTheme.byId[theme.id] = theme
+end
+
+NeverYieldTheme.sequence = function(theme, lighten)
+	local rim = theme.rim or {{170, 90, 255}, {255, 120, 230}, {110, 200, 255}}
+	local keys = {}
+	for i = 0, #rim do
+		local color = NeverYieldTheme.rgb(rim[(i % #rim) + 1])
+		if lighten then
+			color = color:Lerp(Color3.new(1, 1, 1), lighten)
+		end
+		table.insert(keys, ColorSequenceKeypoint.new(i / #rim, color))
+	end
+	return ColorSequence.new(keys)
+end
+
+NeverYieldTheme.candy = function()
+	local keys = {}
+	for i = 0, 10 do
+		table.insert(keys, ColorSequenceKeypoint.new(i / 10, (i % 2 == 0) and Color3.fromRGB(230, 30, 45) or Color3.new(1, 1, 1)))
+	end
+	return ColorSequence.new(keys)
+end
+
+NeverYieldTheme.easterDate = function(y)
+	local a, b, c = y % 19, math.floor(y / 100), y % 100
+	local d, e = math.floor(b / 4), b % 4
+	local f = math.floor((b + 8) / 25)
+	local g = math.floor((b - f + 1) / 3)
+	local h = (19 * a + b - d - g + 15) % 30
+	local i, k = math.floor(c / 4), c % 4
+	local l = (32 + 2 * e + 2 * i - h - k) % 7
+	local m = math.floor((a + 11 * h + 22 * l) / 451)
+	local n = h + l - 7 * m + 114
+	return math.floor(n / 31), (n % 31) + 1
+end
+
+NeverYieldTheme.holiday = function()
+	local now = os.date("*t")
+	local md = now.month * 100 + now.day
+	local em, ed = NeverYieldTheme.easterDate(now.year)
+	local daysToEaster = (os.time({year = now.year, month = em, day = ed, hour = 12}) - os.time({year = now.year, month = now.month, day = now.day, hour = 12})) / 86400
+	if md >= 1231 or md <= 102 then return "newyear" end
+	if md >= 207 and md <= 214 then return "valentines" end
+	if md >= 121 and md <= 220 then return "lunarnewyear" end
+	if md >= 310 and md <= 317 then return "stpatricks" end
+	if daysToEaster >= 0 and daysToEaster <= 7 then return "easter" end
+	if md >= 628 and md <= 704 then return "fourthofjuly" end
+	if md >= 1001 and md <= 1031 then return "halloween" end
+	if md >= 1101 and md <= 1130 then return "thanksgiving" end
+	if md >= 1201 and md <= 1230 then return "christmas" end
+	return "space"
+end
+
+-- Particle layer inside the main panel
+NeverYieldTheme.layer = function()
+	if NeverYieldTheme.container and NeverYieldTheme.container.Parent then
+		return NeverYieldTheme.container
+	end
+	local layer = Instance.new("Frame")
+	layer.Name = randomString()
+	layer.BackgroundTransparency = 1
+	layer.Size = UDim2.new(1, 0, 1, 0)
+	layer.ClipsDescendants = true
+	layer.ZIndex = 10
+	layer.Parent = Holder
+	NeverYieldTheme.container = layer
+	return layer
+end
+
+NeverYieldTheme.makeParticle = function(theme, parent)
+	local label = Instance.new("TextLabel")
+	local size = math.random(12, 20)
+	label.Name = randomString()
+	label.BackgroundTransparency = 1
+	label.AnchorPoint = Vector2.new(0.5, 0.5)
+	label.Size = UDim2.new(0, size, 0, size)
+	label.TextScaled = true
+	label.Font = Enum.Font.GothamBold
+	label.Text = WackyState.pick(theme.particles)
+	label.TextColor3 = NeverYieldTheme.rgb(theme.rim[math.random(1, #theme.rim)])
+	label.TextTransparency = 0.35
+	label.ZIndex = 10
+	label.Parent = parent
+	return label
+end
+
+NeverYieldTheme.animate = function(label, info, goal)
+	local tween = TweenService:Create(label, info, goal)
+	tween.Completed:Connect(function()
+		label:Destroy()
+	end)
+	tween:Play()
+end
+
+NeverYieldTheme.emit = function(theme, layer)
+	local mode = theme.mode
+	local x = math.random()
+	if mode == "burst" then
+		local cx, cy = 0.15 + math.random() * 0.7, 0.15 + math.random() * 0.7
+		for i = 1, 8 do
+			local bit = NeverYieldTheme.makeParticle(theme, layer)
+			local angle = (i / 8) * math.pi * 2
+			bit.Position = UDim2.new(cx, 0, cy, 0)
+			NeverYieldTheme.animate(bit, TweenInfo.new(1.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				Position = UDim2.new(cx + math.cos(angle) * 0.25, 0, cy + math.sin(angle) * 0.25, 0),
+				TextTransparency = 1,
+				Rotation = math.random(-90, 90),
+			})
+		end
+		return
+	end
+	local label = NeverYieldTheme.makeParticle(theme, layer)
+	if mode == "fall" then
+		label.Position = UDim2.new(x, 0, 0, -12)
+		NeverYieldTheme.animate(label, TweenInfo.new(3 + math.random() * 3, Enum.EasingStyle.Linear), {
+			Position = UDim2.new(math.clamp(x + (math.random() - 0.5) * 0.3, 0, 1), 0, 1, 12),
+			Rotation = math.random(-180, 180),
+		})
+	elseif mode == "rise" then
+		label.Position = UDim2.new(x, 0, 1, 12)
+		NeverYieldTheme.animate(label, TweenInfo.new(3 + math.random() * 3, Enum.EasingStyle.Sine), {
+			Position = UDim2.new(math.clamp(x + (math.random() - 0.5) * 0.2, 0, 1), 0, 0, -12),
+			TextTransparency = 0.9,
+		})
+	elseif mode == "drift" then
+		local y = math.random()
+		label.Position = UDim2.new(0, -12, y, 0)
+		NeverYieldTheme.animate(label, TweenInfo.new(2 + math.random() * 2, Enum.EasingStyle.Sine), {
+			Position = UDim2.new(1, 12, math.clamp(y + (math.random() - 0.5) * 0.4, 0, 1), 0),
+		})
+	else
+		label.Position = UDim2.new(x, 0, math.random(), 0)
+		label.TextTransparency = 1
+		NeverYieldTheme.animate(label, TweenInfo.new(0.8 + math.random(), Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, 0, true), {
+			TextTransparency = 0.2,
+		})
+	end
+end
+
+NeverYieldTheme.step = function()
+	if Holder.Parent == nil then
+		NeverYieldTheme.conn:Disconnect()
+		return
+	end
+	local theme = NeverYieldTheme.active
+	if not theme then return end
+	local now = tick()
+	if theme.particles and theme.rate and now - NeverYieldTheme.lastSpawn > 1 / theme.rate then
+		NeverYieldTheme.lastSpawn = now
+		NeverYieldTheme.emit(theme, NeverYieldTheme.layer())
+	end
+	local rim = NeverYieldPortal.rim
+	if theme.fx == "flicker" then
+		rim.Transparency = (math.random() < 0.06) and 0.85 or 0
+	elseif theme.fx == "heartbeat" then
+		local p = (now * 1.2) % 1
+		local beat = math.max(0, 1 - math.abs(p - 0.1) * 12) + math.max(0, 1 - math.abs(p - 0.3) * 12) * 0.7
+		rim.Thickness = 2.5 + beat * 3
+	elseif theme.fx == "candle" then
+		rim.Transparency = math.clamp(0.15 + math.noise(now * 3, 0.5) * 0.4, 0, 0.6)
+	elseif theme.fx == "glow" then
+		rim.Thickness = 2.5 + (math.sin(now * 2) + 1) * 1.2
+	end
+end
+
+NeverYieldTheme.apply = function(id, save)
+	local themeId = id == "auto" and NeverYieldTheme.holiday() or id
+	local theme = NeverYieldTheme.byId[themeId]
+	if not theme or not theme.colors then
+		return false
+	end
+	NeverYieldTheme.selected = id
+	local c = theme.colors
+	updateColors(NeverYieldTheme.rgb(c[1]), shade1)
+	updateColors(NeverYieldTheme.rgb(c[2]), shade2)
+	updateColors(NeverYieldTheme.rgb(c[3]), shade3)
+	updateColors(NeverYieldTheme.rgb(c[4]), text1)
+	updateColors(NeverYieldTheme.rgb(c[5]), text2)
+	updateColors(NeverYieldTheme.rgb(c[6]), scroll)
+	NeverYieldTheme.active = theme
+	local seq = NeverYieldTheme.sequence(theme)
+	NeverYieldPortal.swirl = function() return seq end
+	NeverYieldPortal.rimGradient.Color = theme.candy and NeverYieldTheme.candy() or seq
+	NeverYieldPortal.rim.Transparency = 0
+	NeverYieldPortal.rim.Thickness = 2.5
+	for _, ring in ipairs(NeverYieldPortal.rings) do
+		ring.gradient.Color = seq
+	end
+	for i, spark in ipairs(NeverYieldPortal.sparks) do
+		spark.BackgroundColor3 = NeverYieldTheme.rgb(theme.rim[(i % #theme.rim) + 1])
+	end
+	for _, gradient in ipairs(NeverYieldGradients) do
+		gradient.Color = NeverYieldTheme.sequence(theme, 0.55)
+	end
+	for _, child in ipairs(NeverYieldTheme.layer():GetChildren()) do
+		child:Destroy()
+	end
+	pcall(NeverYieldPortal.pulse)
+	if save then
+		pcall(function() writefile("NeverYield_theme.txt", id, true) end)
+		pcall(updatesaves)
+	end
+	if NeverYieldTheme.refreshStudio then
+		pcall(NeverYieldTheme.refreshStudio)
+	end
+	return true, theme
+end
+
+-- Theme Studio screen
+NeverYieldTheme.closeStudio = function()
+	local studio = NeverYieldTheme.studio
+	for _, conn in ipairs(NeverYieldTheme.dragConns or {}) do
+		conn:Disconnect()
+	end
+	NeverYieldTheme.dragConns = {}
+	if not studio then return end
+	NeverYieldTheme.studio = nil
+	NeverYieldTheme.refreshStudio = nil
+	NeverYieldTheme.showPage = nil
+	NeverYieldTheme.onCustomPage = false
+	if NeverYieldTheme.studioConn then
+		NeverYieldTheme.studioConn:Disconnect()
+		NeverYieldTheme.studioConn = nil
+	end
+	local scale = studio:FindFirstChildOfClass("UIScale")
+	if scale then
+		TweenService:Create(scale, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Scale = 0}):Play()
+		TweenService:Create(studio, TweenInfo.new(0.25), {Rotation = 10}):Play()
+	end
+	task.delay(0.3, function()
+		pcall(function() studio:Destroy() end)
+	end)
+end
+
+NeverYieldTheme.openStudio = function(page)
+	if NeverYieldTheme.studio and NeverYieldTheme.studio.Parent then
+		if page == "custom" and NeverYieldTheme.showPage then
+			NeverYieldTheme.showPage(true)
+		else
+			NeverYieldTheme.closeStudio()
+		end
+		return
+	end
+	NeverYieldTheme.closeStudio()
+	local function corner(obj, px)
+		local c = Instance.new("UICorner")
+		c.CornerRadius = UDim.new(0, px)
+		c.Parent = obj
+	end
+	local function currentTheme()
+		local id = NeverYieldTheme.selected == "auto" and NeverYieldTheme.holiday() or NeverYieldTheme.selected
+		return NeverYieldTheme.byId[id] or NeverYieldTheme.byId.space
+	end
+
+	local studio = Instance.new("Frame")
+	studio.Name = randomString()
+	studio.AnchorPoint = Vector2.new(0.5, 0.5)
+	studio.Position = UDim2.new(0.5, 0, 0.5, 0)
+	studio.Size = UDim2.new(0, 470, 0, 340)
+	studio.BackgroundColor3 = currentShade1
+	studio.BorderSizePixel = 0
+	studio.Active = true
+	studio.Rotation = -12
+	studio.ZIndex = 20
+	corner(studio, 16)
+	local studioStroke, studioStrokeGradient = NeverYieldPortal.stroke(studio, 2.5, 0)
+	local bgGradient = Instance.new("UIGradient")
+	bgGradient.Parent = studio
+	local scale = Instance.new("UIScale")
+	scale.Scale = 0
+	scale.Parent = studio
+	studio.Parent = ScaledHolder
+	NeverYieldTheme.studio = studio
+
+	for i = 1, 40 do
+		local star = Instance.new("Frame")
+		local size = math.random(1, 3)
+		star.Name = "Star"
+		star.BorderSizePixel = 0
+		star.BackgroundColor3 = Color3.new(1, 1, 1)
+		star.BackgroundTransparency = math.random() * 0.5
+		star.Size = UDim2.new(0, size, 0, size)
+		star.Position = UDim2.new(math.random(), 0, math.random(), 0)
+		star.ZIndex = 20
+		star.Parent = studio
+		TweenService:Create(star, TweenInfo.new(0.6 + math.random() * 1.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {BackgroundTransparency = 1}):Play()
+	end
+
+	local title = Instance.new("TextLabel")
+	title.BackgroundTransparency = 1
+	title.Position = UDim2.new(0, 0, 0, 10)
+	title.Size = UDim2.new(1, 0, 0, 34)
+	title.Font = Enum.Font.FredokaOne
+	title.TextSize = 30
+	title.Text = "✦ THEME STUDIO ✦"
+	title.TextColor3 = Color3.new(1, 1, 1)
+	title.ZIndex = 21
+	title.Parent = studio
+	local titleGradient = Instance.new("UIGradient")
+	titleGradient.Parent = title
+
+	local subtitle = Instance.new("TextLabel")
+	subtitle.BackgroundTransparency = 1
+	subtitle.Position = UDim2.new(0, 0, 0, 44)
+	subtitle.Size = UDim2.new(1, 0, 0, 18)
+	subtitle.Font = Enum.Font.Gotham
+	subtitle.TextSize = 13
+	subtitle.Text = "NeverYield  •  edited by kas  •  pick your vibe"
+	subtitle.TextTransparency = 0.25
+	subtitle.ZIndex = 21
+	subtitle.Parent = studio
+
+	local close = Instance.new("TextButton")
+	close.AnchorPoint = Vector2.new(1, 0)
+	close.Position = UDim2.new(1, -10, 0, 10)
+	close.Size = UDim2.new(0, 28, 0, 28)
+	close.Font = Enum.Font.GothamBold
+	close.TextSize = 16
+	close.Text = "✕"
+	close.AutoButtonColor = false
+	close.BorderSizePixel = 0
+	close.ZIndex = 22
+	corner(close, 14)
+	close.Parent = studio
+	close.MouseButton1Click:Connect(NeverYieldTheme.closeStudio)
+	close.MouseEnter:Connect(function()
+		TweenService:Create(close, TweenInfo.new(0.15), {Rotation = 90}):Play()
+	end)
+	close.MouseLeave:Connect(function()
+		TweenService:Create(close, TweenInfo.new(0.15), {Rotation = 0}):Play()
+	end)
+
+	local grid = Instance.new("ScrollingFrame")
+	grid.BackgroundTransparency = 1
+	grid.BorderSizePixel = 0
+	grid.Position = UDim2.new(0, 14, 0, 70)
+	grid.Size = UDim2.new(1, -28, 1, -120)
+	grid.CanvasSize = UDim2.new(0, 0, 0, math.ceil(#NeverYieldTheme.list / 4) * 96 + 12)
+	grid.ScrollBarThickness = 4
+	grid.ZIndex = 21
+	grid.Parent = studio
+	local layout = Instance.new("UIGridLayout")
+	layout.CellSize = UDim2.new(0, 100, 0, 86)
+	layout.CellPadding = UDim2.new(0, 10, 0, 10)
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	layout.Parent = grid
+	local gridPad = Instance.new("UIPadding")
+	gridPad.PaddingTop = UDim.new(0, 6)
+	gridPad.PaddingBottom = UDim.new(0, 6)
+	gridPad.Parent = grid
+
+	local footer = Instance.new("TextLabel")
+	footer.BackgroundTransparency = 1
+	footer.Position = UDim2.new(0, 16, 1, -46)
+	footer.Size = UDim2.new(1, -32, 0, 36)
+	footer.Font = Enum.Font.Gotham
+	footer.TextSize = 13
+	footer.TextWrapped = true
+	footer.RichText = true
+	footer.ZIndex = 21
+	footer.Parent = studio
+
+	local function describe(theme, prefix)
+		if NeverYieldTheme.onCustomPage then return end
+		footer.Text = prefix .. ' <b>' .. theme.icon .. ' ' .. theme.name .. '</b>  —  ' .. theme.desc
+	end
+
+	local back = Instance.new("TextButton")
+	back.Position = UDim2.new(0, 10, 0, 10)
+	back.Size = UDim2.new(0, 92, 0, 28)
+	back.Font = Enum.Font.GothamBold
+	back.TextSize = 12
+	back.Text = "← Themes"
+	back.AutoButtonColor = false
+	back.BorderSizePixel = 0
+	back.Visible = false
+	back.ZIndex = 22
+	corner(back, 14)
+	back.Parent = studio
+
+	local customPage = Instance.new("Frame")
+	customPage.BackgroundTransparency = 1
+	customPage.Position = grid.Position
+	customPage.Size = grid.Size
+	customPage.Visible = false
+	customPage.ZIndex = 21
+	customPage.Parent = studio
+
+	local slots = {
+		{name = "Background", tbl = shade1, get = function() return currentShade1 end},
+		{name = "Panels", tbl = shade2, get = function() return currentShade2 end},
+		{name = "Accent", tbl = shade3, get = function() return currentShade3 end},
+		{name = "Text", tbl = text1, get = function() return currentText1 end},
+		{name = "Scrollbar", tbl = scroll, get = function() return currentScroll end},
+	}
+	local selectedSlot = 1
+	local slotButtons = {}
+	local function refreshCustom()
+		for i, entry in ipairs(slotButtons) do
+			entry.button.BackgroundColor3 = currentShade2
+			entry.button.TextColor3 = currentText1
+			entry.chip.BackgroundColor3 = slots[i].get()
+			entry.stroke.Transparency = (i == selectedSlot) and 0 or 1
+		end
+		back.BackgroundColor3 = currentShade2
+		back.TextColor3 = currentText1
+	end
+	for i, slot in ipairs(slots) do
+		local button = Instance.new("TextButton")
+		button.Position = UDim2.new(0, (i - 1) * 88, 0, 0)
+		button.Size = UDim2.new(0, 82, 0, 32)
+		button.AutoButtonColor = false
+		button.BorderSizePixel = 0
+		button.Font = Enum.Font.GothamBold
+		button.TextSize = 11
+		button.Text = slot.name
+		button.TextYAlignment = Enum.TextYAlignment.Top
+		button.ZIndex = 22
+		corner(button, 8)
+		local padTop = Instance.new("UIPadding")
+		padTop.PaddingTop = UDim.new(0, 5)
+		padTop.Parent = button
+		local chip = Instance.new("Frame")
+		chip.AnchorPoint = Vector2.new(0.5, 1)
+		chip.Position = UDim2.new(0.5, 0, 1, -4)
+		chip.Size = UDim2.new(1, -16, 0, 8)
+		chip.BorderSizePixel = 0
+		chip.ZIndex = 23
+		corner(chip, 4)
+		chip.Parent = button
+		local stroke = Instance.new("UIStroke")
+		stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		stroke.Color = Color3.new(1, 1, 1)
+		stroke.Thickness = 2
+		stroke.Transparency = 1
+		stroke.Parent = button
+		button.Parent = customPage
+		slotButtons[i] = {button = button, chip = chip, stroke = stroke}
+		button.MouseButton1Click:Connect(function()
+			selectedSlot = i
+			refreshCustom()
+		end)
+	end
+
+	local swatches = Instance.new("ScrollingFrame")
+	swatches.BackgroundTransparency = 1
+	swatches.BorderSizePixel = 0
+	swatches.Position = UDim2.new(0, 0, 0, 42)
+	swatches.Size = UDim2.new(1, 0, 1, -42)
+	swatches.CanvasSize = UDim2.new(0, 0, 0, math.ceil(84 / 12) * 34 + 8)
+	swatches.ScrollBarThickness = 4
+	swatches.ZIndex = 21
+	swatches.Parent = customPage
+	local swatchLayout = Instance.new("UIGridLayout")
+	swatchLayout.CellSize = UDim2.new(0, 28, 0, 28)
+	swatchLayout.CellPadding = UDim2.new(0, 6, 0, 6)
+	swatchLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	swatchLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	swatchLayout.Parent = swatches
+	local swatchPad = Instance.new("UIPadding")
+	swatchPad.PaddingTop = UDim.new(0, 4)
+	swatchPad.PaddingBottom = UDim.new(0, 4)
+	swatchPad.Parent = swatches
+	local palette = {}
+	for _, sv in ipairs({{0.35, 1}, {0.65, 1}, {0.85, 0.8}, {0.9, 0.55}, {0.9, 0.33}, {0.85, 0.18}}) do
+		for h = 0, 11 do
+			table.insert(palette, Color3.fromHSV(h / 12, sv[1], sv[2]))
+		end
+	end
+	for g = 0, 11 do
+		table.insert(palette, Color3.fromHSV(0, 0, g / 11))
+	end
+	for i, color in ipairs(palette) do
+		local swatch = Instance.new("TextButton")
+		swatch.LayoutOrder = i
+		swatch.Text = ""
+		swatch.AutoButtonColor = false
+		swatch.BorderSizePixel = 0
+		swatch.BackgroundColor3 = color
+		swatch.ZIndex = 22
+		corner(swatch, 8)
+		local ring = Instance.new("UIStroke")
+		ring.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		ring.Color = Color3.new(1, 1, 1)
+		ring.Thickness = 1
+		ring.Transparency = 0.7
+		ring.Parent = swatch
+		swatch.Parent = swatches
+		swatch.MouseEnter:Connect(function()
+			ring.Thickness = 2.5
+			ring.Transparency = 0
+		end)
+		swatch.MouseLeave:Connect(function()
+			ring.Thickness = 1
+			ring.Transparency = 0.7
+		end)
+		swatch.MouseButton1Click:Connect(function()
+			updateColors(color, slots[selectedSlot].tbl)
+			NeverYieldTheme.selected = "custom"
+			NeverYieldTheme.active = nil
+			pcall(function() writefile("NeverYield_theme.txt", "custom", true) end)
+			pcall(updatesaves)
+			if NeverYieldTheme.refreshStudio then
+				pcall(NeverYieldTheme.refreshStudio)
+			end
+		end)
+	end
+
+	local function showPage(custom)
+		NeverYieldTheme.onCustomPage = custom
+		grid.Visible = not custom
+		customPage.Visible = custom
+		back.Visible = custom
+		if custom then
+			footer.Text = "<b>🎨 Custom Colors</b>  —  pick a part of the GUI, then click a color. It saves automatically."
+			refreshCustom()
+		else
+			describe(currentTheme(), "Now wearing:")
+		end
+	end
+	NeverYieldTheme.showPage = showPage
+	back.MouseButton1Click:Connect(function()
+		showPage(false)
+	end)
+
+	NeverYieldTheme.cards = {}
+	local cardScales = {}
+	for i, theme in ipairs(NeverYieldTheme.list) do
+		local card = Instance.new("TextButton")
+		card.Name = theme.id
+		card.LayoutOrder = i
+		card.Text = ""
+		card.AutoButtonColor = false
+		card.BackgroundColor3 = theme.colors and NeverYieldTheme.rgb(theme.colors[2]) or Color3.fromRGB(40, 30, 60)
+		card.BorderSizePixel = 0
+		card.ZIndex = 21
+		corner(card, 12)
+		local cardStroke, cardStrokeGradient = NeverYieldPortal.stroke(card, 1.5, 0.5)
+		cardStrokeGradient.Color = theme.candy and NeverYieldTheme.candy() or NeverYieldTheme.sequence(theme)
+		local cardGradient = Instance.new("UIGradient")
+		cardGradient.Color = NeverYieldTheme.sequence(theme, 0.45)
+		cardGradient.Rotation = 90
+		cardGradient.Parent = card
+		local cardScale = Instance.new("UIScale")
+		cardScale.Scale = 0
+		cardScale.Parent = card
+		table.insert(cardScales, cardScale)
+
+		local icon = Instance.new("TextLabel")
+		icon.BackgroundTransparency = 1
+		icon.Position = UDim2.new(0, 0, 0, 6)
+		icon.Size = UDim2.new(1, 0, 0, 38)
+		icon.TextScaled = true
+		icon.Font = Enum.Font.GothamBold
+		icon.Text = theme.icon
+		icon.TextColor3 = Color3.new(1, 1, 1)
+		icon.ZIndex = 22
+		icon.Parent = card
+
+		local name = Instance.new("TextLabel")
+		name.BackgroundTransparency = 1
+		name.Position = UDim2.new(0, 4, 0, 48)
+		name.Size = UDim2.new(1, -8, 0, 16)
+		name.Font = Enum.Font.GothamBold
+		name.TextSize = 12
+		name.TextTruncate = Enum.TextTruncate.AtEnd
+		name.Text = theme.name
+		name.TextColor3 = theme.colors and NeverYieldTheme.rgb(theme.colors[4]) or Color3.new(1, 1, 1)
+		name.ZIndex = 22
+		name.Parent = card
+
+		if theme.colors then
+			for d, color in ipairs({theme.colors[1], theme.colors[3], theme.rim[1]}) do
+				local dot = Instance.new("Frame")
+				dot.AnchorPoint = Vector2.new(0.5, 0)
+				dot.Position = UDim2.new(0.5, (d - 2) * 14, 0, 68)
+				dot.Size = UDim2.new(0, 10, 0, 10)
+				dot.BackgroundColor3 = NeverYieldTheme.rgb(color)
+				dot.BorderSizePixel = 0
+				dot.ZIndex = 22
+				corner(dot, 5)
+				local dotStroke = Instance.new("UIStroke")
+				dotStroke.Color = Color3.new(1, 1, 1)
+				dotStroke.Transparency = 0.6
+				dotStroke.Parent = dot
+				dot.Parent = card
+			end
+		end
+
+		local badge = Instance.new("TextLabel")
+		badge.AnchorPoint = Vector2.new(1, 0)
+		badge.Position = UDim2.new(1, -4, 0, 4)
+		badge.Size = UDim2.new(0, 18, 0, 18)
+		badge.BackgroundColor3 = Color3.fromRGB(120, 255, 160)
+		badge.BorderSizePixel = 0
+		badge.Font = Enum.Font.GothamBlack
+		badge.TextSize = 12
+		badge.Text = "✓"
+		badge.TextColor3 = Color3.new(0, 0, 0)
+		badge.ZIndex = 23
+		badge.Visible = false
+		corner(badge, 9)
+		badge.Parent = card
+
+		NeverYieldTheme.cards[theme.id] = {badge = badge, stroke = cardStroke, gradient = cardStrokeGradient}
+
+		card.MouseEnter:Connect(function()
+			TweenService:Create(cardScale, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1.07}):Play()
+			TweenService:Create(cardStroke, TweenInfo.new(0.18), {Thickness = 3, Transparency = 0}):Play()
+			TweenService:Create(icon, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Rotation = 12}):Play()
+			describe(theme, "Preview:")
+		end)
+		card.MouseLeave:Connect(function()
+			local active = NeverYieldTheme.selected == theme.id
+			TweenService:Create(cardScale, TweenInfo.new(0.18), {Scale = 1}):Play()
+			TweenService:Create(cardStroke, TweenInfo.new(0.18), {Thickness = active and 3 or 1.5, Transparency = active and 0 or 0.5}):Play()
+			TweenService:Create(icon, TweenInfo.new(0.2), {Rotation = 0}):Play()
+			describe(currentTheme(), "Now wearing:")
+		end)
+		card.MouseButton1Click:Connect(function()
+			cardScale.Scale = 0.85
+			TweenService:Create(cardScale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1.07}):Play()
+			if theme.id == "custom" then
+				showPage(true)
+				return
+			end
+			NeverYieldTheme.apply(theme.id, true)
+		end)
+	end
+
+	NeverYieldTheme.refreshStudio = function()
+		local theme = currentTheme()
+		studio.BackgroundColor3 = currentShade1
+		studioStrokeGradient.Color = theme.candy and NeverYieldTheme.candy() or NeverYieldTheme.sequence(theme)
+		bgGradient.Color = NeverYieldTheme.sequence(theme, 0.6)
+		titleGradient.Color = NeverYieldTheme.sequence(theme, 0.2)
+		subtitle.TextColor3 = currentText1
+		footer.TextColor3 = currentText1
+		close.BackgroundColor3 = currentShade2
+		close.TextColor3 = currentText1
+		grid.ScrollBarImageColor3 = currentScroll
+		for id, card in pairs(NeverYieldTheme.cards) do
+			local active = NeverYieldTheme.selected == id
+			card.badge.Visible = active
+			card.stroke.Thickness = active and 3 or 1.5
+			card.stroke.Transparency = active and 0 or 0.5
+		end
+		describe(theme, "Now wearing:")
+		if NeverYieldTheme.onCustomPage then
+			refreshCustom()
+		end
+	end
+	NeverYieldTheme.onCustomPage = false
+	NeverYieldTheme.refreshStudio()
+	title.Active = true
+	local dragging, dragStart, startPos = false, nil, nil
+	NeverYieldTheme.dragConns = {
+		title.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				dragging, dragStart, startPos = true, input.Position, studio.Position
+			end
+		end),
+		UserInputService.InputEnded:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				dragging = false
+			end
+		end),
+		UserInputService.InputChanged:Connect(function(input)
+			if not dragging or not studio.Parent then return end
+			if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
+			local uiScale = ScaledHolder:FindFirstChildOfClass("UIScale")
+			local factor = uiScale and uiScale.Scale or 1
+			local delta = (input.Position - dragStart) / factor
+			studio.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+		end),
+	}
+
+	NeverYieldTheme.studioConn = RunService.RenderStepped:Connect(function()
+		local t = tick()
+		studioStrokeGradient.Rotation = (t * 120) % 360
+		bgGradient.Rotation = (t * 15) % 360
+		titleGradient.Rotation = (t * 60) % 360
+		for _, card in pairs(NeverYieldTheme.cards) do
+			card.gradient.Rotation = (t * 90) % 360
+		end
+	end)
+
+	TweenService:Create(scale, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+	TweenService:Create(studio, TweenInfo.new(0.45, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Rotation = 0}):Play()
+	if page == "custom" then
+		showPage(true)
+	end
+	for i, cardScale in ipairs(cardScales) do
+		task.delay(0.15 + i * 0.03, function()
+			TweenService:Create(cardScale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+		end)
+	end
+end
+
+addcmd('themes',{'themestudio','themeselect'},function(args, speaker)
+	local ok, err = pcall(NeverYieldTheme.openStudio)
+	if not ok then
+		pcall(NeverYieldTheme.closeStudio)
+		notify('Theme Studio', 'Could not open: ' .. tostring(err))
+	end
+end)
+
+addcmd('autotheme',{'holidaytheme'},function(args, speaker)
+	NeverYieldTheme.apply("auto", true)
+	notify('Theme', 'Auto holiday theme on: ' .. NeverYieldTheme.byId[NeverYieldTheme.holiday()].name)
+end)
+
+-- Load the saved theme (defaults to the auto holiday theme)
+NeverYieldTheme.conn = RunService.Heartbeat:Connect(NeverYieldTheme.step)
+task.spawn(function()
+	task.wait()
+	local saved = "auto"
+	pcall(function()
+		if isfile and isfile("NeverYield_theme.txt") then
+			local data = readfile("NeverYield_theme.txt")
+			if type(data) == "string" and data ~= "" then
+				saved = (data:gsub("%s", ""))
+			end
+		end
+	end)
+	if saved == "custom" then
+		NeverYieldTheme.selected = "custom"
+	elseif not NeverYieldTheme.apply(saved, false) then
+		NeverYieldTheme.apply("auto", false)
+	end
+end)
+-- ================== END NEVERYIELD THEME STUDIO ==================
 
 addcmd('removecmd',{'deletecmd'},function(args, speaker)
 	removecmd(args[1])
