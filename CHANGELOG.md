@@ -5,6 +5,7 @@ Versions before 1.11.3 were reconstructed from the Desktop `.bakN` backups (one 
 
 | Version | Date | Commands | Change |
 |---|---|---|---|
+| 1.23.4 | 10-10 | 634 | Room door view really shows your room now: seen from the front the doorway's corners were mirrored on screen, so the window strips were 0 pixels wide (invisible); `doordebug` also shows the window width |
 | 1.23.3 | 10-10 | 634 | Room door view: only solid visible parts (not effects, pets or players) hide the view; a failed view build is reported; new `doordebug` |
 | 1.23.2 | 10-10 | 633 | Portal runs lighter: tiny details are left out of the window copies of Agartha (the island itself is unchanged) |
 | 1.23.1 | 10-10 | 633 | Clowns stuck far away (behind walls, on roofs) come back near you so a round can always end |

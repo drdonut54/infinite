@@ -1,4 +1,4 @@
--- NeverYield v1.22.1 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.23.4 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.23.3" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.23.4" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -24347,6 +24347,11 @@ NeverYieldDoor.updateWindow = function(win, door, other, frontSign, char)
 			if sp.Z <= 0 then visible = false break end
 			table.insert(corners, Vector2.new(sp.X, sp.Y))
 		end
+		-- seen from the front, the door's left edge is on the right of the screen: keep tl/bl on the screen's left or every strip is 0 wide
+		if visible and corners[1].X > corners[2].X then
+			corners[1], corners[2] = corners[2], corners[1]
+			corners[3], corners[4] = corners[4], corners[3]
+		end
 	end
 	if visible then
 		local params = RaycastParams.new()
@@ -24574,8 +24579,9 @@ addcmd('doordebug',{'roomdebug'},function(args, speaker)
 	local cam = workspace.CurrentCamera
 	local rel = s.homeDoor.cf:PointToObjectSpace(cam.CFrame.Position)
 	local hw = s.homeWindow
-	local info = string.format("view built: %s | showing: %s | blocked by: %s | door angle: %d | camera side: %.1f | inside: %s | error: %s",
-		tostring(hw ~= nil), tostring(hw and hw.visible), tostring(hw and hw.blocker or "-"), math.floor(s.homeDoor.angle), rel.Z, tostring(s.inside), tostring(s.viewError or "-"))
+	local width = hw and hw.clips[1] and math.floor(hw.clips[1].frame.Size.X.Offset) or 0
+	local info = string.format("view built: %s | showing: %s | width: %d px | blocked by: %s | door angle: %d | camera side: %.1f | inside: %s | error: %s",
+		tostring(hw ~= nil), tostring(hw and hw.visible), width, tostring(hw and hw.blocker or "-"), math.floor(s.homeDoor.angle), rel.Z, tostring(s.inside), tostring(s.viewError or "-"))
 	warn("[NeverYield doordebug] " .. info)
 	notify('Door Debug', info, 15)
 end)
