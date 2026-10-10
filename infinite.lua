@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.22.1" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.23.2" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -515,7 +515,7 @@ SettingsHolder.BorderSizePixel = 0
 SettingsHolder.Size = UDim2.new(1,0,1,0)
 SettingsHolder.ScrollBarImageColor3 = Color3.fromRGB(86, 50, 160)
 SettingsHolder.BottomImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
-SettingsHolder.CanvasSize = UDim2.new(0, 0, 0, 295)
+SettingsHolder.CanvasSize = UDim2.new(0, 0, 0, 325)
 SettingsHolder.MidImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
 SettingsHolder.ScrollBarThickness = 8
 SettingsHolder.TopImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
@@ -608,6 +608,12 @@ PetsButton.Position = UDim2.new(0, 5, 0, 115)
 PetsButton.Size = UDim2.new(1, -10, 0, 25)
 PetsButton.Name = "Pets"
 PetsButton.Parent = SettingsHolder
+
+AchButton = makeSettingsButton("Achievements", "")
+AchButton.Position = UDim2.new(0, 5, 0, 145)
+AchButton.Size = UDim2.new(1, -10, 0, 25)
+AchButton.Name = "Achievements"
+AchButton.Parent = SettingsHolder
 do
 	-- no stats icon in IY's asset pack, so show an emoji in the icon spot
 	local icon = StatsButton:FindFirstChild("Icon")
@@ -627,16 +633,21 @@ do
 	local paw = emoji:Clone()
 	paw.Text = "\u{1F43E}"
 	paw.Parent = PetsButton
+	local achIcon = AchButton:FindFirstChild("Icon")
+	if achIcon then achIcon.Visible = false end
+	local cup = emoji:Clone()
+	cup.Text = "\u{1F3C6}"
+	cup.Parent = AchButton
 end
 
 Keybinds = makeSettingsButton("Edit Keybinds",getcustomasset("infiniteyield/assets/editkeybinds.png"))
-Keybinds.Position = UDim2.new(0, 5, 0, 145)
+Keybinds.Position = UDim2.new(0, 5, 0, 175)
 Keybinds.Size = UDim2.new(1, -10, 0, 25)
 Keybinds.Name = "Keybinds"
 Keybinds.Parent = SettingsHolder
 
 Aliases = makeSettingsButton("Edit Aliases",getcustomasset("infiniteyield/assets/editaliases.png"))
-Aliases.Position = UDim2.new(0, 5, 0, 175)
+Aliases.Position = UDim2.new(0, 5, 0, 205)
 Aliases.Size = UDim2.new(1, -10, 0, 25)
 Aliases.Name = "Aliases"
 Aliases.Parent = SettingsHolder
@@ -680,19 +691,19 @@ On.TextColor3 = Color3.new(0, 0, 0)
 On.ZIndex = 10
 
 Positions = makeSettingsButton("Edit/Goto Waypoints",getcustomasset("infiniteyield/assets/editwaypoints.png"))
-Positions.Position = UDim2.new(0, 5, 0, 205)
+Positions.Position = UDim2.new(0, 5, 0, 235)
 Positions.Size = UDim2.new(1, -10, 0, 25)
 Positions.Name = "Waypoints"
 Positions.Parent = SettingsHolder
 
 EventBind = makeSettingsButton("Edit Event Binds",getcustomasset("infiniteyield/assets/bindsandplugins.png"),759)
-EventBind.Position = UDim2.new(0, 5, 0, 265)
+EventBind.Position = UDim2.new(0, 5, 0, 295)
 EventBind.Size = UDim2.new(1, -10, 0, 25)
 EventBind.Name = "EventBinds"
 EventBind.Parent = SettingsHolder
 
 Plugins = makeSettingsButton("Manage Plugins",getcustomasset("infiniteyield/assets/bindsandplugins.png"),743)
-Plugins.Position = UDim2.new(0, 5, 0, 235)
+Plugins.Position = UDim2.new(0, 5, 0, 265)
 Plugins.Size = UDim2.new(1, -10, 0, 25)
 Plugins.Name = "Plugins"
 Plugins.Parent = SettingsHolder
@@ -4244,6 +4255,14 @@ PetsButton.MouseButton1Click:Connect(function()
 	end
 end)
 
+AchButton.MouseButton1Click:Connect(function()
+	local ok, err = pcall(function() NeverYieldAch.open() end)
+	if not ok then
+		pcall(function() NeverYieldAch.close() end)
+		notify('Achievements', 'Could not open: ' .. tostring(err))
+	end
+end)
+
 StatsButton.MouseButton1Click:Connect(function()
 	local ok, err = pcall(function() NeverYieldStats.open() end)
 	if not ok then
@@ -5305,11 +5324,13 @@ CMDs[#CMDs + 1] = {NAME = 'skipweather / nexttrack', DESC = 'Weather sounds chan
 CMDs[#CMDs + 1] = {NAME = 'fuckoff / unloadny', DESC = 'Completely unloads NeverYield: turns everything off, resets your speed, jump, gravity and camera to the game values, and removes the GUI'}
 CMDs[#CMDs + 1] = {NAME = 'END / theend', DESC = 'A black hole (only you see it) swallows the map and you, then takes you to a new server'}
 CMDs[#CMDs + 1] = {NAME = 'portal / agartha', DESC = 'Opens a sparking see-through gateway to Agartha, a peaceful floating island with a cottage and yard. It closes 5 s after you walk through; type portal again in Agartha to come back'}
-CMDs[#CMDs + 1] = {NAME = 'door / studyhall', DESC = 'An old door appears: open it to see into a dark, dusty 90s marble study hall and walk through (only you see it)'}
-CMDs[#CMDs + 1] = {NAME = 'undoor', DESC = 'Removes the study hall door (brings you back if you are inside)'}
+CMDs[#CMDs + 1] = {NAME = 'door / room', DESC = 'A door to YOUR room: open it to see inside, walk in, press Edit to place furniture, trophies and unlocks anywhere and pick floors, walls and lighting. It saves'}
+CMDs[#CMDs + 1] = {NAME = 'undoor', DESC = 'Removes the door to your room (brings you back if you are inside)'}
+CMDs[#CMDs + 1] = {NAME = 'roomreset', DESC = 'Puts your room back to the default layout (the old one is kept as a backup file)'}
+CMDs[#CMDs + 1] = {NAME = 'achievements / trophies [tab]', DESC = '(Also in Settings) Your achievements and their trophies. Tabs: basics, neveryield, minigames, pets, explorer, social, milestones, settings'}
 CMDs[#CMDs + 1] = {NAME = 'unportal', DESC = 'Closes the Agartha portal (brings you back if you are inside)'}
 CMDs[#CMDs + 1] = {NAME = 'portaldebug', DESC = 'Shows what the portal windows see (for fixing display problems)'}
-CMDs[#CMDs + 1] = {NAME = 'clown / circus', DESC = 'Clown characters chase you with pathfinding, faster over time. You get the Clown Buster gun (one shot each). Caught = you die and get server hopped. Kills and time go to stats'}
+CMDs[#CMDs + 1] = {NAME = 'clown / circus', DESC = 'Survive endless waves of clowns (5 s break between rounds). They get tougher every round, flying clowns from round 10. Kills pay clown cash for the Clown Shop (B): gun and speed upgrades'}
 CMDs[#CMDs + 1] = {NAME = 'unclown', DESC = 'Sends the clowns away (before they catch you)'}
 CMDs[#CMDs + 1] = {NAME = 'moon / moonfall', DESC = 'An angry-faced moon falls on the map while a masked imp giggles at you; countdown, quakes, impact, then shop to a new server (only you see it)'}
 CMDs[#CMDs + 1] = {NAME = 'unweather / clearskies', DESC = 'Clears the weather'}
@@ -5358,7 +5379,7 @@ CMDs[#CMDs + 1] = {NAME = 'sunset / goldenhour', DESC = 'Warm sunset lighting'}
 CMDs[#CMDs + 1] = {NAME = 'unsunset', DESC = 'Removes the sunset'}
 CMDs[#CMDs + 1] = {NAME = 'flashlight / torch', DESC = 'Puts a flashlight on you'}
 CMDs[#CMDs + 1] = {NAME = 'unflashlight', DESC = 'Turns off the flashlight'}
-CMDs[#CMDs + 1] = {NAME = 'horror / hunt [safe]', DESC = 'Lights out, black fog, and The Watcher hunts you: it only moves when you are not looking at it. If it reaches you: jumpscare and you die (horror safe = no dying)'}
+CMDs[#CMDs + 1] = {NAME = 'horror / hunt [safe]', DESC = 'Lights out, black fog, and The Watcher hunts you: fast when you look away, creeping while you watch, and it screams and sprints at you every so often. If it reaches you: jumpscare and you die (horror safe = no dying)'}
 CMDs[#CMDs + 1] = {NAME = 'unhorror', DESC = 'Turns the lights back on'}
 CMDs[#CMDs + 1] = {NAME = 'matrix', DESC = 'Green vision + low gravity. There is no spoon'}
 CMDs[#CMDs + 1] = {NAME = 'unmatrix / bluepill', DESC = 'Leaves the matrix'}
@@ -5453,7 +5474,7 @@ CMDs[#CMDs + 1] = {NAME = 'unmidas', DESC = 'Turns everything back to normal'}
 CMDs[#CMDs + 1] = {NAME = 'diamond / diamondrush [seconds]', DESC = 'Mini-game: diamonds rain from the sky, collect them before time runs out (pink = 3, golden = 10). Music, popups and a saved best score'}
 CMDs[#CMDs + 1] = {NAME = 'undiamond', DESC = 'Stops a Diamond Rush round'}
 CMDs[#CMDs + 1] = {NAME = '--- PET HUB ---', DESC = ''}
-CMDs[#CMDs + 1] = {NAME = 'pets / pethub / pet [tab]', DESC = 'Opens the Pet Hub (also in Settings): 9 eggs, 21 species, 11 skins, 10 hats, potions, food, levels to 50, breeding, upgrades. Tabs: pets, eggs, shop, breed, index'}
+CMDs[#CMDs + 1] = {NAME = 'pets / pethub / pet [tab]', DESC = 'Opens the Pet Hub (also in Settings): 9 eggs, 25 species (4 SECRET), 14 random effects, mystery skins and hats, odds on every pull, potions, levels, breeding. Tabs: pets, eggs, shop, breed, index, settings'}
 CMDs[#CMDs + 1] = {NAME = 'unpet', DESC = 'Sends all following pets back to the Pet Hub'}
 CMDs[#CMDs + 1] = {NAME = 'feedpets / feedall', DESC = 'Feeds your following pets with the cheapest food you have'}
 CMDs[#CMDs + 1] = {NAME = 'petcoins', DESC = 'Shows your pet coins (pets find coins, walking with pets, daily reward, Diamond Rush)'}
@@ -19323,6 +19344,7 @@ addcmd('fuckoff',{'unloadny','unloadscript'},function(args, speaker)
 	pcall(WackyState.lightReleaseAll)
 	pcall(function() NeverYieldStats.stop() end)
 	pcall(function() NeverYieldPets.stop() end)
+	pcall(function() NeverYieldAch.stop() end)
 	for key in pairs(WackyState.conns) do
 		pcall(WackyState.disconnect, key)
 	end
@@ -20571,8 +20593,8 @@ end)
 -- ================== END THE MOON ==================
 
 -- ==================== HORROR 2.0 ====================
--- The lights die, black fog rolls in and The Watcher hunts you. It only moves while you are NOT
--- looking at it (keep it in view / in your flashlight) and it walks through walls. If it reaches
+-- The lights die, black fog rolls in and The Watcher hunts you. It stalks fast while you look away,
+-- creeps while you watch it, and every so often screams and sprints at you. It walks through walls. If it reaches
 -- you: jumpscare, and your character dies. Only on your screen. "horror safe" = no dying.
 WackyState.horrorSounds = {
 	drones = {9114353372, 9114353056, 9113586892},
@@ -20884,7 +20906,16 @@ addcmd('horror',{'spookymode','hunt'},function(args, speaker)
 			cam.CFrame = cam.CFrame * CFrame.new((math.random() - 0.5) * s, (math.random() - 0.5) * s, 0)
 		end
 	end)
+	local nextHunt, huntUntil = t0 + 25 + math.random() * 15, 0
+	local step
 	WackyState.connect("horror", RunService.Heartbeat:Connect(function(dt)
+		local ok, err = pcall(step, dt)
+		if not ok and not h.warned then
+			h.warned = true
+			warn("[NeverYield horror] " .. tostring(err))
+		end
+	end))
+	step = function(dt)
 		local t = tick()
 		local char = speaker.Character
 		local r = getRoot(char)
@@ -20933,9 +20964,40 @@ addcmd('horror',{'spookymode','hunt'},function(args, speaker)
 			looking = workspace:Raycast(cam.CFrame.Position, headPos - cam.CFrame.Position, params) == nil
 		end
 
-		-- it moves only while you're not looking, faster as time goes on, straight through walls
-		if not looking and not h.caught then
-			local speed = math.min(17, 6 + (t - h.start) * 0.05)
+		-- hunts: every 25-45 s it screams and sprints straight at you for a few seconds, looking or not
+		if t > nextHunt and not h.caught then
+			nextHunt = t + 25 + math.random() * 20
+			huntUntil = t + 5 + math.random() * 4
+			h.hunting = true
+			WackyState.sound(hs.scream, nil, 0.9, false, 0.75 + math.random() * 0.15)
+			line.Text = "RUN"
+			line.Rotation = math.random(-6, 6)
+			TweenService:Create(line, TweenInfo.new(0.2), {TextTransparency = 0}):Play()
+			task.delay(1.6, function()
+				if line.Parent then TweenService:Create(line, TweenInfo.new(0.6), {TextTransparency = 1}):Play() end
+			end)
+			-- it comes from close enough to matter
+			if dist > 70 then
+				local behind = r.CFrame.LookVector * -55
+				local nx, nz = r.Position.X + behind.X, r.Position.Z + behind.Z
+				h.pos = Vector3.new(nx, WackyState.horrorGround(nx, nz, r.Position.Y, params), nz)
+				flat = Vector3.new(h.pos.X - r.Position.X, 0, h.pos.Z - r.Position.Z)
+				dist = flat.Magnitude
+			end
+		end
+		if h.hunting and t > huntUntil then h.hunting = false end
+		h.shakeBoost = h.hunting and 0.25 or 0
+		-- stalking: fast while you look away, a slow creep while you watch it; straight through walls
+		if not h.caught then
+			local elapsed = t - h.start
+			local speed
+			if h.hunting then
+				speed = math.min(30, 21 + elapsed * 0.02)
+			elseif looking then
+				speed = math.min(5, 1.5 + elapsed * 0.01)
+			else
+				speed = math.min(22, 11 + elapsed * 0.04)
+			end
 			if dist > 0.1 then
 				local step = math.min(dist, speed * dt)
 				local nx, nz = h.pos.X - flat.Unit.X * step, h.pos.Z - flat.Unit.Z * step
@@ -20947,10 +21009,10 @@ addcmd('horror',{'spookymode','hunt'},function(args, speaker)
 			local nx, nz = r.Position.X + behind.X, r.Position.Z + behind.Z
 			h.pos = Vector3.new(nx, WackyState.horrorGround(nx, nz, r.Position.Y, params), nz)
 		end
-		local twitch = looking and CFrame.new() or CFrame.Angles(0, 0, (math.random() - 0.5) * 0.06)
+		local twitch = (looking and not h.hunting) and CFrame.new() or CFrame.Angles(0, 0, (math.random() - 0.5) * (h.hunting and 0.2 or 0.06))
 		figure:PivotTo(CFrame.lookAt(h.pos, Vector3.new(r.Position.X, h.pos.Y, r.Position.Z)) * twitch)
 		for _, e in ipairs(eyes) do
-			e.Color = looking and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(200, 30, 30)
+			e.Color = h.hunting and Color3.fromRGB(255, 0, 0) or looking and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(200, 30, 30)
 		end
 
 		-- the closer it is, the worse it gets
@@ -21010,11 +21072,12 @@ addcmd('horror',{'spookymode','hunt'},function(args, speaker)
 		-- caught
 		if dist < 4.2 and not h.caught then
 			h.caught = true
+			h.hunting = false
 			task.spawn(WackyState.horrorJumpscare, speaker, h)
 		end
-	end))
+	end
 	notify('Horror', safe and 'The lights are out... (safe mode: it can catch you, but you live)' or
-		"Something is out there. It only moves when you're not looking. Don't let it reach you. (unhorror to stop)", 10)
+		"Something is out there. Watch it and it slows down... look away and it comes. When it screams, RUN. (unhorror to stop)", 10)
 end)
 
 addcmd('unhorror',{'unspookymode','unhunt'},function(args, speaker)
@@ -21558,8 +21621,8 @@ NeverYieldAgartha.build = function(O)
 
 	-- pond with rocks and lily pads, a bench beside it
 	NeverYieldAgartha.pondCenter, NeverYieldAgartha.pondRadius = O + Vector3.new(22, 0, -18), 8.8
-	local pondStandIn = P(folder, Vector3.new(0.6, 18, 18), at(22, 0.5, -18) * up, Color3.fromRGB(80, 160, 220), M.Glass, "Cylinder", {Transparency = 1, CanCollide = false})
-	pondStandIn:SetAttribute("ViewOnly", true)
+	P(folder, Vector3.new(0.5, 18, 18), at(22, 0.45, -18) * up, Color3.fromRGB(40, 115, 175), M.Glass, "Cylinder", {Transparency = 0.2, Reflectance = 0.15, CanCollide = false})
+	P(folder, Vector3.new(0.2, 17.6, 17.6), at(22, 0.12, -18) * up, Color3.fromRGB(25, 60, 70), M.Slate, "Cylinder", {CanCollide = false})
 	for i = 1, 12 do
 		local a = i / 12 * math.pi * 2
 		P(folder, Vector3.new(2.6, 1.4, 2), at(22 + math.cos(a) * 9.4, 0.4, -18 + math.sin(a) * 9.4) * CFrame.Angles(0, a, 0), Color3.fromRGB(150, 145, 135), M.Slate, "Ellipsoid")
@@ -21732,8 +21795,14 @@ NeverYieldAgartha.makeWindow = function(model, skyTop, skyBottom)
 	for _, d in ipairs(model:GetDescendants()) do
 		if d:IsA("BasePart") then win.parts = win.parts + 1 end
 	end
-	-- three overlapping rectangles that all stay inside the ring (together close to a circle)
-	win.shapes = {{0.93, 0.31}, {0.7, 0.7}, {0.31, 0.93}}
+	-- six horizontal bands, each as wide as the circle at its inner edge; the ring covers the corners
+	win.shapes = {}
+	local R, n = 0.92, 6
+	for i = 1, n do
+		local y0, y1 = -R + (i - 1) * 2 * R / n, -R + i * 2 * R / n
+		local inner = (y0 < 0 and y1 > 0) and 0 or math.min(math.abs(y0), math.abs(y1))
+		table.insert(win.shapes, {math.sqrt(R * R - inner * inner), y0, y1})
+	end
 	for i = 1, #win.shapes do
 		local clip = Instance.new("Frame")
 		clip.BackgroundTransparency = 1
@@ -21780,20 +21849,8 @@ NeverYieldAgartha.makeWindow = function(model, skyTop, skyBottom)
 		ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 240, 170)),
 	})
 	swirl.Parent = glow
-	local inner = Instance.new("Frame")
-	inner.AnchorPoint = Vector2.new(0.5, 0.5)
-	inner.Position = UDim2.new(0.5, 0, 0.5, 0)
-	inner.Size = UDim2.new(0.86, 0, 0.86, 0)
-	inner.BackgroundTransparency = 1
-	inner.Parent = ring
-	local innerCorner = Instance.new("UICorner")
-	innerCorner.CornerRadius = UDim.new(0.5, 0)
-	innerCorner.Parent = inner
-	local innerGlow = Instance.new("UIStroke")
-	innerGlow.Color = Color3.fromRGB(255, 220, 150)
-	innerGlow.Transparency = 0.55
-	innerGlow.Parent = inner
-	win.ring, win.glow, win.swirl, win.innerGlow = ring, glow, swirl, innerGlow
+	pcall(function() glow.BorderStrokePosition = Enum.BorderStrokePosition.Outer end)
+	win.ring, win.glow, win.swirl = ring, glow, swirl
 	return win
 end
 
@@ -21832,8 +21889,9 @@ NeverYieldAgartha.updateWindow = function(win, gate, other, frontSign, char)
 	local virtual = other.cf:ToWorldSpace(gate.cf:ToObjectSpace(cam.CFrame))
 	for i, clip in ipairs(win.clips) do
 		local shape = win.shapes[i]
-		local w, h = rx * 2 * shape[1], ry * 2 * shape[2]
-		local x, y = sp.X - w / 2, sp.Y - h / 2
+		local w = rx * 2 * shape[1]
+		local x, y = sp.X - w / 2, sp.Y + shape[2] * ry
+		local h = (shape[3] - shape[2]) * ry + 1
 		clip.frame.Position = UDim2.new(0, x, 0, y)
 		clip.frame.Size = UDim2.new(0, w, 0, h)
 		clip.vp.Position = UDim2.new(0, -x, 0, -y)
@@ -21845,8 +21903,7 @@ NeverYieldAgartha.updateWindow = function(win, gate, other, frontSign, char)
 	end
 	win.ring.Position = UDim2.new(0, sp.X, 0, sp.Y)
 	win.ring.Size = UDim2.new(0, rx * 1.84, 0, ry * 1.84)
-	win.glow.Thickness = math.max(3, math.min(rx, ry) * 0.2)
-	win.innerGlow.Thickness = math.max(1, math.min(rx, ry) * 0.05)
+	win.glow.Thickness = math.max(4, math.min(rx, ry) * 0.27)
 	win.swirl.Rotation = (tick() * 200) % 360
 end
 
@@ -21872,29 +21929,79 @@ end
 -- a frozen copy of what is around a spot (for the window back home)
 NeverYieldAgartha.snapshot = function(center, radius, limit, gateCF)
 	local model = Instance.new("Model")
-	local count = 0
 	local chars = {}
 	for _, plr in ipairs(Players:GetPlayers()) do
 		if plr.Character then chars[plr.Character] = true end
 	end
+	local function behind(pos, reach)
+		return not gateCF or gateCF:PointToObjectSpace(pos).Z - reach < 12
+	end
+	local found = {}
 	for _, inst in ipairs(workspace:GetDescendants()) do
-		if count >= limit then break end
-		if inst:IsA("BasePart") and not inst:IsA("Terrain") and inst.Transparency < 0.95 and not inst:GetAttribute("NYFx") and (inst.Position - center).Magnitude < radius
-			and (not gateCF or gateCF:PointToObjectSpace(inst.Position).Z < 12) then
-			local owned, anc = false, inst.Parent
-			while anc and anc ~= workspace do
-				if chars[anc] then owned = true break end
-				anc = anc.Parent
+		if inst:IsA("BasePart") and not inst:IsA("Terrain") and inst.Transparency < 0.95 and not inst:GetAttribute("NYFx") then
+			local reach = inst.Size.Magnitude / 2
+			local d = (inst.Position - center).Magnitude - reach
+			if d < radius and behind(inst.Position, reach) then
+				table.insert(found, {inst, math.max(0, d)})
 			end
-			if not owned then
-				local ok, copy = pcall(function() return inst:Clone() end)
-				if ok and copy then
-					for _, d in ipairs(copy:GetChildren()) do
-						if not (d:IsA("SpecialMesh") or d:IsA("Decal") or d:IsA("Texture")) then d:Destroy() end
+		end
+	end
+	table.sort(found, function(x, y) return x[2] < y[2] end)
+	local count = 0
+	for _, entry in ipairs(found) do
+		if count >= limit then break end
+		local inst = entry[1]
+		local owned, anc = false, inst.Parent
+		while anc and anc ~= workspace do
+			if chars[anc] then owned = true break end
+			anc = anc.Parent
+		end
+		if not owned then
+			local ok, copy = pcall(function()
+				local was = inst.Archivable
+				inst.Archivable = true
+				local c = inst:Clone()
+				inst.Archivable = was
+				return c
+			end)
+			if ok and copy then
+				for _, d in ipairs(copy:GetChildren()) do
+					if not (d:IsA("SpecialMesh") or d:IsA("Decal") or d:IsA("Texture")) then d:Destroy() end
+				end
+				copy.Anchored = true
+				copy.Parent = model
+				count = count + 1
+			end
+		end
+	end
+	-- terrain ground as tiles in the terrain's own colours
+	local terrain = workspace:FindFirstChildOfClass("Terrain")
+	if terrain then
+		local params = RaycastParams.new()
+		params.FilterType = Enum.RaycastFilterType.Include
+		params.FilterDescendantsInstances = {terrain}
+		local step, span = 12, math.min(radius, 132)
+		for gx = -span, span, step do
+			for gz = -span, span, step do
+				local x, z = center.X + gx, center.Z + gz
+				local hit = workspace:Raycast(Vector3.new(x, center.Y + 60, z), Vector3.new(0, -160, 0), params)
+				if hit and behind(hit.Position, step) then
+					local tile = Instance.new("Part")
+					tile.Anchored = true
+					tile.Size = Vector3.new(step + 0.6, 3, step + 0.6)
+					tile.CFrame = CFrame.new(x, hit.Position.Y - 1.5, z)
+					tile.TopSurface = Enum.SurfaceType.Smooth
+					if hit.Material == Enum.Material.Water then
+						tile.Color = Color3.fromRGB(60, 130, 190)
+						tile.Material = Enum.Material.Glass
+						tile.Transparency = 0.2
+					else
+						pcall(function() tile.Color = terrain:GetMaterialColor(hit.Material) end)
+						if not pcall(function() tile.Material = hit.Material end) then
+							tile.Material = Enum.Material.SmoothPlastic
+						end
 					end
-					copy.Anchored = true
-					copy.Parent = model
-					count = count + 1
+					tile.Parent = model
 				end
 			end
 		end
@@ -21943,7 +22050,7 @@ NeverYieldAgartha.close = function()
 		pcall(function() win.screen:Destroy() end)
 	end
 	pcall(function()
-		workspace.Terrain:FillCylinder(CFrame.new(A.pondCenter + Vector3.new(0, -1.3, 0)), 4, A.pondRadius + 0.5, Enum.Material.Air)
+		workspace.Terrain:FillCylinder(CFrame.new(A.pondCenter + Vector3.new(0, 0.2, 0)), 4, A.pondRadius + 0.5, Enum.Material.Air)
 	end)
 	A.destroyGate(s.homeGate)
 	A.destroyGate(s.awayGate)
@@ -21957,7 +22064,7 @@ NeverYieldAgartha.fillWater = function()
 	local A = NeverYieldAgartha
 	if not A.pondCenter then return end
 	pcall(function()
-		workspace.Terrain:FillCylinder(CFrame.new(A.pondCenter + Vector3.new(0, -1.3, 0)), 4, A.pondRadius, Enum.Material.Water)
+		workspace.Terrain:FillCylinder(CFrame.new(A.pondCenter + Vector3.new(0, 0.2, 0)), 1.6, A.pondRadius, Enum.Material.Water)
 	end)
 end
 
@@ -22038,7 +22145,7 @@ addcmd('portal',{'agartha','gateway'},function(args, speaker)
 	land.Parent = workspace
 	-- real Roblox water in the pond
 	pcall(function()
-		workspace.Terrain:FillCylinder(CFrame.new(A.pondCenter + Vector3.new(0, -1.3, 0)), 4, A.pondRadius, Enum.Material.Water)
+		workspace.Terrain:FillCylinder(CFrame.new(A.pondCenter + Vector3.new(0, 0.2, 0)), 1.6, A.pondRadius, Enum.Material.Water)
 	end)
 	local view = land:Clone()
 	for _, d in ipairs(view:GetDescendants()) do
@@ -22046,9 +22153,12 @@ addcmd('portal',{'agartha','gateway'},function(args, speaker)
 			d:Destroy()
 		elseif d:IsA("BasePart") and d:GetAttribute("ViewOnly") then
 			d.Transparency = 0.25
+		elseif d:IsA("BasePart") and d.Size.Magnitude < 1.1 then
+			-- tiny details can't be seen through the portal; each window copy draws the island again
+			d:Destroy()
 		end
 	end
-	local homeView = A.snapshot(gatePos, 220, 900, homeCF)
+	local homeView = A.snapshot(gatePos, 220, 600, homeCF)
 	local s = {land = land}
 	s.homeCF, s.awayCF = homeCF, awayCF
 	A.openGates(s)
@@ -22135,9 +22245,10 @@ table.insert(WackyState.undoList, 'unportal')
 -- ================== END AGARTHA PORTAL ==================
 
 -- ==================== CLOWNS ====================
--- "clown": real R6 clown characters keep appearing and chase you with pathfinding, faster over time.
--- You get the Clown Buster (one shot per clown). If one catches you: you die and get server hopped.
--- Kills and survival time are saved in your stats. Only on your screen.
+-- "clown": waves of real R6 clowns chase you with pathfinding, with a 5 second break between rounds.
+-- Every round they get tougher, faster and hit harder (speedy clowns from round 4, brutes from 6, balloon
+-- flying clowns from 10). Kills pay clown cash (only for this minigame) to spend in the Clown Shop (B) on
+-- gun and speed upgrades. When your health runs out: you die and get server hopped. Only on your screen.
 NeverYieldClowns = {
 	music = {81890241259637, 122263324184602, 125773734041692}, -- DistroKid official Roblox music
 	honks = {9116942696, 9114824238},
@@ -22265,6 +22376,43 @@ NeverYieldClowns.make = function(cf)
 	return model, hrp, hum, animator
 end
 
+-- ---------- run: rounds, cash (this minigame only), upgrades ----------
+NeverYieldClowns.toolAnims = {R6 = "rbxassetid://182393478", R15 = "rbxassetid://507768375"} -- Roblox's default "holding a tool" poses
+NeverYieldClowns.upgrades = {
+	{id = "damage", name = "Damage", icon = "\u{1F4A5}", base = 40, growth = 1.55, max = 25, desc = function(l) return "+" .. math.floor((1.35 ^ l - 1) * 100) .. "% damage" end},
+	{id = "rate", name = "Fire Rate", icon = "\u{26A1}", base = 50, growth = 1.6, max = 12, desc = function(l) return string.format("%.2fs between shots", NeverYieldClowns.cooldown(l)) end},
+	{id = "speed", name = "Move Speed", icon = "\u{1F45F}", base = 45, growth = 1.5, max = 10, desc = function(l) return "walk speed " .. (16 + l * 2.5) end},
+	{id = "health", name = "Max Health", icon = "\u{2764}\u{FE0F}", base = 60, growth = 1.5, max = 15, desc = function(l) return (100 + l * 35) .. " max health" end},
+	{id = "pierce", name = "Piercing", icon = "\u{1F3AF}", base = 150, growth = 2.2, max = 4, desc = function(l) return "bullets go through " .. (l + 1) .. " clown" .. (l > 0 and "s" or "") end},
+	{id = "regen", name = "Regeneration", icon = "\u{2728}", base = 80, growth = 1.7, max = 8, desc = function(l) return (l * 1.5) .. " health per second" end},
+}
+NeverYieldClowns.medkitPrice = function(s) return 40 + s.round * 10 end
+
+NeverYieldClowns.cooldown = function(level)
+	return math.max(0.06, 0.32 * 0.82 ^ level)
+end
+
+NeverYieldClowns.price = function(up, level)
+	return math.floor(up.base * up.growth ^ level)
+end
+
+NeverYieldClowns.maxHealth = function(s)
+	return 100 + s.levels.health * 35
+end
+
+-- how tough each round's clowns are
+NeverYieldClowns.roundInfo = function(n)
+	return {
+		total = 6 + n * 3 + math.floor(n ^ 1.35),
+		alive = math.min(10 + n * 2, 36),
+		interval = math.max(0.25, 1.5 - n * 0.07),
+		hp = 100 * 1.25 ^ (n - 1),
+		speed = math.min(38, 17 + n * 1.2),
+		damage = 15 + n * 4,
+		cash = 8 + n * 3,
+	}
+end
+
 NeverYieldClowns.saveStats = function(s, died)
 	pcall(function()
 		local data = NeverYieldStats.data
@@ -22276,12 +22424,15 @@ NeverYieldClowns.saveStats = function(s, died)
 		mg.clownTotalTime = (mg.clownTotalTime or 0) + survived
 		if s.kills > (mg.clownBestKills or 0) then mg.clownBestKills = s.kills end
 		if survived > (mg.clownBestTime or 0) then mg.clownBestTime = survived end
+		if s.round > (mg.clownBestRound or 0) then mg.clownBestRound = s.round end
+		if s.flyingKills > 0 then mg.clownFlyingKills = (mg.clownFlyingKills or 0) + s.flyingKills end
 		NeverYieldStats.dirty = true
 		NeverYieldStats.save()
 	end)
 end
 
 NeverYieldClowns.removeGun = function(s)
+	pcall(function() s.holdTrack:Stop() end)
 	pcall(function() s.tool:Destroy() end)
 end
 
@@ -22290,10 +22441,16 @@ NeverYieldClowns.stop = function()
 	if not s then return end
 	NeverYieldClowns.state = nil
 	WackyState.disconnect("clowns")
+	WackyState.disconnect("clownkeys")
 	for _, c in ipairs(s.clowns) do
 		pcall(function() c.model:Destroy() end)
 	end
 	NeverYieldClowns.removeGun(s)
+	NeverYieldClowns.closeShop(s)
+	pcall(function()
+		local hum = Players.LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+		if hum and s.baseSpeed then hum.WalkSpeed = s.baseSpeed end
+	end)
 	pcall(function()
 		TweenService:Create(s.music, TweenInfo.new(1.5), {Volume = 0}):Play()
 		Services.Debris:AddItem(s.music, 1.6)
@@ -22302,20 +22459,27 @@ NeverYieldClowns.stop = function()
 	pcall(function() s.hud:Destroy() end)
 end
 
--- a clown dies: it falls apart with a honk and a burst of confetti
+-- a clown dies: it falls apart with a honk and a burst of confetti, and pays out
 NeverYieldClowns.kill = function(s, c)
 	if c.dead then return end
 	c.dead = true
 	s.kills = s.kills + 1
+	s.waveKilled = s.waveKilled + 1
+	if c.kind == "flying" then s.flyingKills = s.flyingKills + 1 end
+	local pay = c.cash
+	s.cash = s.cash + pay
+	s.earned = s.earned + pay
 	pcall(function()
 		WackyState.sound(WackyState.pick(NeverYieldClowns.honks), c.hrp, 0.8, false, 1.3 + math.random() * 0.3)
 		WackyState.burst(c.hrp, Color3.fromRGB(255, 80, 120), Color3.fromRGB(80, 200, 255), 30, 18)
+		NeverYieldClowns.popText(c.hrp.Position + Vector3.new(0, 3, 0), "+$" .. pay, Color3.fromRGB(120, 255, 140))
 		for _, j in ipairs(c.model:GetDescendants()) do
 			if j:IsA("JointInstance") or j:IsA("WeldConstraint") then j:Destroy() end
 		end
 		c.hum.Health = 0
 		for _, p in ipairs(c.model:GetDescendants()) do
 			if p:IsA("BasePart") then
+				p.Anchored = false
 				p.CanCollide = true
 				p.AssemblyLinearVelocity = Vector3.new(math.random(-20, 20), math.random(15, 35), math.random(-20, 20))
 			end
@@ -22324,19 +22488,127 @@ NeverYieldClowns.kill = function(s, c)
 	Services.Debris:AddItem(c.model, 3)
 end
 
-NeverYieldClowns.giveGun = function(speaker, s)
+-- floating text in the world (cash, damage)
+NeverYieldClowns.popText = function(pos, text, color)
+	local anchor = Instance.new("Part")
+	anchor.Anchored, anchor.CanCollide, anchor.CanQuery, anchor.CanTouch = true, false, false, false
+	anchor.Transparency = 1
+	anchor.Size = Vector3.new(0.2, 0.2, 0.2)
+	anchor.Position = pos
+	anchor.Parent = workspace
+	local bb = Instance.new("BillboardGui")
+	bb.Size = UDim2.new(0, 120, 0, 36)
+	bb.AlwaysOnTop = true
+	bb.Parent = anchor
+	local l = Instance.new("TextLabel")
+	l.BackgroundTransparency = 1
+	l.Size = UDim2.new(1, 0, 1, 0)
+	l.Font = Enum.Font.FredokaOne
+	l.TextScaled = true
+	l.Text = text
+	l.TextColor3 = color
+	l.TextStrokeTransparency = 0.2
+	l.Parent = bb
+	TweenService:Create(anchor, TweenInfo.new(0.9), {Position = pos + Vector3.new(0, 4, 0)}):Play()
+	TweenService:Create(l, TweenInfo.new(0.9), {TextTransparency = 1, TextStrokeTransparency = 1}):Play()
+	Services.Debris:AddItem(anchor, 1)
+end
+
+NeverYieldClowns.damageClown = function(s, c, amount)
+	if c.dead then return end
+	c.hp = c.hp - amount
+	NeverYieldClowns.popText(c.hrp.Position + Vector3.new(math.random(-10, 10) / 10, 2.5, 0), tostring(math.floor(amount)), Color3.fromRGB(255, 230, 120))
+	if c.hp <= 0 then
+		NeverYieldClowns.kill(s, c)
+		return
+	end
+	if c.bar then
+		c.bar.Parent.Parent.Enabled = true
+		c.bar.Size = UDim2.new(math.clamp(c.hp / c.maxHp, 0, 1), 0, 1, 0)
+	end
+	-- flash white
+	for _, p in ipairs(c.model:GetDescendants()) do
+		if p:IsA("BasePart") and p.Transparency < 1 then
+			local was = p.Color
+			p.Color = Color3.new(1, 1, 1)
+			task.delay(0.06, function() if p.Parent then p.Color = was end end)
+		end
+	end
+end
+
+NeverYieldClowns.fire = function(speaker, s)
 	local C = NeverYieldClowns
+	local char = speaker.Character
+	local handle = s.handle
+	if not handle or not handle.Parent then return end
+	local origin = s.muzzle.WorldPosition
+	local mouse = Players.LocalPlayer:GetMouse()
+	local aim = mouse.Hit and mouse.Hit.Position or (origin + workspace.CurrentCamera.CFrame.LookVector * 100)
+	local camPos = workspace.CurrentCamera.CFrame.Position
+	local dir = (aim - camPos).Unit * 600
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	local skip = {char, s.tool}
+	local damage = 100 * 1.35 ^ s.levels.damage
+	local pierce = s.levels.pierce + 1
+	local finish = camPos + dir
+	for _ = 1, 12 do
+		params.FilterDescendantsInstances = skip
+		local hit = workspace:Raycast(camPos, dir, params)
+		if not hit then break end
+		local victim
+		for _, c in ipairs(s.clowns) do
+			if not c.dead and hit.Instance:IsDescendantOf(c.model) then victim = c break end
+		end
+		if victim then
+			C.damageClown(s, victim, damage)
+			table.insert(skip, victim.model)
+			pierce = pierce - 1
+			if pierce <= 0 then
+				finish = hit.Position
+				break
+			end
+		elseif hit.Instance:GetAttribute("NYFx") or hit.Instance.Transparency > 0.9 then
+			table.insert(skip, hit.Instance)
+		else
+			finish = hit.Position
+			break
+		end
+	end
+	WackyState.sound(WackyState.pick(C.shots), handle, 0.6, false, 0.9 + math.random() * 0.2)
+	local tracer = Instance.new("Part")
+	tracer.Anchored, tracer.CanCollide, tracer.CanQuery, tracer.CanTouch = true, false, false, false
+	tracer.Material = Enum.Material.Neon
+	tracer.Color = Color3.fromRGB(255, 230, 120)
+	local length = (finish - origin).Magnitude
+	tracer.Size = Vector3.new(0.12, 0.12, length)
+	tracer.CFrame = CFrame.lookAt((origin + finish) / 2, finish)
+	tracer.Parent = workspace
+	TweenService:Create(tracer, TweenInfo.new(0.1), {Transparency = 1}):Play()
+	Services.Debris:AddItem(tracer, 0.12)
+	local flash = Instance.new("PointLight")
+	flash.Color = Color3.fromRGB(255, 200, 100)
+	flash.Range = 10
+	flash.Brightness = 3
+	flash.Parent = handle
+	Services.Debris:AddItem(flash, 0.06)
+end
+
+NeverYieldClowns.giveGun = function(speaker, s)
 	local tool = Instance.new("Tool")
 	tool.Name = "Clown Buster"
-	tool.ToolTip = "Click to shoot clowns (one shot each)"
+	tool.ToolTip = "Hold to shoot clowns"
 	tool.CanBeDropped = false
 	tool.RequiresHandle = true
+	-- the hand holds the wooden grip; the barrel points forward
+	tool.Grip = CFrame.new(0, -0.5, 0.4)
 	local handle = Instance.new("Part")
 	handle.Name = "Handle"
 	handle.Size = Vector3.new(0.35, 0.55, 1.5)
 	handle.Color = Color3.fromRGB(40, 40, 48)
 	handle.Material = Enum.Material.Metal
 	handle.CanCollide = false
+	handle.Massless = true
 	handle:SetAttribute("NYFx", true)
 	handle.Parent = tool
 	local function piece(size, offset, color, material, shape)
@@ -22355,7 +22627,6 @@ NeverYieldClowns.giveGun = function(speaker, s)
 		p.Parent = tool
 		return p
 	end
-	-- barrel points along the handle's -Z (forward when held)
 	piece(Vector3.new(1.0, 0.28, 0.28), CFrame.new(0, 0.08, -1.1) * CFrame.Angles(0, math.rad(90), 0), Color3.fromRGB(70, 70, 80), Enum.Material.Metal, "Cylinder")
 	piece(Vector3.new(0.3, 0.9, 0.42), CFrame.new(0, -0.6, 0.45) * CFrame.Angles(math.rad(-15), 0, 0), Color3.fromRGB(120, 70, 40), Enum.Material.Wood)
 	piece(Vector3.new(0.37, 0.08, 1.3), CFrame.new(0, 0.1, -0.05), Color3.fromRGB(255, 60, 160), Enum.Material.Neon)
@@ -22363,59 +22634,141 @@ NeverYieldClowns.giveGun = function(speaker, s)
 	local muzzle = Instance.new("Attachment")
 	muzzle.Position = Vector3.new(0, 0.08, -1.65)
 	muzzle.Parent = handle
-	local mouse = Players.LocalPlayer:GetMouse()
-	local last = 0
-	tool.Activated:Connect(function()
-		if s.caught or tick() - last < 0.12 then return end
-		last = tick()
-		local char = speaker.Character
-		local origin = muzzle.WorldPosition
-		local aim = mouse.Hit and mouse.Hit.Position or (origin + workspace.CurrentCamera.CFrame.LookVector * 100)
-		local params = RaycastParams.new()
-		params.FilterType = Enum.RaycastFilterType.Exclude
-		params.FilterDescendantsInstances = {char, tool}
-		local camPos = workspace.CurrentCamera.CFrame.Position
-		local hit = workspace:Raycast(camPos, (aim - camPos).Unit * 600, params)
-		local finish = hit and hit.Position or (camPos + (aim - camPos).Unit * 600)
-		WackyState.sound(WackyState.pick(C.shots), handle, 0.7, false, 0.9 + math.random() * 0.2)
-		-- tracer and muzzle flash
-		local tracer = Instance.new("Part")
-		tracer.Anchored, tracer.CanCollide, tracer.CanQuery, tracer.CanTouch = true, false, false, false
-		tracer.Material = Enum.Material.Neon
-		tracer.Color = Color3.fromRGB(255, 230, 120)
-		local length = (finish - origin).Magnitude
-		tracer.Size = Vector3.new(0.12, 0.12, length)
-		tracer.CFrame = CFrame.lookAt((origin + finish) / 2, finish)
-		tracer.Parent = workspace
-		TweenService:Create(tracer, TweenInfo.new(0.1), {Transparency = 1}):Play()
-		Services.Debris:AddItem(tracer, 0.12)
-		local flash = Instance.new("PointLight")
-		flash.Color = Color3.fromRGB(255, 200, 100)
-		flash.Range = 10
-		flash.Brightness = 3
-		flash.Parent = handle
-		Services.Debris:AddItem(flash, 0.06)
-		if hit then
-			for _, c in ipairs(s.clowns) do
-				if not c.dead and hit.Instance:IsDescendantOf(c.model) then
-					C.kill(s, c)
-					break
-				end
-			end
-		end
+	s.handle, s.muzzle = handle, muzzle
+	tool.Activated:Connect(function() s.firing = true end)
+	tool.Deactivated:Connect(function() s.firing = false end)
+	-- raise the arm like a normal Roblox tool (some games strip the Animate script that does this)
+	tool.Equipped:Connect(function()
+		pcall(function()
+			local hum = speaker.Character:FindFirstChildOfClass("Humanoid")
+			local animator = hum:FindFirstChildOfClass("Animator") or hum
+			local anim = Instance.new("Animation")
+			anim.AnimationId = hum.RigType == Enum.HumanoidRigType.R15 and NeverYieldClowns.toolAnims.R15 or NeverYieldClowns.toolAnims.R6
+			s.holdTrack = animator:LoadAnimation(anim)
+			s.holdTrack.Priority = Enum.AnimationPriority.Action
+			s.holdTrack.Looped = true
+			s.holdTrack:Play(0.1)
+		end)
+	end)
+	tool.Unequipped:Connect(function()
+		s.firing = false
+		pcall(function() s.holdTrack:Stop(0.1) end)
 	end)
 	tool.Parent = Players.LocalPlayer:FindFirstChildOfClass("Backpack")
 	s.tool = tool
-	-- equip it right away
 	pcall(function()
 		local hum = speaker.Character and speaker.Character:FindFirstChildOfClass("Humanoid")
 		if hum then hum:EquipTool(tool) end
 	end)
 end
 
+-- ---------- shop (only for this minigame; cash resets every run) ----------
+NeverYieldClowns.closeShop = function(s)
+	if s and s.shop then
+		pcall(function() s.shop:Destroy() end)
+		s.shop = nil
+	end
+end
+
+NeverYieldClowns.openShop = function(s)
+	local C = NeverYieldClowns
+	if s.shop then
+		C.closeShop(s)
+		return
+	end
+	local P = NeverYieldPets
+	local panel = Instance.new("Frame")
+	panel.AnchorPoint = Vector2.new(1, 0.5)
+	panel.Position = UDim2.new(1, -20, 0.5, 0)
+	panel.Size = UDim2.new(0, 330, 0, 470)
+	panel.BackgroundColor3 = Color3.fromRGB(35, 12, 25)
+	panel.BorderSizePixel = 0
+	panel.Active = true
+	panel.ZIndex = 20
+	NeverYieldPortal.corner(panel, UDim.new(0, 16))
+	local _, g = NeverYieldPortal.stroke(panel, 3, 0)
+	g.Color = ColorSequence.new(Color3.fromRGB(255, 60, 90), Color3.fromRGB(255, 210, 60))
+	panel.Parent = WackyState.overlay()
+	s.shop = panel
+	local title = P.label(panel, {Position = UDim2.new(0, 16, 0, 8), Size = UDim2.new(1, -60, 0, 34), Font = Enum.Font.FredokaOne, TextSize = 26,
+		TextXAlignment = Enum.TextXAlignment.Left, Text = "\u{1F3AA} CLOWN SHOP"})
+	title.TextColor3 = Color3.fromRGB(255, 220, 90)
+	P.button(panel, "X", UDim2.new(1, -42, 0, 10), UDim2.new(0, 30, 0, 30), Color3.fromRGB(150, 50, 80), function() C.closeShop(s) end)
+	local cash = P.label(panel, {Position = UDim2.new(0, 16, 0, 42), Size = UDim2.new(1, -32, 0, 22), TextSize = 16, TextXAlignment = Enum.TextXAlignment.Left,
+		TextColor3 = Color3.fromRGB(120, 255, 140)})
+	local rows = {}
+	local function refresh()
+		if not panel.Parent then return end
+		cash.Text = "\u{1F4B5} $" .. NeverYieldStats.num(s.cash) .. "   (clown cash, only for this run)"
+		for _, row in ipairs(rows) do row() end
+	end
+	for i, up in ipairs(C.upgrades) do
+		local card = P.card(panel, UDim2.new(0, 12, 0, 70 + (i - 1) * 58), UDim2.new(1, -24, 0, 52))
+		local name = P.label(card, {Position = UDim2.new(0, 10, 0, 4), Size = UDim2.new(0.62, 0, 0, 22), TextSize = 15, TextXAlignment = Enum.TextXAlignment.Left})
+		local desc = P.label(card, {Position = UDim2.new(0, 10, 0, 26), Size = UDim2.new(0.62, 0, 0, 20), TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left,
+			TextColor3 = Color3.fromRGB(220, 200, 210)})
+		local buy = P.button(card, "", UDim2.new(1, -108, 0, 8), UDim2.new(0, 98, 0, 36), Color3.fromRGB(60, 160, 90), function()
+			local level = s.levels[up.id]
+			if level >= up.max then return end
+			local price = C.price(up, level)
+			if s.cash < price then
+				notify('Clown Shop', 'Not enough clown cash.')
+				return
+			end
+			s.cash = s.cash - price
+			s.levels[up.id] = level + 1
+			WackyState.sound(NeverYieldPets.coinSound, nil, 0.5, false, 1.2)
+			if up.id == "speed" then C.applySpeed(s) end
+			if up.id == "health" then s.hp = s.hp + 35 end
+			refresh()
+		end)
+		table.insert(rows, function()
+			local level = s.levels[up.id]
+			name.Text = up.icon .. " " .. up.name .. "  Lv " .. level
+			desc.Text = level >= up.max and up.desc(level) or (up.desc(level) .. "  \u{2192}  " .. up.desc(level + 1))
+			if level >= up.max then
+				buy.Text = "MAX"
+				buy.BackgroundColor3 = Color3.fromRGB(70, 50, 70)
+			else
+				local price = C.price(up, level)
+				buy.Text = "$" .. NeverYieldStats.num(price)
+				buy.BackgroundColor3 = s.cash >= price and Color3.fromRGB(60, 160, 90) or Color3.fromRGB(110, 60, 70)
+			end
+		end)
+	end
+	local medY = 70 + #C.upgrades * 58
+	local med = P.button(panel, "", UDim2.new(0, 12, 0, medY), UDim2.new(1, -24, 0, 40), Color3.fromRGB(200, 60, 80), function()
+		local price = C.medkitPrice(s)
+		if s.cash < price then
+			notify('Clown Shop', 'Not enough clown cash.')
+			return
+		end
+		s.cash = s.cash - price
+		s.hp = C.maxHealth(s)
+		WackyState.sound(NeverYieldPets.coinSound, nil, 0.5, false, 0.9)
+		refresh()
+	end)
+	table.insert(rows, function()
+		med.Text = "\u{1FA79} Medkit: full health  ($" .. C.medkitPrice(s) .. ")"
+	end)
+	P.label(panel, {Position = UDim2.new(0, 12, 1, -26), Size = UDim2.new(1, -24, 0, 20), TextSize = 11, TextColor3 = Color3.fromRGB(200, 170, 190),
+		Text = "B opens/closes the shop. Clowns pay more every round."})
+	s.refreshShop = refresh
+	refresh()
+end
+
+NeverYieldClowns.applySpeed = function(s)
+	pcall(function()
+		local hum = Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+		hum.WalkSpeed = 16 + s.levels.speed * 2.5
+	end)
+end
+
 NeverYieldClowns.caught = function(speaker, s)
 	local C = NeverYieldClowns
 	s.caught = true
+	s.firing = false
+	C.closeShop(s)
 	C.saveStats(s, true)
 	for _, id in ipairs(C.honks) do
 		WackyState.sound(id, nil, 1, false, 0.8 + math.random() * 0.3)
@@ -22453,7 +22806,7 @@ NeverYieldClowns.caught = function(speaker, s)
 	end)
 	task.wait(2)
 	local survived = math.floor(tick() - s.start)
-	honk.Text = string.format("you shot %d clowns and lasted %d:%02d... the circus never ends", s.kills, math.floor(survived / 60), survived % 60)
+	honk.Text = string.format("ROUND %d - you shot %d clowns and lasted %d:%02d... the circus never ends", s.round, s.kills, math.floor(survived / 60), survived % 60)
 	honk.Size = UDim2.new(0.8, 0, 0.1, 0)
 	TweenService:Create(red, TweenInfo.new(1), {BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0}):Play()
 	task.wait(3)
@@ -22477,8 +22830,15 @@ addcmd('clown',{'clowns','circus'},function(args, speaker)
 		return
 	end
 	local PathfindingService = game:GetService("PathfindingService")
-	local s = {clowns = {}, start = tick(), nextSpawn = tick() + 2, kills = 0}
+	local s = {clowns = {}, start = tick(), kills = 0, flyingKills = 0, round = 0, cash = 0, earned = 0, waveKilled = 0,
+		levels = {damage = 0, rate = 0, speed = 0, health = 0, pierce = 0, regen = 0}, lastShot = 0}
+	s.hp = C.maxHealth(s)
 	C.state = s
+	pcall(function()
+		local hum = speaker.Character:FindFirstChildOfClass("Humanoid")
+		s.baseSpeed = hum.WalkSpeed
+		hum.WalkSpeed = 16
+	end)
 	s.music = WackyState.sound(WackyState.pick(C.music), nil, 0, true)
 	TweenService:Create(s.music, TweenInfo.new(2), {Volume = 0.5}):Play()
 	s.cc = Instance.new("ColorCorrectionEffect")
@@ -22487,21 +22847,56 @@ addcmd('clown',{'clowns','circus'},function(args, speaker)
 	s.cc.Contrast = 0.15
 	s.cc.Parent = Lighting
 	C.giveGun(speaker, s)
-	-- HUD
-	local hud = Instance.new("TextLabel")
+
+	-- HUD: round, clowns left, cash, health bar, shop button, big centre text
+	local hud = Instance.new("Frame")
 	hud.AnchorPoint = Vector2.new(0.5, 0)
-	hud.Position = UDim2.new(0.5, 0, 0, 70)
-	hud.Size = UDim2.new(0, 360, 0, 44)
+	hud.Position = UDim2.new(0.5, 0, 0, 64)
+	hud.Size = UDim2.new(0, 460, 0, 70)
 	hud.BackgroundColor3 = Color3.fromRGB(30, 10, 20)
 	hud.BackgroundTransparency = 0.2
-	hud.Font = Enum.Font.FredokaOne
-	hud.TextSize = 24
-	hud.TextColor3 = Color3.new(1, 1, 1)
 	hud.ZIndex = 55
 	NeverYieldPortal.corner(hud, UDim.new(0, 12))
 	NeverYieldPortal.stroke(hud, 2, 0.2)
 	hud.Parent = WackyState.overlay()
 	s.hud = hud
+	local info = NeverYieldPets.label(hud, {Position = UDim2.new(0, 10, 0, 4), Size = UDim2.new(1, -110, 0, 30), Font = Enum.Font.FredokaOne, TextSize = 20,
+		TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 56})
+	local hpBack = Instance.new("Frame")
+	hpBack.Position = UDim2.new(0, 10, 0, 40)
+	hpBack.Size = UDim2.new(1, -120, 0, 20)
+	hpBack.BackgroundColor3 = Color3.fromRGB(60, 20, 30)
+	hpBack.BorderSizePixel = 0
+	hpBack.ZIndex = 56
+	NeverYieldPortal.corner(hpBack, UDim.new(0, 6))
+	hpBack.Parent = hud
+	local hpFill = Instance.new("Frame")
+	hpFill.Size = UDim2.new(1, 0, 1, 0)
+	hpFill.BackgroundColor3 = Color3.fromRGB(230, 50, 70)
+	hpFill.BorderSizePixel = 0
+	hpFill.ZIndex = 57
+	NeverYieldPortal.corner(hpFill, UDim.new(0, 6))
+	hpFill.Parent = hpBack
+	local hpText = NeverYieldPets.label(hpBack, {Size = UDim2.new(1, 0, 1, 0), TextSize = 12, ZIndex = 58})
+	local shopButton = NeverYieldPets.button(hud, "\u{1F3AA} SHOP (B)", UDim2.new(1, -100, 0, 10), UDim2.new(0, 90, 0, 50), Color3.fromRGB(200, 120, 30), function()
+		C.openShop(s)
+	end)
+	shopButton.ZIndex = 57
+	local banner = NeverYieldPets.label(hud, {AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 90), Size = UDim2.new(0, 700, 0, 60),
+		Font = Enum.Font.FredokaOne, TextSize = 44, TextStrokeTransparency = 0.2, TextTransparency = 1, ZIndex = 58})
+	local function announce(text, color)
+		banner.Text = text
+		banner.TextColor3 = color or Color3.new(1, 1, 1)
+		banner.TextTransparency = 0
+		banner.TextStrokeTransparency = 0.2
+		task.delay(2.2, function()
+			if banner.Parent then TweenService:Create(banner, TweenInfo.new(0.6), {TextTransparency = 1, TextStrokeTransparency = 1}):Play() end
+		end)
+	end
+	WackyState.connect("clownkeys", UserInputService.InputBegan:Connect(function(input, processed)
+		if processed then return end
+		if input.KeyCode == Enum.KeyCode.B then C.openShop(s) end
+	end))
 
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
@@ -22509,15 +22904,115 @@ addcmd('clown',{'clowns','circus'},function(args, speaker)
 		local hit = workspace:Raycast(Vector3.new(x, fromY + 20, z), Vector3.new(0, -80, 0), params)
 		return hit and hit.Position.Y or (fromY - 3)
 	end
+
+	local function startRound()
+		s.round = s.round + 1
+		s.wave = C.roundInfo(s.round)
+		s.spawned, s.waveKilled = 0, 0
+		s.breakUntil = nil
+		s.nextSpawn = tick() + 0.5
+		if s.round == 10 then
+			announce("ROUND 10 - THEY CAN FLY NOW", Color3.fromRGB(255, 120, 200))
+			WackyState.sound(C.laughs[2], nil, 1, false, 0.6)
+		else
+			announce("ROUND " .. s.round, Color3.fromRGB(255, 220, 90))
+		end
+		WackyState.sound(WackyState.pick(C.honks), nil, 0.8, false, 0.7)
+	end
+
 	local function spawnClown(root)
+		local w = s.wave
+		local roll = math.random()
+		local kind = "normal"
+		if s.round >= 10 and roll < math.min(0.45, 0.2 + (s.round - 10) * 0.025) then
+			kind = "flying"
+		elseif s.round >= 6 and roll < 0.62 and math.random() < 0.3 then
+			kind = "brute"
+		elseif s.round >= 4 and math.random() < 0.3 then
+			kind = "speedy"
+		end
 		local a = math.random() * math.pi * 2
 		local d = 45 + math.random() * 25
 		local x, z = root.Position.X + math.cos(a) * d, root.Position.Z + math.sin(a) * d
-		local pos = Vector3.new(x, ground(x, z, root.Position.Y) + 3.2, z)
+		local y = ground(x, z, root.Position.Y) + 3.2
+		if kind == "flying" then y = root.Position.Y + 18 + math.random() * 10 end
+		local pos = Vector3.new(x, y, z)
 		local model, hrp, hum, animator = C.make(CFrame.lookAt(pos, Vector3.new(root.Position.X, pos.Y, root.Position.Z)))
+		local c = {model = model, hrp = hrp, hum = hum, kind = kind, nextPath = 0, waypoints = nil, wp = 1, lastMove = tick(), lastPos = hrp.Position,
+			nextLaugh = tick() + math.random() * 6, nextHit = 0, cash = w.cash}
+		c.maxHp = w.hp
+		c.speed = w.speed
+		c.damage = w.damage
+		local torso = model:FindFirstChild("Torso")
+		if kind == "speedy" then
+			c.maxHp, c.speed, c.cash = w.hp * 0.6, w.speed * 1.35, math.floor(w.cash * 1.3)
+			torso.Color = Color3.fromRGB(255, 230, 40)
+		elseif kind == "brute" then
+			c.maxHp, c.speed, c.damage, c.cash = w.hp * 3.2, w.speed * 0.8, w.damage * 1.8, w.cash * 3
+			for _, p in ipairs(model:GetChildren()) do
+				if p:IsA("BasePart") and p.Name ~= "HumanoidRootPart" and p.Name ~= "Head" then p.Color = p.Color:Lerp(Color3.fromRGB(60, 10, 20), 0.6) end
+			end
+		elseif kind == "flying" then
+			c.maxHp, c.speed, c.damage, c.cash = w.hp * 0.9, w.speed * 0.85, w.damage * 1.2, math.floor(w.cash * 1.6)
+			hrp.Anchored = true
+			-- a bunch of balloons holding it up
+			local head = model:FindFirstChild("Head")
+			for i = 1, 3 do
+				local balloon = Instance.new("Part")
+				balloon.Shape = Enum.PartType.Ball
+				balloon.Size = Vector3.new(2.2, 2.2, 2.2)
+				balloon.Color = C.rgb(C.suits[math.random(1, #C.suits)])
+				balloon.Material = Enum.Material.SmoothPlastic
+				balloon.Reflectance = 0.15
+				balloon.CanCollide, balloon.Massless, balloon.CastShadow = false, true, false
+				balloon:SetAttribute("NYFx", true)
+				balloon.CFrame = head.CFrame * CFrame.new((i - 2) * 1.6, 5 + (i % 2) * 0.8, 0)
+				local weld = Instance.new("WeldConstraint")
+				weld.Part0, weld.Part1 = head, balloon
+				weld.Parent = balloon
+				balloon.Parent = model
+				local string_ = Instance.new("Part")
+				string_.Size = Vector3.new(0.05, 4, 0.05)
+				string_.Color = Color3.new(1, 1, 1)
+				string_.CanCollide, string_.Massless, string_.CanQuery = false, true, false
+				string_:SetAttribute("NYFx", true)
+				string_.CFrame = CFrame.lookAt((head.Position + balloon.Position) / 2, balloon.Position) * CFrame.Angles(math.rad(90), 0, 0)
+				local w2 = Instance.new("WeldConstraint")
+				w2.Part0, w2.Part1 = head, string_
+				w2.Parent = string_
+				string_.Parent = model
+			end
+		end
+		-- rounds get deadlier: clowns glow red more and more
+		if s.round >= 5 then
+			local eyes = Instance.new("PointLight")
+			eyes.Color = Color3.fromRGB(255, 40, 40)
+			eyes.Range = 6 + math.min(10, s.round * 0.5)
+			eyes.Brightness = 2
+			eyes.Parent = model:FindFirstChild("Head")
+		end
+		c.hp = c.maxHp
+		-- health bar (shows after the first hit)
+		local bb = Instance.new("BillboardGui")
+		bb.Size = UDim2.new(0, 60, 0, 8)
+		bb.StudsOffset = Vector3.new(0, 3.6, 0)
+		bb.Enabled = false
+		bb.Parent = model:FindFirstChild("Head")
+		local back = Instance.new("Frame")
+		back.Size = UDim2.new(1, 0, 1, 0)
+		back.BackgroundColor3 = Color3.fromRGB(40, 10, 10)
+		back.BorderSizePixel = 0
+		back.Parent = bb
+		local fill = Instance.new("Frame")
+		fill.Size = UDim2.new(1, 0, 1, 0)
+		fill.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
+		fill.BorderSizePixel = 0
+		fill.Parent = back
+		c.bar = fill
+		if kind ~= "flying" then
+			c.path = PathfindingService:CreatePath({AgentRadius = 2, AgentHeight = 5, AgentCanJump = true, WaypointSpacing = 4})
+		end
 		model.Parent = workspace
-		local c = {model = model, hrp = hrp, hum = hum, nextPath = 0, waypoints = nil, wp = 1, lastMove = tick(), lastPos = hrp.Position,
-			path = PathfindingService:CreatePath({AgentRadius = 2, AgentHeight = 5, AgentCanJump = true, WaypointSpacing = 4}), nextLaugh = tick() + math.random() * 6}
 		pcall(function()
 			local anim = Instance.new("Animation")
 			anim.AnimationId = C.walkAnim
@@ -22529,10 +23024,32 @@ addcmd('clown',{'clowns','circus'},function(args, speaker)
 		local laugh = WackyState.sound(WackyState.pick(C.laughs), hrp, 0.8, false, 0.75 + math.random() * 0.3)
 		laugh.RollOffMaxDistance = 120
 	end
+
+	local function hurt(amount)
+		s.hp = s.hp - amount
+		s.lastHurt = tick()
+		WackyState.sound(WackyState.pick(C.honks), nil, 0.7, false, 0.9 + math.random() * 0.3)
+		local flash = Instance.new("Frame")
+		flash.Size = UDim2.new(1, 0, 1, 0)
+		flash.BackgroundColor3 = Color3.fromRGB(200, 0, 20)
+		flash.BackgroundTransparency = 0.55
+		flash.BorderSizePixel = 0
+		flash.ZIndex = 50
+		flash.Parent = WackyState.overlay()
+		TweenService:Create(flash, TweenInfo.new(0.35), {BackgroundTransparency = 1}):Play()
+		Services.Debris:AddItem(flash, 0.4)
+	end
+
+	startRound()
 	WackyState.connect("clowns", RunService.Heartbeat:Connect(function(dt)
 		local now = tick()
 		local root = getRoot(speaker.Character)
-		if not root or s.caught then return end
+		if s.caught then return end
+		local myHum = speaker.Character and speaker.Character:FindFirstChildOfClass("Humanoid")
+		if not root or not myHum or myHum.Health <= 0 then
+			if not s.caught then task.spawn(C.caught, speaker, s) end
+			return
+		end
 		local elapsed = now - s.start
 		local alive = 0
 		local filter = {speaker.Character}
@@ -22541,63 +23058,118 @@ addcmd('clown',{'clowns','circus'},function(args, speaker)
 			if not c.dead then alive = alive + 1 end
 		end
 		params.FilterDescendantsInstances = filter
-		hud.Text = string.format("\u{1F921} %d shot   |   %d:%02d   |   %d coming", s.kills, math.floor(elapsed / 60), math.floor(elapsed) % 60, alive)
-		if now >= s.nextSpawn and alive < 18 then
-			s.nextSpawn = now + math.max(0.9, 2.6 - elapsed * 0.03)
-			for _ = 1, (elapsed > 30 and 2 or 1) do
+		local maxHp = C.maxHealth(s)
+		-- regeneration and shooting
+		if s.levels.regen > 0 and now - (s.lastHurt or 0) > 2 then
+			s.hp = math.min(maxHp, s.hp + s.levels.regen * 1.5 * dt)
+		end
+		if s.firing and now - s.lastShot >= C.cooldown(s.levels.rate) then
+			s.lastShot = now
+			pcall(C.fire, speaker, s)
+		end
+		-- waves: spawn this round's clowns, then a 5 second break once they are all gone
+		local w = s.wave
+		local left = w.total - s.waveKilled
+		if s.breakUntil then
+			local wait = math.ceil(s.breakUntil - now)
+			info.Text = string.format("ROUND %d CLEAR!  next in %d   |   \u{1F4B5} $%s", s.round, math.max(0, wait), NeverYieldStats.num(s.cash))
+			if now >= s.breakUntil then startRound() end
+		else
+			info.Text = string.format("ROUND %d   |   \u{1F921} %d left   |   \u{1F4B5} $%s", s.round, math.max(0, left), NeverYieldStats.num(s.cash))
+			if s.spawned < w.total and now >= s.nextSpawn and alive < w.alive then
+				s.nextSpawn = now + w.interval
+				s.spawned = s.spawned + 1
 				spawnClown(root)
 			end
+			if s.waveKilled >= w.total then
+				local bonus = 25 * s.round
+				s.cash = s.cash + bonus
+				s.earned = s.earned + bonus
+				s.breakUntil = now + 5
+				announce("ROUND " .. s.round .. " CLEAR!  +$" .. bonus .. "   (B = shop)", Color3.fromRGB(120, 255, 140))
+			end
 		end
-		local speed = math.min(30, 20 + elapsed * 0.15)
+		hpFill.Size = UDim2.new(math.clamp(s.hp / maxHp, 0, 1), 0, 1, 0)
+		hpText.Text = "\u{2764}\u{FE0F} " .. math.max(0, math.floor(s.hp)) .. " / " .. maxHp .. "      " .. string.format("%d:%02d", math.floor(elapsed / 60), math.floor(elapsed) % 60)
+		if s.refreshShop and s.shop then
+			s.shopTick = (s.shopTick or 0) + dt
+			if s.shopTick > 0.5 then
+				s.shopTick = 0
+				s.refreshShop()
+			end
+		end
 		for i = #s.clowns, 1, -1 do
 			local c = s.clowns[i]
 			if c.dead or not c.model.Parent or c.hrp.Position.Y < workspace.FallenPartsDestroyHeight + 20 then
-				if not c.dead then pcall(function() c.model:Destroy() end) end
+				if not c.dead then
+					-- fell off the map: it still counts so the round can end
+					pcall(function() c.model:Destroy() end)
+					s.waveKilled = s.waveKilled + 1
+				end
 				table.remove(s.clowns, i)
 			else
-				c.hum.WalkSpeed = speed
-				if c.walk then c.walk:AdjustSpeed(speed / 14) end
 				local toPlayer = root.Position - c.hrp.Position
 				local dist = toPlayer.Magnitude
-				-- close and nothing in the way: run straight at you
-				local direct = dist < 20 and workspace:Raycast(c.hrp.Position, toPlayer, params) == nil
-				if direct then
-					c.waypoints = nil
-					c.hum:MoveTo(root.Position)
-				else
-					-- otherwise follow a path around walls (recomputed often, in the background)
-					if now > c.nextPath and not c.computing then
-						c.nextPath = now + 0.8 + math.random() * 0.4
-						c.computing = true
-						task.spawn(function()
-							local ok = pcall(function() c.path:ComputeAsync(c.hrp.Position, root.Position) end)
-							if ok and c.path.Status == Enum.PathStatus.Success then
-								c.waypoints = c.path:GetWaypoints()
-								c.wp = 2
-							else
-								c.waypoints = nil
-							end
-							c.computing = false
-						end)
-					end
-					local wps = c.waypoints
-					if wps and wps[c.wp] then
-						local w = wps[c.wp]
-						c.hum:MoveTo(w.Position)
-						if w.Action == Enum.PathWaypointAction.Jump then c.hum.Jump = true end
-						local flat = (w.Position - c.hrp.Position) * Vector3.new(1, 0, 1)
-						if flat.Magnitude < 3 then c.wp = c.wp + 1 end
-					else
-						c.hum:MoveTo(root.Position)
-					end
+				-- stuck far away (behind walls, on a roof...): it comes back near you so the round can end
+				if dist > 140 or (now - c.lastMove > 8 and dist > 30) then
+					local a = math.random() * math.pi * 2
+					local x, z = root.Position.X + math.cos(a) * 40, root.Position.Z + math.sin(a) * 40
+					local y = c.kind == "flying" and root.Position.Y + 18 or ground(x, z, root.Position.Y) + 3.2
+					c.model:PivotTo(CFrame.lookAt(Vector3.new(x, y, z), Vector3.new(root.Position.X, y, root.Position.Z)))
+					c.lastPos, c.lastMove, c.waypoints, c.nextPath = c.hrp.Position, now, nil, 0
+					toPlayer = root.Position - c.hrp.Position
+					dist = toPlayer.Magnitude
 				end
-				-- stuck? hop and look for a new path
-				if (c.hrp.Position - c.lastPos).Magnitude > 1 then
-					c.lastPos, c.lastMove = c.hrp.Position, now
-				elseif now - c.lastMove > 1.2 then
-					c.hum.Jump = true
-					c.nextPath = 0
+				if c.kind == "flying" then
+					-- float towards you from above, then dive
+					local target = root.Position + Vector3.new(0, dist > 14 and 8 or 0, 0)
+					local dir = target - c.hrp.Position
+					local stepLen = math.min(dir.Magnitude, c.speed * dt)
+					local bob = math.sin(now * 3 + i) * 0.04
+					local pos = c.hrp.Position + (dir.Magnitude > 0.01 and dir.Unit * stepLen or Vector3.zero) + Vector3.new(0, bob, 0)
+					c.hrp.CFrame = CFrame.lookAt(pos, Vector3.new(root.Position.X, pos.Y, root.Position.Z))
+					if c.walk then c.walk:AdjustSpeed(0.4) end
 					c.lastMove = now
+				else
+					c.hum.WalkSpeed = c.speed
+					if c.walk then c.walk:AdjustSpeed(c.speed / 14) end
+					local direct = dist < 20 and workspace:Raycast(c.hrp.Position, toPlayer, params) == nil
+					if direct then
+						c.waypoints = nil
+						c.hum:MoveTo(root.Position)
+					else
+						if now > c.nextPath and not c.computing then
+							c.nextPath = now + 0.8 + math.random() * 0.6
+							c.computing = true
+							task.spawn(function()
+								local ok = pcall(function() c.path:ComputeAsync(c.hrp.Position, root.Position) end)
+								if ok and c.path.Status == Enum.PathStatus.Success then
+									c.waypoints = c.path:GetWaypoints()
+									c.wp = 2
+								else
+									c.waypoints = nil
+								end
+								c.computing = false
+							end)
+						end
+						local wps = c.waypoints
+						if wps and wps[c.wp] then
+							local wpt = wps[c.wp]
+							c.hum:MoveTo(wpt.Position)
+							if wpt.Action == Enum.PathWaypointAction.Jump then c.hum.Jump = true end
+							local flat = (wpt.Position - c.hrp.Position) * Vector3.new(1, 0, 1)
+							if flat.Magnitude < 3 then c.wp = c.wp + 1 end
+						else
+							c.hum:MoveTo(root.Position)
+						end
+					end
+					if (c.hrp.Position - c.lastPos).Magnitude > 1 then
+						c.lastPos, c.lastMove = c.hrp.Position, now
+					elseif now - c.lastMove > 1.2 then
+						c.hum.Jump = true
+						c.nextPath = 0
+						c.lastMove = now
+					end
 				end
 				if now > c.nextLaugh and dist < 50 then
 					c.nextLaugh = now + 5 + math.random() * 8
@@ -22605,14 +23177,19 @@ addcmd('clown',{'clowns','circus'},function(args, speaker)
 					local snd = WackyState.sound(id, c.hrp, 0.7, false, 0.8 + math.random() * 0.3)
 					snd.RollOffMaxDistance = 90
 				end
-				if dist < 3.6 then
-					task.spawn(C.caught, speaker, s)
-					return
+				-- hits hurt more every round
+				if dist < (c.kind == "brute" and 4.4 or 3.8) and now > c.nextHit then
+					c.nextHit = now + 0.8
+					hurt(c.damage)
+					if s.hp <= 0 then
+						task.spawn(C.caught, speaker, s)
+						return
+					end
 				end
 			end
 		end
 	end))
-	notify('Clowns', 'Do you hear that music? You have the Clown Buster - one shot each. Survive! (unclown to stop)', 8)
+	notify('Clowns', 'The circus is here. Survive the waves! Hold click to shoot, kill clowns for cash, B opens the shop. (unclown to stop)', 9)
 end)
 
 addcmd('unclown',{'unclowns','nocircus'},function(args, speaker)
@@ -22625,277 +23202,1053 @@ end)
 table.insert(WackyState.undoList, 'unclown')
 -- ================== END CLOWNS ==================
 
--- ==================== STUDY HALL DOOR ====================
--- "door": an old wooden door appears in front of you. Open it (prompt) and you can see straight into a
--- dark, dusty 90s marble study hall; walk through to go there, its own door brings you back. Doors swing
--- shut 5 seconds after you walk through (open them again with the prompt). Client-side only.
+-- ==================== ROOM DOOR ====================
+-- "door": an old wooden door appears in front of you. Open it and you can see straight into your room:
+-- a cozy hangout you decorate yourself. Press Edit (inside) to place furniture, trophies from your
+-- achievements and unlockable items anywhere, move/rotate/delete them, and pick the floor, walls and
+-- lighting. Everything saves (NeverYield_room.json) and comes back in every game. Client-side only.
+do
 NeverYieldDoor = {
-	library = 9125716196, clock = 9116464138, hum = 9125446564, creak = 9120839552, shut = 9114829231,
-	width = 4.4, height = 7.6,
+	creak = 9120839552, shut = 9114829231, clock = 9116464138, fire = 9112780462, rain = 9112856768, place = 9120000696, pick = 9114491814,
+	width = 4.4, height = 7.6, strips = 5,
+}
+NeverYieldRoom = {file = "NeverYield_room.json", W = 44, D = 40, H = 16, maxItems = 160, version = 0}
+
+NeverYieldRoom.mat = function(name)
+	local ok, m = pcall(function() return Enum.Material[name] end)
+	return ok and m or Enum.Material.SmoothPlastic
+end
+
+NeverYieldRoom.rgb = function(t)
+	return Color3.fromRGB(t[1], t[2], t[3])
+end
+
+-- styles (some unlock with achievements)
+NeverYieldRoom.floors = {
+	{id = "oak", name = "Oak Planks", color = {160, 115, 75}, mat = "WoodPlanks"},
+	{id = "walnut", name = "Walnut", color = {95, 62, 40}, mat = "WoodPlanks"},
+	{id = "carpet", name = "Cozy Carpet", color = {150, 62, 66}, mat = "Fabric"},
+	{id = "tile", name = "Checker Tile", color = {230, 230, 225}, checker = {50, 50, 60}, mat = "Marble", unlock = "hello"},
+	{id = "marble", name = "Marble", color = {235, 232, 228}, mat = "Marble", unlock = "diamond1000"},
+	{id = "grass", name = "Indoor Grass", color = {100, 170, 80}, mat = "Grass", unlock = "games25"},
+	{id = "gold", name = "Solid Gold", color = {255, 196, 48}, mat = "Foil", unlock = "midas"},
+	{id = "galaxy", name = "Galaxy", color = {35, 20, 70}, mat = "Glass", unlock = "moon"},
+}
+NeverYieldRoom.walls = {
+	{id = "cream", name = "Cream", color = {240, 228, 200}, mat = "Plaster"},
+	{id = "sage", name = "Sage", color = {170, 190, 160}, mat = "Plaster"},
+	{id = "blush", name = "Blush", color = {240, 195, 195}, mat = "Plaster"},
+	{id = "navy", name = "Navy", color = {45, 55, 90}, mat = "Plaster"},
+	{id = "brick", name = "Brick", color = {150, 80, 60}, mat = "Brick", unlock = "games5"},
+	{id = "wood", name = "Wood Panels", color = {130, 90, 60}, mat = "WoodPlanks", unlock = "cmd100"},
+	{id = "ice", name = "Ice Palace", color = {180, 220, 255}, mat = "Glacier", unlock = "weather25"},
+	{id = "neon", name = "Neon Night", color = {30, 15, 50}, mat = "SmoothPlastic", trim = {255, 60, 200}, unlock = "clownround10"},
+}
+NeverYieldRoom.moods = {
+	{id = "warm", name = "Warm Evening", clock = 18.4, bright = 0.8, ambient = {120, 100, 85}, lamp = {255, 200, 140}, lampBright = 1.4, sky = {{255, 150, 90}, {120, 70, 140}}},
+	{id = "day", name = "Bright Day", clock = 13, bright = 2, ambient = {170, 170, 170}, lamp = {255, 245, 230}, lampBright = 0.8, sky = {{120, 190, 255}, {220, 240, 255}}},
+	{id = "night", name = "Night", clock = 0, bright = 0.2, ambient = {55, 55, 85}, lamp = {255, 190, 120}, lampBright = 1.1, sky = {{15, 20, 45}, {40, 30, 80}}},
+	{id = "party", name = "Party", clock = 0, bright = 0.2, ambient = {70, 50, 90}, lamp = {255, 80, 200}, lampBright = 1.8, sky = {{40, 10, 60}, {10, 30, 80}}, party = true, unlock = "trophy25"},
 }
 
--- the hall; H = middle of the floor. The way in is a door in the south wall (z = -32), the hall runs to +Z
-NeverYieldDoor.build = function(H)
-	local folder = Instance.new("Model")
-	folder.Name = randomString()
-	local P = NeverYieldAgartha.part
-	local M = Enum.Material
-	local function at(x, y, z) return CFrame.new(H + Vector3.new(x, y, z)) end
-	local up = CFrame.Angles(0, 0, math.pi / 2)
-	local rng = Random.new(11)
-	local wood = Color3.fromRGB(72, 46, 30)
-	local woodLight = Color3.fromRGB(110, 75, 48)
-	local plaster = Color3.fromRGB(118, 108, 92)
-	local brass = Color3.fromRGB(190, 150, 70)
+NeverYieldRoom.byId = function(list, id)
+	for _, v in ipairs(list) do
+		if v.id == id then return v end
+	end
+	return list[1]
+end
 
-	-- checkered dark marble floor
-	P(folder, Vector3.new(42, 1, 66), at(0, -0.5, 0), Color3.fromRGB(30, 28, 32), M.Marble)
-	for ix = 0, 4 do
-		for iz = 0, 7 do
-			local dark = (ix + iz) % 2 == 0
-			P(folder, Vector3.new(8, 0.12, 8), at(-16 + ix * 8, 0.06, -28 + iz * 8), dark and Color3.fromRGB(34, 32, 38) or Color3.fromRGB(62, 58, 64), M.Marble)
-		end
-	end
-	-- walls: wood wainscot below, dusty plaster above, crown moulding; the south wall has the doorway
-	local function wall(cf, w, d)
-		P(folder, Vector3.new(w, 18, d), cf * CFrame.new(0, 9, 0), plaster, M.Concrete)
-		P(folder, Vector3.new(w, 6, d + 0.3), cf * CFrame.new(0, 3, 0), wood, M.Wood)
-		P(folder, Vector3.new(w, 0.5, d + 0.5), cf * CFrame.new(0, 6.1, 0), woodLight, M.Wood)
-		P(folder, Vector3.new(w, 0.8, d + 0.6), cf * CFrame.new(0, 17.6, 0), woodLight, M.Wood)
-	end
-	wall(at(-20.5, 0, 0), 1, 66)
-	wall(at(20.5, 0, 0), 1, 66)
-	wall(at(0, 0, 32.5), 42, 1)
-	local dw, dh = NeverYieldDoor.width, NeverYieldDoor.height
-	wall(at(-(dw / 2 + 9.6), 0, -32.5), 19.2, 1)
-	wall(at(dw / 2 + 9.6, 0, -32.5), 19.2, 1)
-	P(folder, Vector3.new(dw, 18 - dh, 1), at(0, dh + (18 - dh) / 2, -32.5), plaster, M.Concrete)
-	-- door frame on the inside
-	for _, side in ipairs({-1, 1}) do
-		P(folder, Vector3.new(0.6, dh + 0.6, 1.4), at(side * (dw / 2 + 0.3), (dh + 0.6) / 2, -32.5), woodLight, M.Wood)
-	end
-	P(folder, Vector3.new(dw + 1.8, 0.7, 1.4), at(0, dh + 0.35, -32.5), woodLight, M.Wood)
-	-- ceiling with beams and flickering fluorescent panels
-	P(folder, Vector3.new(42, 1, 66), at(0, 18.5, 0), Color3.fromRGB(48, 42, 38), M.Wood)
-	for _, z in ipairs({-24, -12, 0, 12, 24}) do
-		P(folder, Vector3.new(41, 1, 1.2), at(0, 17.6, z), wood, M.Wood)
-	end
-	NeverYieldDoor.flicker = {}
-	for _, x in ipairs({-8, 8}) do
-		for _, z in ipairs({-18, -6, 6, 18}) do
-			P(folder, Vector3.new(3.4, 0.25, 8.4), at(x, 17.85, z), Color3.fromRGB(150, 150, 145), M.Metal)
-			local tube = P(folder, Vector3.new(2.6, 0.2, 7.6), at(x, 17.65, z), Color3.fromRGB(225, 238, 215), M.Neon, nil, {Transparency = 0.15})
-			local light = Instance.new("PointLight")
-			light.Color = Color3.fromRGB(215, 230, 205)
-			light.Range = 20
-			light.Brightness = 0.55
-			light.Parent = tube
-			table.insert(NeverYieldDoor.flicker, {tube = tube, light = light})
-		end
-	end
-	-- marble columns
-	for _, x in ipairs({-13, 13}) do
-		for _, z in ipairs({-18, 0, 18}) do
-			P(folder, Vector3.new(16, 2.6, 2.6), at(x, 9, z) * up, Color3.fromRGB(78, 74, 82), M.Marble, "Cylinder")
-			P(folder, Vector3.new(3.6, 1.2, 3.6), at(x, 0.6, z), Color3.fromRGB(60, 56, 64), M.Marble)
-			P(folder, Vector3.new(3.6, 1.2, 3.6), at(x, 17.0, z), Color3.fromRGB(60, 56, 64), M.Marble)
-		end
-	end
-	-- red runner down the middle
-	P(folder, Vector3.new(4, 0.1, 58), at(0, 0.18, 0), Color3.fromRGB(110, 30, 35), M.Fabric)
-	P(folder, Vector3.new(3.2, 0.11, 58), at(0, 0.19, 0), Color3.fromRGB(140, 45, 45), M.Fabric)
+NeverYieldRoom.unlocked = function(entry)
+	return not entry.unlock or (NeverYieldAch and NeverYieldAch.has(entry.unlock))
+end
 
-	-- study tables, green banker's lamps, books, a few beige 90s computers, chairs you can sit on
-	local function chair(cx, cz, yaw)
-		local base = at(cx, 0, cz) * CFrame.Angles(0, yaw, 0)
-		P(folder, Vector3.new(2, 0.3, 2), base * CFrame.new(0, 2.4, 0), woodLight, M.Wood)
-		local cushion = P(folder, Vector3.new(1.7, 0.2, 1.7), base * CFrame.new(0, 2.6, 0), Color3.fromRGB(70, 90, 70), M.Fabric)
-		NeverYieldAgartha.seat(cushion, base * CFrame.new(0, 2.7 + 1.5, -0.1), "Sit")
-		for _, lx in ipairs({-0.8, 0.8}) do
-			for _, lz in ipairs({-0.8, 0.8}) do
-				P(folder, Vector3.new(0.22, 2.3, 0.22), base * CFrame.new(lx, 1.15, lz), wood, M.Wood)
-			end
-			P(folder, Vector3.new(0.24, 3, 0.24), base * CFrame.new(lx, 4, 0.85), wood, M.Wood)
-		end
-		P(folder, Vector3.new(1.6, 1.1, 0.18), base * CFrame.new(0, 4.6, 0.85), woodLight, M.Wood)
-	end
-	local computers = 0
-	for _, tx in ipairs({-6, 6}) do
-		for _, tz in ipairs({-16, -4, 8}) do
-			P(folder, Vector3.new(4, 0.35, 10), at(tx, 3.2, tz), Color3.fromRGB(80, 52, 34), M.Wood)
-			for _, lx in ipairs({-1.7, 1.7}) do
-				for _, lz in ipairs({-4.6, 4.6}) do
-					P(folder, Vector3.new(0.35, 3, 0.35), at(tx + lx, 1.5, tz + lz), wood, M.Wood)
-				end
-			end
-			for _, lz in ipairs({-2.6, 2.6}) do
-				-- banker's lamp
-				P(folder, Vector3.new(0.18, 0.9, 0.9), at(tx, 3.48, tz + lz) * up, brass, M.Foil, "Cylinder")
-				P(folder, Vector3.new(0.12, 1.1, 0.12), at(tx, 4.0, tz + lz), brass, M.Foil)
-				local shade = P(folder, Vector3.new(1.6, 0.5, 0.8), at(tx, 4.6, tz + lz), Color3.fromRGB(30, 110, 60), M.Glass, "Ellipsoid", {Transparency = 0.1})
-				local glow = Instance.new("PointLight")
-				glow.Color = Color3.fromRGB(255, 210, 140)
-				glow.Range = 9
-				glow.Brightness = 1.1
-				glow.Parent = shade
-				P(folder, Vector3.new(1.0, 0.15, 0.4), at(tx, 4.38, tz + lz), Color3.fromRGB(255, 225, 160), M.Neon, "Ellipsoid")
-			end
-			-- books and papers
-			for k = 1, 3 do
-				local bz = tz + rng:NextNumber(-1.5, 1.5)
-				local h = 3.4
-				for b = 1, rng:NextInteger(1, 4) do
-					local th = rng:NextNumber(0.2, 0.45)
-					P(folder, Vector3.new(1.3, th, 1.8), at(tx + rng:NextNumber(-1, 1), h + th / 2, bz) * CFrame.Angles(0, rng:NextNumber(-0.4, 0.4), 0),
-						({Color3.fromRGB(120, 30, 30), Color3.fromRGB(30, 50, 100), Color3.fromRGB(40, 80, 50), Color3.fromRGB(150, 120, 60)})[rng:NextInteger(1, 4)], M.SmoothPlastic)
-					h = h + th
-				end
-			end
-			P(folder, Vector3.new(1.6, 0.05, 2.1), at(tx - 0.8, 3.4, tz + 0.5) * CFrame.Angles(0, 0.3, 0), Color3.fromRGB(235, 228, 205), M.SmoothPlastic)
-			if computers < 3 and rng:NextNumber() < 0.6 then
-				computers = computers + 1
-				local beige = Color3.fromRGB(205, 195, 170)
-				local cz = tz - 0.2
-				P(folder, Vector3.new(2.2, 2, 2.2), at(tx + 0.6, 4.4, cz), beige, M.SmoothPlastic)
-				P(folder, Vector3.new(1.6, 1.3, 0.1), at(tx + 0.6, 4.5, cz - 1.12) * CFrame.Angles(0, 0, 0), Color3.fromRGB(15, 30, 20), M.SmoothPlastic)
-				local screen = P(folder, Vector3.new(1.4, 1.1, 0.05), at(tx + 0.6, 4.5, cz - 1.16), Color3.fromRGB(40, 150, 70), M.Neon, nil, {Transparency = 0.55})
-				local sg = Instance.new("SurfaceGui")
-				sg.Face = Enum.NormalId.Front
-				sg.LightInfluence = 0
-				sg.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-				sg.PixelsPerStud = 60
-				sg.Parent = screen
-				local txt = Instance.new("TextLabel")
-				txt.Size = UDim2.new(1, 0, 1, 0)
-				txt.BackgroundTransparency = 1
-				txt.Font = Enum.Font.Code
-				txt.TextScaled = true
-				txt.TextColor3 = Color3.fromRGB(120, 255, 140)
-				txt.TextXAlignment = Enum.TextXAlignment.Left
-				txt.TextYAlignment = Enum.TextYAlignment.Top
-				txt.Text = "C:\\>dir\nSTUDY.DOC\nNOTES.TXT\nC:\\>_"
-				txt.Parent = sg
-				P(folder, Vector3.new(1.9, 0.12, 0.7), at(tx + 0.6, 3.44, cz - 1.9), beige, M.SmoothPlastic)
-				P(folder, Vector3.new(0.8, 2, 2), at(tx - 1.3, 4.4, cz + 1.5), beige, M.SmoothPlastic)
-			end
-			chair(tx - 3, tz - 2.2, math.rad(90))
-			chair(tx + 3, tz + 2.2, math.rad(-90))
-		end
-	end
+NeverYieldRoom.unlockName = function(entry)
+	local d = NeverYieldAch and NeverYieldAch.byId[entry.unlock]
+	return d and d.name or entry.unlock
+end
 
-	-- tall bookshelves along both long walls
-	local bookColors = {Color3.fromRGB(120, 30, 30), Color3.fromRGB(30, 50, 100), Color3.fromRGB(40, 80, 50), Color3.fromRGB(150, 120, 60),
-		Color3.fromRGB(80, 50, 90), Color3.fromRGB(190, 180, 150), Color3.fromRGB(60, 40, 30)}
-	for _, side in ipairs({-1, 1}) do
-		for _, z in ipairs({-26, -9, 9, 26}) do
-			local sx = side * 19.2
-			P(folder, Vector3.new(1.8, 12, 8), at(sx, 6, z), wood, M.Wood)
-			for shelf = 0, 4 do
-				local sy = 1 + shelf * 2.3
-				P(folder, Vector3.new(1.9, 0.25, 7.8), at(sx - side * 0.1, sy, z), woodLight, M.Wood)
-				local bz = z - 3.7
-				while bz < z + 3.6 do
-					local bw, bh = rng:NextNumber(0.3, 0.6), rng:NextNumber(1.3, 2.0)
-					local lean = rng:NextNumber() < 0.08 and 0.25 or 0
-					P(folder, Vector3.new(1.2, bh, bw), at(sx - side * 0.5, sy + 0.12 + bh / 2, bz + bw / 2) * CFrame.Angles(lean, 0, 0), bookColors[rng:NextInteger(1, #bookColors)], M.SmoothPlastic)
-					bz = bz + bw + 0.05
+-- a seat that keeps working when the furniture is moved (target stored relative to the part)
+NeverYieldRoom.seat = function(part, seatCF, text, sleep)
+	local rel = part.CFrame:ToObjectSpace(seatCF)
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.ActionText = text or "Sit"
+	prompt.ObjectText = ""
+	prompt.HoldDuration = 0
+	prompt.MaxActivationDistance = 9
+	prompt.RequiresLineOfSight = false
+	prompt.KeyboardKeyCode = Enum.KeyCode.E
+	prompt.Parent = part
+	prompt.Triggered:Connect(function()
+		if NeverYieldRoom.editing then return end
+		NeverYieldAgartha.sitDown(part, part.CFrame * rel, sleep)
+	end)
+end
+
+-- ---------- furniture catalog ----------
+-- build(add, model, rng): add(size, offset, color, material, shape, props) places a part relative to the
+-- item's origin (floor level, centre); the front of every item faces -Z.
+local M = Enum.Material
+local function C(r, g, b) return Color3.fromRGB(r, g, b) end
+local up = CFrame.Angles(0, 0, math.pi / 2)
+local function at(x, y, z) return CFrame.new(x, y, z) end
+local function light(part, color, range, brightness)
+	local l = Instance.new("PointLight")
+	l.Color = color
+	l.Range = range
+	l.Brightness = brightness
+	l.Shadows = true
+	l.Parent = part
+	return l
+end
+
+NeverYieldRoom.catalog = {
+	{id = "rug", name = "Round Rug", build = function(add)
+		add(Vector3.new(0.12, 10, 10), at(0, 0.06, 0) * up, C(170, 90, 80), M.Fabric, "Cylinder")
+		add(Vector3.new(0.14, 8, 8), at(0, 0.07, 0) * up, C(225, 190, 150), M.Fabric, "Cylinder")
+		add(Vector3.new(0.16, 5, 5), at(0, 0.08, 0) * up, C(150, 70, 70), M.Fabric, "Cylinder")
+	end},
+	{id = "sofa", name = "Comfy Sofa", build = function(add)
+		local fabric = C(95, 120, 160)
+		local base = add(Vector3.new(7.4, 1.3, 3.2), at(0, 1.05, 0), fabric, M.Fabric)
+		for _, x in ipairs({-1.75, 1.75}) do
+			local cushion = add(Vector3.new(3.3, 0.55, 2.5), at(x, 1.95, -0.25), fabric:Lerp(Color3.new(1, 1, 1), 0.08), M.Fabric)
+			NeverYieldRoom.seat(cushion, at(x, 2.25 + 1.5, -0.2), "Sit")
+			add(Vector3.new(3.2, 1.9, 0.6), at(x, 2.9, 1.2) * CFrame.Angles(math.rad(-10), 0, 0), fabric:Lerp(Color3.new(1, 1, 1), 0.05), M.Fabric)
+		end
+		add(Vector3.new(7.4, 2.4, 0.7), at(0, 2.3, 1.3), fabric, M.Fabric)
+		for _, x in ipairs({-3.35, 3.35}) do
+			add(Vector3.new(0.9, 1.9, 3.2), at(x, 1.65, 0), fabric, M.Fabric)
+			add(Vector3.new(0.3, 0.4, 0.3), at(x, 0.2, -1.3), C(70, 45, 30), M.Wood)
+			add(Vector3.new(0.3, 0.4, 0.3), at(x, 0.2, 1.3), C(70, 45, 30), M.Wood)
+		end
+		add(Vector3.new(1.2, 1.2, 0.4), at(-2.6, 2.6, 0.7) * CFrame.Angles(math.rad(-15), 0, math.rad(15)), C(255, 200, 120), M.Fabric)
+	end},
+	{id = "armchair", name = "Armchair", build = function(add)
+		local fabric = C(160, 90, 70)
+		add(Vector3.new(3.4, 1.3, 3.2), at(0, 1.05, 0), fabric, M.Fabric)
+		local cushion = add(Vector3.new(2.4, 0.55, 2.5), at(0, 1.95, -0.25), fabric:Lerp(Color3.new(1, 1, 1), 0.1), M.Fabric)
+		NeverYieldRoom.seat(cushion, at(0, 2.25 + 1.5, -0.2), "Sit")
+		add(Vector3.new(3.4, 2.6, 0.7), at(0, 2.4, 1.3), fabric, M.Fabric)
+		for _, x in ipairs({-1.45, 1.45}) do
+			add(Vector3.new(0.6, 1.9, 3.2), at(x, 1.65, 0), fabric, M.Fabric)
+		end
+	end},
+	{id = "beanbag", name = "Bean Bag", unlock = "hatch1", build = function(add)
+		local bag = add(Vector3.new(3.4, 2.2, 3.4), at(0, 1.05, 0), C(255, 140, 60), M.Fabric, "Ellipsoid")
+		add(Vector3.new(2.6, 1.6, 1.2), at(0, 1.9, 1.1), C(255, 140, 60), M.Fabric, "Ellipsoid")
+		NeverYieldRoom.seat(bag, at(0, 1.7 + 1.5, -0.3), "Flop down")
+	end},
+	{id = "coffeetable", name = "Coffee Table", build = function(add)
+		add(Vector3.new(4.6, 0.3, 2.6), at(0, 1.55, 0), C(120, 80, 50), M.Wood)
+		add(Vector3.new(4.2, 0.2, 2.2), at(0, 0.5, 0), C(105, 70, 45), M.Wood)
+		for _, x in ipairs({-2, 2}) do
+			for _, z in ipairs({-1, 1}) do
+				add(Vector3.new(0.3, 1.4, 0.3), at(x, 0.7, z), C(90, 60, 40), M.Wood)
+			end
+		end
+		add(Vector3.new(0.35, 0.5, 0.5), at(1.2, 1.95, 0.2) * up, C(240, 240, 235), M.SmoothPlastic, "Cylinder")
+		add(Vector3.new(1.2, 0.15, 0.9), at(-1, 1.78, -0.2) * CFrame.Angles(0, 0.3, 0), C(200, 60, 60), M.SmoothPlastic)
+	end},
+	{id = "sidetable", name = "Side Table", build = function(add)
+		add(Vector3.new(0.25, 1.9, 1.9), at(0, 2.2, 0) * up, C(120, 80, 50), M.Wood, "Cylinder")
+		add(Vector3.new(2.1, 0.3, 0.3), at(0, 1.05, 0) * up, C(90, 60, 40), M.Wood, "Cylinder")
+		add(Vector3.new(0.2, 1.2, 1.2), at(0, 0.1, 0) * up, C(90, 60, 40), M.Wood, "Cylinder")
+		local bulb = add(Vector3.new(0.6, 0.6, 0.6), at(0, 2.9, 0), C(255, 230, 170), M.Neon, "Ball")
+		add(Vector3.new(1.0, 0.7, 1.0), at(0, 3.2, 0), C(240, 225, 200), M.Fabric, "Ellipsoid", {Transparency = 0.15})
+		light(bulb, C(255, 200, 140), 12, 0.8)
+	end},
+	{id = "floorlamp", name = "Floor Lamp", build = function(add)
+		add(Vector3.new(0.25, 1.6, 1.6), at(0, 0.12, 0) * up, C(40, 35, 35), M.Metal, "Cylinder")
+		add(Vector3.new(5.6, 0.2, 0.2), at(0, 2.9, 0) * up, C(40, 35, 35), M.Metal, "Cylinder")
+		local bulb = add(Vector3.new(0.7, 0.7, 0.7), at(0, 5.6, 0), C(255, 220, 160), M.Neon, "Ball")
+		add(Vector3.new(1.4, 1.5, 1.4), at(0, 6.1, 0), C(240, 220, 190), M.Fabric, "Cylinder", {CFrame = at(0, 6.1, 0) * up, Size = Vector3.new(1.4, 1.9, 1.9), Transparency = 0.1})
+		light(bulb, C(255, 200, 140), 18, 1.2)
+	end},
+	{id = "plant", name = "Potted Plant", build = function(add, model, rng)
+		add(Vector3.new(1.6, 1.8, 1.6), at(0, 0.9, 0), C(190, 100, 70), M.Slate)
+		add(Vector3.new(1.4, 0.2, 1.4), at(0, 1.8, 0), C(80, 55, 35), M.Ground)
+		for i = 1, 7 do
+			local a = i / 7 * math.pi * 2
+			add(Vector3.new(0.7, 2.8, 0.25), at(math.cos(a) * 0.35, 3.1, math.sin(a) * 0.35) * CFrame.Angles(math.sin(a) * 0.45, 0, math.cos(a) * 0.45),
+				C(60, 140, 60):Lerp(C(110, 180, 80), rng:NextNumber()), M.SmoothPlastic, "Ellipsoid")
+		end
+	end},
+	{id = "bookshelf", name = "Bookshelf", build = function(add, model, rng)
+		local wood = C(100, 65, 40)
+		add(Vector3.new(5.2, 7.5, 0.25), at(0, 3.75, 0.6), wood, M.Wood)
+		for _, x in ipairs({-2.5, 2.5}) do add(Vector3.new(0.25, 7.5, 1.5), at(x, 3.75, 0), wood, M.Wood) end
+		for i = 0, 4 do
+			add(Vector3.new(5.2, 0.25, 1.5), at(0, 0.12 + i * 1.8, 0), wood, M.Wood)
+			if i < 4 then
+				local x = -2.2
+				while x < 2.1 do
+					local w = rng:NextNumber(0.25, 0.45)
+					local h = rng:NextNumber(1.0, 1.5)
+					add(Vector3.new(w, h, 1.1), at(x + w / 2, 0.25 + i * 1.8 + h / 2, -0.05),
+						C(rng:NextInteger(60, 220), rng:NextInteger(40, 150), rng:NextInteger(40, 150)), M.SmoothPlastic)
+					x = x + w + 0.03
 				end
 			end
 		end
-	end
-
-	-- north wall: chalkboard, teacher's desk with a globe and an apple, a big clock
-	P(folder, Vector3.new(16, 7, 0.4), at(0, 9.5, 31.8), wood, M.Wood)
-	P(folder, Vector3.new(15, 6, 0.45), at(0, 9.5, 31.75), Color3.fromRGB(32, 58, 44), M.Slate)
-	for i = 1, 6 do
-		P(folder, Vector3.new(rng:NextNumber(3, 9), 0.12, 0.47), at(rng:NextNumber(-3, 3), 8 + i * 0.6, 31.7) * CFrame.Angles(0, 0, rng:NextNumber(-0.05, 0.05)), Color3.fromRGB(220, 220, 210), M.SmoothPlastic, nil, {Transparency = 0.25})
-	end
-	P(folder, Vector3.new(15, 0.3, 0.8), at(0, 6.4, 31.4), woodLight, M.Wood)
-	P(folder, Vector3.new(8, 3.2, 3.6), at(0, 1.6, 26), Color3.fromRGB(85, 55, 35), M.Wood)
-	P(folder, Vector3.new(8.4, 0.3, 4), at(0, 3.35, 26), woodLight, M.Wood)
-	P(folder, Vector3.new(0.3, 0.9, 0.9), at(2.5, 3.6, 26) * up, brass, M.Foil, "Cylinder")
-	P(folder, Vector3.new(1.4, 1.4, 1.4), at(2.5, 4.9, 26), Color3.fromRGB(60, 110, 170), M.SmoothPlastic, "Ball")
-	P(folder, Vector3.new(0.5, 0.4, 0.4), at(2.35, 5.2, 25.4), Color3.fromRGB(80, 150, 70), M.SmoothPlastic, "Ellipsoid")
-	P(folder, Vector3.new(0.6, 0.6, 0.6), at(-2.5, 3.8, 26), Color3.fromRGB(190, 30, 35), M.SmoothPlastic, "Ball")
-	local clock = P(folder, Vector3.new(0.4, 3, 3), at(0, 14.5, 31.9) * CFrame.Angles(0, math.rad(90), 0), Color3.fromRGB(240, 235, 220), M.SmoothPlastic, "Cylinder")
-	P(folder, Vector3.new(0.35, 3.4, 3.4), at(0, 14.5, 31.95) * CFrame.Angles(0, math.rad(90), 0), Color3.fromRGB(30, 25, 25), M.Metal, "Cylinder")
-	P(folder, Vector3.new(0.12, 1.0, 0.1), at(0, 14.9, 31.65) * CFrame.Angles(0, 0, math.rad(-30)), Color3.fromRGB(20, 20, 20), M.SmoothPlastic)
-	P(folder, Vector3.new(0.1, 1.3, 0.1), at(0.35, 14.3, 31.62) * CFrame.Angles(0, 0, math.rad(110)), Color3.fromRGB(20, 20, 20), M.SmoothPlastic)
-	NeverYieldDoor.clockPart = clock
-
-	-- tall windows with blinds on the west wall, an orange street light glowing outside, radiators below
-	for _, z in ipairs({-14, 14}) do
-		P(folder, Vector3.new(0.3, 9, 5), at(-20.1, 10.5, z), Color3.fromRGB(255, 170, 90), M.Neon, nil, {Transparency = 0.55})
-		for i = 0, 17 do
-			P(folder, Vector3.new(0.12, 0.3, 5), at(-19.7, 6.4 + i * 0.5, z) * CFrame.Angles(0, 0, math.rad(25)), Color3.fromRGB(215, 205, 180), M.SmoothPlastic)
+	end},
+	{id = "bed", name = "Cozy Bed", build = function(add)
+		local wood = C(110, 75, 50)
+		add(Vector3.new(5.4, 1.2, 8.2), at(0, 0.8, 0), wood, M.Wood)
+		local mattress = add(Vector3.new(5, 0.9, 7.8), at(0, 1.8, 0), C(245, 245, 240), M.Fabric)
+		add(Vector3.new(5.1, 0.35, 5.2), at(0, 2.35, -1.3), C(110, 140, 200), M.Fabric)
+		add(Vector3.new(3.6, 0.7, 1.4), at(0, 2.5, 3.0), C(255, 255, 255), M.Fabric, "Ellipsoid")
+		add(Vector3.new(5.6, 3.6, 0.5), at(0, 2.2, 4.1), wood, M.Wood)
+		NeverYieldRoom.seat(mattress, at(0, 2.9, 1.5) * CFrame.Angles(math.rad(90), 0, 0), "Sleep", true)
+	end},
+	{id = "pedestal", name = "Trophy Pedestal", build = function(add)
+		add(Vector3.new(2.4, 0.4, 2.4), at(0, 0.2, 0), C(230, 228, 225), M.Marble)
+		add(Vector3.new(1.8, 2.4, 1.8), at(0, 1.6, 0), C(240, 238, 235), M.Marble)
+		add(Vector3.new(2.4, 0.3, 2.4), at(0, 2.95, 0), C(230, 228, 225), M.Marble)
+		add(Vector3.new(2.45, 0.08, 2.45), at(0, 2.82, 0), C(255, 200, 70), M.Foil)
+	end},
+	{id = "trophyshelf", name = "Trophy Shelf", build = function(add)
+		local wood = C(70, 45, 30)
+		add(Vector3.new(9, 7.6, 0.25), at(0, 3.8, 0.9), wood, M.Wood)
+		for _, x in ipairs({-4.4, 4.4}) do add(Vector3.new(0.25, 7.6, 2), at(x, 3.8, 0), wood, M.Wood) end
+		for i = 0, 3 do
+			add(Vector3.new(9, 0.2, 2), at(0, 0.1 + i * 2.5, 0), i == 0 and wood or C(200, 230, 255), i == 0 and M.Wood or M.Glass, nil, {Transparency = i == 0 and 0 or 0.4})
 		end
-		P(folder, Vector3.new(0.6, 9.4, 0.5), at(-19.8, 10.5, z - 2.7), woodLight, M.Wood)
-		P(folder, Vector3.new(0.6, 9.4, 0.5), at(-19.8, 10.5, z + 2.7), woodLight, M.Wood)
-		P(folder, Vector3.new(0.8, 0.5, 5.9), at(-19.7, 5.9, z), woodLight, M.Wood)
-		local beam = P(folder, Vector3.new(14, 0.2, 4.6), at(-13.5, 6.5, z) * CFrame.Angles(0, 0, math.rad(-35)), Color3.fromRGB(255, 200, 140), M.Neon, nil, {Transparency = 0.93, CanCollide = false})
-		for i = 0, 6 do
-			P(folder, Vector3.new(0.6, 2.2, 0.3), at(-19.4, 1.6, z - 2.4 + i * 0.8), Color3.fromRGB(150, 145, 140), M.Metal)
+		for i = 0, 2 do
+			local glow = add(Vector3.new(8.6, 0.08, 0.1), at(0, 2.4 + i * 2.5, 0.7), C(255, 220, 160), M.Neon)
+			light(glow, C(255, 220, 160), 5, 0.5)
 		end
-	end
-	-- filing cabinets, a plant, 90s posters
-	for i = 0, 1 do
-		local fx = 16.5 - i * 2.4
-		P(folder, Vector3.new(2.2, 5.2, 2.4), at(fx, 2.6, 30.4), Color3.fromRGB(120, 125, 125), M.Metal)
-		for d = 0, 3 do
-			P(folder, Vector3.new(1.9, 1.05, 0.08), at(fx, 0.9 + d * 1.25, 29.18), Color3.fromRGB(140, 145, 145), M.Metal)
-			P(folder, Vector3.new(0.6, 0.15, 0.12), at(fx, 1.1 + d * 1.25, 29.12), Color3.fromRGB(70, 70, 70), M.Metal)
-		end
-	end
-	P(folder, Vector3.new(1.6, 1.8, 1.6), at(-17.5, 0.9, 29.5), Color3.fromRGB(150, 80, 50), M.Slate)
-	for i = 1, 5 do
-		local a = i / 5 * math.pi * 2
-		P(folder, Vector3.new(0.8, 2.6, 0.4), at(-17.5 + math.cos(a) * 0.3, 2.9, 29.5 + math.sin(a) * 0.3) * CFrame.Angles(math.sin(a) * 0.4, 0, math.cos(a) * 0.4), Color3.fromRGB(60, 120, 60), M.SmoothPlastic, "Ellipsoid")
-	end
-	local function poster(cf, bg, text, fg)
-		local p = P(folder, Vector3.new(3.4, 4.6, 0.1), cf, bg, M.SmoothPlastic)
-		local sg = Instance.new("SurfaceGui")
-		sg.Face = Enum.NormalId.Front
-		sg.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-		sg.PixelsPerStud = 40
-		sg.Parent = p
+	end},
+	{id = "tv", name = "TV Stand", unlock = "cmd100", build = function(add)
+		add(Vector3.new(6.4, 2, 1.8), at(0, 1, 0), C(60, 45, 35), M.Wood)
+		add(Vector3.new(6.6, 3.8, 0.35), at(0, 4.1, 0.3), C(20, 20, 24), M.SmoothPlastic)
+		local screen = add(Vector3.new(6.2, 3.4, 0.1), at(0, 4.1, 0.1), C(40, 90, 170), M.Neon)
+		local gui = Instance.new("SurfaceGui")
+		gui.Face = Enum.NormalId.Front
+		gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		gui.PixelsPerStud = 30
+		gui.Parent = screen
 		local t = Instance.new("TextLabel")
 		t.Size = UDim2.new(1, 0, 1, 0)
 		t.BackgroundTransparency = 1
-		t.Font = Enum.Font.Arcade
+		t.Font = Enum.Font.FredokaOne
 		t.TextScaled = true
-		t.TextColor3 = fg
-		t.Text = text
-		t.Parent = sg
-	end
-	poster(at(20.0, 10, -20) * CFrame.Angles(0, math.rad(-90), 0), Color3.fromRGB(240, 60, 140), "READ!", Color3.fromRGB(255, 240, 60))
-	poster(at(20.0, 10, 4) * CFrame.Angles(0, math.rad(-90), 0), Color3.fromRGB(40, 200, 200), "STAY\nIN\nSCHOOL", Color3.fromRGB(60, 20, 90))
-	poster(at(-20.0, 10.5, 0) * CFrame.Angles(0, math.rad(90), 0), Color3.fromRGB(250, 230, 120), "CLASS\nOF\n'97", Color3.fromRGB(200, 40, 60))
-
-	-- dust drifting through the light
-	local dustPart = P(folder, Vector3.new(38, 14, 60), at(0, 9, 0), Color3.new(1, 1, 1), M.SmoothPlastic, nil, {Transparency = 1, CanCollide = false})
-	local dust = Instance.new("ParticleEmitter")
-	dust.Texture = "rbxasset://textures/particles/sparkles_main.dds"
-	dust.Rate = 28
-	dust.Speed = NumberRange.new(0.1, 0.4)
-	dust.SpreadAngle = Vector2.new(180, 180)
-	dust.Lifetime = NumberRange.new(8, 12)
-	dust.Size = NumberSequence.new(0.08)
-	dust.LightEmission = 0.4
-	dust.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.3, 0.4), NumberSequenceKeypoint.new(1, 1)})
-	dust.Color = ColorSequence.new(Color3.fromRGB(230, 220, 200))
-	dust.Acceleration = Vector3.new(0.05, -0.02, 0.03)
-	pcall(function()
-		dust.Shape = Enum.ParticleEmitterShape.Box
-		dust.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
-	end)
-	dust.Parent = dustPart
-	return folder
+		t.TextColor3 = Color3.new(1, 1, 1)
+		t.Text = "NEVERYIELD"
+		t.Parent = gui
+		add(Vector3.new(1.4, 0.2, 0.5), at(1.8, 2.1, -0.2), C(30, 30, 35), M.SmoothPlastic)
+	end},
+	{id = "gamingdesk", name = "Gaming Setup", unlock = "cmd1000", build = function(add)
+		add(Vector3.new(6.4, 0.3, 2.8), at(0, 2.9, 0.4), C(30, 30, 35), M.SmoothPlastic)
+		for _, x in ipairs({-3, 3}) do add(Vector3.new(0.3, 2.8, 2.6), at(x, 1.4, 0.4), C(30, 30, 35), M.Metal) end
+		local strip = add(Vector3.new(6.4, 0.06, 0.06), at(0, 2.78, -1.0), C(255, 60, 200), M.Neon)
+		light(strip, C(255, 60, 200), 8, 0.8)
+		for i, x in ipairs({-1.5, 1.5}) do
+			add(Vector3.new(2.8, 1.7, 0.15), at(x, 4.2, 1.2) * CFrame.Angles(0, (i == 1) and 0.2 or -0.2, 0), C(15, 15, 18), M.SmoothPlastic)
+			add(Vector3.new(2.6, 1.5, 0.05), at(x, 4.2, 1.1) * CFrame.Angles(0, (i == 1) and 0.2 or -0.2, 0), (i == 1) and C(60, 200, 120) or C(80, 140, 255), M.Neon)
+		end
+		add(Vector3.new(1.0, 2.4, 2.2), at(2.6, 4.25, 0.6), C(20, 20, 25), M.SmoothPlastic)
+		add(Vector3.new(0.05, 2.0, 1.8), at(2.08, 4.25, 0.6), C(120, 255, 220), M.Neon)
+		add(Vector3.new(2.4, 0.12, 0.8), at(-0.4, 3.1, -0.4), C(25, 25, 30), M.SmoothPlastic)
+		add(Vector3.new(2.3, 0.04, 0.7), at(-0.4, 3.17, -0.4), C(150, 60, 255), M.Neon)
+		-- gaming chair
+		local seat = add(Vector3.new(2.2, 0.5, 2.2), at(0, 1.9, -2.4), C(30, 30, 35), M.Fabric)
+		add(Vector3.new(2.2, 3.2, 0.5), at(0, 3.6, -3.4) * CFrame.Angles(math.rad(-8), 0, 0), C(30, 30, 35), M.Fabric)
+		add(Vector3.new(0.6, 2.6, 0.55), at(0, 3.6, -3.38) * CFrame.Angles(math.rad(-8), 0, 0), C(255, 60, 90), M.Fabric)
+		add(Vector3.new(1.6, 0.3, 0.3), at(0, 0.3, -2.4) * up, C(40, 40, 45), M.Metal, "Cylinder")
+		add(Vector3.new(0.3, 2.2, 2.2), at(0, 0.15, -2.4) * up, C(40, 40, 45), M.Metal, "Cylinder")
+		NeverYieldRoom.seat(seat, at(0, 2.15 + 1.5, -2.4) * CFrame.Angles(0, math.pi, 0), "Game")
+	end},
+	{id = "fireplace", name = "Fireplace", unlock = "play10", build = function(add)
+		local brick = C(150, 80, 60)
+		add(Vector3.new(7.4, 6.4, 2.2), at(0, 3.2, 0.4), brick, M.Brick)
+		add(Vector3.new(4.2, 3.2, 1.6), at(0, 1.9, -0.25), C(20, 15, 15), M.Slate)
+		add(Vector3.new(8.2, 0.5, 2.8), at(0, 6.6, 0.2), C(110, 75, 50), M.Wood)
+		add(Vector3.new(6.2, 0.3, 1.6), at(0, 0.15, -1.2), C(90, 85, 80), M.Slate)
+		for i = -1, 1 do
+			add(Vector3.new(2.6, 0.45, 0.45), at(i * 0.5, 0.6, -0.4) * CFrame.Angles(0, i * 0.5, 0), C(80, 50, 30), M.Wood, "Cylinder")
+		end
+		local flame = add(Vector3.new(1.6, 1, 0.8), at(0, 1.2, -0.4), C(255, 140, 40), M.Neon, nil, {Transparency = 1, CanCollide = false})
+		local fire = Instance.new("Fire")
+		fire.Size = 4
+		fire.Heat = 6
+		fire.Color = C(255, 140, 40)
+		fire.SecondaryColor = C(255, 60, 20)
+		fire.Parent = flame
+		light(flame, C(255, 140, 60), 22, 1.6)
+		local snd = Instance.new("Sound")
+		snd.SoundId = "rbxassetid://" .. NeverYieldDoor.fire
+		snd.Looped = true
+		snd.Volume = 0.5
+		snd.RollOffMaxDistance = 45
+		snd.Parent = flame
+		snd:Play()
+	end},
+	{id = "stringlights", name = "String Lights", unlock = "met100", build = function(add)
+		local colors = {C(255, 80, 80), C(255, 210, 80), C(80, 220, 120), C(80, 160, 255), C(220, 100, 255)}
+		for i = 0, 15 do
+			local x = -7.5 + i
+			local sag = -math.sin(i / 15 * math.pi) * 0.9
+			add(Vector3.new(1.05, 0.05, 0.05), at(x + 0.5, 11.2 + sag, 0), C(30, 30, 30), M.SmoothPlastic, nil, {CanCollide = false})
+			local bulb = add(Vector3.new(0.3, 0.42, 0.3), at(x, 10.95 + sag, 0), colors[i % #colors + 1], M.Neon, "Ellipsoid", {CanCollide = false})
+			if i % 4 == 0 then light(bulb, colors[i % #colors + 1], 6, 0.6) end
+		end
+	end},
+	{id = "aquarium", name = "Aquarium", unlock = "breed1", build = function(add, model, rng)
+		add(Vector3.new(5, 2.4, 2), at(0, 1.2, 0), C(40, 40, 45), M.Wood)
+		add(Vector3.new(4.8, 3, 1.8), at(0, 3.9, 0), C(70, 160, 220), M.Glass, nil, {Transparency = 0.55})
+		add(Vector3.new(4.6, 0.4, 1.6), at(0, 2.6, 0), C(220, 200, 150), M.Sand)
+		for i = 1, 5 do
+			add(Vector3.new(0.5, 0.3, 0.12), at(rng:NextNumber(-2, 2), rng:NextNumber(3.2, 4.8), rng:NextNumber(-0.5, 0.5)),
+				({C(255, 140, 40), C(255, 220, 60), C(80, 200, 255), C(255, 90, 160)})[i % 4 + 1], M.Neon, "Ellipsoid", {CanCollide = false})
+		end
+		for i = 1, 3 do
+			add(Vector3.new(0.2, rng:NextNumber(1, 2), 0.2), at(-1.8 + i * 0.9, 3.4, 0.3), C(60, 160, 70), M.SmoothPlastic, nil, {CanCollide = false})
+		end
+		local top = add(Vector3.new(5, 0.2, 2), at(0, 5.5, 0), C(30, 30, 35), M.SmoothPlastic)
+		light(top, C(120, 200, 255), 8, 0.7)
+	end},
+	{id = "arcade", name = "Arcade Cabinet", unlock = "diamond100", build = function(add)
+		add(Vector3.new(2.8, 6.2, 2.6), at(0, 3.1, 0.2), C(40, 20, 70), M.SmoothPlastic)
+		add(Vector3.new(2.4, 1.9, 0.1), at(0, 4.4, -1.08) * CFrame.Angles(math.rad(-12), 0, 0), C(80, 220, 255), M.Neon)
+		add(Vector3.new(2.6, 0.7, 0.2), at(0, 5.8, -1.05), C(255, 80, 200), M.Neon)
+		add(Vector3.new(2.6, 0.2, 1.0), at(0, 3.2, -1.4), C(30, 15, 50), M.SmoothPlastic)
+		for i, col in ipairs({C(255, 60, 60), C(60, 160, 255), C(255, 220, 60)}) do
+			add(Vector3.new(0.22, 0.1, 0.22), at(-0.2 + i * 0.35, 3.33, -1.4), col, M.Neon, "Ball")
+		end
+		add(Vector3.new(0.12, 0.5, 0.12), at(-0.8, 3.5, -1.4), C(20, 20, 20), M.SmoothPlastic)
+		add(Vector3.new(0.3, 0.3, 0.3), at(-0.8, 3.8, -1.4), C(255, 50, 50), M.SmoothPlastic, "Ball")
+	end},
+	{id = "jukebox", name = "Jukebox", unlock = "games25", build = function(add)
+		local body = add(Vector3.new(3.2, 4.4, 2), at(0, 2.2, 0), C(120, 40, 40), M.Wood)
+		add(Vector3.new(2, 3.2, 3.2), at(0, 4.4, 0) * CFrame.Angles(0, math.pi / 2, 0) * up * CFrame.Angles(0, 0, 0), C(120, 40, 40), M.Wood, "Cylinder",
+			{CFrame = at(0, 4.4, 0) * CFrame.Angles(0, math.pi / 2, 0), Size = Vector3.new(2, 3.2, 3.2)})
+		add(Vector3.new(2.6, 0.12, 0.1), at(0, 3.6, -1.02), C(255, 200, 80), M.Neon)
+		add(Vector3.new(0.12, 3.4, 0.1), at(-1.4, 2.2, -1.02), C(255, 90, 200), M.Neon)
+		add(Vector3.new(0.12, 3.4, 0.1), at(1.4, 2.2, -1.02), C(90, 200, 255), M.Neon)
+		add(Vector3.new(2.2, 1.2, 0.1), at(0, 2.6, -1.02), C(255, 230, 170), M.Glass, nil, {Transparency = 0.3})
+		local prompt = Instance.new("ProximityPrompt")
+		prompt.ActionText = "Play music"
+		prompt.ObjectText = "Jukebox"
+		prompt.HoldDuration = 0
+		prompt.MaxActivationDistance = 9
+		prompt.RequiresLineOfSight = false
+		prompt.Parent = body
+		local track = 0
+		local snd = Instance.new("Sound")
+		snd.Looped = true
+		snd.Volume = 0.45
+		snd.RollOffMaxDistance = 60
+		snd.Parent = body
+		prompt.Triggered:Connect(function()
+			local list = NeverYieldAgartha.music
+			track = track + 1
+			if track > #list then
+				track = 0
+				snd:Stop()
+				prompt.ActionText = "Play music"
+				return
+			end
+			snd.SoundId = "rbxassetid://" .. list[track]
+			snd:Play()
+			prompt.ActionText = track < #list and "Next song" or "Stop music"
+		end)
+	end},
+	{id = "neonsign", name = "Neon Sign", unlock = "trophy10", build = function(add)
+		local board = add(Vector3.new(9, 2.4, 0.2), at(0, 9.5, 0.3), C(20, 15, 30), M.SmoothPlastic)
+		local gui = Instance.new("SurfaceGui")
+		gui.Face = Enum.NormalId.Front
+		gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		gui.PixelsPerStud = 40
+		gui.LightInfluence = 0
+		gui.Parent = board
+		local t = Instance.new("TextLabel")
+		t.Size = UDim2.new(1, 0, 1, 0)
+		t.BackgroundTransparency = 1
+		t.Font = Enum.Font.FredokaOne
+		t.TextScaled = true
+		t.TextColor3 = C(255, 90, 210)
+		t.TextStrokeColor3 = C(255, 200, 255)
+		t.TextStrokeTransparency = 0.3
+		t.Text = Players.LocalPlayer.DisplayName .. "'s Room"
+		t.Parent = gui
+		light(board, C(255, 90, 210), 10, 1)
+	end},
+	{id = "petbed", name = "Pet Bed", unlock = "species10", build = function(add)
+		add(Vector3.new(0.8, 3.4, 3.4), at(0, 0.4, 0) * up, C(200, 120, 160), M.Fabric, "Cylinder")
+		add(Vector3.new(0.5, 2.6, 2.6), at(0, 0.75, 0) * up, C(255, 230, 240), M.Fabric, "Cylinder")
+		add(Vector3.new(0.6, 0.6, 0.6), at(0.6, 1.2, 0.3), C(255, 220, 60), M.SmoothPlastic, "Ball")
+	end},
+	{id = "lavalamp", name = "Lava Lamp", unlock = "effect1", build = function(add, model, rng)
+		add(Vector3.new(0.9, 1, 0.9), at(0, 0.5, 0), C(60, 60, 70), M.Metal)
+		local glass = add(Vector3.new(0.8, 2.6, 0.8), at(0, 2.3, 0), C(255, 120, 60), M.Glass, nil, {Transparency = 0.5})
+		for i = 1, 4 do
+			add(Vector3.new(0.35, 0.45, 0.35), at(rng:NextNumber(-0.15, 0.15), 1.4 + i * 0.45, 0), C(255, 60, 140), M.Neon, "Ellipsoid", {CanCollide = false})
+		end
+		add(Vector3.new(0.6, 0.4, 0.6), at(0, 3.8, 0), C(60, 60, 70), M.Metal)
+		light(glass, C(255, 90, 140), 10, 0.9)
+	end},
+	{id = "moonlamp", name = "Moon Lamp", unlock = "moon", build = function(add)
+		add(Vector3.new(0.3, 1.4, 1.4), at(0, 0.15, 0) * up, C(40, 35, 35), M.Metal, "Cylinder")
+		local moon = add(Vector3.new(2.4, 2.4, 2.4), at(0, 1.6, 0), C(200, 185, 160), M.Slate, "Ball")
+		for _, x in ipairs({-0.45, 0.45}) do
+			add(Vector3.new(0.4, 0.5, 0.1), at(x, 1.85, -1.1), C(255, 220, 90), M.Neon, "Ellipsoid", {CanCollide = false})
+		end
+		light(moon, C(255, 210, 150), 12, 0.9)
+	end},
+	{id = "portalart", name = "Portal Painting", unlock = "portal", build = function(add)
+		add(Vector3.new(5.4, 4.4, 0.3), at(0, 7, 0.4), C(130, 90, 50), M.Wood)
+		add(Vector3.new(4.8, 3.8, 0.1), at(0, 7, 0.2), C(30, 40, 70), M.SmoothPlastic)
+		add(Vector3.new(0.12, 3, 3), at(0, 7, 0.12) * CFrame.Angles(0, math.pi / 2, 0), C(255, 150, 50), M.Neon, "Cylinder")
+		add(Vector3.new(0.14, 2.4, 2.4), at(0, 7, 0.1) * CFrame.Angles(0, math.pi / 2, 0), C(120, 200, 140), M.SmoothPlastic, "Cylinder")
+		add(Vector3.new(0.16, 1.2, 0.8), at(0, 6.8, 0.08) * CFrame.Angles(0, math.pi / 2, 0), C(240, 228, 196), M.SmoothPlastic)
+	end},
+	{id = "clownstatue", name = "Clown Statue", unlock = "clown100", build = function(add, model)
+		add(Vector3.new(2.6, 0.6, 2.6), at(0, 0.3, 0), C(60, 20, 30), M.Marble)
+		local ok, clown = pcall(NeverYieldClowns.make, at(0, 3.6, 0))
+		if ok and clown then
+			for _, d in ipairs(clown:GetDescendants()) do
+				if d:IsA("Humanoid") or d:IsA("JointInstance") then
+					d:Destroy()
+				elseif d:IsA("BasePart") then
+					d.Anchored = true
+					d.CanCollide = false
+				end
+			end
+			for _, p in ipairs(clown:GetChildren()) do p.Parent = model end
+			clown:Destroy()
+		end
+	end},
+	{id = "goldstatue", name = "Golden Statue", unlock = "midas", build = function(add)
+		local gold = C(255, 196, 48)
+		add(Vector3.new(2.6, 1.2, 2.6), at(0, 0.6, 0), C(25, 22, 26), M.Marble)
+		add(Vector3.new(2, 2, 1), at(0, 3.2, 0), gold, M.Foil)
+		add(Vector3.new(1.25, 1.25, 1.25), at(0, 4.85, 0), gold, M.Foil, "Ball")
+		for _, x in ipairs({-0.5, 0.5}) do add(Vector3.new(1, 2, 1), at(x, 1.2 + 1, 0), gold, M.Foil) end
+		add(Vector3.new(1, 2, 1), at(-1.5, 3.2, 0), gold, M.Foil)
+		add(Vector3.new(1, 2, 1), at(1.6, 4.1, 0) * CFrame.Angles(0, 0, math.rad(150)), gold, M.Foil)
+	end},
+	{id = "discoball", name = "Disco Ball", unlock = "trophy25", build = function(add)
+		add(Vector3.new(0.06, 2.6, 0.06), at(0, 14.7, 0), C(200, 200, 200), M.Metal, nil, {CanCollide = false})
+		local ball = add(Vector3.new(2, 2, 2), at(0, 12.4, 0), C(230, 230, 240), M.Foil, "Ball", {Reflectance = 0.6, CanCollide = false})
+		local sparkle = Instance.new("ParticleEmitter")
+		sparkle.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+		sparkle.Rate = 10
+		sparkle.Lifetime = NumberRange.new(0.4, 0.8)
+		sparkle.Speed = NumberRange.new(4, 8)
+		sparkle.SpreadAngle = Vector2.new(180, 180)
+		sparkle.LightEmission = 1
+		sparkle.Size = NumberSequence.new(0.2, 0)
+		sparkle.Parent = ball
+		light(ball, C(255, 120, 255), 24, 1)
+	end},
+	{id = "throne", name = "Champion Throne", unlock = "trophy50", build = function(add)
+		local gold, red = C(255, 196, 48), C(160, 20, 40)
+		add(Vector3.new(4, 0.6, 4), at(0, 0.3, 0), gold, M.Foil)
+		local seat = add(Vector3.new(3, 0.6, 3), at(0, 2.2, 0), red, M.Fabric)
+		add(Vector3.new(3.2, 1.6, 3.2), at(0, 1.2, 0), gold, M.Foil)
+		add(Vector3.new(3.4, 6, 0.6), at(0, 4.6, 1.5), gold, M.Foil)
+		add(Vector3.new(2.6, 5, 0.3), at(0, 4.6, 1.15), red, M.Fabric)
+		for _, x in ipairs({-1.75, 1.75}) do add(Vector3.new(0.5, 1.4, 3), at(x, 3.1, 0), gold, M.Foil) end
+		for i = -1, 1 do add(Vector3.new(0.5, 0.9, 0.5), at(i * 1.1, 8, 1.5), gold, M.Foil, "Wedge") end
+		NeverYieldRoom.seat(seat, at(0, 2.5 + 1.5, 0), "Sit on the throne")
+	end},
+}
+NeverYieldRoom.itemById = {}
+for _, item in ipairs(NeverYieldRoom.catalog) do
+	NeverYieldRoom.itemById[item.id] = item
 end
 
+NeverYieldRoom.isTrophy = function(id)
+	return id:sub(1, 7) == "trophy:"
+end
+
+NeverYieldRoom.itemName = function(id)
+	if NeverYieldRoom.isTrophy(id) then
+		local d = NeverYieldAch and NeverYieldAch.byId[id:sub(8)]
+		return d and (d.name .. " trophy") or "Trophy"
+	end
+	local item = NeverYieldRoom.itemById[id]
+	return item and item.name or id
+end
+
+-- build any item (or trophy) with its origin on cf
+NeverYieldRoom.build = function(id, cf)
+	local model
+	if NeverYieldRoom.isTrophy(id) then
+		local d = NeverYieldAch and NeverYieldAch.byId[id:sub(8)]
+		if not d then return nil end
+		model = NeverYieldAch.trophy(d)
+	else
+		local item = NeverYieldRoom.itemById[id]
+		if not item then return nil end
+		model = Instance.new("Model")
+		model.Name = randomString()
+		local function add(size, offset, color, material, shape, props)
+			return NeverYieldAgartha.part(model, size, offset, color, material, shape, props)
+		end
+		local seed = 0
+		for i = 1, #id do seed = seed + id:byte(i) * i end
+		local ok, err = pcall(item.build, add, model, Random.new(seed))
+		if not ok then warn("[NeverYield room] " .. id .. ": " .. tostring(err)) end
+		model.WorldPivot = CFrame.new()
+	end
+	model:PivotTo(cf)
+	return model
+end
+
+-- ---------- save ----------
+NeverYieldRoom.defaultItems = {
+	{id = "rug", x = 0, y = 0, z = 3, r = 0}, {id = "coffeetable", x = 0, y = 0, z = 3, r = 0}, {id = "sofa", x = 0, y = 0, z = 9, r = 0},
+	{id = "armchair", x = -7, y = 0, z = 3, r = -90}, {id = "armchair", x = 7, y = 0, z = 3, r = 90}, {id = "floorlamp", x = -5, y = 0, z = 10.5, r = 0},
+	{id = "sidetable", x = 5, y = 0, z = 10, r = 0}, {id = "bookshelf", x = -14, y = 0, z = 18.9, r = 0}, {id = "trophyshelf", x = 11, y = 0, z = 18.9, r = 0},
+	{id = "plant", x = 19.5, y = 0, z = 17.5, r = 0}, {id = "plant", x = -19.5, y = 0, z = 17.5, r = 0}, {id = "bed", x = 16.5, y = 0, z = -10, r = 90},
+	{id = "pedestal", x = -12, y = 0, z = -12, r = 0},
+}
+
+NeverYieldRoom.load = function()
+	local data
+	pcall(function()
+		if isfile and isfile(NeverYieldRoom.file) then
+			local ok, decoded = pcall(function() return HttpService:JSONDecode(readfile(NeverYieldRoom.file)) end)
+			if ok and type(decoded) == "table" then data = decoded end
+		end
+	end)
+	if not data then
+		data = {version = 1, floor = "oak", wall = "cream", mood = "warm", items = {}}
+		for _, it in ipairs(NeverYieldRoom.defaultItems) do
+			table.insert(data.items, {id = it.id, x = it.x, y = it.y, z = it.z, r = it.r})
+		end
+	end
+	if type(data.items) ~= "table" then data.items = {} end
+	for _, key in ipairs({"floor", "wall", "mood"}) do
+		if type(data[key]) ~= "string" then data[key] = ({floor = "oak", wall = "cream", mood = "warm"})[key] end
+	end
+	NeverYieldRoom.data = data
+	return data
+end
+
+NeverYieldRoom.save = function()
+	local data = NeverYieldRoom.data
+	if not data then return end
+	local ok, encoded = pcall(function() return HttpService:JSONEncode(data) end)
+	if ok and encoded then pcall(writefile, NeverYieldRoom.file, encoded) end
+	NeverYieldRoom.version = NeverYieldRoom.version + 1
+	if NeverYieldAch and NeverYieldAch.flag then NeverYieldAch.flag("roomItems", #data.items) end
+end
+
+-- ---------- the room ----------
+NeverYieldRoom.buildShell = function(s)
+	local R = NeverYieldRoom
+	local data = R.data
+	local O = s.origin
+	if s.shell then s.shell:Destroy() end
+	local shell = Instance.new("Model")
+	shell.Name = randomString()
+	local P = NeverYieldAgartha.part
+	local function A(x, y, z) return CFrame.new(O + Vector3.new(x, y, z)) end
+	local floor = R.byId(R.floors, data.floor)
+	local wall = R.byId(R.walls, data.wall)
+	local W, D, Hh = R.W, R.D, R.H
+	local hw, hd = W / 2, D / 2
+	-- floor
+	P(shell, Vector3.new(W + 2, 1, D + 2), A(0, -0.5, 0), R.rgb(floor.color), R.mat(floor.mat))
+	if floor.checker then
+		for ix = 0, W / 4 - 1 do
+			for iz = 0, D / 4 - 1 do
+				if (ix + iz) % 2 == 0 then
+					P(shell, Vector3.new(4, 0.04, 4), A(-hw + 2 + ix * 4, 0.02, -hd + 2 + iz * 4), R.rgb(floor.checker), R.mat(floor.mat))
+				end
+			end
+		end
+	end
+	-- walls with window holes (east/west) and the doorway (south)
+	local wc, wm = R.rgb(wall.color), R.mat(wall.mat)
+	local function wallPiece(size, cf) return P(shell, size, cf, wc, wm) end
+	for _, side in ipairs({-1, 1}) do
+		local x = side * (hw + 0.5)
+		wallPiece(Vector3.new(1, 4, D), A(x, 2, 0))
+		wallPiece(Vector3.new(1, Hh - 11, D), A(x, 11 + (Hh - 11) / 2, 0))
+		for _, seg in ipairs({{-hd, -11}, {-5, 5}, {11, hd}}) do
+			wallPiece(Vector3.new(1, 7, seg[2] - seg[1]), A(x, 7.5, (seg[1] + seg[2]) / 2))
+		end
+		for _, wz in ipairs({-8, 8}) do
+			P(shell, Vector3.new(0.2, 7, 6), A(x, 7.5, wz), C(200, 225, 255), M.Glass, nil, {Transparency = 0.7})
+			P(shell, Vector3.new(0.5, 0.4, 6.6), A(x - side * 0.3, 3.9, wz), C(240, 235, 225), M.Wood)
+			P(shell, Vector3.new(0.4, 0.4, 6.6), A(x - side * 0.3, 11.1, wz), C(240, 235, 225), M.Wood)
+			P(shell, Vector3.new(0.3, 7, 0.3), A(x - side * 0.3, 7.5, wz), C(240, 235, 225), M.Wood)
+			for _, cz in ipairs({-3.6, 3.6}) do
+				P(shell, Vector3.new(0.3, 8.2, 1.4), A(x - side * 0.8, 7.6, wz + cz), C(200, 110, 90), M.Fabric)
+			end
+			P(shell, Vector3.new(0.2, 0.2, 9), A(x - side * 0.8, 11.8, wz), C(80, 60, 40), M.Wood, "Cylinder", {CFrame = A(x - side * 0.8, 11.8, wz) * CFrame.Angles(0, math.pi / 2, 0)})
+		end
+	end
+	wallPiece(Vector3.new(W + 2, Hh, 1), A(0, Hh / 2, hd + 0.5))
+	local dw = NeverYieldDoor.width / 2 + 0.6
+	wallPiece(Vector3.new(hw - dw + 1, Hh, 1), A(-(dw + (hw - dw + 1) / 2), Hh / 2, -hd - 0.5))
+	wallPiece(Vector3.new(hw - dw + 1, Hh, 1), A(dw + (hw - dw + 1) / 2, Hh / 2, -hd - 0.5))
+	wallPiece(Vector3.new(dw * 2, Hh - 8.2, 1), A(0, 8.2 + (Hh - 8.2) / 2, -hd - 0.5))
+	-- baseboards, crown moulding, ceiling and beams
+	local trim = wall.trim and R.rgb(wall.trim) or C(245, 240, 230)
+	local trimMat = wall.trim and M.Neon or M.Wood
+	for _, b in ipairs({{Vector3.new(W, 0.6, 0.3), A(0, 0.3, hd - 0.15)}, {Vector3.new(0.3, 0.6, D), A(-hw + 0.15, 0.3, 0)}, {Vector3.new(0.3, 0.6, D), A(hw - 0.15, 0.3, 0)},
+		{Vector3.new(W, 0.5, 0.4), A(0, Hh - 0.25, hd - 0.2)}, {Vector3.new(0.4, 0.5, D), A(-hw + 0.2, Hh - 0.25, 0)}, {Vector3.new(0.4, 0.5, D), A(hw - 0.2, Hh - 0.25, 0)}}) do
+		P(shell, b[1], b[2], trim, trimMat)
+	end
+	P(shell, Vector3.new(W + 2, 1, D + 2), A(0, Hh + 0.5, 0), C(235, 228, 215), R.mat("Plaster"))
+	for i = -2, 2 do
+		P(shell, Vector3.new(W, 0.9, 1), A(0, Hh - 0.45, i * 8), C(120, 85, 55), M.Wood)
+	end
+	-- pendant lights
+	s.lamps = {}
+	for _, px in ipairs({-10, 10}) do
+		for _, pz in ipairs({-8, 8}) do
+			P(shell, Vector3.new(0.08, 2, 0.08), A(px, Hh - 1, pz), C(30, 30, 30), M.Metal, nil, {CanCollide = false})
+			P(shell, Vector3.new(1.8, 1, 1.8), A(px, Hh - 2.4, pz), C(40, 35, 30), M.Metal, "Ellipsoid", {CanCollide = false})
+			local bulb = P(shell, Vector3.new(0.7, 0.7, 0.7), A(px, Hh - 2.85, pz), C(255, 220, 160), M.Neon, "Ball", {CanCollide = false})
+			local l = light(bulb, C(255, 200, 140), 26, 1)
+			table.insert(s.lamps, {bulb = bulb, light = l})
+		end
+	end
+	-- the view out of the windows: a sky and soft hills
+	s.sky = {}
+	for _, side in ipairs({-1, 1}) do
+		for i = 0, 3 do
+			local band = P(shell, Vector3.new(0.5, 6, 60), A(side * (hw + 18), 2 + i * 6, 0), C(255, 150, 90), M.Neon, nil, {CanCollide = false, CastShadow = false})
+			table.insert(s.sky, {part = band, t = i / 3})
+		end
+		for i = 1, 4 do
+			P(shell, Vector3.new(14, 10, 24), A(side * (hw + 14), -2, -24 + i * 12), C(70, 120, 70), M.Grass, "Ellipsoid", {CanCollide = false})
+		end
+	end
+	shell.Parent = s.model
+	s.shell = shell
+	R.applyMood(s)
+end
+
+NeverYieldRoom.applyMood = function(s)
+	local R = NeverYieldRoom
+	local mood = R.byId(R.moods, R.data.mood)
+	for _, lamp in ipairs(s.lamps or {}) do
+		lamp.light.Color = R.rgb(mood.lamp)
+		lamp.light.Brightness = mood.lampBright
+		lamp.bulb.Color = R.rgb(mood.lamp):Lerp(Color3.new(1, 1, 1), 0.4)
+	end
+	for _, band in ipairs(s.sky or {}) do
+		band.part.Color = R.rgb(mood.sky[1]):Lerp(R.rgb(mood.sky[2]), band.t)
+	end
+	if s.inside then
+		Lighting.ClockTime, Lighting.Brightness = mood.clock, mood.bright
+		Lighting.Ambient, Lighting.OutdoorAmbient = R.rgb(mood.ambient), R.rgb(mood.ambient)
+	end
+end
+
+NeverYieldRoom.placeAll = function(s)
+	local R = NeverYieldRoom
+	if s.items then s.items:Destroy() end
+	local folder = Instance.new("Model")
+	folder.Name = randomString()
+	folder.Parent = s.model
+	s.items = folder
+	s.placed = {}
+	for _, entry in ipairs(R.data.items) do
+		R.spawnItem(s, entry)
+	end
+end
+
+NeverYieldRoom.entryCF = function(s, entry)
+	return CFrame.new(s.origin + Vector3.new(entry.x, entry.y, entry.z)) * CFrame.Angles(0, math.rad(entry.r or 0), 0)
+end
+
+NeverYieldRoom.spawnItem = function(s, entry)
+	local model = NeverYieldRoom.build(entry.id, NeverYieldRoom.entryCF(s, entry))
+	if not model then return end
+	model.Parent = s.items
+	table.insert(s.placed, {entry = entry, model = model})
+	return model
+end
+
+-- ---------- editor ----------
+NeverYieldRoom.hud = function(s)
+	local R = NeverYieldRoom
+	local P = NeverYieldPets
+	if s.hud then s.hud:Destroy() end
+	local screen = Instance.new("ScreenGui")
+	screen.Name = randomString()
+	screen.ResetOnSpawn = false
+	screen.IgnoreGuiInset = true
+	screen.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	screen.DisplayOrder = 2147483640
+	if not pcall(function() screen.Parent = gethui and gethui() or COREGUI end) then
+		screen.Parent = Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")
+	end
+	s.hud = screen
+	local bar = Instance.new("Frame")
+	bar.AnchorPoint = Vector2.new(0.5, 1)
+	bar.Position = UDim2.new(0.5, 0, 1, -16)
+	bar.Size = UDim2.new(0, 330, 0, 46)
+	bar.BackgroundTransparency = 1
+	bar.Parent = screen
+	s.editButton = P.button(bar, "\u{1F6E0}\u{FE0F} Edit Room", UDim2.new(0, 0, 0, 0), UDim2.new(0, 160, 0, 44), Color3.fromRGB(255, 150, 70), function()
+		if R.editing then R.stopEdit(s) else R.startEdit(s) end
+	end)
+	s.editButton.TextSize = 16
+	P.button(bar, "\u{1F3C6} Achievements", UDim2.new(0, 170, 0, 0), UDim2.new(0, 160, 0, 44), Color3.fromRGB(80, 70, 150), function()
+		NeverYieldAch.open()
+	end).TextSize = 16
+end
+
+NeverYieldRoom.startEdit = function(s)
+	local R = NeverYieldRoom
+	local P = NeverYieldPets
+	R.editing = true
+	s.editButton.Text = "\u{2705} Done"
+	s.tab = s.tab or "furniture"
+	local panel = Instance.new("Frame")
+	panel.Position = UDim2.new(0, 16, 0.5, -230)
+	panel.Size = UDim2.new(0, 300, 0, 460)
+	panel.BackgroundColor3 = Color3.fromRGB(26, 20, 40)
+	panel.BorderSizePixel = 0
+	panel.Active = true
+	panel.ZIndex = 20
+	NeverYieldPortal.corner(panel, UDim.new(0, 14))
+	local _, g = NeverYieldPortal.stroke(panel, 2, 0)
+	g.Color = ColorSequence.new(Color3.fromRGB(255, 170, 90), Color3.fromRGB(255, 120, 200))
+	panel.Parent = s.hud
+	s.panel = panel
+	P.label(panel, {Position = UDim2.new(0, 14, 0, 6), Size = UDim2.new(1, -28, 0, 30), Font = Enum.Font.FredokaOne, TextSize = 22,
+		TextXAlignment = Enum.TextXAlignment.Left, Text = "\u{1F6CB}\u{FE0F} DECORATE"})
+	s.hint = P.label(panel, {Position = UDim2.new(0, 14, 1, -58), Size = UDim2.new(1, -28, 0, 52), TextSize = 11, TextWrapped = true,
+		TextColor3 = Color3.fromRGB(210, 200, 240), Text = ""})
+	local tabs = {{"furniture", "Furniture"}, {"trophies", "Trophies"}, {"style", "Style"}}
+	s.tabButtons = {}
+	for i, info in ipairs(tabs) do
+		s.tabButtons[info[1]] = P.button(panel, info[2], UDim2.new(0, 10 + (i - 1) * 94, 0, 40), UDim2.new(0, 88, 0, 26), nil, function()
+			s.tab = info[1]
+			R.refreshPanel(s)
+		end)
+	end
+	local list = Instance.new("ScrollingFrame")
+	list.Position = UDim2.new(0, 10, 0, 74)
+	list.Size = UDim2.new(1, -20, 1, -138)
+	list.BackgroundTransparency = 1
+	list.BorderSizePixel = 0
+	list.ScrollBarThickness = 6
+	list.ZIndex = 21
+	list.Parent = panel
+	s.list = list
+	-- selected-item actions
+	local actions = Instance.new("Frame")
+	actions.AnchorPoint = Vector2.new(0.5, 1)
+	actions.Position = UDim2.new(0.5, 0, 1, -72)
+	actions.Size = UDim2.new(0, 420, 0, 40)
+	actions.BackgroundTransparency = 1
+	actions.Visible = false
+	actions.Parent = s.hud
+	s.actions = actions
+	for i, info in ipairs({{"Move (M)", Color3.fromRGB(70, 130, 200), function() R.moveSelected(s) end},
+		{"Rotate (R)", Color3.fromRGB(120, 90, 200), function() R.rotateSelected(s) end},
+		{"Delete (X)", Color3.fromRGB(190, 60, 70), function() R.deleteSelected(s) end},
+		{"Deselect", Color3.fromRGB(70, 60, 90), function() R.select(s, nil) end}}) do
+		P.button(actions, info[1], UDim2.new(0, (i - 1) * 106, 0, 0), UDim2.new(0, 100, 0, 38), info[2], info[3])
+	end
+	R.refreshPanel(s)
+	R.setHint(s)
+
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Include
+	local function aim()
+		local cam = workspace.CurrentCamera
+		local m = UserInputService:GetMouseLocation()
+		local ray = cam:ViewportPointToRay(m.X, m.Y)
+		params.FilterDescendantsInstances = {s.shell, s.items}
+		return workspace:Raycast(ray.Origin, ray.Direction * 300, params)
+	end
+	s.aim = aim
+	WackyState.connect("roomEditMove", RunService.RenderStepped:Connect(function()
+		local pl = s.placing
+		if not pl then return end
+		local hit = aim()
+		if not hit then return end
+		local rel = hit.Position - s.origin
+		local x, y, z = rel.X, rel.Y, rel.Z
+		local rot = pl.rot
+		if hit.Normal.Y < 0.5 and not NeverYieldRoom.isTrophy(pl.id) then
+			-- on a wall: stand at its foot, facing out of the wall
+			x, z = x + hit.Normal.X * 0.9, z + hit.Normal.Z * 0.9
+			y = 0
+			rot = math.deg(math.atan2(-hit.Normal.X, -hit.Normal.Z)) + 180
+		elseif hit.Normal.Y < 0.5 then
+			y = math.max(0, y - 1)
+		end
+		x = math.clamp(math.floor(x * 2 + 0.5) / 2, -R.W / 2 + 0.5, R.W / 2 - 0.5)
+		z = math.clamp(math.floor(z * 2 + 0.5) / 2, -R.D / 2 + 0.5, R.D / 2 - 0.5)
+		y = math.clamp(y, 0, R.H - 1)
+		pl.x, pl.y, pl.z, pl.r = x, y, z, rot
+		pl.ghost:PivotTo(CFrame.new(s.origin + Vector3.new(x, y, z)) * CFrame.Angles(0, math.rad(rot), 0))
+	end))
+	WackyState.connect("roomEditInput", UserInputService.InputBegan:Connect(function(input, processed)
+		if processed then return end
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			if s.placing then
+				R.confirmPlace(s)
+			else
+				local hit = aim()
+				local found
+				if hit then
+					for _, rec in ipairs(s.placed) do
+						if hit.Instance:IsDescendantOf(rec.model) then found = rec break end
+					end
+				end
+				R.select(s, found)
+			end
+		elseif input.KeyCode == Enum.KeyCode.R then
+			if s.placing then
+				s.placing.rot = (s.placing.rot + 45) % 360
+			elseif s.selected then
+				R.rotateSelected(s)
+			end
+		elseif input.KeyCode == Enum.KeyCode.Q or input.UserInputType == Enum.UserInputType.MouseButton2 then
+			R.cancelPlace(s)
+		elseif input.KeyCode == Enum.KeyCode.X or input.KeyCode == Enum.KeyCode.Delete then
+			R.deleteSelected(s)
+		elseif input.KeyCode == Enum.KeyCode.M then
+			R.moveSelected(s)
+		end
+	end))
+end
+
+NeverYieldRoom.setHint = function(s)
+	if not s.hint then return end
+	if s.placing then
+		s.hint.Text = "Placing " .. NeverYieldRoom.itemName(s.placing.id) .. ": click to place, R rotates, Q or right click cancels. Things snap to walls and sit on tables."
+	elseif s.selected then
+		s.hint.Text = "Selected " .. NeverYieldRoom.itemName(s.selected.entry.id) .. ": M moves it, R rotates, X deletes."
+	else
+		s.hint.Text = "Pick something from the list to place it, or click anything in your room to move, rotate or delete it. (" .. #NeverYieldRoom.data.items .. "/" .. NeverYieldRoom.maxItems .. " items)"
+	end
+end
+
+NeverYieldRoom.stopEdit = function(s)
+	local R = NeverYieldRoom
+	R.cancelPlace(s)
+	R.select(s, nil)
+	R.editing = false
+	WackyState.disconnect("roomEditMove")
+	WackyState.disconnect("roomEditInput")
+	if s.panel then s.panel:Destroy() s.panel = nil end
+	if s.actions then s.actions:Destroy() s.actions = nil end
+	s.hint = nil
+	if s.editButton then s.editButton.Text = "\u{1F6E0}\u{FE0F} Edit Room" end
+	R.save()
+end
+
+NeverYieldRoom.refreshPanel = function(s)
+	local R = NeverYieldRoom
+	local P = NeverYieldPets
+	if not s.list then return end
+	for id, b in pairs(s.tabButtons) do
+		b.BackgroundColor3 = id == s.tab and Color3.fromRGB(255, 150, 70) or Color3.fromRGB(60, 50, 110)
+	end
+	for _, c in ipairs(s.list:GetChildren()) do c:Destroy() end
+	local y = 0
+	local function row(title, sub, color, onClick, locked)
+		local b = P.button(s.list, "", UDim2.new(0, 0, 0, y), UDim2.new(1, -10, 0, 44), color, onClick)
+		P.label(b, {Position = UDim2.new(0, 10, 0, 3), Size = UDim2.new(1, -20, 0, 20), TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left,
+			Text = title, ZIndex = 24, TextColor3 = locked and Color3.fromRGB(160, 150, 180) or Color3.new(1, 1, 1)})
+		P.label(b, {Position = UDim2.new(0, 10, 0, 23), Size = UDim2.new(1, -20, 0, 16), TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left,
+			Text = sub, ZIndex = 24, TextColor3 = Color3.fromRGB(210, 200, 240)})
+		y = y + 50
+		return b
+	end
+	if s.tab == "furniture" then
+		for _, item in ipairs(R.catalog) do
+			local open = R.unlocked(item)
+			row((open and "" or "\u{1F512} ") .. item.name, open and "click to place" or ("unlock: " .. R.unlockName(item)),
+				open and Color3.fromRGB(60, 50, 110) or Color3.fromRGB(40, 34, 60), function()
+					if not open then
+						notify('Room', 'Unlock the "' .. R.unlockName(item) .. '" achievement to get the ' .. item.name .. '.')
+						return
+					end
+					R.startPlace(s, item.id, 0)
+				end, not open)
+		end
+	elseif s.tab == "trophies" then
+		local placed = {}
+		for _, entry in ipairs(R.data.items) do placed[entry.id] = true end
+		local any = false
+		for _, d in ipairs(NeverYieldAch.defs) do
+			if NeverYieldAch.has(d.id) then
+				any = true
+				local id = "trophy:" .. d.id
+				local tier = NeverYieldAch.tiers[d.tier]
+				row("\u{1F3C6} " .. d.name, tier.name .. (placed[id] and "  -  in your room" or "  -  click to place"),
+					placed[id] and Color3.fromRGB(40, 34, 60) or Color3.fromRGB(60, 50, 110), function()
+						if placed[id] then
+							notify('Room', 'That trophy is already in your room. Click it to move it.')
+							return
+						end
+						R.startPlace(s, id, 0)
+					end)
+			end
+		end
+		if not any then
+			P.label(s.list, {Size = UDim2.new(1, -10, 0, 60), TextWrapped = true, TextSize = 13, Text = "No trophies yet! Unlock achievements (Settings > Achievements) to get trophies to show off here."})
+			y = 60
+		end
+	else
+		local function group(title, list, key, apply)
+			P.label(s.list, {Position = UDim2.new(0, 0, 0, y), Size = UDim2.new(1, -10, 0, 20), TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, Text = title})
+			y = y + 24
+			for _, entry in ipairs(list) do
+				local open = R.unlocked(entry)
+				local current = R.data[key] == entry.id
+				row((open and "" or "\u{1F512} ") .. entry.name .. (current and "  \u{2714}" or ""), open and (current and "in use" or "click to use") or ("unlock: " .. R.unlockName(entry)),
+					current and Color3.fromRGB(255, 150, 70) or (open and Color3.fromRGB(60, 50, 110) or Color3.fromRGB(40, 34, 60)), function()
+						if not open then
+							notify('Room', 'Unlock the "' .. R.unlockName(entry) .. '" achievement first.')
+							return
+						end
+						R.data[key] = entry.id
+						apply()
+						R.save()
+						R.refreshPanel(s)
+					end, not open)
+			end
+			y = y + 6
+		end
+		group("FLOOR", R.floors, "floor", function() R.buildShell(s) end)
+		group("WALLS", R.walls, "wall", function() R.buildShell(s) end)
+		group("LIGHTING", R.moods, "mood", function() R.applyMood(s) end)
+	end
+	s.list.CanvasSize = UDim2.new(0, 0, 0, y)
+end
+
+NeverYieldRoom.ghostOf = function(model)
+	for _, d in ipairs(model:GetDescendants()) do
+		if d:IsA("BasePart") then
+			if d.Transparency < 1 then d.Transparency = 0.45 + d.Transparency * 0.5 end
+			d.CanCollide, d.CanQuery, d.CanTouch, d.CastShadow = false, false, false, false
+		elseif d:IsA("ProximityPrompt") or d:IsA("Light") or d:IsA("Sound") or d:IsA("ParticleEmitter") or d:IsA("Fire") then
+			d:Destroy()
+		end
+	end
+	local hl = Instance.new("Highlight")
+	hl.FillColor = Color3.fromRGB(120, 255, 160)
+	hl.FillTransparency = 0.75
+	hl.OutlineColor = Color3.fromRGB(120, 255, 160)
+	hl.Parent = model
+end
+
+NeverYieldRoom.startPlace = function(s, id, rot, moving)
+	local R = NeverYieldRoom
+	R.cancelPlace(s)
+	R.select(s, nil)
+	if not moving and #R.data.items >= R.maxItems then
+		notify('Room', 'Your room is full (' .. R.maxItems .. ' things). Delete something first.')
+		return
+	end
+	local ghost = R.build(id, CFrame.new(s.origin))
+	if not ghost then return end
+	R.ghostOf(ghost)
+	ghost.Parent = workspace
+	s.placing = {id = id, rot = rot or 0, ghost = ghost, moving = moving, x = 0, y = 0, z = 0, r = rot or 0}
+	R.setHint(s)
+end
+
+NeverYieldRoom.cancelPlace = function(s)
+	local pl = s.placing
+	if not pl then return end
+	s.placing = nil
+	pcall(function() pl.ghost:Destroy() end)
+	-- a moved item that was not put down goes back where it was
+	if pl.moving then
+		table.insert(NeverYieldRoom.data.items, pl.moving)
+		NeverYieldRoom.spawnItem(s, pl.moving)
+	end
+	NeverYieldRoom.setHint(s)
+end
+
+NeverYieldRoom.confirmPlace = function(s)
+	local R = NeverYieldRoom
+	local pl = s.placing
+	if not pl then return end
+	local entry = {id = pl.id, x = pl.x, y = pl.y, z = pl.z, r = pl.r}
+	pl.moving = nil
+	s.placing = nil
+	pcall(function() pl.ghost:Destroy() end)
+	table.insert(R.data.items, entry)
+	local model = R.spawnItem(s, entry)
+	if model then WackyState.sound(NeverYieldDoor.place, model:FindFirstChildWhichIsA("BasePart"), 0.7, false, 0.9 + math.random() * 0.2) end
+	R.save()
+	R.setHint(s)
+	if R.isTrophy(pl.id) then R.refreshPanel(s) end
+	-- keep placing the same furniture (not trophies), so rows of chairs are quick
+	if not R.isTrophy(pl.id) then R.startPlace(s, pl.id, pl.rot) end
+end
+
+NeverYieldRoom.select = function(s, rec)
+	if s.selected and s.selected.highlight then pcall(function() s.selected.highlight:Destroy() end) end
+	s.selected = rec
+	if rec then
+		local hl = Instance.new("Highlight")
+		hl.FillColor = Color3.fromRGB(255, 200, 90)
+		hl.FillTransparency = 0.8
+		hl.OutlineColor = Color3.fromRGB(255, 220, 120)
+		hl.Parent = rec.model
+		rec.highlight = hl
+	end
+	if s.actions then s.actions.Visible = rec ~= nil end
+	NeverYieldRoom.setHint(s)
+end
+
+NeverYieldRoom.removeRecord = function(s, rec)
+	local R = NeverYieldRoom
+	for i, e in ipairs(R.data.items) do
+		if e == rec.entry then table.remove(R.data.items, i) break end
+	end
+	for i, r in ipairs(s.placed) do
+		if r == rec then table.remove(s.placed, i) break end
+	end
+	pcall(function() rec.model:Destroy() end)
+end
+
+NeverYieldRoom.deleteSelected = function(s)
+	local rec = s.selected
+	if not rec then return end
+	NeverYieldRoom.select(s, nil)
+	NeverYieldRoom.removeRecord(s, rec)
+	WackyState.sound(NeverYieldDoor.pick, nil, 0.6, false, 0.8)
+	NeverYieldRoom.save()
+	NeverYieldRoom.refreshPanel(s)
+	NeverYieldRoom.setHint(s)
+end
+
+NeverYieldRoom.rotateSelected = function(s)
+	local rec = s.selected
+	if not rec then return end
+	rec.entry.r = ((rec.entry.r or 0) + 45) % 360
+	rec.model:PivotTo(NeverYieldRoom.entryCF(s, rec.entry))
+	NeverYieldRoom.save()
+end
+
+NeverYieldRoom.moveSelected = function(s)
+	local rec = s.selected
+	if not rec then return end
+	NeverYieldRoom.select(s, nil)
+	NeverYieldRoom.removeRecord(s, rec)
+	WackyState.sound(NeverYieldDoor.pick, nil, 0.6, false, 1.1)
+	NeverYieldRoom.startPlace(s, rec.entry.id, rec.entry.r or 0, rec.entry)
+end
+
+NeverYieldRoom.onUnlock = function()
+	local s = NeverYieldDoor.state
+	if s and NeverYieldRoom.editing then pcall(NeverYieldRoom.refreshPanel, s) end
+end
+
+-- ---------- the door ----------
 -- an old wooden door with a frame; its front (-Z) faces whoever spawned it, it swings open away from you
 NeverYieldDoor.makeDoor = function(cf, withFrame)
 	local P = NeverYieldAgartha.part
-	local M = Enum.Material
 	local door = {cf = cf, angle = 0, target = 0, parts = {}}
 	local folder = Instance.new("Model")
 	folder.Name = randomString()
@@ -22945,7 +24298,7 @@ NeverYieldDoor.pose = function(door)
 	end
 end
 
--- see-through window shaped like the doorway: three horizontal strips inside the projected opening
+-- see-through window shaped like the doorway: horizontal strips fitted to the projected opening
 NeverYieldDoor.makeWindow = function(model, color)
 	local screen = Instance.new("ScreenGui")
 	screen.Name = randomString()
@@ -22957,7 +24310,7 @@ NeverYieldDoor.makeWindow = function(model, color)
 		screen.Parent = Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")
 	end
 	local win = {screen = screen, clips = {}}
-	for i = 1, 3 do
+	for i = 1, NeverYieldDoor.strips do
 		local clip = Instance.new("Frame")
 		clip.BackgroundTransparency = 1
 		clip.BorderSizePixel = 0
@@ -22966,7 +24319,7 @@ NeverYieldDoor.makeWindow = function(model, color)
 		local vp = Instance.new("ViewportFrame")
 		vp.BackgroundColor3 = color
 		vp.BackgroundTransparency = 0
-		vp.Ambient = Color3.fromRGB(150, 140, 130)
+		vp.Ambient = Color3.fromRGB(170, 155, 140)
 		vp.LightColor = Color3.fromRGB(255, 225, 190)
 		vp.LightDirection = Vector3.new(-0.3, -1, 0.3)
 		vp.Parent = clip
@@ -23015,8 +24368,9 @@ NeverYieldDoor.updateWindow = function(win, door, other, frontSign, char)
 	local tl, tr, bl, br = corners[1], corners[2], corners[3], corners[4]
 	local size = cam.ViewportSize
 	local virtual = other.cf:ToWorldSpace(door.cf:ToObjectSpace(cam.CFrame))
+	local n = #win.clips
 	for i, clip in ipairs(win.clips) do
-		local f0, f1 = (i - 1) / 3, i / 3
+		local f0, f1 = (i - 1) / n, i / n
 		local leftTop, leftBottom = tl:Lerp(bl, f0), tl:Lerp(bl, f1)
 		local rightTop, rightBottom = tr:Lerp(br, f0), tr:Lerp(br, f1)
 		local x0 = math.max(leftTop.X, leftBottom.X)
@@ -23024,9 +24378,9 @@ NeverYieldDoor.updateWindow = function(win, door, other, frontSign, char)
 		local y0 = math.min(leftTop.Y, rightTop.Y)
 		local y1 = math.max(leftBottom.Y, rightBottom.Y)
 		if i == 1 then y0 = math.max(leftTop.Y, rightTop.Y) end
-		if i == 3 then y1 = math.min(leftBottom.Y, rightBottom.Y) end
+		if i == n then y1 = math.min(leftBottom.Y, rightBottom.Y) end
 		clip.frame.Position = UDim2.new(0, x0, 0, y0)
-		clip.frame.Size = UDim2.new(0, math.max(0, x1 - x0), 0, math.max(0, y1 - y0))
+		clip.frame.Size = UDim2.new(0, math.max(0, x1 - x0), 0, math.max(0, y1 - y0) + 1)
 		clip.vp.Position = UDim2.new(0, -x0, 0, -y0)
 		clip.vp.Size = UDim2.new(0, size.X, 0, size.Y)
 		clip.cam.FieldOfView = cam.FieldOfView
@@ -23034,42 +24388,58 @@ NeverYieldDoor.updateWindow = function(win, door, other, frontSign, char)
 	end
 end
 
+-- the view into the room is a copy, rebuilt when you open the door after redecorating
+NeverYieldDoor.refreshView = function(s)
+	if s.viewVersion == NeverYieldRoom.version and s.homeWindow then return end
+	s.viewVersion = NeverYieldRoom.version
+	if s.homeWindow then pcall(function() s.homeWindow.screen:Destroy() end) end
+	local view = s.model:Clone()
+	for _, d in ipairs(view:GetDescendants()) do
+		if d:IsA("ParticleEmitter") or d:IsA("Light") or d:IsA("ProximityPrompt") or d:IsA("Sound") or d:IsA("Fire") or d:IsA("Highlight") then d:Destroy() end
+	end
+	s.homeWindow = NeverYieldDoor.makeWindow(view, Color3.fromRGB(60, 45, 35))
+end
+
 NeverYieldDoor.setOpen = function(s, open)
 	local D = NeverYieldDoor
-	for _, door in ipairs({s.homeDoor, s.hallDoor}) do
+	if open and not s.inside then pcall(D.refreshView, s) end
+	for _, door in ipairs({s.homeDoor, s.roomDoor}) do
 		door.target = open and 100 or 0
 	end
 	s.open = open
-	WackyState.sound(open and D.creak or D.shut, s.inside and s.hallDoor.slab or s.homeDoor.slab, 0.8, false, 0.95 + math.random() * 0.1)
-	for _, door in ipairs({s.homeDoor, s.hallDoor}) do
+	WackyState.sound(open and D.creak or D.shut, s.inside and s.roomDoor.slab or s.homeDoor.slab, 0.8, false, 0.95 + math.random() * 0.1)
+	for _, door in ipairs({s.homeDoor, s.roomDoor}) do
 		door.prompt.ActionText = open and "Close" or "Open"
 	end
 end
 
 NeverYieldDoor.enterMood = function(s)
 	s.inside = true
-	WackyState.lightClaim("studyhall", {"ClockTime", "Brightness", "Ambient", "OutdoorAmbient", "ExposureCompensation"})
-	Lighting.ClockTime, Lighting.Brightness = 21, 0.4
-	Lighting.Ambient, Lighting.OutdoorAmbient = Color3.fromRGB(70, 62, 55), Color3.fromRGB(55, 50, 48)
-	Lighting.ExposureCompensation = -0.2
+	WackyState.lightClaim("room", {"ClockTime", "Brightness", "Ambient", "OutdoorAmbient", "ExposureCompensation", "FogEnd"})
+	Lighting.ExposureCompensation = 0
+	Lighting.FogEnd = 100000
 	local atmosphere = Instance.new("Atmosphere")
-	atmosphere.Density, atmosphere.Offset, atmosphere.Glare, atmosphere.Haze = 0.38, 0, 0, 1.6
-	atmosphere.Color, atmosphere.Decay = Color3.fromRGB(150, 132, 110), Color3.fromRGB(90, 80, 70)
+	atmosphere.Density, atmosphere.Offset, atmosphere.Glare, atmosphere.Haze = 0.2, 0, 0, 0.5
+	atmosphere.Color, atmosphere.Decay = Color3.fromRGB(255, 230, 200), Color3.fromRGB(200, 170, 140)
 	WackyState.envSet("Atmosphere", atmosphere)
-	local cc = WackyState.track("studyhall", Instance.new("ColorCorrectionEffect"))
-	cc.Saturation, cc.Contrast, cc.TintColor = -0.25, 0.1, Color3.fromRGB(255, 236, 210)
+	local cc = WackyState.track("room", Instance.new("ColorCorrectionEffect"))
+	cc.Saturation, cc.Contrast, cc.TintColor = 0.05, 0.05, Color3.fromRGB(255, 245, 232)
 	cc.Parent = Lighting
-	for _, snd in ipairs({{s.library, 0.35}, {s.clock, 0.6}, {s.hum, 0.18}}) do
+	NeverYieldRoom.applyMood(s)
+	for _, snd in ipairs({{s.rain, 0.12}, {s.clock, 0.35}}) do
 		TweenService:Create(snd[1], TweenInfo.new(2), {Volume = snd[2]}):Play()
 	end
+	NeverYieldRoom.hud(s)
 end
 
 NeverYieldDoor.leaveMood = function(s)
 	s.inside = false
-	WackyState.clear("studyhall")
+	if NeverYieldRoom.editing then NeverYieldRoom.stopEdit(s) end
+	if s.hud then pcall(function() s.hud:Destroy() end) s.hud = nil end
+	WackyState.clear("room")
 	WackyState.envRestore("Atmosphere")
-	WackyState.lightRelease("studyhall", 1)
-	for _, snd in ipairs({s.library, s.clock, s.hum}) do
+	WackyState.lightRelease("room", 1)
+	for _, snd in ipairs({s.rain, s.clock}) do
 		TweenService:Create(snd, TweenInfo.new(1.5), {Volume = 0}):Play()
 	end
 end
@@ -23083,16 +24453,18 @@ NeverYieldDoor.close = function()
 		if root then root.CFrame = s.homeDoor.cf * CFrame.new(0, 0, -5) * CFrame.Angles(0, math.pi, 0) end
 		D.leaveMood(s)
 	end
+	if NeverYieldRoom.editing then pcall(NeverYieldRoom.stopEdit, s) end
 	D.state = nil
 	NeverYieldAgartha.standUp()
-	WackyState.disconnect("studydoor")
-	for _, obj in ipairs({s.homeDoor.model, s.hallDoor.model, s.hall, s.homeWindow.screen, s.hallWindow.screen, s.library, s.clock, s.hum}) do
+	WackyState.disconnect("roomdoor")
+	for _, obj in ipairs({s.homeDoor.model, s.roomDoor.model, s.model, s.homeWindow and s.homeWindow.screen, s.roomWindow.screen, s.rain, s.clock, s.hud}) do
 		pcall(function() obj:Destroy() end)
 	end
 end
 
-addcmd('door',{'studyhall','oldoor'},function(args, speaker)
+addcmd('door',{'room','myroom'},function(args, speaker)
 	local D = NeverYieldDoor
+	local R = NeverYieldRoom
 	if D.state then
 		notify('Door', 'The door is already here. Use undoor to remove it.')
 		return
@@ -23111,38 +24483,35 @@ addcmd('door',{'studyhall','oldoor'},function(args, speaker)
 	local floorY = hit and hit.Position.Y or (root.Position.Y - 3)
 	local doorPos = Vector3.new(spot.X, floorY + D.height / 2, spot.Z)
 	local homeCF = CFrame.lookAt(doorPos, doorPos - look)
-	local H = root.Position + Vector3.new(-6000, 1600, 0)
-	local hall = D.build(H)
-	hall.Parent = workspace
-	local hallPos = H + Vector3.new(0, D.height / 2, -32.5)
-	local hallCF = CFrame.lookAt(hallPos, hallPos - Vector3.new(0, 0, 1))
-	local view = hall:Clone()
-	for _, d in ipairs(view:GetDescendants()) do
-		if d:IsA("ParticleEmitter") or d:IsA("Light") or d:IsA("ProximityPrompt") then d:Destroy() end
-	end
-	local homeView = NeverYieldAgartha.snapshot(doorPos, 200, 900, homeCF)
-	local s = {hall = hall, open = false}
+	R.load()
+	local s = {open = false}
+	s.origin = root.Position + Vector3.new(-6000, 1600, 0)
+	s.model = Instance.new("Model")
+	s.model.Name = randomString()
+	s.model.Parent = workspace
+	R.buildShell(s)
+	R.placeAll(s)
+	local roomPos = s.origin + Vector3.new(0, D.height / 2, -R.D / 2 - 0.5)
+	local roomCF = CFrame.lookAt(roomPos, roomPos - Vector3.new(0, 0, 1))
+	local homeView = NeverYieldAgartha.snapshot(doorPos, 200, 500, homeCF)
 	s.homeDoor = D.makeDoor(homeCF, true)
-	s.hallDoor = D.makeDoor(hallCF, false)
-	s.homeWindow = D.makeWindow(view, Color3.fromRGB(40, 35, 32))
-	s.hallWindow = D.makeWindow(homeView, Color3.fromRGB(160, 190, 230))
-	s.library = WackyState.sound(D.library, nil, 0, true)
-	s.hum = WackyState.sound(D.hum, nil, 0, true)
-	s.clock = WackyState.sound(D.clock, D.clockPart, 0, true)
-	s.clock.RollOffMaxDistance = 80
+	s.roomDoor = D.makeDoor(roomCF, true)
+	s.roomWindow = D.makeWindow(homeView, Color3.fromRGB(160, 190, 230))
+	s.rain = WackyState.sound(D.rain, nil, 0, true)
+	s.clock = WackyState.sound(D.clock, nil, 0, true)
 	D.state = s
-	for _, door in ipairs({s.homeDoor, s.hallDoor}) do
+	R.save()
+	for _, door in ipairs({s.homeDoor, s.roomDoor}) do
 		door.prompt.Triggered:Connect(function()
 			D.setOpen(s, not s.open)
 			s.closeAt = nil
 		end)
 	end
 	local lastSide = {}
-	local nextFlicker = 0
-	WackyState.connect("studydoor", RunService.RenderStepped:Connect(function(dt)
+	local hue = 0
+	WackyState.connect("roomdoor", RunService.RenderStepped:Connect(function(dt)
 		local now = tick()
-		-- swing the doors
-		for _, door in ipairs({s.homeDoor, s.hallDoor}) do
+		for _, door in ipairs({s.homeDoor, s.roomDoor}) do
 			if math.abs(door.angle - door.target) > 0.1 then
 				door.angle = door.angle + (door.target - door.angle) * math.clamp(dt * 6, 0, 1)
 				D.pose(door)
@@ -23152,31 +24521,24 @@ addcmd('door',{'studyhall','oldoor'},function(args, speaker)
 			s.closeAt = nil
 			D.setOpen(s, false)
 		end
-		-- fluorescent flicker inside
-		if s.inside and now > nextFlicker then
-			nextFlicker = now + 2 + math.random() * 5
-			local f = D.flicker[math.random(1, #D.flicker)]
-			task.spawn(function()
-				for _ = 1, math.random(2, 5) do
-					f.light.Enabled = false
-					f.tube.Transparency = 0.7
-					task.wait(0.04 + math.random() * 0.08)
-					f.light.Enabled = true
-					f.tube.Transparency = 0.15
-					task.wait(0.04 + math.random() * 0.1)
-				end
-			end)
+		-- party lighting cycles colours
+		if s.inside and R.data.mood == "party" then
+			hue = (hue + dt * 0.15) % 1
+			for i, lamp in ipairs(s.lamps or {}) do
+				local c = Color3.fromHSV((hue + i * 0.25) % 1, 0.8, 1)
+				lamp.light.Color = c
+				lamp.bulb.Color = c
+			end
 		end
-		D.updateWindow(s.homeWindow, s.homeDoor, s.hallDoor, -1, speaker.Character)
-		D.updateWindow(s.hallWindow, s.hallDoor, s.homeDoor, 1, speaker.Character)
-		-- walking through the open doorway
+		if s.homeWindow then D.updateWindow(s.homeWindow, s.homeDoor, s.roomDoor, -1, speaker.Character) end
+		D.updateWindow(s.roomWindow, s.roomDoor, s.homeDoor, 1, speaker.Character)
 		local r = getRoot(speaker.Character)
 		if not r or not s.open or s.homeDoor.angle < 60 then return end
-		for key, pair in pairs({home = {s.homeDoor, s.hallDoor}, hall = {s.hallDoor, s.homeDoor}}) do
+		for key, pair in pairs({home = {s.homeDoor, s.roomDoor}, room = {s.roomDoor, s.homeDoor}}) do
 			local door, other = pair[1], pair[2]
 			local rel = door.cf:PointToObjectSpace(r.Position)
 			local side = rel.Z >= 0
-			local wanted = (key == "home") and side or (key == "hall" and not side)
+			local wanted = (key == "home") and side or (key == "room" and not side)
 			if lastSide[key] ~= nil and side ~= lastSide[key] and wanted and math.abs(rel.X) < D.width / 2 + 0.5 and math.abs(rel.Y) < D.height / 2 + 1.5 then
 				NeverYieldAgartha.travel(door, other, r)
 				if key == "home" then D.enterMood(s) else D.leaveMood(s) end
@@ -23187,15 +24549,23 @@ addcmd('door',{'studyhall','oldoor'},function(args, speaker)
 			lastSide[key] = side
 		end
 	end))
-	notify('Door', 'An old door appeared. Open it and see where it leads... (undoor removes it)', 8)
+	notify('Door', 'Your door is here. Open it to see your room, walk in, and press Edit to decorate. (undoor removes it)', 8)
 end)
 
 addcmd('undoor',{'removedoor','nodoor'},function(args, speaker)
 	NeverYieldDoor.close()
 end)
 
+addcmd('roomreset',{},function(args, speaker)
+	pcall(function() if isfile(NeverYieldRoom.file) then writefile(NeverYieldRoom.file .. ".old", readfile(NeverYieldRoom.file)) end end)
+	pcall(delfile, NeverYieldRoom.file)
+	NeverYieldRoom.data = nil
+	notify('Room', 'Your room is back to the default layout (the old one is saved as NeverYield_room.json.old). Reopen the door to see it.')
+end)
+
 table.insert(WackyState.undoList, 'undoor')
--- ================== END STUDY HALL DOOR ==================
+end
+-- ================== END ROOM DOOR ==================
 
 -- ==================== MIDAS & DIAMOND RUSH ====================
 WackyState.midasGold = Color3.fromRGB(255, 196, 48)
@@ -24310,7 +25680,9 @@ NeverYieldStats.lines = function(tab)
 		add("Most clowns shot in a round", fmt.num(mg.clownBestKills or 0))
 		add("Longest survival", fmt.time(mg.clownBestTime or 0))
 		add("Total clowns shot", fmt.num(mg.clownKills or 0))
-		add("Rounds played", fmt.num(mg.clownRounds or 0))
+		add("Highest round reached", fmt.num(mg.clownBestRound or 0))
+		add("Flying clowns popped", fmt.num(mg.clownFlyingKills or 0))
+		add("Runs played", fmt.num(mg.clownRounds or 0))
 		add("Total time running", fmt.time(mg.clownTotalTime or 0))
 	elseif tab == "pets" then
 		local P = NeverYieldPets
@@ -24770,6 +26142,7 @@ NeverYieldPets.rarities = {
 	{id = "epic", name = "Epic", color = Color3.fromRGB(190, 100, 255), sell = 200},
 	{id = "legendary", name = "Legendary", color = Color3.fromRGB(255, 190, 60), sell = 500},
 	{id = "mythic", name = "Mythic", color = Color3.fromRGB(255, 90, 150), sell = 1500},
+	{id = "secret", name = "Secret", color = Color3.fromRGB(70, 255, 215), sell = 6000},
 }
 NeverYieldPets.rarityIndex = {}
 for i, r in ipairs(NeverYieldPets.rarities) do
@@ -25022,6 +26395,42 @@ NeverYieldPets.species = {
 		{"Ellipsoid", {0.25, 0.1, 0.35}, {-0.25, -0.95, -0.15}, nil, "fixed", {255, 210, 60}}, {"Ellipsoid", {0.25, 0.1, 0.35}, {0.25, -0.95, -0.15}, nil, "fixed", {255, 210, 60}},
 	}},
 }
+-- SECRET species (never in an egg's normal pool: every hatch has a tiny secret roll instead)
+NeverYieldPets.secretSpecies = {
+	{id = "voidcat", name = "Void Cat", base = "cat", main = {25, 15, 40}, accent = {170, 70, 255}, effect = "void"},
+	{id = "glitch", name = "Gl1tch", base = "robot", main = {25, 255, 130}, accent = {20, 20, 28}, effect = "glitch"},
+	{id = "cosmicdragon", name = "Cosmic Dragon", base = "dragon", main = {35, 25, 110}, accent = {120, 230, 255}, effect = "starfall"},
+	{id = "seraph", name = "Seraph Bunny", base = "bunny", main = {255, 252, 240}, accent = {255, 215, 90}, effect = "divine"},
+}
+for _, sec in ipairs(NeverYieldPets.secretSpecies) do
+	for _, base in ipairs(NeverYieldPets.species) do
+		if base.id == sec.base then
+			local copy = {}
+			for k, v in pairs(base) do copy[k] = v end
+			copy.id, copy.name, copy.rarity, copy.main, copy.accent, copy.fx, copy.innate = sec.id, sec.name, "secret", sec.main, sec.accent, nil, sec.effect
+			table.insert(NeverYieldPets.species, copy)
+			break
+		end
+	end
+end
+-- 1 in N chance per hatch that the pet is a secret species instead
+NeverYieldPets.secretOdds = {basic = 12000, forest = 9000, ocean = 9000, fancy = 7000, spooky = 6000, galaxy = 3500, mythic = 3000, golden = 3000, rainbow = 1500}
+
+-- random EFFECTS (rare to secret): any hatched pet can roll one, rarer effects make the pet rarer
+NeverYieldPets.effects = {
+	{id = "bubbles", name = "Bubbly", rarity = "rare"}, {id = "hearts", name = "Lovestruck", rarity = "rare"}, {id = "breeze", name = "Breezy", rarity = "rare"},
+	{id = "frost", name = "Frostbite", rarity = "epic"}, {id = "toxic", name = "Toxic", rarity = "epic"}, {id = "static", name = "Static", rarity = "epic"},
+	{id = "inferno", name = "Inferno", rarity = "legendary"}, {id = "starfall", name = "Starfall", rarity = "legendary"}, {id = "prism", name = "Prismatic", rarity = "legendary"},
+	{id = "galactic", name = "Galactic", rarity = "mythic"}, {id = "divine", name = "Divine", rarity = "mythic"},
+	{id = "void", name = "Void", rarity = "secret"}, {id = "glitch", name = "Glitched", rarity = "secret"}, {id = "supernova", name = "Supernova", rarity = "secret"},
+}
+NeverYieldPets.effectById = {}
+for _, e in ipairs(NeverYieldPets.effects) do
+	NeverYieldPets.effectById[e.id] = e
+end
+NeverYieldPets.effectChance = 0.12
+NeverYieldPets.effectWeights = {rare = 62, epic = 25, legendary = 9, mythic = 3.5, secret = 0.5}
+
 NeverYieldPets.speciesById = {}
 for _, s in ipairs(NeverYieldPets.species) do
 	NeverYieldPets.speciesById[s.id] = s
@@ -25117,15 +26526,15 @@ NeverYieldPets.eggs = {
 		pool = {duck = 28, penguin = 22, frog = 15, octopus = 15, axolotl = 10, shark = 10}, skins = {common = 75, rare = 20, epic = 5}, shiny = 0.015},
 	{id = "fancy", name = "Fancy Egg", price = 400, hatch = 30, color = {150, 200, 255}, spots = {255, 150, 220}, desc = "rare to legendary",
 		species = {common = 30, uncommon = 40, rare = 22, epic = 7, legendary = 1}, skins = {common = 60, rare = 28, epic = 10, legendary = 2}, shiny = 0.02},
-	{id = "spooky", name = "Spooky Egg", price = 600, hatch = 30, color = {60, 40, 70}, spots = {255, 140, 40}, desc = "ghosts and shadows",
+	{id = "spooky", name = "Spooky Egg", price = 600, hatch = 30, color = {60, 40, 70}, spots = {255, 140, 40}, desc = "spooky surprises",
 		pool = {ghost = 35, cat = 20, owl = 20, fox = 12, bee = 13}, skinPool = {classic = 40, shadow = 25, midnight = 20, toxic = 15}, shiny = 0.03},
-	{id = "galaxy", name = "Galaxy Egg", price = 1200, hatch = 45, color = {40, 25, 100}, spots = {255, 120, 230}, desc = "space legends",
+	{id = "galaxy", name = "Galaxy Egg", price = 1200, hatch = 45, color = {40, 25, 100}, spots = {255, 120, 230}, desc = "out of this world",
 		pool = {robot = 35, ghost = 20, dragon = 20, unicorn = 18, phoenix = 2, octopus = 5}, skinPool = {classic = 40, midnight = 25, galaxy = 15, diamond = 20}, shiny = 0.04},
 	{id = "mythic", name = "Mythic Egg", price = 1500, hatch = 60, color = {60, 30, 110}, spots = {255, 200, 80}, desc = "epic + legendary",
 		species = {uncommon = 20, rare = 40, epic = 28, legendary = 11, mythic = 1}, skins = {common = 30, rare = 35, epic = 25, legendary = 8, mythic = 2}, shiny = 0.05},
 	{id = "golden", name = "Golden Egg", price = 2500, hatch = 45, color = {255, 200, 50}, spots = {255, 240, 160}, gold = true, desc = "always a gold skin",
 		species = {common = 25, uncommon = 30, rare = 25, epic = 14, legendary = 5, mythic = 1}, fixedSkin = "gold", shiny = 0.05},
-	{id = "rainbow", name = "Rainbow Egg", price = 5000, hatch = 60, color = {255, 120, 200}, spots = {120, 220, 255}, desc = "phoenix chance!",
+	{id = "rainbow", name = "Rainbow Egg", price = 5000, hatch = 60, color = {255, 120, 200}, spots = {120, 220, 255}, desc = "mythic chance!",
 		species = {rare = 35, epic = 35, legendary = 24, mythic = 6}, skinPool = {rainbow = 25, galaxy = 25, gold = 20, diamond = 15, lava = 15}, shiny = 0.08},
 }
 NeverYieldPets.eggById = {}
@@ -25180,7 +26589,7 @@ NeverYieldPets.blank = function()
 	return {version = 2, coins = 200, nextId = 1, pets = {}, equipped = {}, food = {berry = 3, cookie = 1}, eggs = {},
 		skins = {classic = true}, hats = {}, items = {instant = 0}, boosts = {}, discovered = {}, slots = 3, storage = 60, incubator = false,
 		lastDecay = os.time(), lastDaily = "", streak = 0,
-		stats = {hatched = 0, bred = 0, fed = 0, coinsEarned = 0, released = 0}, settings = {music = true, sounds = true}, created = os.time()}
+		stats = {hatched = 0, bred = 0, fed = 0, coinsEarned = 0, released = 0, bestOdds = 0}, effectsFound = {}, settings = {music = true, sounds = true}, created = os.time()}
 end
 
 NeverYieldPets.load = function()
@@ -25273,8 +26682,11 @@ end
 NeverYieldPets.rarityOf = function(pet)
 	local s = NeverYieldPets.speciesById[pet.species]
 	local k = NeverYieldPets.skinById[pet.skin] or NeverYieldPets.skins[1]
-	local i = math.max(NeverYieldPets.rarityIndex[s and s.rarity or "common"] or 1, NeverYieldPets.rarityIndex[k.rarity] or 1)
-	if pet.shiny then i = math.min(#NeverYieldPets.rarities, i + 1) end
+	local e = pet.effect and NeverYieldPets.effectById[pet.effect]
+	local i = math.max(NeverYieldPets.rarityIndex[s and s.rarity or "common"] or 1, NeverYieldPets.rarityIndex[k.rarity] or 1,
+		e and NeverYieldPets.rarityIndex[e.rarity] or 1)
+	local secret = NeverYieldPets.rarityIndex.secret
+	if pet.shiny and i < secret then i = math.min(secret - 1, i + 1) end
 	return NeverYieldPets.rarities[i]
 end
 
@@ -25292,6 +26704,32 @@ NeverYieldPets.weightedKey = function(weights)
 		if roll <= 0 then return k end
 	end
 	return keys[#keys]
+end
+
+NeverYieldPets.weightedKeyP = function(weights)
+	local total = 0
+	for _, w in pairs(weights) do total = total + w end
+	local key = NeverYieldPets.weightedKey(weights)
+	return key, total > 0 and weights[key] / total or 1
+end
+
+NeverYieldPets.countOf = function(list, rarity)
+	local n = 0
+	for _, item in ipairs(list) do
+		if item.rarity == rarity then n = n + 1 end
+	end
+	return math.max(1, n)
+end
+
+-- roll a random effect; returns id (or nil) and the chance of that exact effect
+NeverYieldPets.rollEffect = function(chanceMult)
+	local lucky = NeverYieldPets.boosted("luck")
+	local chance = NeverYieldPets.effectChance * (chanceMult or 1) * (lucky and 1.5 or 1)
+	if math.random() >= chance then return nil, 1 end
+	local ri = NeverYieldPets.rarityIndex
+	local rarity, p = NeverYieldPets.weightedKeyP(NeverYieldPets.luckWeights(NeverYieldPets.effectWeights, function(r) return ri[r] - 2 end))
+	local e = NeverYieldPets.pickOf(NeverYieldPets.effects, rarity)
+	return e.id, chance * p / NeverYieldPets.countOf(NeverYieldPets.effects, rarity)
 end
 
 -- luck potion makes rarer results more likely
@@ -25450,34 +26888,54 @@ end
 
 NeverYieldPets.rollEgg = function(egg)
 	if egg.bred then
-		return egg.species, egg.skin, egg.shiny, egg.traits, egg.gen, egg.parents
+		return egg.species, egg.skin, egg.shiny, egg.traits, egg.gen, egg.parents, egg.effect, nil
 	end
 	local def = NeverYieldPets.eggById[egg.kind] or NeverYieldPets.eggs[1]
 	local ri = NeverYieldPets.rarityIndex
-	local species
-	if def.pool then
-		species = NeverYieldPets.weightedKey(NeverYieldPets.luckWeights(def.pool, function(id)
-			local s = NeverYieldPets.speciesById[id]
-			return s and ri[s.rarity]
+	local lucky = NeverYieldPets.boosted("luck")
+	local species, odds, p
+	local secretChance = 1 / (NeverYieldPets.secretOdds[def.id] or 10000) * (lucky and 2 or 1)
+	if math.random() < secretChance then
+		local sec = NeverYieldPets.secretSpecies[math.random(1, #NeverYieldPets.secretSpecies)]
+		species, odds = sec.id, secretChance / #NeverYieldPets.secretSpecies
+	elseif def.pool then
+		species, odds = NeverYieldPets.weightedKeyP(NeverYieldPets.luckWeights(def.pool, function(id)
+			local sp = NeverYieldPets.speciesById[id]
+			return sp and ri[sp.rarity]
 		end))
 	else
-		local rarity = NeverYieldPets.weightedKey(NeverYieldPets.luckWeights(def.species, function(r) return ri[r] end))
+		local rarity
+		rarity, p = NeverYieldPets.weightedKeyP(NeverYieldPets.luckWeights(def.species, function(r) return ri[r] end))
 		species = NeverYieldPets.pickOf(NeverYieldPets.species, rarity).id
+		odds = p / NeverYieldPets.countOf(NeverYieldPets.species, rarity)
 	end
 	local skin
 	if def.fixedSkin then
 		skin = def.fixedSkin
 	elseif def.skinPool then
-		skin = NeverYieldPets.weightedKey(NeverYieldPets.luckWeights(def.skinPool, function(id)
+		skin, p = NeverYieldPets.weightedKeyP(NeverYieldPets.luckWeights(def.skinPool, function(id)
 			local k = NeverYieldPets.skinById[id]
 			return k and ri[k.rarity]
 		end))
+		odds = odds * p
 	else
-		local rarity = NeverYieldPets.weightedKey(NeverYieldPets.luckWeights(def.skins, function(r) return ri[r] end))
+		local rarity
+		rarity, p = NeverYieldPets.weightedKeyP(NeverYieldPets.luckWeights(def.skins, function(r) return ri[r] end))
 		skin = NeverYieldPets.pickOf(NeverYieldPets.skins, rarity).id
+		odds = odds * p / NeverYieldPets.countOf(NeverYieldPets.skins, rarity)
 	end
-	local shinyChance = def.shiny * (NeverYieldPets.boosted("luck") and 3 or 1)
-	return species, skin, math.random() < shinyChance, nil, 1, {}
+	local shinyChance = def.shiny * (lucky and 3 or 1)
+	local shiny = math.random() < shinyChance
+	if shiny then odds = odds * shinyChance end
+	local sp = NeverYieldPets.speciesById[species]
+	local effect
+	if sp and sp.innate then
+		effect = sp.innate
+	else
+		effect, p = NeverYieldPets.rollEffect(1)
+		if effect then odds = odds * p end
+	end
+	return species, skin, shiny, nil, 1, {}, effect, math.max(1, math.floor(1 / math.max(odds, 1e-9) + 0.5))
 end
 
 NeverYieldPets.hatch = function(index, instant)
@@ -25501,9 +26959,12 @@ NeverYieldPets.hatch = function(index, instant)
 		data.items.instant = data.items.instant - 1
 	end
 	table.remove(data.eggs, index)
-	local species, skin, shiny, traits, gen, parents = NeverYieldPets.rollEgg(egg)
+	local species, skin, shiny, traits, gen, parents, effect, odds = NeverYieldPets.rollEgg(egg)
 	local newSpecies = not data.discovered[species]
 	local pet = NeverYieldPets.newPet(species, skin, shiny, traits, gen, parents)
+	pet.effect, pet.odds = effect, odds
+	if effect then data.effectsFound[effect] = true end
+	if odds and odds > (data.stats.bestOdds or 0) then data.stats.bestOdds = odds end
 	data.stats.hatched = data.stats.hatched + 1
 	if #data.equipped < data.slots then
 		NeverYieldPets.equip(pet.id)
@@ -25545,7 +27006,7 @@ NeverYieldPets.breed = function(a, b)
 		local best = math.max(NeverYieldPets.rarityIndex[NeverYieldPets.speciesById[a.species].rarity], NeverYieldPets.rarityIndex[NeverYieldPets.speciesById[b.species].rarity])
 		local pool = {}
 		for _, s in ipairs(NeverYieldPets.species) do
-			if NeverYieldPets.rarityIndex[s.rarity] >= best then table.insert(pool, s.id) end
+			if NeverYieldPets.rarityIndex[s.rarity] >= math.min(best, 6) and s.rarity ~= "secret" then table.insert(pool, s.id) end
 		end
 		species = pool[math.random(1, #pool)]
 	end
@@ -25569,10 +27030,18 @@ NeverYieldPets.breed = function(a, b)
 	end
 	while #traits > 2 do table.remove(traits) end
 	if table.find(traits, "tiny") and table.find(traits, "giant") then table.remove(traits, table.find(traits, "giant")) end
+	local effect
+	local inherited = (a.effect and b.effect) and (math.random() < 0.5 and a.effect or b.effect) or a.effect or b.effect
+	if inherited and math.random() < 0.3 then
+		effect = inherited
+	else
+		effect = NeverYieldPets.rollEffect(0.5)
+	end
+	if NeverYieldPets.speciesById[species].innate then effect = NeverYieldPets.speciesById[species].innate end
 	local now = os.time()
 	a.breedReady, b.breedReady = now + 300, now + 300
 	table.insert(data.eggs, {kind = "bred", bred = true, ready = now + NeverYieldPets.hatchTime(120), species = species, skin = skin, shiny = shiny, traits = traits,
-		gen = gen, parents = {a.name, b.name}})
+		gen = gen, parents = {a.name, b.name}, effect = effect})
 	data.stats.bred = data.stats.bred + 1
 	NeverYieldPets.dirty = true
 	notify('Pets', a.name .. ' and ' .. b.name .. ' made an egg! Check the Eggs tab.')
@@ -25749,6 +27218,8 @@ NeverYieldPets.build = function(pet, scale)
 		sparkle.Color = pet.shiny and ColorSequence.new(Color3.fromRGB(255, 250, 200), Color3.fromRGB(255, 200, 80)) or ColorSequence.new(Color3.new(1, 1, 1))
 		sparkle.Parent = root
 	end
+	local effectId = pet.effect or species.innate
+	if effectId then pcall(NeverYieldPets.addEffect, root, effectId, scale) end
 	if species.fx == "fire" then
 		local fire = Instance.new("ParticleEmitter")
 		fire.Texture = "rbxasset://textures/particles/fire_main.dds"
@@ -25768,6 +27239,98 @@ NeverYieldPets.build = function(pet, scale)
 		glow.Parent = root
 	end
 	return model, root, roles, skin
+end
+
+-- particle effects (Roblox's built-in particle textures, no uploads)
+NeverYieldPets.effectLooks = {
+	bubbles = {tex = "sparkles", c1 = {170, 230, 255}, c2 = {255, 255, 255}, rate = 6, size = 0.4, speed = {0.5, 1.2}, accel = {0, 1.5, 0}, life = {1.2, 2}, light = 0},
+	hearts = {tex = "heart", c1 = {255, 120, 170}, c2 = {255, 60, 120}, rate = 3, size = 0.45, speed = {0.6, 1.2}, accel = {0, 1.2, 0}, life = {1, 1.6}, light = 0},
+	breeze = {tex = "smoke", c1 = {200, 255, 210}, c2 = {120, 220, 150}, rate = 5, size = 0.6, speed = {1, 2}, accel = {1.5, 0.3, 0}, life = {1, 1.6}, light = 0.2, transp = 0.6},
+	frost = {tex = "sparkles", c1 = {200, 240, 255}, c2 = {120, 200, 255}, rate = 14, size = 0.3, speed = {0.3, 1}, accel = {0, -1, 0}, life = {1, 1.8}, light = 1, glow = {150, 210, 255}},
+	toxic = {tex = "smoke", c1 = {140, 255, 60}, c2 = {40, 140, 20}, rate = 10, size = 0.7, speed = {0.2, 0.6}, accel = {0, -1.5, 0}, life = {1, 1.6}, light = 0.6, glow = {120, 255, 60}, transp = 0.4},
+	static = {tex = "sparks", c1 = {255, 255, 160}, c2 = {120, 200, 255}, rate = 25, size = 0.35, speed = {3, 6}, life = {0.1, 0.25}, light = 1, glow = {200, 220, 255}},
+	inferno = {tex = "fire", c1 = {255, 220, 90}, c2 = {255, 60, 20}, rate = 28, size = 1.1, speed = {1, 2.5}, accel = {0, 5, 0}, life = {0.4, 0.8}, light = 1, glow = {255, 140, 50}},
+	starfall = {tex = "sparkles", c1 = {255, 240, 150}, c2 = {255, 200, 80}, rate = 12, size = 0.5, speed = {0, 0.2}, accel = {0, -5, 0}, life = {0.8, 1.2}, light = 1, offset = 2.6, glow = {255, 230, 140}},
+	prism = {tex = "sparkles", rainbow = true, rate = 18, size = 0.45, speed = {0.5, 1.5}, life = {0.6, 1.2}, light = 1, trail = true},
+	galactic = {tex = "implosion", c1 = {150, 80, 255}, c2 = {60, 200, 255}, rate = 10, size = 1.4, speed = {0, 0.4}, life = {1, 1.6}, light = 1, glow = {160, 100, 255}, spin = true, extra = "sparkles"},
+	divine = {tex = "shockwave", c1 = {255, 245, 190}, c2 = {255, 210, 90}, rate = 3, size = 2.2, speed = {0, 0}, life = {1, 1.4}, light = 1, glow = {255, 230, 150}, extra = "sparkles"},
+	void = {tex = "implosion", c1 = {40, 0, 60}, c2 = {0, 0, 0}, rate = 16, size = 1.8, speed = {-1.5, -0.6}, life = {0.8, 1.2}, light = 0, glow = {120, 0, 200}, spin = true, extra = "smoke"},
+	glitch = {tex = "core", c1 = {0, 255, 140}, c2 = {255, 0, 200}, rate = 20, size = 0.6, speed = {2, 5}, life = {0.05, 0.15}, light = 1, glow = {0, 255, 160}, flicker = true},
+	supernova = {tex = "core", c1 = {255, 255, 255}, c2 = {255, 120, 40}, rate = 6, size = 2.6, speed = {0, 0.3}, life = {0.6, 1}, light = 1, glow = {255, 180, 90}, extra = "sparks"},
+}
+NeverYieldPets.textures = {
+	sparkles = "rbxasset://textures/particles/sparkles_main.dds", fire = "rbxasset://textures/particles/fire_main.dds",
+	sparks = "rbxasset://textures/particles/fire_sparks_main.dds", smoke = "rbxasset://textures/particles/smoke_main.dds",
+	implosion = "rbxasset://textures/particles/explosion01_implosion_main.dds", shockwave = "rbxasset://textures/particles/explosion01_shockwave_main.dds",
+	core = "rbxasset://textures/particles/explosion01_core_main.dds",
+}
+
+NeverYieldPets.addEffect = function(root, id, scale)
+	local look = NeverYieldPets.effectLooks[id]
+	if not look then return end
+	local function rgb(t) return Color3.fromRGB(t[1], t[2], t[3]) end
+	local function emitter(tex, rateMult, sizeMult)
+		local e = Instance.new("ParticleEmitter")
+		e.Name = randomString()
+		e.Texture = tex == "heart" and NeverYieldPets.heart or NeverYieldPets.textures[tex]
+		e.Rate = look.rate * (rateMult or 1)
+		e.Speed = NumberRange.new(look.speed[1], look.speed[2])
+		e.SpreadAngle = Vector2.new(180, 180)
+		e.Lifetime = NumberRange.new(look.life[1], look.life[2])
+		e.LightEmission = look.light
+		local size = look.size * scale * (sizeMult or 1)
+		e.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, size), NumberSequenceKeypoint.new(1, 0)})
+		e.Transparency = NumberSequence.new(look.transp or 0, 1)
+		if look.accel then e.Acceleration = Vector3.new(look.accel[1], look.accel[2], look.accel[3]) end
+		if look.spin then e.RotSpeed = NumberRange.new(-180, 180) end
+		if look.rainbow then
+			e.Color = ColorSequence.new({
+				ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 80, 80)), ColorSequenceKeypoint.new(0.25, Color3.fromRGB(255, 220, 80)),
+				ColorSequenceKeypoint.new(0.5, Color3.fromRGB(80, 255, 120)), ColorSequenceKeypoint.new(0.75, Color3.fromRGB(80, 160, 255)),
+				ColorSequenceKeypoint.new(1, Color3.fromRGB(220, 90, 255)),
+			})
+		else
+			e.Color = ColorSequence.new(rgb(look.c1), rgb(look.c2))
+		end
+		e.Parent = root
+		return e
+	end
+	if look.offset then
+		local att = Instance.new("Attachment")
+		att.Position = Vector3.new(0, look.offset * scale, 0)
+		att.Parent = root
+		local e = emitter(look.tex)
+		e.Parent = att
+		pcall(function()
+			e.Shape = Enum.ParticleEmitterShape.Disc
+			e.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
+		end)
+	else
+		emitter(look.tex)
+	end
+	if look.extra then emitter(look.extra, 0.6, 0.5) end
+	if look.glow then
+		local glow = Instance.new("PointLight")
+		glow.Color = rgb(look.glow)
+		glow.Range = 7 * scale
+		glow.Brightness = look.flicker and 2 or 1.2
+		glow.Parent = root
+	end
+	if look.trail then
+		local a0, a1 = Instance.new("Attachment"), Instance.new("Attachment")
+		a0.Position, a1.Position = Vector3.new(0, 0.6 * scale, 0), Vector3.new(0, -0.6 * scale, 0)
+		a0.Parent, a1.Parent = root, root
+		local trail = Instance.new("Trail")
+		trail.Attachment0, trail.Attachment1 = a0, a1
+		trail.Lifetime = 0.6
+		trail.LightEmission = 1
+		trail.Transparency = NumberSequence.new(0.3, 1)
+		trail.Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 80, 80)), ColorSequenceKeypoint.new(0.33, Color3.fromRGB(255, 220, 80)),
+			ColorSequenceKeypoint.new(0.66, Color3.fromRGB(80, 200, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(220, 90, 255)),
+		})
+		trail.Parent = root
+	end
 end
 
 NeverYieldPets.scaleOf = function(pet)
@@ -26438,10 +28001,12 @@ NeverYieldPets.pages.detail = function(body, ui)
 		{(pet.shiny and "Shiny " or "") .. rarity.name .. " " .. (species and species.name or pet.species), rarity.color},
 		{"Generation " .. (pet.gen or 1) .. ((pet.parents and #pet.parents == 2) and ("  |  parents: " .. pet.parents[1] .. " + " .. pet.parents[2]) or ""), nil},
 		{"Traits: " .. (#traitNames > 0 and table.concat(traitNames, ", ") or "none"), nil},
+		{"Effect: " .. (pet.effect and NeverYieldPets.effectById[pet.effect] and (NeverYieldPets.effectById[pet.effect].name .. " (" .. NeverYieldPets.rarities[NeverYieldPets.rarityIndex[NeverYieldPets.effectById[pet.effect].rarity]].name .. ")") or "none")
+			.. (pet.odds and ("   |   pulled at 1 in " .. NeverYieldStats.num(pet.odds)) or ""), pet.effect and NeverYieldPets.effectById[pet.effect] and NeverYieldPets.rarities[NeverYieldPets.rarityIndex[NeverYieldPets.effectById[pet.effect].rarity]].color or nil},
 		{NeverYieldPets.canBreed(pet) and "Ready to breed" or (pet.level < 5 and "Breeds at level 5" or ("Resting: " .. math.max(0, (pet.breedReady or 0) - os.time()) .. "s")), nil},
 	}
 	for i, line in ipairs(lines) do
-		NeverYieldPets.label(body, {Position = UDim2.new(0, x, 0, 38 + (i - 1) * 20), Size = UDim2.new(0, 390, 0, 20), TextSize = 13,
+		NeverYieldPets.label(body, {Position = UDim2.new(0, x, 0, 34 + (i - 1) * 17), Size = UDim2.new(0, 390, 0, 17), TextSize = 12,
 			TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Text = line[1], TextColor3 = line[2] or Color3.fromRGB(220, 215, 255)})
 	end
 	local need = NeverYieldPets.xpNeeded(pet.level)
@@ -26541,7 +28106,7 @@ NeverYieldPets.shopPages.eggs = function(body, ui, data)
 		NeverYieldPets.eggPreview(card, egg, UDim2.new(0, 22, 0, 2), UDim2.new(0, 80, 0, 56))
 		NeverYieldPets.label(card, {Position = UDim2.new(0, 4, 0, 58), Size = UDim2.new(1, -8, 0, 16), TextSize = 13, Text = egg.name})
 		NeverYieldPets.label(card, {Position = UDim2.new(0, 4, 0, 74), Size = UDim2.new(1, -8, 0, 26), TextSize = 10, TextWrapped = true,
-			TextColor3 = Color3.fromRGB(200, 200, 230), Text = egg.desc .. "  (" .. NeverYieldPets.hatchTime(egg.hatch) .. "s)"})
+			TextColor3 = Color3.fromRGB(200, 200, 230), Text = egg.desc .. "  (" .. NeverYieldPets.hatchTime(egg.hatch) .. "s)\n\u{2620}\u{FE0F} secret 1 in " .. NeverYieldStats.num(NeverYieldPets.secretOdds[egg.id] or 10000)})
 		NeverYieldPets.button(card, "\u{1F4B0} " .. NeverYieldStats.num(egg.price), UDim2.new(0, 10, 0, 108), UDim2.new(1, -20, 0, 30), Color3.fromRGB(60, 160, 90), function()
 			if NeverYieldPets.buyEgg(egg.id) then NeverYieldPets.refresh() end
 		end)
@@ -26595,20 +28160,24 @@ end
 
 NeverYieldPets.shopPages.skins = function(body, ui, data)
 	NeverYieldPets.label(body, {Position = UDim2.new(0, 0, 0, 34), Size = UDim2.new(1, 0, 0, 18), TextXAlignment = Enum.TextXAlignment.Left,
-		Text = "Unlocked skins can be put on any pet (pet detail page)."})
+		Text = "Mystery skins: you only see a skin once you own it. Put them on any pet (pet detail page)."})
 	local col = 0
 	for _, skin in ipairs(NeverYieldPets.skins) do
 		if skin.id ~= "classic" then
 			local owned = data.skins[skin.id]
 			local rarity = NeverYieldPets.rarities[NeverYieldPets.rarityIndex[skin.rarity]]
 			local card = NeverYieldPets.card(body, UDim2.new(0, (col % 5) * 130, 0, 56 + math.floor(col / 5) * 140), UDim2.new(0, 124, 0, 134), rarity.color)
-			NeverYieldPets.preview(card, {species = "cat", skin = skin.id, level = 1, traits = {}}, UDim2.new(0, 4, 0, 2), UDim2.new(1, -8, 0, 72), true)
-			NeverYieldPets.label(card, {Position = UDim2.new(0, 4, 0, 74), Size = UDim2.new(1, -8, 0, 18), Text = skin.name, TextColor3 = rarity.color})
+			if owned then
+				NeverYieldPets.preview(card, {species = "cat", skin = skin.id, level = 1, traits = {}}, UDim2.new(0, 4, 0, 2), UDim2.new(1, -8, 0, 72), true)
+			else
+				NeverYieldPets.mystery(card)
+			end
+			NeverYieldPets.label(card, {Position = UDim2.new(0, 4, 0, 74), Size = UDim2.new(1, -8, 0, 18), Text = owned and skin.name or ("??? " .. rarity.name), TextColor3 = rarity.color})
 			NeverYieldPets.button(card, owned and "Owned" or ("\u{1F4B0} " .. NeverYieldStats.num(skin.price)), UDim2.new(0, 10, 0, 96), UDim2.new(1, -20, 0, 30),
 				owned and Color3.fromRGB(50, 45, 80) or Color3.fromRGB(60, 160, 90), function()
 					if data.skins[skin.id] or not NeverYieldPets.spend(skin.price) then return end
 					data.skins[skin.id] = true
-					notify('Pets', skin.name .. ' skin unlocked!')
+					notify('Pets', 'You unlocked the ' .. skin.name .. ' skin!')
 					NeverYieldPets.refresh()
 				end)
 			col = col + 1
@@ -26616,16 +28185,27 @@ NeverYieldPets.shopPages.skins = function(body, ui, data)
 	end
 end
 
+-- a "?" placeholder for things you have not unlocked yet
+NeverYieldPets.mystery = function(card)
+	local q = NeverYieldPets.label(card, {Position = UDim2.new(0, 4, 0, 6), Size = UDim2.new(1, -8, 0, 62), TextSize = 46, Font = Enum.Font.FredokaOne,
+		Text = "?", TextColor3 = Color3.fromRGB(110, 100, 160)})
+	return q
+end
+
 NeverYieldPets.shopPages.hats = function(body, ui, data)
 	NeverYieldPets.label(body, {Position = UDim2.new(0, 0, 0, 34), Size = UDim2.new(1, 0, 0, 18), TextXAlignment = Enum.TextXAlignment.Left,
-		Text = "Hats can be put on any pet (pet detail page)."})
+		Text = "Mystery hats: you only see a hat once you own it. Put them on any pet (pet detail page)."})
 	for i, hat in ipairs(NeverYieldPets.hats) do
 		local col, row = (i - 1) % 5, math.floor((i - 1) / 5)
 		local owned = data.hats[hat.id]
 		local rarity = NeverYieldPets.rarities[NeverYieldPets.rarityIndex[hat.rarity]]
 		local card = NeverYieldPets.card(body, UDim2.new(0, col * 130, 0, 56 + row * 140), UDim2.new(0, 124, 0, 134), rarity.color)
-		NeverYieldPets.preview(card, {species = "bunny", skin = "classic", level = 1, traits = {}, hat = hat.id}, UDim2.new(0, 4, 0, 2), UDim2.new(1, -8, 0, 72), true)
-		NeverYieldPets.label(card, {Position = UDim2.new(0, 4, 0, 74), Size = UDim2.new(1, -8, 0, 18), Text = hat.name, TextColor3 = rarity.color})
+		if owned then
+			NeverYieldPets.preview(card, {species = "bunny", skin = "classic", level = 1, traits = {}, hat = hat.id}, UDim2.new(0, 4, 0, 2), UDim2.new(1, -8, 0, 72), true)
+		else
+			NeverYieldPets.mystery(card)
+		end
+		NeverYieldPets.label(card, {Position = UDim2.new(0, 4, 0, 74), Size = UDim2.new(1, -8, 0, 18), Text = owned and hat.name or ("??? " .. rarity.name), TextColor3 = rarity.color})
 		NeverYieldPets.button(card, owned and "Owned" or ("\u{1F4B0} " .. NeverYieldStats.num(hat.price)), UDim2.new(0, 10, 0, 96), UDim2.new(1, -20, 0, 30),
 			owned and Color3.fromRGB(50, 45, 80) or Color3.fromRGB(60, 160, 90), function()
 				if data.hats[hat.id] or not NeverYieldPets.spend(hat.price) then return end
@@ -26728,18 +28308,30 @@ end
 
 NeverYieldPets.pages.index = function(body, ui)
 	local data = NeverYieldPets.data
-	local found, skins, hats = 0, 0, 0
+	local found, skins, hats, effects = 0, 0, 0, 0
 	for _ in pairs(data.discovered) do found = found + 1 end
 	for _ in pairs(data.skins) do skins = skins + 1 end
 	for _ in pairs(data.hats) do hats = hats + 1 end
+	for _ in pairs(data.effectsFound) do effects = effects + 1 end
 	NeverYieldPets.label(body, {Size = UDim2.new(1, 0, 0, 20), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(210, 200, 255), TextSize = 12,
 		Text = "Species " .. found .. "/" .. #NeverYieldPets.species .. "  |  Skins " .. skins .. "/" .. #NeverYieldPets.skins .. "  |  Hats " .. hats .. "/" .. #NeverYieldPets.hats ..
-		"  |  hatched " .. data.stats.hatched .. ", bred " .. data.stats.bred .. ", fed " .. data.stats.fed .. ", coins earned " .. NeverYieldStats.num(data.stats.coinsEarned)})
+		"  |  Effects " .. effects .. "/" .. #NeverYieldPets.effects .. "  |  luckiest pull: 1 in " .. NeverYieldStats.num(data.stats.bestOdds or 0)})
+	local scroll = Instance.new("ScrollingFrame")
+	scroll.Position = UDim2.new(0, 0, 0, 24)
+	scroll.Size = UDim2.new(1, 0, 1, -24)
+	scroll.BackgroundTransparency = 1
+	scroll.BorderSizePixel = 0
+	scroll.ScrollBarThickness = 6
+	scroll.ZIndex = 21
+	scroll.Parent = body
+	local y = 0
 	for i, species in ipairs(NeverYieldPets.species) do
 		local col, row = (i - 1) % 7, math.floor((i - 1) / 7)
 		local rarity = NeverYieldPets.rarities[NeverYieldPets.rarityIndex[species.rarity]]
-		local card = NeverYieldPets.card(body, UDim2.new(0, col * 92, 0, 26 + row * 110), UDim2.new(0, 86, 0, 104), rarity.color)
-		if data.discovered[species.id] then
+		local known = data.discovered[species.id]
+		local secret = species.rarity == "secret"
+		local card = NeverYieldPets.card(scroll, UDim2.new(0, col * 92, 0, row * 110), UDim2.new(0, 86, 0, 104), (known or not secret) and rarity.color or Color3.fromRGB(70, 70, 90))
+		if known then
 			NeverYieldPets.preview(card, {species = species.id, skin = "classic", level = 1, traits = {}}, UDim2.new(0, 3, 0, 2), UDim2.new(1, -6, 0, 66), true)
 			NeverYieldPets.label(card, {Position = UDim2.new(0, 0, 0, 68), Size = UDim2.new(1, 0, 0, 18), TextSize = 13, Text = species.name})
 		else
@@ -26747,8 +28339,24 @@ NeverYieldPets.pages.index = function(body, ui)
 				Text = "?", TextColor3 = Color3.fromRGB(90, 85, 130)})
 			NeverYieldPets.label(card, {Position = UDim2.new(0, 0, 0, 68), Size = UDim2.new(1, 0, 0, 18), TextSize = 13, Text = "???"})
 		end
-		NeverYieldPets.label(card, {Position = UDim2.new(0, 0, 0, 86), Size = UDim2.new(1, 0, 0, 14), TextSize = 11, TextColor3 = rarity.color, Text = rarity.name})
+		NeverYieldPets.label(card, {Position = UDim2.new(0, 0, 0, 86), Size = UDim2.new(1, 0, 0, 14), TextSize = 11, TextColor3 = (known or not secret) and rarity.color or Color3.fromRGB(120, 120, 140),
+			Text = (known or not secret) and rarity.name or "???"})
+		y = row * 110 + 110
 	end
+	NeverYieldPets.label(scroll, {Position = UDim2.new(0, 0, 0, y + 4), Size = UDim2.new(1, 0, 0, 20), TextXAlignment = Enum.TextXAlignment.Left, TextSize = 14, Text = "EFFECTS"})
+	y = y + 28
+	for i, effect in ipairs(NeverYieldPets.effects) do
+		local col, row = (i - 1) % 7, math.floor((i - 1) / 7)
+		local rarity = NeverYieldPets.rarities[NeverYieldPets.rarityIndex[effect.rarity]]
+		local known = data.effectsFound[effect.id]
+		local secret = effect.rarity == "secret"
+		local card = NeverYieldPets.card(scroll, UDim2.new(0, col * 92, 0, y + row * 56), UDim2.new(0, 86, 0, 50), (known or not secret) and rarity.color or Color3.fromRGB(70, 70, 90))
+		NeverYieldPets.label(card, {Position = UDim2.new(0, 0, 0, 6), Size = UDim2.new(1, 0, 0, 20), TextSize = 13, Text = known and ("\u{2728} " .. effect.name) or "???"})
+		NeverYieldPets.label(card, {Position = UDim2.new(0, 0, 0, 28), Size = UDim2.new(1, 0, 0, 16), TextSize = 11, TextColor3 = (known or not secret) and rarity.color or Color3.fromRGB(120, 120, 140),
+			Text = (known or not secret) and rarity.name or "???"})
+	end
+	y = y + math.ceil(#NeverYieldPets.effects / 7) * 56 + 10
+	scroll.CanvasSize = UDim2.new(0, 0, 0, y)
 end
 
 NeverYieldPets.pages.settings = function(body, ui)
@@ -26776,7 +28384,7 @@ NeverYieldPets.hatchPopup = function(egg, pet, newSpecies)
 	local card = Instance.new("Frame")
 	card.AnchorPoint = Vector2.new(0.5, 0.5)
 	card.Position = UDim2.new(0.5, 0, 0.5, 0)
-	card.Size = UDim2.new(0, 360, 0, 380)
+	card.Size = UDim2.new(0, 360, 0, 404)
 	card.BackgroundColor3 = Color3.fromRGB(22, 18, 44)
 	card.BorderSizePixel = 0
 	card.ZIndex = 70
@@ -26833,8 +28441,46 @@ NeverYieldPets.hatchPopup = function(egg, pet, newSpecies)
 		status.TextColor3 = rarity.color
 		NeverYieldPets.label(card, {Position = UDim2.new(0, 0, 0, 236), Size = UDim2.new(1, 0, 0, 26), TextSize = 18, ZIndex = 72,
 			Text = skin.name .. " " .. species.name .. (newSpecies and "  -  NEW SPECIES!" or "")})
+		local effect = pet.effect and NeverYieldPets.effectById[pet.effect]
+		local extra = {}
+		if effect then
+			local er = NeverYieldPets.rarities[NeverYieldPets.rarityIndex[effect.rarity]]
+			table.insert(extra, "\u{2728} " .. effect.name .. " effect (" .. er.name .. ")")
+		end
+		if pet.odds then table.insert(extra, "1 in " .. NeverYieldStats.num(pet.odds)) end
+		if #extra > 0 then
+			NeverYieldPets.label(card, {Position = UDim2.new(0, 0, 0, 300), Size = UDim2.new(1, 0, 0, 22), TextSize = 15, ZIndex = 72,
+				TextColor3 = effect and NeverYieldPets.rarities[NeverYieldPets.rarityIndex[effect.rarity]].color or Color3.fromRGB(220, 215, 255), Text = table.concat(extra, "   |   ")})
+		end
+		local tier = NeverYieldPets.rarityIndex[rarity.id]
+		if tier >= NeverYieldPets.rarityIndex.legendary then
+			-- big pull: the screen flashes in the rarity colour, and SECRET gets its own banner
+			local glow = Instance.new("Frame")
+			glow.Size = UDim2.new(1, 0, 1, 0)
+			glow.BackgroundColor3 = rarity.color
+			glow.BackgroundTransparency = 0.35
+			glow.BorderSizePixel = 0
+			glow.ZIndex = 65
+			glow.Parent = screen
+			TweenService:Create(glow, TweenInfo.new(1.4), {BackgroundTransparency = 1}):Play()
+			Services.Debris:AddItem(glow, 1.5)
+			if rarity.id == "secret" then
+				local banner = NeverYieldPets.label(screen, {AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.18, 0), Size = UDim2.new(0.8, 0, 0.12, 0),
+					Font = Enum.Font.FredokaOne, TextScaled = true, Text = "\u{2620}\u{FE0F} SECRET PULL \u{2620}\u{FE0F}", TextColor3 = rarity.color, TextStrokeTransparency = 0, ZIndex = 76})
+				task.spawn(function()
+					for _ = 1, 40 do
+						if not banner.Parent then return end
+						banner.Position = UDim2.new(0.5, math.random(-8, 8), 0.18, math.random(-6, 6))
+						banner.Rotation = math.random(-3, 3)
+						task.wait(0.05)
+					end
+					TweenService:Create(banner, TweenInfo.new(0.8), {TextTransparency = 1, TextStrokeTransparency = 1}):Play()
+					Services.Debris:AddItem(banner, 0.9)
+				end)
+			end
+		end
 		NeverYieldPets.jingle("hatch")
-		NeverYieldPets.button(card, "Awesome!", UDim2.new(0.5, -80, 0, 316), UDim2.new(0, 160, 0, 44), Color3.fromRGB(255, 140, 90), function()
+		NeverYieldPets.button(card, "Awesome!", UDim2.new(0.5, -80, 0, 340), UDim2.new(0, 160, 0, 44), Color3.fromRGB(255, 140, 90), function()
 			TweenService:Create(scale, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Scale = 0}):Play()
 			Services.Debris:AddItem(card, 0.3)
 			NeverYieldPets.hatching = nil
@@ -26948,6 +28594,948 @@ end)
 
 pcall(NeverYieldPets.start)
 -- ================== END NEVERYIELD PETS ==================
+
+-- ==================== NEVERYIELD ACHIEVEMENTS ====================
+-- Achievements for the things people do with Infinite Yield, the NeverYield commands and minigames,
+-- playtime, games visited, people met, front-page games and more. Progress comes from your Stats and
+-- Pet Hub saves (checked every few seconds); unlocks are saved in NeverYield_achievements.json.
+-- Every achievement has its own trophy model (base x tier x topper), shown in the menu and placeable
+-- in your room (door command).
+do
+NeverYieldAch = {file = "NeverYield_achievements.json", queue = {}, ui = {}}
+
+NeverYieldAch.tiers = {
+	bronze = {name = "Bronze", color = Color3.fromRGB(205, 127, 70), material = Enum.Material.Foil, base = Color3.fromRGB(70, 45, 30), baseMat = Enum.Material.Wood, order = 1},
+	silver = {name = "Silver", color = Color3.fromRGB(205, 210, 220), material = Enum.Material.Foil, base = Color3.fromRGB(225, 225, 230), baseMat = Enum.Material.Marble, order = 2},
+	gold = {name = "Gold", color = Color3.fromRGB(255, 196, 48), material = Enum.Material.Foil, base = Color3.fromRGB(25, 22, 26), baseMat = Enum.Material.Marble, order = 3},
+	diamond = {name = "Diamond", color = Color3.fromRGB(150, 235, 255), material = Enum.Material.Glass, base = Color3.fromRGB(40, 60, 90), baseMat = Enum.Material.Marble, order = 4, glow = true},
+	mythic = {name = "Mythic", color = Color3.fromRGB(200, 90, 255), material = Enum.Material.Neon, base = Color3.fromRGB(15, 10, 25), baseMat = Enum.Material.Slate, order = 5, glow = true},
+}
+NeverYieldAch.cats = {{"all", "All"}, {"basics", "Basics"}, {"neveryield", "NeverYield"}, {"minigames", "Minigames"}, {"pets", "Pets"},
+	{"explorer", "Explorer"}, {"social", "Social"}, {"milestones", "Milestones"}, {"settings", "Settings"}}
+
+-- helpers that read your saves
+NeverYieldAch.cmd = function(name)
+	local st = NeverYieldStats.data
+	return st and st.commands and st.commands[name] or 0
+end
+NeverYieldAch.total = function(key)
+	local st = NeverYieldStats.data
+	return st and st.totals and st.totals[key] or 0
+end
+NeverYieldAch.mg = function(key)
+	local st = NeverYieldStats.data
+	return st and type(st.minigames) == "table" and st.minigames[key] or 0
+end
+NeverYieldAch.pet = function(key)
+	local pd = NeverYieldPets and NeverYieldPets.data
+	return pd and pd.stats and pd.stats[key] or 0
+end
+NeverYieldAch.size = function(t)
+	local n = 0
+	for _ in pairs(t or {}) do n = n + 1 end
+	return n
+end
+
+-- front page games (universe ids checked against the Roblox API; place ids for older stats)
+NeverYieldAch.frontPage = {
+	{"brookhaven", "Brookhaven Resident", "Brookhaven RP", 1686885941, {4924922222}, {120, 200, 120}},
+	{"adoptme", "Adopted", "Adopt Me!", 383310974, {920587237}, {255, 170, 60}},
+	{"bloxfruits", "Fruit Hunter", "Blox Fruits", 994732206, {2753915549, 4442272183, 7449423635}, {80, 160, 255}},
+	{"ps99", "Pet Collector", "Pet Simulator 99", 3317771874, {8737899170}, {255, 120, 200}},
+	{"growagarden", "Green Thumb", "Grow a Garden", 7436755782, {126884695634066}, {90, 200, 80}},
+	{"mm2", "Who Did It?", "Murder Mystery 2", 66654135, {142823291}, {200, 40, 40}},
+	{"arsenal", "Locked and Loaded", "Arsenal", 111958650, {286090429}, {240, 120, 40}},
+	{"jailbreak", "Jailbird", "Jailbreak", 245662005, {606849621}, {70, 110, 200}},
+	{"doors", "Door Number One", "DOORS", 2440500124, {6516141723, 6839171747}, {150, 110, 70}},
+	{"towerofhell", "Tower Climber", "Tower of Hell", 703124385, {1962086868}, {255, 80, 60}},
+	{"nds", "Disaster Survivor", "Natural Disaster Survival", 65241, {189707}, {120, 180, 255}},
+	{"bedwars", "Bed Defender", "BedWars", 2619619496, {6872265039, 8560631822}, {150, 90, 220}},
+	{"brainrot", "Brainrot", "Steal a Brainrot", 7709344486, {109983668079237}, {255, 220, 60}},
+	{"99nights", "Night One", "99 Nights in the Forest", 7326934954, {79546208627805}, {60, 120, 70}},
+	{"dti", "Strike a Pose", "Dress To Impress", 5203828273, {15101393044}, {255, 140, 220}},
+	{"dahood", "Hood Legend", "Da Hood", 1008451066, {2788229376}, {90, 90, 100}},
+	{"fisch", "Gone Fishin'", "Fisch", 5750914919, {16732694052}, {60, 170, 220}},
+	{"royalehigh", "Royalty", "Royale High", 321778215, {735030788}, {255, 180, 230}},
+	{"piggy", "Oink Oink", "Piggy", 1516533665, {4623386862}, {255, 150, 170}},
+	{"pizza", "Pizza Time", "Work at a Pizza Place", 47545, {192800}, {230, 60, 40}},
+	{"bloxburg", "Welcome Home", "Welcome to Bloxburg", 88070565, {185655149}, {110, 200, 255}},
+	{"rivals", "Rival", "RIVALS", 6035872082, {17625359962}, {255, 70, 70}},
+	{"evade", "Run!", "Evade", 3647333358, {9872472334}, {200, 200, 210}},
+	{"deadrails", "All Aboard", "Dead Rails", 7018190066, {116495829188952}, {150, 100, 60}},
+}
+
+NeverYieldAch.visited = function(fp)
+	local data = NeverYieldAch.data
+	if data.universes[tostring(fp[4])] then return true end
+	local games = NeverYieldStats.data and NeverYieldStats.data.games or {}
+	for _, placeId in ipairs(fp[5]) do
+		if games[tostring(placeId)] then return true end
+	end
+	return false
+end
+
+NeverYieldAch.frontPageCount = function()
+	local n = 0
+	for _, fp in ipairs(NeverYieldAch.frontPage) do
+		if NeverYieldAch.visited(fp) then n = n + 1 end
+	end
+	return n
+end
+
+-- definitions: {id, name, description, category, tier, topper, goal, value function, accent colour}
+NeverYieldAch.defs = {}
+local function def(id, name, desc, cat, tier, topper, goal, value, accent)
+	table.insert(NeverYieldAch.defs, {id = id, name = name, desc = desc, cat = cat, tier = tier, topper = topper, goal = goal, value = value, accent = accent})
+end
+local A = NeverYieldAch
+local function cmdDef(id, name, desc, cat, tier, topper, cmdName, goal, accent)
+	def(id, name, desc, cat, tier, topper, goal, function() return A.cmd(cmdName) end, accent)
+end
+
+-- basics: the classic Infinite Yield stuff
+def("hello", "Hello World", "Run your first command", "basics", "bronze", "star", 1, function() return A.total("commands") end)
+def("cmd100", "Power User", "Run 100 commands", "basics", "silver", "star", 100, function() return A.total("commands") end)
+def("cmd1000", "Command Line Hero", "Run 1,000 commands", "basics", "gold", "star", 1000, function() return A.total("commands") end)
+def("cmd10000", "Never Yield", "Run 10,000 commands", "basics", "diamond", "star", 10000, function() return A.total("commands") end)
+cmdDef("fly", "Liftoff", "Use fly", "basics", "bronze", "wings", "fly", 1)
+cmdDef("fly100", "Frequent Flyer", "Use fly 100 times", "basics", "gold", "wings", "fly", 100)
+cmdDef("noclip", "Ghost Walk", "Use noclip", "basics", "bronze", "ghost", "noclip", 1)
+cmdDef("goto", "Teleporter", "Use goto 25 times", "basics", "silver", "bolt", "goto", 25, {120, 200, 255})
+cmdDef("esp", "X-Ray Vision", "Use esp", "basics", "bronze", "eye", "esp", 1)
+cmdDef("speed", "Gotta Go Fast", "Use speed", "basics", "bronze", "bolt", "speed", 1)
+cmdDef("fling", "Yeet", "Use fling", "basics", "bronze", "rocket", "fling", 1)
+cmdDef("spin", "Beyblade", "Use spin 10 times", "basics", "silver", "star", "spin", 10, {120, 255, 200})
+cmdDef("invisible", "Now You See Me", "Use invisible", "basics", "silver", "ghost", "invisible", 1)
+cmdDef("view", "Spectator", "Use view 10 times", "basics", "bronze", "eye", "view", 10)
+cmdDef("serverhop", "Server Hopper", "Use serverhop 10 times", "basics", "silver", "globe", "serverhop", 10)
+cmdDef("rejoin", "Deja Vu", "Use rejoin 5 times", "basics", "bronze", "globe", "rejoin", 5)
+cmdDef("breakdance", "B-Boy", "Use breakdance", "basics", "bronze", "note", "breakdance", 1)
+-- NeverYield commands
+cmdDef("weather", "Storm Chaser", "Change the weather", "neveryield", "bronze", "cloud", "weather", 1)
+cmdDef("weather25", "Meteorologist", "Change the weather 25 times", "neveryield", "silver", "cloud", "weather", 25)
+cmdDef("theend", "Event Horizon", "Witness THE END", "neveryield", "silver", "blackhole", "end", 1)
+cmdDef("moon", "Dawn of the Final Day", "Bring down the moon", "neveryield", "gold", "moon", "moon", 1)
+cmdDef("horror", "Don't Look Away", "Survive (or not) horror", "neveryield", "silver", "skull", "horror", 1)
+cmdDef("horror10", "Fearless", "Play horror 10 times", "neveryield", "gold", "skull", "horror", 10)
+cmdDef("portal", "Agartha Awaits", "Open a portal to Agartha", "neveryield", "silver", "portal", "portal", 1)
+cmdDef("portal10", "Interdimensional", "Open 10 portals", "neveryield", "gold", "portal", "portal", 10)
+cmdDef("door", "Home Sweet Home", "Open the door to your room", "neveryield", "bronze", "house", "door", 1)
+def("decorator", "Interior Designer", "Place 10 things in your room", "neveryield", "gold", "house", 10, function() return A.data.flags.roomItems or 0 end, {255, 170, 120})
+cmdDef("midas", "Golden Touch", "Use midas", "neveryield", "gold", "crown", "midas", 1)
+cmdDef("stats", "Number Cruncher", "Look at your stats", "neveryield", "bronze", "chart", "stats", 1)
+-- minigames
+def("diamond1", "Diamond Hands", "Play Diamond Rush", "minigames", "bronze", "gem", 1, function() return A.mg("diamondRounds") end)
+def("diamond100", "Shiny Collector", "Collect 100 diamond points", "minigames", "silver", "gem", 100, function() return A.mg("diamondTotal") end)
+def("diamond1000", "Diamond Mine", "Collect 1,000 diamond points", "minigames", "gold", "gem", 1000, function() return A.mg("diamondTotal") end)
+def("diamond10000", "Crown Jewels", "Collect 10,000 diamond points", "minigames", "diamond", "gem", 10000, function() return A.mg("diamondTotal") end)
+def("diamondbest", "Rush Master", "Score 75 in one Diamond Rush", "minigames", "gold", "gem", 75, function() return A.mg("diamondBest") end, {255, 150, 225})
+def("diamondbest2", "Diamond Rush Legend", "Score 150 in one Diamond Rush", "minigames", "mythic", "gem", 150, function() return A.mg("diamondBest") end, {255, 210, 80})
+def("clown1", "Honk Honk", "Shoot a clown", "minigames", "bronze", "clown", 1, function() return A.mg("clownKills") end)
+def("clown100", "Clown Hunter", "Shoot 100 clowns", "minigames", "silver", "clown", 100, function() return A.mg("clownKills") end)
+def("clown1000", "Circus Closed", "Shoot 1,000 clowns", "minigames", "gold", "clown", 1000, function() return A.mg("clownKills") end)
+def("clown10000", "Pennywise Who?", "Shoot 10,000 clowns", "minigames", "diamond", "clown", 10000, function() return A.mg("clownKills") end)
+def("clownround5", "Survivor", "Reach clown round 5", "minigames", "silver", "clown", 5, function() return A.mg("clownBestRound") end, {80, 160, 255})
+def("clownround10", "Balloon Season", "Reach clown round 10", "minigames", "gold", "balloon", 10, function() return A.mg("clownBestRound") end)
+def("clownround20", "Ringmaster", "Reach clown round 20", "minigames", "diamond", "clown", 20, function() return A.mg("clownBestRound") end, {255, 200, 40})
+def("clownround30", "The Circus Never Ends", "Reach clown round 30", "minigames", "mythic", "clown", 30, function() return A.mg("clownBestRound") end, {150, 70, 220})
+def("clownfly", "Pop Goes the Clown", "Shoot 25 flying clowns", "minigames", "gold", "balloon", 25, function() return A.mg("clownFlyingKills") end, {255, 60, 160})
+-- pets
+def("hatch1", "It's Alive!", "Hatch an egg", "pets", "bronze", "egg", 1, function() return A.pet("hatched") end)
+def("hatch25", "Egg Enthusiast", "Hatch 25 eggs", "pets", "silver", "egg", 25, function() return A.pet("hatched") end)
+def("hatch250", "Hatchery", "Hatch 250 eggs", "pets", "gold", "egg", 250, function() return A.pet("hatched") end)
+def("breed1", "Matchmaker", "Breed two pets", "pets", "silver", "heart", 1, function() return A.pet("bred") end)
+def("breed25", "Breeder", "Breed 25 times", "pets", "gold", "heart", 25, function() return A.pet("bred") end)
+def("species10", "Zookeeper", "Discover 10 species", "pets", "silver", "paw", 10, function() return A.size(NeverYieldPets.data and NeverYieldPets.data.discovered) end)
+local normalSpecies = 0
+for _, sp in ipairs(NeverYieldPets.species or {}) do
+	if sp.rarity ~= "secret" then normalSpecies = normalSpecies + 1 end
+end
+def("speciesall", "Gotta Hatch 'Em All", "Discover all " .. normalSpecies .. " normal species", "pets", "diamond", "paw", math.max(1, normalSpecies), function()
+	local n = 0
+	for id in pairs(NeverYieldPets.data and NeverYieldPets.data.discovered or {}) do
+		local sp = NeverYieldPets.speciesById[id]
+		if sp and sp.rarity ~= "secret" then n = n + 1 end
+	end
+	return n
+end)
+def("secret", "Secret Keeper", "Hatch a SECRET pet", "pets", "mythic", "paw", 1, function()
+	local n = 0
+	for _, sec in ipairs(NeverYieldPets.secretSpecies or {}) do
+		if NeverYieldPets.data and NeverYieldPets.data.discovered[sec.id] then n = n + 1 end
+	end
+	return n
+end, {70, 255, 215})
+def("effect1", "Special Effects", "Hatch a pet with an effect", "pets", "silver", "sparkle", 1, function() return A.size(NeverYieldPets.data and NeverYieldPets.data.effectsFound) end)
+def("effect7", "Effect Collector", "Find 7 different effects", "pets", "gold", "sparkle", 7, function() return A.size(NeverYieldPets.data and NeverYieldPets.data.effectsFound) end)
+def("shiny", "Shiny!", "Own a shiny pet", "pets", "gold", "sparkle", 1, function()
+	local n = 0
+	for _, pet in pairs(NeverYieldPets.data and NeverYieldPets.data.pets or {}) do
+		if pet.shiny then n = n + 1 end
+	end
+	return n
+end, {255, 240, 150})
+def("level25", "Best Friends", "Get a pet to level 25", "pets", "gold", "heart", 25, function()
+	local best = 0
+	for _, pet in pairs(NeverYieldPets.data and NeverYieldPets.data.pets or {}) do
+		best = math.max(best, pet.level or 0)
+	end
+	return best
+end, {255, 120, 200})
+def("odds", "Against All Odds", "Pull a 1 in 10,000 pet", "pets", "diamond", "sparkle", 10000, function() return A.pet("bestOdds") end, {120, 255, 220})
+def("tycoon", "Pet Tycoon", "Earn 25,000 pet coins", "pets", "gold", "coin", 25000, function() return A.pet("coinsEarned") end)
+-- explorer
+local function gamesVisited()
+	return A.size(NeverYieldStats.data and NeverYieldStats.data.games)
+end
+def("games5", "Wanderer", "Visit 5 different games", "explorer", "bronze", "globe", 5, gamesVisited)
+def("games25", "Explorer", "Visit 25 different games", "explorer", "silver", "globe", 25, gamesVisited)
+def("games100", "Globetrotter", "Visit 100 different games", "explorer", "gold", "globe", 100, gamesVisited)
+def("games500", "Seen It All", "Visit 500 different games", "explorer", "diamond", "globe", 500, gamesVisited)
+def("tour10", "World Tour", "Visit 10 front-page games", "explorer", "gold", "map", 10, function() return A.frontPageCount() end)
+def("tourall", "Front Page Legend", "Visit every front-page game here", "explorer", "mythic", "map", #A.frontPage, function() return A.frontPageCount() end)
+for _, fp in ipairs(A.frontPage) do
+	local entry = fp
+	def("fp_" .. entry[1], entry[2], "Visit " .. entry[3], "explorer", "bronze", "placard", 1, function() return A.visited(entry) and 1 or 0 end, entry[6])
+end
+-- social and combat
+def("met10", "Friendly", "Meet 10 people", "social", "bronze", "people", 10, function() return A.total("playersMet") end)
+def("met100", "Social Butterfly", "Meet 100 people", "social", "silver", "people", 100, function() return A.total("playersMet") end)
+def("met1000", "Celebrity", "Meet 1,000 people", "social", "gold", "people", 1000, function() return A.total("playersMet") end)
+def("met5000", "Everyone Knows You", "Meet 5,000 people", "social", "diamond", "people", 5000, function() return A.total("playersMet") end)
+def("chat100", "Chatterbox", "Send 100 chat messages", "social", "bronze", "speech", 100, function() return A.total("messages") end)
+def("chat1000", "Motormouth", "Send 1,000 chat messages", "social", "silver", "speech", 1000, function() return A.total("messages") end)
+def("chat10000", "Keyboard Warrior", "Send 10,000 chat messages", "social", "gold", "speech", 10000, function() return A.total("messages") end)
+def("kill1", "First Blood", "Get a kill", "social", "bronze", "sword", 1, function() return A.total("kills") end)
+def("kill100", "Warrior", "Get 100 kills", "social", "silver", "sword", 100, function() return A.total("kills") end)
+def("kill1000", "Legend", "Get 1,000 kills", "social", "gold", "sword", 1000, function() return A.total("kills") end)
+def("streak5", "Rampage", "Get a 5 kill streak", "social", "silver", "sword", 5, function() return A.total("bestStreak") end, {255, 80, 60})
+def("streak10", "Unstoppable", "Get a 10 kill streak", "social", "gold", "sword", 10, function() return A.total("bestStreak") end, {255, 40, 40})
+def("deaths100", "Oof", "Die 100 times", "social", "bronze", "skull", 100, function() return A.total("deaths") end)
+-- milestones
+local function playHours() return A.total("playtime") / 3600 end
+def("play1", "Just Getting Started", "Play for 1 hour", "milestones", "bronze", "clock", 1, playHours)
+def("play10", "Regular", "Play for 10 hours", "milestones", "silver", "clock", 10, playHours)
+def("play24", "Full Day", "Play for 24 hours", "milestones", "gold", "clock", 24, playHours)
+def("play100", "No Life", "Play for 100 hours", "milestones", "diamond", "clock", 100, playHours)
+def("play500", "Touch Grass", "Play for 500 hours", "milestones", "mythic", "clock", 500, playHours)
+def("sessions50", "Loyal", "Load NeverYield 50 times", "milestones", "silver", "star", 50, function() return A.total("sessions") end, {255, 170, 90})
+def("jumps", "Bunny Hop", "Jump 1,000 times", "milestones", "bronze", "rocket", 1000, function() return A.total("jumps") end, {150, 255, 150})
+def("marathon", "Marathon", "Walk 100,000 studs", "milestones", "silver", "shoe", 100000, function() return A.total("distance") end)
+def("trophy10", "Trophy Hunter", "Earn 10 trophies", "milestones", "silver", "cup", 10, function() return A.count() end)
+def("trophy25", "Trophy Case", "Earn 25 trophies", "milestones", "gold", "cup", 25, function() return A.count() end)
+def("trophy50", "Hall of Fame", "Earn 50 trophies", "milestones", "diamond", "cup", 50, function() return A.count() end)
+def("trophyall", "Completionist", "Earn every other trophy", "milestones", "mythic", "crown", 0, function() return A.count() end)
+
+-- Completionist: every other trophy
+for _, d in ipairs(NeverYieldAch.defs) do
+	if d.id == "trophyall" then d.goal = #NeverYieldAch.defs - 1 end
+end
+NeverYieldAch.byId = {}
+for _, d in ipairs(NeverYieldAch.defs) do
+	NeverYieldAch.byId[d.id] = d
+end
+
+-- ---------- saving ----------
+NeverYieldAch.load = function()
+	local data
+	pcall(function()
+		if isfile and isfile(NeverYieldAch.file) then
+			local ok, decoded = pcall(function() return HttpService:JSONDecode(readfile(NeverYieldAch.file)) end)
+			if ok and type(decoded) == "table" then data = decoded end
+		end
+	end)
+	local blank = {version = 1, unlocked = {}, flags = {}, universes = {}, settings = {popups = true, sound = true}, initialized = false}
+	data = data or blank
+	for k, v in pairs(blank) do
+		if type(data[k]) ~= type(v) then data[k] = v end
+	end
+	if data.settings.popups == nil then data.settings.popups = true end
+	if data.settings.sound == nil then data.settings.sound = true end
+	NeverYieldAch.data = data
+end
+
+NeverYieldAch.save = function()
+	local ok, encoded = pcall(function() return HttpService:JSONEncode(NeverYieldAch.data) end)
+	if ok and encoded then pcall(writefile, NeverYieldAch.file, encoded) end
+end
+
+NeverYieldAch.has = function(id)
+	return NeverYieldAch.data and NeverYieldAch.data.unlocked[id] ~= nil
+end
+
+NeverYieldAch.count = function()
+	return NeverYieldAch.data and NeverYieldAch.size(NeverYieldAch.data.unlocked) or 0
+end
+
+NeverYieldAch.flag = function(key, value)
+	if not NeverYieldAch.data then return end
+	if NeverYieldAch.data.flags[key] ~= value then
+		NeverYieldAch.data.flags[key] = value
+		NeverYieldAch.dirty = true
+	end
+end
+
+NeverYieldAch.progress = function(d)
+	local ok, v = pcall(d.value)
+	v = ok and tonumber(v) or 0
+	return v, d.goal
+end
+
+-- ---------- checking ----------
+NeverYieldAch.check = function(silent)
+	local data = NeverYieldAch.data
+	if not data then return {} end
+	local new = {}
+	-- a few passes, so trophy-count achievements can chain in the same check
+	for _ = 1, 3 do
+		local any = false
+		for _, d in ipairs(NeverYieldAch.defs) do
+			if not data.unlocked[d.id] then
+				local v, goal = NeverYieldAch.progress(d)
+				if goal > 0 and v >= goal then
+					data.unlocked[d.id] = os.time()
+					table.insert(new, d)
+					any = true
+				end
+			end
+		end
+		if not any then break end
+	end
+	if #new > 0 then
+		NeverYieldAch.save()
+		if not silent then
+			for _, d in ipairs(new) do table.insert(NeverYieldAch.queue, d) end
+			NeverYieldAch.pump()
+		end
+		if NeverYieldAch.ui.refresh then pcall(NeverYieldAch.ui.refresh) end
+		if NeverYieldRoom and NeverYieldRoom.onUnlock then pcall(NeverYieldRoom.onUnlock) end
+	end
+	return new
+end
+
+-- ---------- trophy models ----------
+-- origin = bottom centre, about 3.4 studs tall. silhouette = dark locked version for the menu.
+NeverYieldAch.trophy = function(d, silhouette)
+	local tier = NeverYieldAch.tiers[d.tier] or NeverYieldAch.tiers.bronze
+	local model = Instance.new("Model")
+	model.Name = randomString()
+	local P = NeverYieldAgartha.part
+	local M = Enum.Material
+	local metal, metalMat = tier.color, tier.material
+	local accent = d.accent and Color3.fromRGB(d.accent[1], d.accent[2], d.accent[3]) or metal
+	local function at(x, y, z) return CFrame.new(x, y, z) end
+	local up = CFrame.Angles(0, 0, math.pi / 2)
+	local function m(size, cf, shape, props) return P(model, size, cf, metal, metalMat, shape, props) end
+	local function a(size, cf, shape, mat, props) return P(model, size, cf, accent, mat or M.SmoothPlastic, shape, props) end
+	local function c(size, cf, color, mat, shape, props) return P(model, size, cf, color, mat or M.SmoothPlastic, shape, props) end
+	-- base: plinth, tier band, plaque, step
+	c(Vector3.new(2.2, 0.55, 2.2), at(0, 0.275, 0), tier.base, tier.baseMat)
+	m(Vector3.new(2.26, 0.12, 2.26), at(0, 0.6, 0))
+	c(Vector3.new(1.5, 0.3, 1.5), at(0, 0.81, 0), tier.base, tier.baseMat)
+	c(Vector3.new(1.0, 0.3, 0.05), at(0, 0.3, -1.12), metal, M.Foil)
+	local y = 0.96
+	local t = d.topper
+	if t == "cup" then
+		m(Vector3.new(0.25, 0.8, 0.8), at(0, y + 0.12, 0) * up, "Cylinder")
+		m(Vector3.new(0.7, 0.18, 0.18), at(0, y + 0.55, 0) * up, "Cylinder")
+		m(Vector3.new(1.3, 1.1, 1.3), at(0, y + 1.3, 0), "Ellipsoid")
+		m(Vector3.new(0.12, 1.45, 1.45), at(0, y + 1.78, 0) * up, "Cylinder")
+		for _, side in ipairs({-1, 1}) do
+			m(Vector3.new(0.14, 0.7, 0.14), at(side * 0.82, y + 1.4, 0) * CFrame.Angles(0, 0, side * 0.5))
+			m(Vector3.new(0.14, 0.4, 0.14), at(side * 0.92, y + 1.05, 0) * CFrame.Angles(0, 0, -side * 0.6))
+		end
+	elseif t == "star" then
+		m(Vector3.new(0.16, 0.9, 0.16), at(0, y + 0.45, 0))
+		local center = y + 1.55
+		m(Vector3.new(0.6, 0.6, 0.35), at(0, center, 0), "Ball")
+		for i = 0, 4 do
+			local ang = i / 5 * math.pi * 2
+			m(Vector3.new(0.34, 0.9, 0.22), at(0, center, 0) * CFrame.Angles(0, 0, ang) * CFrame.new(0, 0.45, 0) * CFrame.Angles(0, 0, 0))
+		end
+		a(Vector3.new(0.25, 0.25, 0.4), at(0, center, 0), "Ball", M.Neon)
+	elseif t == "wings" then
+		m(Vector3.new(0.4, 0.8, 0.4), at(0, y + 0.4, 0), "Ellipsoid")
+		for _, side in ipairs({-1, 1}) do
+			for i = 0, 3 do
+				m(Vector3.new(0.9 - i * 0.12, 0.22, 0.12), at(side * (0.45 + i * 0.12), y + 1.0 + i * 0.32, 0) * CFrame.Angles(0, 0, side * (0.5 + i * 0.12)))
+			end
+		end
+	elseif t == "ghost" then
+		a(Vector3.new(1.1, 1.5, 1.0), at(0, y + 0.95, 0), "Ellipsoid", M.Glass, {Transparency = 0.25, Color = Color3.fromRGB(235, 240, 255)})
+		for i = -1, 1 do
+			c(Vector3.new(0.35, 0.4, 0.35), at(i * 0.33, y + 0.25, 0), Color3.fromRGB(235, 240, 255), M.Glass, "Ball", {Transparency = 0.25})
+		end
+		for _, side in ipairs({-1, 1}) do
+			c(Vector3.new(0.18, 0.28, 0.08), at(side * 0.2, y + 1.15, -0.48), Color3.fromRGB(20, 20, 30), M.SmoothPlastic, "Ellipsoid")
+		end
+		m(Vector3.new(0.08, 0.9, 0.9), at(0, y + 1.9, 0) * up, "Cylinder")
+	elseif t == "bolt" then
+		local pts = {{0.25, 2.2, 0.3}, {-0.15, 1.6, -0.4}, {0.2, 1.0, 0.35}, {-0.1, 0.45, -0.3}}
+		for _, pt in ipairs(pts) do
+			a(Vector3.new(0.35, 0.75, 0.2), at(pt[1], y + pt[2] - 0.2, 0) * CFrame.Angles(0, 0, pt[3]), nil, M.Neon)
+		end
+		m(Vector3.new(0.6, 0.2, 0.6), at(0, y + 0.1, 0))
+	elseif t == "eye" then
+		m(Vector3.new(0.16, 0.7, 0.16), at(0, y + 0.35, 0))
+		c(Vector3.new(1.3, 1.3, 1.3), at(0, y + 1.3, 0), Color3.fromRGB(245, 245, 250), M.SmoothPlastic, "Ball")
+		a(Vector3.new(0.7, 0.7, 0.2), at(0, y + 1.3, -0.58), "Ellipsoid", M.Neon)
+		c(Vector3.new(0.32, 0.32, 0.1), at(0, y + 1.3, -0.68), Color3.fromRGB(10, 10, 15), M.SmoothPlastic, "Ellipsoid")
+	elseif t == "rocket" then
+		c(Vector3.new(0.7, 1.5, 0.7), at(0, y + 1.0, 0), Color3.fromRGB(240, 240, 245), M.SmoothPlastic, "Ellipsoid")
+		a(Vector3.new(0.5, 0.6, 0.5), at(0, y + 1.75, 0), "Ellipsoid")
+		for i = 0, 2 do
+			m(Vector3.new(0.1, 0.5, 0.45), at(0, y + 0.45, 0) * CFrame.Angles(0, i * math.pi * 2 / 3, 0) * CFrame.new(0, 0, 0.4))
+		end
+		c(Vector3.new(0.25, 0.25, 0.08), at(0, y + 1.15, -0.34), Color3.fromRGB(120, 200, 255), M.Glass, "Ball")
+		c(Vector3.new(0.35, 0.35, 0.35), at(0, y + 0.18, 0), Color3.fromRGB(255, 150, 40), M.Neon, "Ball")
+	elseif t == "globe" or t == "map" then
+		m(Vector3.new(0.5, 0.2, 0.5), at(0, y + 0.1, 0))
+		m(Vector3.new(0.12, 0.6, 0.12), at(0, y + 0.45, 0))
+		c(Vector3.new(1.4, 1.4, 1.4), at(0, y + 1.45, 0), Color3.fromRGB(60, 130, 210), M.SmoothPlastic, "Ball")
+		for i = 1, 5 do
+			local ang = i * 1.3
+			a(Vector3.new(0.5, 0.35, 0.12), at(0, y + 1.45, 0) * CFrame.Angles(math.sin(i) * 0.6, ang, 0) * CFrame.new(0, 0, -0.66), "Ellipsoid", nil,
+				{Color = d.accent and accent or Color3.fromRGB(90, 190, 90)})
+		end
+		m(Vector3.new(0.06, 1.75, 1.75), at(0, y + 1.45, 0) * CFrame.Angles(0, 0, 0.4) * up, "Cylinder", {Transparency = 0.75})
+		if t == "map" then
+			c(Vector3.new(0.08, 0.6, 0.08), at(0.45, y + 2.3, -0.3), Color3.fromRGB(200, 30, 30), M.SmoothPlastic)
+			c(Vector3.new(0.4, 0.28, 0.04), at(0.62, y + 2.48, -0.3), Color3.fromRGB(230, 40, 40), M.SmoothPlastic)
+		end
+	elseif t == "placard" then
+		-- a little framed game sign in the game's colour
+		m(Vector3.new(0.14, 0.9, 0.14), at(0, y + 0.45, 0))
+		m(Vector3.new(1.7, 1.2, 0.18), at(0, y + 1.5, 0))
+		a(Vector3.new(1.5, 1.0, 0.2), at(0, y + 1.5, 0), nil, M.SmoothPlastic)
+		c(Vector3.new(0.5, 0.5, 0.22), at(0, y + 1.5, 0), Color3.new(1, 1, 1), M.Neon, "Ball", {Size = Vector3.new(0.5, 0.5, 0.22)})
+	elseif t == "note" then
+		m(Vector3.new(0.6, 0.45, 0.4), at(-0.2, y + 0.4, 0), "Ellipsoid")
+		m(Vector3.new(0.14, 1.5, 0.14), at(0.07, y + 1.1, 0))
+		m(Vector3.new(0.5, 0.18, 0.14), at(0.28, y + 1.75, 0) * CFrame.Angles(0, 0, -0.5))
+		a(Vector3.new(0.3, 0.3, 0.3), at(0.4, y + 2.1, 0), "Ball", M.Neon)
+	elseif t == "cloud" then
+		for _, b in ipairs({{0, 1.1, 0.75}, {-0.5, 0.9, 0.55}, {0.5, 0.9, 0.55}, {0.2, 1.4, 0.5}}) do
+			c(Vector3.new(b[3] * 2, b[3] * 1.6, b[3] * 1.6), at(b[1], y + b[2] + 0.3, 0), Color3.fromRGB(240, 245, 255), M.SmoothPlastic, "Ball")
+		end
+		m(Vector3.new(0.25, 0.6, 0.1), at(-0.15, y + 0.45, 0) * CFrame.Angles(0, 0, 0.4))
+		m(Vector3.new(0.25, 0.5, 0.1), at(0.1, y + 0.15, 0) * CFrame.Angles(0, 0, -0.4))
+	elseif t == "blackhole" then
+		c(Vector3.new(1.1, 1.1, 1.1), at(0, y + 1.3, 0), Color3.new(0, 0, 0), M.SmoothPlastic, "Ball")
+		m(Vector3.new(0.12, 2.2, 2.2), at(0, y + 1.3, 0) * CFrame.Angles(0.35, 0, math.pi / 2), "Cylinder", {Transparency = 0.2})
+		a(Vector3.new(0.1, 1.7, 1.7), at(0, y + 1.3, 0) * CFrame.Angles(0.35, 0, math.pi / 2), "Cylinder", M.Neon, {Color = Color3.fromRGB(255, 140, 60)})
+		m(Vector3.new(0.14, 0.7, 0.14), at(0, y + 0.35, 0))
+	elseif t == "moon" then
+		c(Vector3.new(1.6, 1.6, 1.6), at(0, y + 1.25, 0), Color3.fromRGB(190, 175, 150), M.Slate, "Ball")
+		for _, side in ipairs({-1, 1}) do
+			c(Vector3.new(0.35, 0.4, 0.1), at(side * 0.32, y + 1.4, -0.74), Color3.fromRGB(255, 220, 90), M.Neon, "Ellipsoid")
+		end
+		c(Vector3.new(0.9, 0.12, 0.1), at(0, y + 0.95, -0.72), Color3.fromRGB(40, 30, 25), M.SmoothPlastic)
+		m(Vector3.new(0.2, 0.5, 0.2), at(0, y + 0.25, 0))
+	elseif t == "skull" then
+		c(Vector3.new(1.2, 1.2, 1.2), at(0, y + 1.25, 0), Color3.fromRGB(235, 230, 215), M.SmoothPlastic, "Ball")
+		c(Vector3.new(0.8, 0.5, 0.8), at(0, y + 0.7, -0.1), Color3.fromRGB(235, 230, 215), M.SmoothPlastic)
+		for _, side in ipairs({-1, 1}) do
+			c(Vector3.new(0.34, 0.38, 0.1), at(side * 0.25, y + 1.25, -0.55), Color3.fromRGB(15, 10, 10), M.SmoothPlastic, "Ellipsoid")
+			a(Vector3.new(0.12, 0.12, 0.05), at(side * 0.25, y + 1.25, -0.6), "Ball", M.Neon, {Color = Color3.fromRGB(255, 40, 40)})
+		end
+		m(Vector3.new(0.9, 0.1, 0.9), at(0, y + 0.42, 0))
+	elseif t == "portal" then
+		m(Vector3.new(0.3, 1.9, 1.9), at(0, y + 1.25, 0) * CFrame.Angles(0, math.pi / 2, 0), "Cylinder")
+		a(Vector3.new(0.32, 1.5, 1.5), at(0, y + 1.25, 0) * CFrame.Angles(0, math.pi / 2, 0), "Cylinder", M.Neon, {Color = Color3.fromRGB(255, 160, 60)})
+		c(Vector3.new(0.34, 1.2, 1.2), at(0, y + 1.25, 0) * CFrame.Angles(0, math.pi / 2, 0), Color3.fromRGB(120, 190, 255), M.Glass, "Cylinder", {Transparency = 0.15})
+		m(Vector3.new(0.6, 0.3, 0.4), at(0, y + 0.15, 0))
+	elseif t == "house" then
+		a(Vector3.new(1.3, 1.0, 1.1), at(0, y + 0.5, 0), nil, M.SmoothPlastic, {Color = Color3.fromRGB(240, 225, 195)})
+		m(Vector3.new(1.3, 0.75, 0.72), at(-0.36, y + 1.37, 0) * CFrame.Angles(0, math.pi / 2, 0), "Wedge")
+		m(Vector3.new(1.3, 0.75, 0.72), at(0.36, y + 1.37, 0) * CFrame.Angles(0, -math.pi / 2, 0), "Wedge")
+		c(Vector3.new(0.35, 0.6, 0.05), at(0, y + 0.3, -0.56), Color3.fromRGB(110, 70, 45), M.Wood)
+		c(Vector3.new(0.3, 0.3, 0.05), at(0.38, y + 0.62, -0.56), Color3.fromRGB(255, 220, 140), M.Neon)
+	elseif t == "crown" then
+		m(Vector3.new(0.3, 1.4, 1.4), at(0, y + 0.55, 0) * up, "Cylinder")
+		for i = 0, 6 do
+			local ang = i / 7 * math.pi * 2
+			m(Vector3.new(0.22, 0.6, 0.22), at(math.cos(ang) * 0.6, y + 0.95, math.sin(ang) * 0.6), "Wedge", {CFrame = at(math.cos(ang) * 0.6, y + 0.95, math.sin(ang) * 0.6) * CFrame.Angles(0, -ang, 0)})
+			a(Vector3.new(0.18, 0.18, 0.18), at(math.cos(ang) * 0.6, y + 1.3, math.sin(ang) * 0.6), "Ball", M.Neon, {Color = Color3.fromRGB(255, 60, 90)})
+		end
+		c(Vector3.new(1.0, 0.3, 1.0), at(0, y + 0.45, 0), Color3.fromRGB(150, 20, 40), M.Fabric, "Ball")
+	elseif t == "chart" then
+		for i, h in ipairs({0.6, 1.0, 1.5, 2.0}) do
+			local col = i == 4 and accent or metal
+			P(model, Vector3.new(0.35, h, 0.35), at(-0.6 + (i - 1) * 0.4, y + h / 2, 0), col, i == 4 and M.Neon or metalMat)
+		end
+	elseif t == "gem" then
+		a(Vector3.new(1.1, 0.5, 1.1), at(0, y + 1.6, 0), nil, M.Glass, {Color = d.accent and accent or Color3.fromRGB(150, 230, 255), Transparency = 0.15})
+		for i = 0, 3 do
+			a(Vector3.new(0.78, 0.9, 0.55), at(0, y + 1.0, 0) * CFrame.Angles(0, i * math.pi / 2, 0) * CFrame.new(0, 0, -0.27) * CFrame.Angles(math.pi, 0, 0), "Wedge", M.Glass,
+				{Color = d.accent and accent or Color3.fromRGB(150, 230, 255), Transparency = 0.15})
+		end
+		m(Vector3.new(0.16, 0.5, 0.16), at(0, y + 0.25, 0))
+	elseif t == "clown" then
+		c(Vector3.new(1.2, 1.2, 1.2), at(0, y + 1.2, 0), Color3.fromRGB(250, 248, 245), M.SmoothPlastic, "Ball")
+		c(Vector3.new(0.4, 0.4, 0.4), at(0, y + 1.15, -0.62), Color3.fromRGB(230, 30, 40), M.Neon, "Ball")
+		for _, side in ipairs({-1, 1}) do
+			a(Vector3.new(0.6, 0.6, 0.6), at(side * 0.62, y + 1.35, 0.1), "Ball", M.Fabric, {Color = d.accent and accent or Color3.fromRGB(255, 120, 30)})
+			c(Vector3.new(0.14, 0.2, 0.06), at(side * 0.22, y + 1.42, -0.57), Color3.fromRGB(15, 12, 15), M.SmoothPlastic, "Ellipsoid")
+		end
+		c(Vector3.new(0.6, 0.15, 0.08), at(0, y + 0.9, -0.55), Color3.fromRGB(230, 30, 40), M.SmoothPlastic, "Ellipsoid")
+		m(Vector3.new(0.5, 0.5, 0.5), at(0, y + 1.95, 0))
+		m(Vector3.new(0.8, 0.08, 0.8), at(0, y + 1.72, 0))
+		m(Vector3.new(1.0, 0.2, 0.7), at(0, y + 0.45, 0), "Ellipsoid")
+	elseif t == "balloon" then
+		for i, col in ipairs({{255, 60, 90}, {80, 160, 255}, {255, 210, 50}}) do
+			local bx = (i - 2) * 0.5
+			c(Vector3.new(0.75, 0.9, 0.75), at(bx, y + 1.8 + (i % 2) * 0.25, 0), Color3.fromRGB(col[1], col[2], col[3]), M.SmoothPlastic, "Ellipsoid", {Reflectance = 0.15})
+			c(Vector3.new(0.04, 1.3, 0.04), at(bx * 0.5, y + 0.85, 0) * CFrame.Angles(0, 0, -bx * 0.4), Color3.new(1, 1, 1), M.SmoothPlastic)
+		end
+		m(Vector3.new(0.4, 0.25, 0.4), at(0, y + 0.12, 0), "Ball")
+	elseif t == "egg" then
+		a(Vector3.new(1.1, 1.45, 1.1), at(0, y + 1.0, 0), "Ellipsoid", M.SmoothPlastic, {Color = Color3.fromRGB(250, 240, 220)})
+		for i = 1, 4 do
+			m(Vector3.new(0.3, 0.3, 0.1), at(0, y + 1.0, 0) * CFrame.Angles(0, i * 1.6, 0) * CFrame.new(0, (i % 2 - 0.5) * 0.5, -0.52), "Ellipsoid")
+		end
+		m(Vector3.new(0.3, 1.2, 1.2), at(0, y + 0.2, 0) * up, "Cylinder")
+	elseif t == "heart" then
+		for _, side in ipairs({-1, 1}) do
+			a(Vector3.new(0.75, 0.75, 0.5), at(side * 0.3, y + 1.55, 0), "Ball", M.SmoothPlastic, {Color = d.accent and accent or Color3.fromRGB(255, 70, 110)})
+		end
+		a(Vector3.new(0.85, 0.85, 0.5), at(0, y + 1.15, 0) * CFrame.Angles(0, 0, math.rad(45)), nil, M.SmoothPlastic, {Color = d.accent and accent or Color3.fromRGB(255, 70, 110)})
+		m(Vector3.new(0.14, 0.6, 0.14), at(0, y + 0.3, 0))
+	elseif t == "paw" then
+		a(Vector3.new(0.9, 0.7, 0.3), at(0, y + 1.0, 0), "Ellipsoid", M.SmoothPlastic, {Color = d.accent and accent or Color3.fromRGB(255, 180, 120)})
+		for i = -1.5, 1.5 do
+			a(Vector3.new(0.32, 0.4, 0.3), at(i * 0.3, y + 1.55 - math.abs(i) * 0.15, 0), "Ellipsoid", M.SmoothPlastic, {Color = d.accent and accent or Color3.fromRGB(255, 180, 120)})
+		end
+		m(Vector3.new(0.14, 0.6, 0.14), at(0, y + 0.3, 0))
+	elseif t == "sparkle" then
+		for i = 0, 3 do
+			a(Vector3.new(0.2, 1.4 - (i % 2) * 0.5, 0.2), at(0, y + 1.3, 0) * CFrame.Angles(0, 0, i * math.pi / 4), nil, M.Neon, {Color = d.accent and accent or Color3.fromRGB(255, 240, 160)})
+		end
+		m(Vector3.new(0.5, 0.5, 0.5), at(0, y + 1.3, 0), "Ball")
+		m(Vector3.new(0.14, 0.7, 0.14), at(0, y + 0.35, 0))
+	elseif t == "coin" then
+		for i = 0, 2 do
+			m(Vector3.new(0.18, 1.0, 1.0), at(0, y + 0.1 + i * 0.19, 0) * up, "Cylinder")
+		end
+		m(Vector3.new(0.2, 1.3, 1.3), at(0, y + 1.5, 0) * CFrame.Angles(0, math.pi / 2, 0), "Cylinder")
+		a(Vector3.new(0.22, 0.6, 0.6), at(0, y + 1.5, 0) * CFrame.Angles(0, math.pi / 2, 0), "Cylinder", M.Neon, {Color = Color3.fromRGB(255, 250, 200)})
+	elseif t == "people" then
+		for i = -1, 1 do
+			local s = i == 0 and 1.15 or 0.9
+			a(Vector3.new(0.55 * s, 0.75 * s, 0.4 * s), at(i * 0.55, y + 0.45 * s, 0), nil, M.SmoothPlastic, {Color = i == 0 and metal or (d.accent and accent or Color3.fromRGB(120, 180, 255))})
+			c(Vector3.new(0.45 * s, 0.45 * s, 0.45 * s), at(i * 0.55, y + 1.05 * s, 0), Color3.fromRGB(255, 220, 180), M.SmoothPlastic, "Ball")
+		end
+	elseif t == "speech" then
+		c(Vector3.new(1.6, 1.0, 0.3), at(0, y + 1.5, 0), Color3.fromRGB(245, 245, 250), M.SmoothPlastic, "Ellipsoid")
+		c(Vector3.new(0.3, 0.4, 0.25), at(-0.35, y + 0.95, 0) * CFrame.Angles(0, 0, 0.6), Color3.fromRGB(245, 245, 250), M.SmoothPlastic, "Wedge")
+		for i = -1, 1 do
+			a(Vector3.new(0.18, 0.18, 0.1), at(i * 0.35, y + 1.5, -0.15), "Ball", M.Neon)
+		end
+		m(Vector3.new(0.14, 0.8, 0.14), at(0, y + 0.4, 0))
+	elseif t == "sword" then
+		a(Vector3.new(0.3, 2.0, 0.08), at(0, y + 1.5, 0), nil, M.Metal, {Color = Color3.fromRGB(220, 225, 235), Reflectance = 0.3})
+		m(Vector3.new(1.0, 0.16, 0.2), at(0, y + 0.5, 0))
+		c(Vector3.new(0.14, 0.4, 0.14), at(0, y + 0.25, 0), Color3.fromRGB(80, 50, 30), M.Wood)
+		m(Vector3.new(0.2, 0.2, 0.2), at(0, y + 0.03, 0), "Ball")
+	elseif t == "clock" then
+		m(Vector3.new(0.3, 1.5, 1.5), at(0, y + 1.1, 0) * CFrame.Angles(0, math.pi / 2, 0), "Cylinder")
+		c(Vector3.new(0.32, 1.25, 1.25), at(0, y + 1.1, 0) * CFrame.Angles(0, math.pi / 2, 0), Color3.fromRGB(250, 248, 240), M.SmoothPlastic, "Cylinder")
+		c(Vector3.new(0.07, 0.45, 0.05), at(0, y + 1.3, -0.17), Color3.fromRGB(20, 20, 20), M.SmoothPlastic)
+		c(Vector3.new(0.3, 0.07, 0.05), at(0.13, y + 1.1, -0.17), Color3.fromRGB(20, 20, 20), M.SmoothPlastic)
+		for _, side in ipairs({-1, 1}) do
+			m(Vector3.new(0.35, 0.35, 0.35), at(side * 0.45, y + 1.9, 0), "Ball")
+		end
+		m(Vector3.new(0.6, 0.35, 0.4), at(0, y + 0.18, 0))
+	elseif t == "shoe" then
+		a(Vector3.new(0.6, 0.55, 1.3), at(0, y + 0.55, 0), "Ellipsoid", M.SmoothPlastic, {Color = Color3.fromRGB(240, 70, 70)})
+		c(Vector3.new(0.65, 0.18, 1.35), at(0, y + 0.3, 0), Color3.fromRGB(245, 245, 245), M.SmoothPlastic)
+		for _, side in ipairs({-1, 1}) do
+			m(Vector3.new(0.1, 0.5, 0.6), at(side * 0.32, y + 0.85, 0.35) * CFrame.Angles(0, 0, side * 0.5))
+		end
+	else
+		m(Vector3.new(1, 1, 1), at(0, y + 0.7, 0), "Ball")
+	end
+	-- higher tiers glow
+	local root = model:FindFirstChildWhichIsA("BasePart")
+	if tier.glow and not silhouette and root then
+		local light = Instance.new("PointLight")
+		light.Color = tier.color
+		light.Range = 6
+		light.Brightness = 1
+		light.Parent = root
+		local sparkle = Instance.new("ParticleEmitter")
+		sparkle.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+		sparkle.Rate = 3
+		sparkle.Lifetime = NumberRange.new(0.6, 1.2)
+		sparkle.Speed = NumberRange.new(0.3, 0.8)
+		sparkle.SpreadAngle = Vector2.new(180, 180)
+		sparkle.LightEmission = 1
+		sparkle.Size = NumberSequence.new(0.25, 0)
+		sparkle.Color = ColorSequence.new(tier.color)
+		local att = Instance.new("Attachment")
+		att.Position = Vector3.new(0, 1.6, 0)
+		att.Parent = root
+		sparkle.Parent = att
+	end
+	if silhouette then
+		for _, p in ipairs(model:GetDescendants()) do
+			if p:IsA("BasePart") then
+				p.Color = Color3.fromRGB(22, 20, 34)
+				p.Material = Enum.Material.SmoothPlastic
+				p.Transparency = 0
+				p.Reflectance = 0
+			end
+		end
+	end
+	model.PrimaryPart = root
+	-- pivot at the bottom centre, so PivotTo(cf) stands the trophy on cf
+	if root then root.PivotOffset = root.CFrame:Inverse() end
+	return model
+end
+
+-- spinning trophy in a ViewportFrame
+NeverYieldAch.preview = function(parent, d, pos, size, locked)
+	local vp = Instance.new("ViewportFrame")
+	vp.Name = randomString()
+	vp.Position = pos
+	vp.Size = size
+	vp.BackgroundTransparency = 1
+	vp.Ambient = Color3.fromRGB(170, 165, 185)
+	vp.LightColor = Color3.new(1, 1, 1)
+	vp.LightDirection = Vector3.new(-1, -1.5, 1)
+	vp.ZIndex = 22
+	vp.Parent = parent
+	local model = NeverYieldAch.trophy(d, locked)
+	model.Parent = vp
+	local cam = Instance.new("Camera")
+	cam.FieldOfView = 34
+	cam.CFrame = CFrame.lookAt(Vector3.new(0, 2.6, -6.4), Vector3.new(0, 1.65, 0))
+	cam.Parent = vp
+	vp.CurrentCamera = cam
+	return vp, model
+end
+
+-- ---------- unlock popups ----------
+NeverYieldAch.pump = function()
+	if NeverYieldAch.showing or #NeverYieldAch.queue == 0 then return end
+	local d = table.remove(NeverYieldAch.queue, 1)
+	local data = NeverYieldAch.data
+	if not data.settings.popups then
+		notify('Achievement', d.name .. ' unlocked! (' .. NeverYieldAch.tiers[d.tier].name .. ')')
+		task.defer(NeverYieldAch.pump)
+		return
+	end
+	NeverYieldAch.showing = true
+	task.spawn(function()
+		local ok = pcall(NeverYieldAch.toast, d)
+		NeverYieldAch.showing = false
+		if not ok then notify('Achievement', d.name .. ' unlocked!') end
+		NeverYieldAch.pump()
+	end)
+end
+
+NeverYieldAch.toast = function(d)
+	local tier = NeverYieldAch.tiers[d.tier]
+	local screen = WackyState.overlay()
+	local card = Instance.new("Frame")
+	card.AnchorPoint = Vector2.new(0.5, 0)
+	card.Position = UDim2.new(0.5, 0, 0, -120)
+	card.Size = UDim2.new(0, 380, 0, 92)
+	card.BackgroundColor3 = Color3.fromRGB(20, 16, 36)
+	card.BorderSizePixel = 0
+	card.ZIndex = 90
+	NeverYieldPortal.corner(card, UDim.new(0, 16))
+	local stroke, gradient = NeverYieldPortal.stroke(card, 3, 0)
+	gradient.Color = ColorSequence.new(tier.color, Color3.new(1, 1, 1))
+	card.Parent = screen
+	local vp, model = NeverYieldAch.preview(card, d, UDim2.new(0, 6, 0, 2), UDim2.new(0, 88, 0, 88), false)
+	vp.ZIndex = 91
+	NeverYieldPets.label(card, {Position = UDim2.new(0, 100, 0, 10), Size = UDim2.new(1, -110, 0, 18), TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left,
+		TextColor3 = tier.color, Text = "\u{1F3C6} ACHIEVEMENT UNLOCKED  -  " .. tier.name:upper(), ZIndex = 92})
+	NeverYieldPets.label(card, {Position = UDim2.new(0, 100, 0, 28), Size = UDim2.new(1, -110, 0, 30), Font = Enum.Font.FredokaOne, TextSize = 24,
+		TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Text = d.name, ZIndex = 92})
+	NeverYieldPets.label(card, {Position = UDim2.new(0, 100, 0, 60), Size = UDim2.new(1, -110, 0, 20), TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left,
+		TextColor3 = Color3.fromRGB(200, 195, 230), Text = d.desc .. "  -  new trophy for your room!", ZIndex = 92})
+	if NeverYieldAch.data.settings.sound then
+		WackyState.sound(WackyState.pick(NeverYieldPets.levelMusic), nil, 0.45)
+	end
+	TweenService:Create(card, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, 0, 0, 58)}):Play()
+	local start = tick()
+	while tick() - start < 4.2 and card.Parent do
+		local t = tick() - start
+		if model.Parent then model:PivotTo(CFrame.Angles(0, t * 1.6, 0)) end
+		gradient.Rotation = (t * 120) % 360
+		RunService.RenderStepped:Wait()
+	end
+	TweenService:Create(card, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Position = UDim2.new(0.5, 0, 0, -120)}):Play()
+	task.wait(0.4)
+	card:Destroy()
+end
+
+-- ---------- menu ----------
+NeverYieldAch.close = function()
+	WackyState.disconnect("achUi")
+	for _, c in ipairs(NeverYieldAch.ui.drag or {}) do pcall(function() c:Disconnect() end) end
+	if NeverYieldAch.ui.screen then pcall(function() NeverYieldAch.ui.screen:Destroy() end) end
+	NeverYieldAch.ui = {}
+end
+
+NeverYieldAch.filtered = function(cat)
+	local list = {}
+	for _, d in ipairs(NeverYieldAch.defs) do
+		if cat == "all" or d.cat == cat then table.insert(list, d) end
+	end
+	-- unlocked first (newest first), then closest to done
+	table.sort(list, function(x, y)
+		local ux, uy = NeverYieldAch.data.unlocked[x.id], NeverYieldAch.data.unlocked[y.id]
+		if ux and uy then return ux > uy end
+		if ux or uy then return ux ~= nil end
+		local vx, gx = NeverYieldAch.progress(x)
+		local vy, gy = NeverYieldAch.progress(y)
+		local px, py = vx / math.max(gx, 1), vy / math.max(gy, 1)
+		if px ~= py then return px > py end
+		return x.id < y.id
+	end)
+	return list
+end
+
+NeverYieldAch.open = function(cat)
+	local ui = NeverYieldAch.ui
+	if ui.panel and ui.panel.Parent then
+		if cat then
+			ui.cat, ui.page = cat, 1
+			ui.refresh()
+		else
+			NeverYieldAch.close()
+		end
+		return
+	end
+	NeverYieldAch.close()
+	pcall(NeverYieldAch.check)
+	ui = NeverYieldAch.ui
+	ui.cat, ui.page, ui.spinners = cat or "all", 1, {}
+	local P = NeverYieldPets
+	local screen = Instance.new("ScreenGui")
+	screen.Name = randomString()
+	screen.ResetOnSpawn = false
+	screen.IgnoreGuiInset = true
+	screen.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	screen.DisplayOrder = 2147483645
+	if not pcall(function() screen.Parent = gethui and gethui() or COREGUI end) then
+		screen.Parent = Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")
+	end
+	ui.screen = screen
+	local panel = Instance.new("Frame")
+	panel.Name = randomString()
+	panel.AnchorPoint = Vector2.new(0.5, 0.5)
+	panel.Position = UDim2.new(0.5, 0, 0.5, 0)
+	panel.Size = UDim2.new(0, 720, 0, 484)
+	panel.BackgroundColor3 = Color3.fromRGB(20, 16, 36)
+	panel.BorderSizePixel = 0
+	panel.Active = true
+	panel.ZIndex = 20
+	NeverYieldPortal.corner(panel, UDim.new(0, 18))
+	local _, strokeGradient = NeverYieldPortal.stroke(panel, 3, 0)
+	strokeGradient.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 200, 70)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(150, 235, 255)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 200, 70)),
+	})
+	local scale = Instance.new("UIScale")
+	scale.Scale = 0.8
+	scale.Parent = panel
+	panel.Parent = screen
+	ui.panel = panel
+	local title = P.label(panel, {Position = UDim2.new(0, 20, 0, 10), Size = UDim2.new(0, 300, 0, 40), Font = Enum.Font.FredokaOne, TextSize = 32,
+		Text = "\u{1F3C6} ACHIEVEMENTS", TextXAlignment = Enum.TextXAlignment.Left, Active = true})
+	local tg = Instance.new("UIGradient")
+	tg.Color = ColorSequence.new(Color3.fromRGB(255, 215, 90), Color3.fromRGB(255, 160, 60))
+	tg.Parent = title
+	ui.summary = P.label(panel, {Position = UDim2.new(0, 330, 0, 12), Size = UDim2.new(0, 300, 0, 18), TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left,
+		TextColor3 = Color3.fromRGB(220, 215, 255)})
+	ui.bar = Instance.new("Frame")
+	ui.bar.Position = UDim2.new(0, 330, 0, 34)
+	ui.bar.Size = UDim2.new(0, 300, 0, 12)
+	ui.bar.BackgroundColor3 = Color3.fromRGB(40, 34, 70)
+	ui.bar.BorderSizePixel = 0
+	ui.bar.ZIndex = 22
+	NeverYieldPortal.corner(ui.bar, UDim.new(0, 6))
+	ui.bar.Parent = panel
+	ui.fill = Instance.new("Frame")
+	ui.fill.BackgroundColor3 = Color3.fromRGB(255, 200, 70)
+	ui.fill.BorderSizePixel = 0
+	ui.fill.ZIndex = 23
+	NeverYieldPortal.corner(ui.fill, UDim.new(0, 6))
+	ui.fill.Parent = ui.bar
+	P.button(panel, "X", UDim2.new(1, -46, 0, 14), UDim2.new(0, 32, 0, 32), Color3.fromRGB(150, 50, 80), NeverYieldAch.close)
+	ui.tabButtons = {}
+	for i, info in ipairs(NeverYieldAch.cats) do
+		ui.tabButtons[info[1]] = P.button(panel, info[2], UDim2.new(0, 16 + (i - 1) * 77, 0, 58), UDim2.new(0, 73, 0, 28), nil, function()
+			ui.cat, ui.page = info[1], 1
+			ui.refresh()
+		end)
+		ui.tabButtons[info[1]].TextSize = 12
+	end
+	ui.body = Instance.new("Frame")
+	ui.body.BackgroundTransparency = 1
+	ui.body.Position = UDim2.new(0, 16, 0, 96)
+	ui.body.Size = UDim2.new(1, -32, 1, -108)
+	ui.body.ZIndex = 21
+	ui.body.Parent = panel
+
+	ui.refresh = function()
+		local data = NeverYieldAch.data
+		local count, total = NeverYieldAch.count(), #NeverYieldAch.defs
+		ui.summary.Text = count .. " / " .. total .. " unlocked   (" .. math.floor(count / total * 100) .. "%)"
+		ui.fill.Size = UDim2.new(count / total, 0, 1, 0)
+		for id, b in pairs(ui.tabButtons) do
+			b.BackgroundColor3 = id == ui.cat and Color3.fromRGB(255, 170, 60) or Color3.fromRGB(60, 50, 110)
+		end
+		ui.spinners = {}
+		for _, c in ipairs(ui.body:GetChildren()) do c:Destroy() end
+		if ui.cat == "settings" then
+			local rows = {{"popups", "\u{1F514} Unlock popups", "Show a popup with the trophy when you unlock something."},
+				{"sound", "\u{1F3B5} Unlock jingle", "Play a short jingle with the popup."}}
+			for i, row in ipairs(rows) do
+				local on = data.settings[row[1]] ~= false
+				local card = P.card(ui.body, UDim2.new(0, 0, 0, (i - 1) * 84), UDim2.new(1, 0, 0, 74))
+				P.label(card, {Position = UDim2.new(0, 16, 0, 10), Size = UDim2.new(0.7, 0, 0, 28), TextSize = 18, TextXAlignment = Enum.TextXAlignment.Left, Text = row[2]})
+				P.label(card, {Position = UDim2.new(0, 16, 0, 40), Size = UDim2.new(0.7, 0, 0, 22), TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left,
+					TextColor3 = Color3.fromRGB(200, 200, 230), Text = row[3]})
+				P.button(card, on and "ON" or "OFF", UDim2.new(1, -150, 0, 17), UDim2.new(0, 130, 0, 40), on and Color3.fromRGB(60, 170, 90) or Color3.fromRGB(150, 60, 70), function()
+					data.settings[row[1]] = not on
+					NeverYieldAch.save()
+					ui.refresh()
+				end)
+			end
+			P.label(ui.body, {Position = UDim2.new(0, 0, 0, 190), Size = UDim2.new(1, 0, 0, 60), TextSize = 13, TextWrapped = true,
+				TextColor3 = Color3.fromRGB(200, 195, 230), Text = "Every achievement gives you its own trophy. Type door and open it to visit your room, then press Edit to put your trophies (and the furniture you unlock) wherever you want."})
+			return
+		end
+		local list = NeverYieldAch.filtered(ui.cat)
+		local perPage = 8
+		local pages = math.max(1, math.ceil(#list / perPage))
+		ui.page = math.clamp(ui.page, 1, pages)
+		for i = 1, perPage do
+			local d = list[(ui.page - 1) * perPage + i]
+			if not d then break end
+			local col, row = (i - 1) % 4, math.floor((i - 1) / 4)
+			local tier = NeverYieldAch.tiers[d.tier]
+			local when = data.unlocked[d.id]
+			local card = P.card(ui.body, UDim2.new(0, col * 172, 0, row * 168), UDim2.new(0, 164, 0, 160), when and tier.color or Color3.fromRGB(60, 55, 90))
+			if not when then card.BackgroundColor3 = Color3.fromRGB(28, 24, 48) end
+			local _, model = NeverYieldAch.preview(card, d, UDim2.new(0, 22, 0, 0), UDim2.new(0, 120, 0, 74), not when)
+			if when then table.insert(ui.spinners, model) end
+			P.label(card, {Position = UDim2.new(0, 6, 0, 74), Size = UDim2.new(1, -12, 0, 18), TextSize = 14, TextTruncate = Enum.TextTruncate.AtEnd,
+				Text = d.name, TextColor3 = when and Color3.new(1, 1, 1) or Color3.fromRGB(170, 165, 200)})
+			P.label(card, {Position = UDim2.new(0, 6, 0, 92), Size = UDim2.new(1, -12, 0, 28), TextSize = 11, TextWrapped = true,
+				TextColor3 = Color3.fromRGB(190, 185, 220), Text = d.desc})
+			local v, goal = NeverYieldAch.progress(d)
+			if when then
+				P.label(card, {Position = UDim2.new(0, 6, 0, 124), Size = UDim2.new(1, -12, 0, 14), TextSize = 11, TextColor3 = tier.color, Text = tier.name .. " trophy"})
+				P.label(card, {Position = UDim2.new(0, 6, 0, 140), Size = UDim2.new(1, -12, 0, 14), TextSize = 10, TextColor3 = Color3.fromRGB(170, 165, 200),
+					Text = "unlocked " .. os.date("%b %d, %Y", when)})
+			else
+				local shown = goal >= 1000 and NeverYieldStats.num(math.floor(math.min(v, goal))) or tostring(math.floor(math.min(v, goal) * 10) / 10)
+				P.bar(card, UDim2.new(0, 10, 0, 128), UDim2.new(1, -20, 0, 16), math.min(1, v / math.max(goal, 1)), tier.color,
+					shown .. " / " .. (goal >= 1000 and NeverYieldStats.num(goal) or tostring(goal)))
+				P.label(card, {Position = UDim2.new(0, 6, 0, 145), Size = UDim2.new(1, -12, 0, 12), TextSize = 10, TextColor3 = tier.color, Text = tier.name})
+			end
+		end
+		if pages > 1 then
+			P.button(ui.body, "<", UDim2.new(0.5, -110, 1, -34), UDim2.new(0, 60, 0, 28), nil, function()
+				ui.page = ui.page - 1
+				if ui.page < 1 then ui.page = pages end
+				ui.refresh()
+			end)
+			P.label(ui.body, {Position = UDim2.new(0.5, -40, 1, -34), Size = UDim2.new(0, 80, 0, 28), TextSize = 14, Text = ui.page .. " / " .. pages})
+			P.button(ui.body, ">", UDim2.new(0.5, 50, 1, -34), UDim2.new(0, 60, 0, 28), nil, function()
+				ui.page = ui.page + 1
+				if ui.page > pages then ui.page = 1 end
+				ui.refresh()
+			end)
+		end
+	end
+
+	local dragging, dragStart, startPos = false, nil, nil
+	ui.drag = {
+		title.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				dragging, dragStart, startPos = true, input.Position, panel.Position
+			end
+		end),
+		UserInputService.InputEnded:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
+		end),
+		UserInputService.InputChanged:Connect(function(input)
+			if not dragging or not panel.Parent then return end
+			if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
+			local delta = input.Position - dragStart
+			panel.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+		end),
+	}
+	WackyState.connect("achUi", RunService.RenderStepped:Connect(function()
+		if not panel.Parent then
+			NeverYieldAch.close()
+			return
+		end
+		local t = tick()
+		strokeGradient.Rotation = (t * 90) % 360
+		for _, m in ipairs(ui.spinners) do
+			if m.Parent then m:PivotTo(CFrame.Angles(0, t * 0.9, 0)) end
+		end
+	end))
+	TweenService:Create(scale, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+	ui.refresh()
+end
+
+-- ---------- start / stop ----------
+NeverYieldAch.start = function()
+	NeverYieldAch.load()
+	local data = NeverYieldAch.data
+	pcall(function() data.universes[tostring(game.GameId)] = true end)
+	if not data.initialized then
+		-- first run: everything you already earned unlocks quietly, with one summary
+		data.initialized = true
+		local new = NeverYieldAch.check(true)
+		NeverYieldAch.save()
+		if #new > 0 then
+			task.delay(10, function()
+				notify('Achievements', 'You already earned ' .. #new .. ' achievements! Open Settings > Achievements to see your trophies.', 10)
+			end)
+		end
+	end
+	NeverYieldAch.save()
+	local acc = 0
+	WackyState.connect("achievements", RunService.Heartbeat:Connect(function(dt)
+		acc = acc + dt
+		if acc < 4 then return end
+		acc = 0
+		pcall(NeverYieldAch.check)
+		if NeverYieldAch.dirty then
+			NeverYieldAch.dirty = false
+			NeverYieldAch.save()
+		end
+	end))
+end
+
+NeverYieldAch.stop = function()
+	pcall(NeverYieldAch.save)
+	pcall(NeverYieldAch.close)
+	WackyState.disconnect("achievements")
+end
+
+addcmd('achievements',{'achs','trophies'},function(args, speaker)
+	local cat = args[1] and args[1]:lower()
+	local valid = false
+	for _, info in ipairs(NeverYieldAch.cats) do
+		if info[1] == cat then valid = true end
+	end
+	NeverYieldAch.open(valid and cat or nil)
+end)
+
+pcall(NeverYieldAch.start)
+end
+-- ================== END NEVERYIELD ACHIEVEMENTS ==================
 
 addcmd('removecmd',{'deletecmd'},function(args, speaker)
 	removecmd(args[1])
