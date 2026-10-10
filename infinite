@@ -1,9 +1,39 @@
 if IY_LOADED and not _G.IY_DEBUG then
-	-- error("Infinite Yield is already running!", 0)
-	return
+	if getgenv and getgenv().IY_CUSTOM_LOADED then
+		-- error("Infinite Yield is already running!", 0)
+		return
+	end
+	-- The stock Infinite Yield is running (it re-queues itself on every teleport).
+	-- Remove it and load this version instead.
+	local guiRoots = {}
+	pcall(function() if gethui then table.insert(guiRoots, gethui()) end end)
+	pcall(function() table.insert(guiRoots, game:GetService("CoreGui")) end)
+	for _, guiRoot in ipairs(guiRoots) do
+		pcall(function()
+			for _, label in ipairs(guiRoot:GetDescendants()) do
+				if label:IsA("TextLabel") and string.find(label.Text, "Infinite Yield FE v", 1, true) then
+					local screen = label:FindFirstAncestorOfClass("ScreenGui")
+					if screen and screen.Name ~= "RobloxGui" then
+						screen:Destroy()
+					end
+				end
+			end
+		end)
+	end
+	pcall(function()
+		local localPlayer = game:GetService("Players").LocalPlayer
+		for _, signal in ipairs({localPlayer.OnTeleport, localPlayer.Chatted}) do
+			for _, conn in ipairs(getconnections(signal)) do
+				pcall(function() conn:Disable() end)
+			end
+		end
+	end)
 end
 
-pcall(function() getgenv().IY_LOADED = true end)
+pcall(function()
+	getgenv().IY_LOADED = true
+	getgenv().IY_CUSTOM_LOADED = true
+end)
 if not game:IsLoaded() then game.Loaded:Wait() end
 
 function missing(t, f, fallback)
