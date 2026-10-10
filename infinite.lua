@@ -1,4 +1,4 @@
--- NeverYield v1.24.3 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.24.4 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.24.3" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.24.4" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -26588,7 +26588,7 @@ end
 NeverYieldPets.potions = {
 	{id = "xp", name = "XP Potion", icon = "\u{1F9EA}", desc = "2x pet XP for 10 min", price = 300},
 	{id = "coins", name = "Coin Potion", icon = "\u{1F4B0}", desc = "2x pet coins for 10 min", price = 400},
-	{id = "luck", name = "Luck Potion", icon = "\u{1F340}", desc = "rarer hatches + 3x shiny for 10 min", price = 600},
+	{id = "luck", name = "Luck Potion", icon = "\u{1F340}", desc = "a bit luckier eggs + skin/hat rolls for 10 min", price = 600},
 }
 
 -- eggs: either rarity weights (species/skins) or a pool of species ids; skinPool / fixedSkin are optional
@@ -26799,7 +26799,7 @@ end
 -- roll a random effect; returns id (or nil) and the chance of that exact effect
 NeverYieldPets.rollEffect = function(chanceMult)
 	local lucky = NeverYieldPets.boosted("luck")
-	local chance = NeverYieldPets.effectChance * (chanceMult or 1) * (lucky and 1.5 or 1)
+	local chance = NeverYieldPets.effectChance * (chanceMult or 1) * (lucky and 1.25 or 1)
 	if math.random() >= chance then return nil, 1 end
 	local ri = NeverYieldPets.rarityIndex
 	local rarity, p = NeverYieldPets.weightedKeyP(NeverYieldPets.luckWeights(NeverYieldPets.effectWeights, function(r) return ri[r] - 2 end))
@@ -26812,7 +26812,7 @@ NeverYieldPets.luckWeights = function(weights, rarityOfKey)
 	if not NeverYieldPets.boosted("luck") then return weights end
 	local out = {}
 	for k, w in pairs(weights) do
-		out[k] = w * (1 + 0.6 * ((rarityOfKey(k) or 1) - 1))
+		out[k] = w * (1 + 0.25 * ((rarityOfKey(k) or 1) - 1))
 	end
 	return out
 end
@@ -26969,7 +26969,7 @@ NeverYieldPets.rollEgg = function(egg)
 	local ri = NeverYieldPets.rarityIndex
 	local lucky = NeverYieldPets.boosted("luck")
 	local species, odds, p
-	local secretChance = 1 / (NeverYieldPets.secretOdds[def.id] or 10000) * (lucky and 2 or 1)
+	local secretChance = 1 / (NeverYieldPets.secretOdds[def.id] or 10000) * (lucky and 1.5 or 1)
 	if math.random() < secretChance then
 		local sec = NeverYieldPets.secretSpecies[math.random(1, #NeverYieldPets.secretSpecies)]
 		species, odds = sec.id, secretChance / #NeverYieldPets.secretSpecies
@@ -26999,7 +26999,7 @@ NeverYieldPets.rollEgg = function(egg)
 		skin = NeverYieldPets.pickOf(NeverYieldPets.skins, rarity).id
 		odds = odds * p / NeverYieldPets.countOf(NeverYieldPets.skins, rarity)
 	end
-	local shinyChance = def.shiny * (lucky and 3 or 1)
+	local shinyChance = def.shiny * (lucky and 1.5 or 1)
 	local shiny = math.random() < shinyChance
 	if shiny then odds = odds * shinyChance end
 	local sp = NeverYieldPets.speciesById[species]
@@ -27090,7 +27090,7 @@ NeverYieldPets.breed = function(a, b)
 	if math.random() < 0.15 + math.min(0.15, gen * 0.01) then
 		skin = NeverYieldPets.pickOf(NeverYieldPets.skins, NeverYieldPets.weightedKey({common = 40, rare = 35, epic = 18, legendary = 6, mythic = 1})).id
 	end
-	local shiny = math.random() < ((a.shiny or b.shiny) and 0.1 or 0.02) * (NeverYieldPets.boosted("luck") and 3 or 1)
+	local shiny = math.random() < ((a.shiny or b.shiny) and 0.1 or 0.02) * (NeverYieldPets.boosted("luck") and 1.5 or 1)
 	local traits = {}
 	for _, parent in ipairs({a, b}) do
 		local list = parent.traits or {}
@@ -28233,31 +28233,173 @@ NeverYieldPets.shopPages.items = function(body, ui, data)
 		end)
 end
 
-NeverYieldPets.shopPages.skins = function(body, ui, data)
-	NeverYieldPets.label(body, {Position = UDim2.new(0, 0, 0, 34), Size = UDim2.new(1, 0, 0, 18), TextXAlignment = Enum.TextXAlignment.Left,
-		Text = "Mystery skins: you only see a skin once you own it. Put them on any pet (pet detail page)."})
-	local col = 0
-	for _, skin in ipairs(NeverYieldPets.skins) do
-		if skin.id ~= "classic" then
-			local owned = data.skins[skin.id]
-			local rarity = NeverYieldPets.rarities[NeverYieldPets.rarityIndex[skin.rarity]]
-			local card = NeverYieldPets.card(body, UDim2.new(0, (col % 5) * 130, 0, 56 + math.floor(col / 5) * 140), UDim2.new(0, 124, 0, 134), rarity.color)
-			if owned then
-				NeverYieldPets.preview(card, {species = "cat", skin = skin.id, level = 1, traits = {}}, UDim2.new(0, 4, 0, 2), UDim2.new(1, -8, 0, 72), true)
-			else
-				NeverYieldPets.mystery(card)
-			end
-			NeverYieldPets.label(card, {Position = UDim2.new(0, 4, 0, 74), Size = UDim2.new(1, -8, 0, 18), Text = owned and skin.name or ("??? " .. rarity.name), TextColor3 = rarity.color})
-			NeverYieldPets.button(card, owned and "Owned" or ("\u{1F4B0} " .. NeverYieldStats.num(skin.price)), UDim2.new(0, 10, 0, 96), UDim2.new(1, -20, 0, 30),
-				owned and Color3.fromRGB(50, 45, 80) or Color3.fromRGB(60, 160, 90), function()
-					if data.skins[skin.id] or not NeverYieldPets.spend(skin.price) then return end
-					data.skins[skin.id] = true
-					notify('Pets', 'You unlocked the ' .. skin.name .. ' skin!')
-					NeverYieldPets.refresh()
-				end)
-			col = col + 1
-		end
+-- skins and hats come from roll machines (no direct buying); duplicates give some coins back
+NeverYieldPets.rollMachines = {
+	skins = {name = "Skin", icon = "\u{1F3A8}", price = 400, weights = {rare = 58, epic = 30, legendary = 9, mythic = 3},
+		refund = {rare = 80, epic = 200, legendary = 600, mythic = 1500}},
+	hats = {name = "Hat", icon = "\u{1F3A9}", price = 250, weights = {common = 45, rare = 30, epic = 18, legendary = 7},
+		refund = {common = 40, rare = 70, epic = 150, legendary = 450}},
+}
+
+NeverYieldPets.rollList = function(kind)
+	local list = {}
+	local m = NeverYieldPets.rollMachines[kind]
+	for _, item in ipairs(kind == "skins" and NeverYieldPets.skins or NeverYieldPets.hats) do
+		if m.weights[item.rarity] then table.insert(list, item) end
 	end
+	return list
+end
+
+-- "1 in N" for one exact item, without luck
+NeverYieldPets.rollOdds = function(kind, item)
+	local m = NeverYieldPets.rollMachines[kind]
+	local total = 0
+	for _, w in pairs(m.weights) do total = total + w end
+	local w = m.weights[item.rarity]
+	if not w or w <= 0 then return 0 end
+	return math.max(1, math.floor(total / w * NeverYieldPets.countOf(NeverYieldPets.rollList(kind), item.rarity) + 0.5))
+end
+
+NeverYieldPets.rollItem = function(kind)
+	local m = NeverYieldPets.rollMachines[kind]
+	local data = NeverYieldPets.data
+	local ri = NeverYieldPets.rarityIndex
+	local rarity = NeverYieldPets.weightedKey(NeverYieldPets.luckWeights(m.weights, function(r) return ri[r] end))
+	local pool = {}
+	for _, item in ipairs(NeverYieldPets.rollList(kind)) do
+		if item.rarity == rarity then table.insert(pool, item) end
+	end
+	local item = pool[math.random(1, #pool)]
+	local result = {item = item, new = not data[kind][item.id], refund = 0}
+	if result.new then
+		data[kind][item.id] = true
+	else
+		result.refund = m.refund[rarity] or 0
+		data.coins = data.coins + result.refund
+	end
+	data.stats.rolls = (data.stats.rolls or 0) + 1
+	NeverYieldPets.dirty = true
+	return result
+end
+
+NeverYieldPets.rollPreview = function(card, kind, item, pos, size)
+	if kind == "skins" then
+		return NeverYieldPets.preview(card, {species = "cat", skin = item.id, level = 1, traits = {}}, pos, size, true)
+	end
+	return NeverYieldPets.preview(card, {species = "bunny", skin = "classic", level = 1, traits = {}, hat = item.id}, pos, size, true)
+end
+
+-- pay, roll, then a short spin through mystery names before the reveal
+NeverYieldPets.roll = function(kind, count)
+	local ui = NeverYieldPets.ui
+	local m = NeverYieldPets.rollMachines[kind]
+	if ui.rolling or not ui.panel then return end
+	local cost = count > 1 and math.floor(m.price * count * 0.9) or m.price
+	if not NeverYieldPets.spend(cost) then return end
+	local results = {}
+	for _ = 1, count do table.insert(results, NeverYieldPets.rollItem(kind)) end
+	NeverYieldPets.save()
+	ui.rolling = true
+	local P = NeverYieldPets
+	local cover = Instance.new("Frame")
+	cover.Name = randomString()
+	cover.Size = UDim2.new(1, 0, 1, 0)
+	cover.BackgroundColor3 = Color3.fromRGB(12, 10, 24)
+	cover.BackgroundTransparency = 0.15
+	cover.BorderSizePixel = 0
+	cover.Active = true
+	cover.ZIndex = 40
+	NeverYieldPortal.corner(cover, UDim.new(0, 18))
+	cover.Parent = ui.panel
+	local spinner = P.label(cover, {Position = UDim2.new(0, 0, 0.5, -60), Size = UDim2.new(1, 0, 0, 80), Font = Enum.Font.FredokaOne, TextSize = 40, Text = "?", ZIndex = 42})
+	task.spawn(function()
+		local list = P.rollList(kind)
+		for i = 1, 16 do
+			if not cover.Parent then return end
+			local item = list[math.random(1, #list)]
+			local rarity = P.rarities[P.rarityIndex[item.rarity]]
+			spinner.Text = "??? " .. rarity.name
+			spinner.TextColor3 = rarity.color
+			P.sfx(P.coinSound, nil, 0.25, 0.8 + i * 0.05)
+			task.wait(0.05 + i * 0.012)
+		end
+		if not cover.Parent then return end
+		spinner:Destroy()
+		local best = 0
+		local w = math.min(5, #results)
+		for i, r in ipairs(results) do
+			local rarity = P.rarities[P.rarityIndex[r.item.rarity]]
+			best = math.max(best, P.rarityIndex[r.item.rarity])
+			local cardW = 120
+			local x = 340 - (w * (cardW + 8)) / 2 + (i - 1) * (cardW + 8)
+			local card = P.card(cover, UDim2.new(0, x, 0, 120), UDim2.new(0, cardW, 0, 180), rarity.color)
+			card.ZIndex = 41
+			P.rollPreview(card, kind, r.item, UDim2.new(0, 4, 0, 4), UDim2.new(1, -8, 0, 92))
+			P.label(card, {Position = UDim2.new(0, 4, 0, 98), Size = UDim2.new(1, -8, 0, 20), TextSize = 14, Text = r.item.name, TextColor3 = rarity.color})
+			P.label(card, {Position = UDim2.new(0, 4, 0, 118), Size = UDim2.new(1, -8, 0, 16), TextSize = 11, Text = rarity.name .. "  |  1 in " .. NeverYieldStats.num(P.rollOdds(kind, r.item))})
+			P.label(card, {Position = UDim2.new(0, 4, 0, 142), Size = UDim2.new(1, -8, 0, 30), TextSize = 12, TextWrapped = true,
+				Text = r.new and "\u{2728} NEW!" or ("duplicate\n+" .. r.refund .. " coins"), TextColor3 = r.new and Color3.fromRGB(255, 230, 120) or Color3.fromRGB(190, 185, 220)})
+		end
+		P.label(cover, {Position = UDim2.new(0, 0, 0, 60), Size = UDim2.new(1, 0, 0, 40), Font = Enum.Font.FredokaOne, TextSize = 30,
+			Text = m.icon .. " " .. m.name .. " Roll" .. (#results > 1 and (" x" .. #results) or ""), TextColor3 = Color3.fromRGB(255, 200, 120)})
+		if best >= P.rarityIndex.legendary then P.jingle("hatch") else P.sfx(P.coinSound, nil, 0.5, 1.2) end
+		P.button(cover, "Nice!", UDim2.new(0.5, -70, 0, 330), UDim2.new(0, 140, 0, 40), Color3.fromRGB(60, 160, 90), function()
+			ui.rolling = false
+			cover:Destroy()
+			P.refresh()
+		end)
+		-- keep the reveal above the shop page underneath
+		for _, g in ipairs(cover:GetDescendants()) do
+			if g:IsA("GuiObject") and g.ZIndex < 40 then g.ZIndex = g.ZIndex + 20 end
+		end
+	end)
+end
+
+-- shared Skins / Hats page: roll buttons on top, the collection with odds below
+NeverYieldPets.rollPage = function(body, ui, data, kind)
+	local P = NeverYieldPets
+	local m = P.rollMachines[kind]
+	local list = P.rollList(kind)
+	local owned = 0
+	for _, item in ipairs(list) do
+		if data[kind][item.id] then owned = owned + 1 end
+	end
+	P.label(body, {Position = UDim2.new(0, 0, 0, 34), Size = UDim2.new(1, 0, 0, 18), TextXAlignment = Enum.TextXAlignment.Left,
+		Text = m.icon .. " " .. m.name .. "s come from rolls. Found " .. owned .. "/" .. #list .. ". Duplicates give coins back. Use them on any pet (pet detail page)."})
+	local chances = {}
+	local total = 0
+	for _, w in pairs(m.weights) do total = total + w end
+	for _, r in ipairs(P.rarities) do
+		if m.weights[r.id] then table.insert(chances, r.name .. " " .. math.floor(m.weights[r.id] / total * 1000 + 0.5) / 10 .. "%") end
+	end
+	P.label(body, {Position = UDim2.new(0, 0, 0, 58), Size = UDim2.new(0, 330, 0, 32), TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true, TextSize = 11,
+		TextColor3 = Color3.fromRGB(200, 195, 235), Text = table.concat(chances, "  |  ") .. (P.boosted("luck") and "\n\u{1F340} Luck Potion active: a bit luckier!" or "")})
+	P.button(body, "\u{1F3B2} Roll 1\n\u{1F4B0} " .. NeverYieldStats.num(m.price), UDim2.new(0, 340, 0, 56), UDim2.new(0, 145, 0, 38), Color3.fromRGB(60, 160, 90), function()
+		P.roll(kind, 1)
+	end)
+	P.button(body, "\u{1F3B2} Roll 5 (10% off)\n\u{1F4B0} " .. NeverYieldStats.num(math.floor(m.price * 5 * 0.9)), UDim2.new(0, 495, 0, 56), UDim2.new(0, 150, 0, 38), Color3.fromRGB(200, 120, 40), function()
+		P.roll(kind, 5)
+	end)
+	for i, item in ipairs(list) do
+		local col, row = (i - 1) % 5, math.floor((i - 1) / 5)
+		local have = data[kind][item.id]
+		local rarity = P.rarities[P.rarityIndex[item.rarity]]
+		local card = P.card(body, UDim2.new(0, col * 130, 0, 100 + row * 128), UDim2.new(0, 124, 0, 122), rarity.color)
+		if have then
+			P.rollPreview(card, kind, item, UDim2.new(0, 4, 0, 2), UDim2.new(1, -8, 0, 64))
+		else
+			P.mystery(card)
+		end
+		P.label(card, {Position = UDim2.new(0, 4, 0, 68), Size = UDim2.new(1, -8, 0, 18), Text = have and item.name or ("??? " .. rarity.name), TextColor3 = rarity.color})
+		P.label(card, {Position = UDim2.new(0, 4, 0, 86), Size = UDim2.new(1, -8, 0, 14), TextSize = 11, TextColor3 = Color3.fromRGB(190, 185, 220),
+			Text = "1 in " .. NeverYieldStats.num(P.rollOdds(kind, item))})
+		P.label(card, {Position = UDim2.new(0, 4, 0, 102), Size = UDim2.new(1, -8, 0, 16), TextSize = 11,
+			Text = have and "owned" or "not found yet", TextColor3 = have and Color3.fromRGB(120, 230, 140) or Color3.fromRGB(140, 135, 170)})
+	end
+end
+
+NeverYieldPets.shopPages.skins = function(body, ui, data)
+	NeverYieldPets.rollPage(body, ui, data, "skins")
 end
 
 -- a "?" placeholder for things you have not unlocked yet
@@ -28268,27 +28410,7 @@ NeverYieldPets.mystery = function(card)
 end
 
 NeverYieldPets.shopPages.hats = function(body, ui, data)
-	NeverYieldPets.label(body, {Position = UDim2.new(0, 0, 0, 34), Size = UDim2.new(1, 0, 0, 18), TextXAlignment = Enum.TextXAlignment.Left,
-		Text = "Mystery hats: you only see a hat once you own it. Put them on any pet (pet detail page)."})
-	for i, hat in ipairs(NeverYieldPets.hats) do
-		local col, row = (i - 1) % 5, math.floor((i - 1) / 5)
-		local owned = data.hats[hat.id]
-		local rarity = NeverYieldPets.rarities[NeverYieldPets.rarityIndex[hat.rarity]]
-		local card = NeverYieldPets.card(body, UDim2.new(0, col * 130, 0, 56 + row * 140), UDim2.new(0, 124, 0, 134), rarity.color)
-		if owned then
-			NeverYieldPets.preview(card, {species = "bunny", skin = "classic", level = 1, traits = {}, hat = hat.id}, UDim2.new(0, 4, 0, 2), UDim2.new(1, -8, 0, 72), true)
-		else
-			NeverYieldPets.mystery(card)
-		end
-		NeverYieldPets.label(card, {Position = UDim2.new(0, 4, 0, 74), Size = UDim2.new(1, -8, 0, 18), Text = owned and hat.name or ("??? " .. rarity.name), TextColor3 = rarity.color})
-		NeverYieldPets.button(card, owned and "Owned" or ("\u{1F4B0} " .. NeverYieldStats.num(hat.price)), UDim2.new(0, 10, 0, 96), UDim2.new(1, -20, 0, 30),
-			owned and Color3.fromRGB(50, 45, 80) or Color3.fromRGB(60, 160, 90), function()
-				if data.hats[hat.id] or not NeverYieldPets.spend(hat.price) then return end
-				data.hats[hat.id] = true
-				notify('Pets', hat.name .. ' unlocked!')
-				NeverYieldPets.refresh()
-			end)
-	end
+	NeverYieldPets.rollPage(body, ui, data, "hats")
 end
 
 NeverYieldPets.shopPages.upgrades = function(body, ui, data)
