@@ -1,4 +1,4 @@
--- NeverYield v1.13.1 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.13.2 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.13.1" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.13.2" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -19158,8 +19158,8 @@ WackyState.makeDiamond = function(kind)
 		p.Size = Vector3.new(l[2], l[1], l[1]) * s
 		p.Material = Enum.Material.Glass
 		p.Color = kind.color
-		p.Transparency = 0.12
-		p.Reflectance = 0.3
+		p.Transparency = 0.04
+		p.Reflectance = 0.2
 		p.CanCollide = false
 		p.CanQuery = false
 		p.CanTouch = false
@@ -19437,8 +19437,8 @@ addcmd('diamond',{'diamondrush','diamonds'},function(args, speaker)
 				local kind = WackyState.diamondPick()
 				local model, hitbox = WackyState.makeDiamond(kind)
 				local angle, dist = math.random() * math.pi * 2, 8 + math.random() * 50
-				hitbox.CFrame = CFrame.new(root.Position + Vector3.new(math.cos(angle) * dist, 65 + math.random() * 25, math.sin(angle) * dist))
-					* CFrame.Angles(math.random() * 6.28, math.random() * 6.28, math.random() * 6.28)
+				model:PivotTo(CFrame.new(root.Position + Vector3.new(math.cos(angle) * dist, 65 + math.random() * 25, math.sin(angle) * dist))
+					* CFrame.Angles(math.random() * 6.28, math.random() * 6.28, math.random() * 6.28))
 				model.Parent = workspace
 				hitbox.AssemblyAngularVelocity = Vector3.new(math.random(-6, 6), math.random(-6, 6), math.random(-6, 6))
 				table.insert(g.diamonds, {model = model, hitbox = hitbox, kind = kind, born = now, seed = math.random() * 10})
