@@ -1,4 +1,4 @@
--- NeverYield v1.25.0 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.25.1 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.25.0" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.25.1" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -23431,7 +23431,15 @@ NeverYieldRoom.floors = {
 	{id = "marble", name = "Marble", color = {235, 232, 228}, mat = "Marble", unlock = "diamond1000"},
 	{id = "grass", name = "Indoor Grass", color = {100, 170, 80}, mat = "Grass", unlock = "games25"},
 	{id = "gold", name = "Solid Gold", color = {255, 196, 48}, mat = "Foil", unlock = "midas"},
-	{id = "galaxy", name = "Galaxy", color = {35, 20, 70}, mat = "Glass", unlock = "moon"},
+	{id = "galaxy", name = "Galaxy", color = {35, 20, 70}, mat = "Glass", fx = "galaxy", unlock = "moon"},
+	{id = "ice", name = "Frozen Lake", color = {175, 215, 245}, mat = "Ice", unlock = "weather25"},
+	{id = "fire", name = "Fire Floor", color = {70, 20, 10}, mat = "CrackedLava", fx = "fire", unlock = "clownround20"},
+	{id = "diamondfloor", name = "Diamond Floor", color = {170, 230, 255}, mat = "Glass", fx = "diamond", unlock = "diamond10000"},
+	{id = "rainbow", name = "Rainbow Tiles", color = {240, 240, 240}, mat = "SmoothPlastic", fx = "rainbow", unlock = "streak20"},
+	{id = "neongrid", name = "Neon Grid", color = {12, 12, 25}, mat = "SmoothPlastic", fx = "grid", unlock = "cmd10000"},
+	{id = "void", name = "The Void", color = {6, 2, 12}, mat = "SmoothPlastic", fx = "void", unlock = "trophy100"},
+	{id = "cloud", name = "Cloud Nine", color = {245, 248, 255}, mat = "SmoothPlastic", fx = "cloud", unlock = "cloudnine"},
+	{id = "water", name = "Glass Over Water", color = {20, 60, 120}, mat = "SmoothPlastic", fx = "water", unlock = "fed1000"},
 }
 NeverYieldRoom.walls = {
 	{id = "cream", name = "Cream", color = {240, 228, 200}, mat = "Plaster"},
@@ -23442,6 +23450,15 @@ NeverYieldRoom.walls = {
 	{id = "wood", name = "Wood Panels", color = {130, 90, 60}, mat = "WoodPlanks", unlock = "cmd100"},
 	{id = "ice", name = "Ice Palace", color = {180, 220, 255}, mat = "Glacier", unlock = "weather25"},
 	{id = "neon", name = "Neon Night", color = {30, 15, 50}, mat = "SmoothPlastic", trim = {255, 60, 200}, unlock = "clownround10"},
+	{id = "candy", name = "Candy Stripes", color = {255, 210, 225}, mat = "SmoothPlastic", fx = "stripes", unlock = "hatch250"},
+	{id = "goldwall", name = "Gold Walls", color = {255, 196, 48}, mat = "Foil", unlock = "midas25"},
+	{id = "matrix", name = "The Matrix", color = {4, 16, 6}, mat = "SmoothPlastic", fx = "matrix", unlock = "matrix"},
+	{id = "rainbowwall", name = "Rainbow Walls", color = {240, 240, 240}, mat = "SmoothPlastic", fx = "rainbow", unlock = "variety100"},
+	{id = "galaxywall", name = "Galaxy Walls", color = {22, 14, 50}, mat = "SmoothPlastic", fx = "galaxy", unlock = "moon5"},
+	{id = "firewall", name = "Fire Walls", color = {55, 15, 8}, mat = "CrackedLava", fx = "fire", unlock = "theend10"},
+	{id = "aquarium", name = "Aquarium Walls", color = {30, 90, 170}, mat = "Glass", fx = "water", unlock = "secretall"},
+	{id = "diamondwall", name = "Diamond Walls", color = {180, 235, 255}, mat = "Glass", fx = "diamond", unlock = "diamondbest2"},
+	{id = "voidwall", name = "Void Walls", color = {6, 2, 12}, mat = "SmoothPlastic", fx = "void", unlock = "mythic1"},
 }
 NeverYieldRoom.moods = {
 	{id = "warm", name = "Warm Evening", clock = 18.4, bright = 0.8, ambient = {120, 100, 85}, lamp = {255, 200, 140}, lampBright = 1.4, sky = {{255, 150, 90}, {120, 70, 140}}},
@@ -23466,6 +23483,7 @@ end
 
 NeverYieldRoom.unlockName = function(entry)
 	local d = NeverYieldAch and NeverYieldAch.byId[entry.unlock]
+	if d and d.hidden and not NeverYieldAch.has(d.id) then return "a secret achievement" end
 	return d and d.name or entry.unlock
 end
 
@@ -24484,13 +24502,14 @@ end
 -- one wall with openings {centre, width, bottom, top}; axis "x" runs along X at z = fixed, "z" along Z at x = fixed
 NeverYieldRoom.wallRun = function(shell, A, axis, fixed, a0, a1, openings, color, mat, H)
 	local P = NeverYieldAgartha.part
+	local made = {}
 	local function piece(from, to, y0, y1)
 		if to - from < 0.05 or y1 - y0 < 0.05 then return end
 		local mid, len = (from + to) / 2, to - from
 		if axis == "x" then
-			P(shell, Vector3.new(len, y1 - y0, 1), A(mid, (y0 + y1) / 2, fixed), color, mat)
+			table.insert(made, P(shell, Vector3.new(len, y1 - y0, 1), A(mid, (y0 + y1) / 2, fixed), color, mat))
 		else
-			P(shell, Vector3.new(1, y1 - y0, len), A(fixed, (y0 + y1) / 2, mid), color, mat)
+			table.insert(made, P(shell, Vector3.new(1, y1 - y0, len), A(fixed, (y0 + y1) / 2, mid), color, mat))
 		end
 	end
 	local sorted = {}
@@ -24505,6 +24524,7 @@ NeverYieldRoom.wallRun = function(shell, A, axis, fixed, a0, a1, openings, color
 		cursor = r
 	end
 	piece(cursor, a1, 0, H)
+	return made
 end
 
 NeverYieldRoom.buildShell = function(s, rs)
@@ -24520,7 +24540,7 @@ NeverYieldRoom.buildShell = function(s, rs)
 	local wall = R.byId(R.walls, data.wall)
 	local W, D, Hh = R.W, R.D, R.H
 	local hw, hd = W / 2, D / 2
-	rs.anim, rs.sky, rs.lamps, rs.walls = {}, {}, {}, {}
+	rs.anim, rs.sky, rs.lamps, rs.walls, rs.wallParts = {}, {}, {}, {}, {}
 	-- floor
 	P(shell, Vector3.new(W + 2, 1, D + 2), A(0, -0.5, 0), R.rgb(floor.color), R.mat(floor.mat))
 	if floor.checker then
@@ -24552,7 +24572,9 @@ NeverYieldRoom.buildShell = function(s, rs)
 			local spot = alongX and 10 or 8
 			openings = {{-spot, 6, 4, 11}, {spot, 6, 4, 11}}
 		end
-		R.wallRun(shell, A, alongX and "x" or "z", fixed, -half, half, openings, wc, wm, Hh)
+		for _, piece in ipairs(R.wallRun(shell, A, alongX and "x" or "z", fixed, -half, half, openings, wc, wm, Hh)) do
+			table.insert(rs.wallParts, piece)
+		end
 		-- a frame on the wall's centre line: X runs along the wall, Z points into the room
 		local along = ({n = Vector3.new(-1, 0, 0), s = Vector3.new(1, 0, 0), e = Vector3.new(0, 0, 1), w = Vector3.new(0, 0, -1)})[side]
 		local base = CFrame.fromMatrix(O + (alongX and Vector3.new(0, 0, fixed) or Vector3.new(fixed, 0, 0)), along, Vector3.new(0, 1, 0))
@@ -24624,6 +24646,243 @@ NeverYieldRoom.buildShell = function(s, rs)
 	rs.shell = shell
 	if R.decorate then R.decorate(s, rs, shell, floor, wall) end
 	R.applyMood(s, rs)
+end
+
+-- ---------- special floors and walls: extra parts, particles and animation on top of the plain shell ----------
+NeverYieldRoom.fxEmitter = function(parent, props)
+	local e = Instance.new("ParticleEmitter")
+	for k, v in pairs(props) do e[k] = v end
+	e.Parent = parent
+	return e
+end
+
+NeverYieldRoom.decorate = function(s, rs, shell, floor, wall)
+	local R = NeverYieldRoom
+	local P = NeverYieldAgartha.part
+	local O = rs.origin
+	local hw, hd, Hh = R.W / 2, R.D / 2, R.H
+	local rng = Random.new(#rs.id * 97 + #floor.id * 13 + #wall.id * 7)
+	local function A(x, y, z) return CFrame.new(O + Vector3.new(x, y, z)) end
+	local function anim(entry) table.insert(rs.anim, entry) return entry end
+	local noHit = {CanCollide = false, CanTouch = false, CastShadow = false}
+	local hidden = {Transparency = 1, CanCollide = false, CanTouch = false, CastShadow = false}
+	local white = Color3.new(1, 1, 1)
+	local f = floor.fx
+	if f == "fire" then
+		for _ = 1, 26 do
+			local crack = P(shell, Vector3.new(rng:NextNumber(3, 8), 0.04, rng:NextNumber(0.15, 0.3)),
+				A(rng:NextNumber(-hw + 3, hw - 3), 0.02, rng:NextNumber(-hd + 3, hd - 3)) * CFrame.Angles(0, rng:NextNumber(0, math.pi), 0), C(255, 120, 30), M.Neon, nil, noHit)
+			anim({kind = "pulse", part = crack, c1 = C(255, 70, 20), c2 = C(255, 200, 60), speed = rng:NextNumber(1.5, 3), phase = rng:NextNumber(0, 6)})
+		end
+		for _, x in ipairs({-hw / 2, hw / 2}) do
+			for _, z in ipairs({-hd / 2, hd / 2}) do
+				local pad = P(shell, Vector3.new(14, 0.1, 12), A(x, 0.05, z), C(0, 0, 0), M.SmoothPlastic, nil, hidden)
+				R.fxEmitter(pad, {Texture = "rbxasset://textures/particles/fire_main.dds", Rate = 7, Lifetime = NumberRange.new(0.5, 1.1), Speed = NumberRange.new(1, 3),
+					Size = NumberSequence.new(0.9, 0), LightEmission = 1, EmissionDirection = Enum.NormalId.Top, Color = ColorSequence.new(C(255, 200, 80), C(255, 60, 20))})
+				light(pad, C(255, 120, 50), 16, 0.5)
+			end
+		end
+	elseif f == "galaxy" then
+		for i = 1, 70 do
+			local star = P(shell, Vector3.new(0.2, 0.05, 0.2) * rng:NextNumber(0.6, 1.6), A(rng:NextNumber(-hw, hw), 0.03, rng:NextNumber(-hd, hd)),
+				i % 4 == 0 and C(170, 200, 255) or white, M.Neon, nil, noHit)
+			if i % 3 == 0 then anim({kind = "twinkle", part = star, speed = rng:NextNumber(1, 3), phase = rng:NextNumber(0, 6)}) end
+		end
+		for _ = 1, 5 do
+			P(shell, Vector3.new(rng:NextNumber(10, 18), 0.03, rng:NextNumber(8, 14)), A(rng:NextNumber(-hw + 6, hw - 6), 0.015, rng:NextNumber(-hd + 6, hd - 6)),
+				Color3.fromHSV(0.7 + rng:NextNumber(0, 0.2), 0.7, 1), M.Neon, "Ellipsoid", {Transparency = 0.85, CanCollide = false, CanTouch = false, CastShadow = false})
+		end
+	elseif f == "diamond" then
+		for ix = -5, 5 do
+			for iz = -4, 4 do
+				P(shell, Vector3.new(2.7, 0.06, 2.7), A(ix * 4, 0.03, iz * 4.4) * CFrame.Angles(0, math.rad(45), 0), C(185, 235, 255):Lerp(white, rng:NextNumber(0, 0.4)), M.Glass, nil,
+					{Transparency = 0.25, Reflectance = 0.35, CanCollide = false, CanTouch = false})
+			end
+		end
+		local pad = P(shell, Vector3.new(R.W, 0.1, R.D), A(0, 0.1, 0), C(0, 0, 0), M.SmoothPlastic, nil, hidden)
+		R.fxEmitter(pad, {Texture = "rbxasset://textures/particles/sparkles_main.dds", Rate = 8, Lifetime = NumberRange.new(0.6, 1.2), Speed = NumberRange.new(0.2, 0.6),
+			Size = NumberSequence.new(0.35, 0), LightEmission = 1, EmissionDirection = Enum.NormalId.Top, Color = ColorSequence.new(C(200, 245, 255))})
+	elseif f == "rainbow" then
+		for ix = 0, R.W / 4 - 1 do
+			for iz = 0, R.D / 4 - 1 do
+				local tile = P(shell, Vector3.new(3.9, 0.05, 3.9), A(-hw + 2 + ix * 4, 0.025, -hd + 2 + iz * 4), white, M.SmoothPlastic, nil, {CanCollide = false, CanTouch = false, Reflectance = 0.1})
+				anim({kind = "hue", part = tile, speed = 0.08, phase = (ix + iz) * 0.04, sat = 0.55, val = 1})
+			end
+		end
+	elseif f == "grid" then
+		local n = 0
+		for i = 0, R.D / 4 do
+			n = n + 1
+			anim({kind = "pulse", part = P(shell, Vector3.new(R.W, 0.04, 0.12), A(0, 0.02, -hd + i * 4), C(0, 240, 255), M.Neon, nil, noHit),
+				c1 = C(0, 240, 255), c2 = C(255, 60, 220), speed = 1, phase = n * 0.4})
+		end
+		for i = 0, R.W / 4 do
+			n = n + 1
+			anim({kind = "pulse", part = P(shell, Vector3.new(0.12, 0.04, R.D), A(-hw + i * 4, 0.02, 0), C(0, 240, 255), M.Neon, nil, noHit),
+				c1 = C(0, 240, 255), c2 = C(255, 60, 220), speed = 1, phase = n * 0.4})
+		end
+	elseif f == "void" then
+		for i = 5, 1, -1 do
+			local r = i * 3.2
+			local y = 0.01 + (5 - i) * 0.025
+			anim({kind = "pulse", part = P(shell, Vector3.new(0.01, r * 2, r * 2), A(0, y, 0) * up, C(150, 60, 255), M.Neon, "Cylinder", noHit),
+				c1 = C(150, 60, 255), c2 = C(40, 90, 255), speed = 1.2, phase = i * 0.8})
+			P(shell, Vector3.new(0.01, r * 2 - 0.6, r * 2 - 0.6), A(0, y + 0.012, 0) * up, C(6, 2, 12), M.SmoothPlastic, "Cylinder", noHit)
+		end
+		light(P(shell, Vector3.new(1, 0.1, 1), A(0, 0.1, 0), C(0, 0, 0), M.SmoothPlastic, nil, hidden), C(150, 70, 255), 20, 0.8)
+	elseif f == "cloud" then
+		for i = 1, 16 do
+			local a = i / 16 * math.pi * 2
+			P(shell, Vector3.new(rng:NextNumber(6, 10), rng:NextNumber(1, 1.8), rng:NextNumber(4, 7)), A(math.cos(a) * (hw - 4), 0.4, math.sin(a) * (hd - 4)), white, M.SmoothPlastic, "Ellipsoid",
+				{Transparency = 0.2, CanCollide = false, CanTouch = false})
+		end
+		local pad = P(shell, Vector3.new(R.W - 4, 0.1, R.D - 4), A(0, 0.1, 0), C(0, 0, 0), M.SmoothPlastic, nil, hidden)
+		R.fxEmitter(pad, {Texture = "rbxasset://textures/particles/smoke_main.dds", Rate = 4, Lifetime = NumberRange.new(4, 6), Speed = NumberRange.new(0.2, 0.6),
+			Size = NumberSequence.new(4, 8), Transparency = NumberSequence.new(0.6, 1), EmissionDirection = Enum.NormalId.Top, Color = ColorSequence.new(white)})
+	elseif f == "water" then
+		for _ = 1, 14 do
+			anim({kind = "pulse", part = P(shell, Vector3.new(rng:NextNumber(5, 12), 0.03, rng:NextNumber(0.3, 0.8)), A(rng:NextNumber(-hw + 4, hw - 4), 0.03, rng:NextNumber(-hd + 3, hd - 3)) * CFrame.Angles(0, rng:NextNumber(0, math.pi), 0),
+				C(90, 170, 240), M.Neon, nil, {Transparency = 0.6, CanCollide = false, CanTouch = false, CastShadow = false}), c1 = C(60, 140, 220), c2 = C(160, 230, 255), speed = rng:NextNumber(0.8, 1.6), phase = rng:NextNumber(0, 6)})
+		end
+		for i = 1, 8 do
+			local cf = A(rng:NextNumber(-8, 8), 0.08, -hd + 3 + i * 4.2) * CFrame.Angles(0, rng:NextNumber(-0.3, 0.3), 0)
+			local fish = P(shell, Vector3.new(1.2, 0.12, 0.5), cf, i % 3 == 0 and C(255, 220, 60) or C(255, 130, 40), M.SmoothPlastic, "Ellipsoid", noHit)
+			anim({kind = "swim", part = fish, cf = cf, amp = hw - 6, speed = rng:NextNumber(0.15, 0.3), phase = rng:NextNumber(0, 6)})
+		end
+		P(shell, Vector3.new(R.W, 0.1, R.D), A(0, 0.2, 0), C(200, 230, 255), M.Glass, nil, {Transparency = 0.65, Reflectance = 0.2, CanCollide = false, CanTouch = false})
+	end
+	local w = wall.fx
+	if not w then return end
+	-- spots on the inner wall faces, kept clear of windows and doorways
+	local function free(info, u, y, pad)
+		for _, o in ipairs(info.openings) do
+			if math.abs(u - o[1]) < o[2] / 2 + pad and y > o[3] - pad and y < o[4] + pad then return false end
+		end
+		return math.abs(u) < info.half - pad
+	end
+	local function colFree(info, u, pad)
+		for _, o in ipairs(info.openings) do
+			if math.abs(u - o[1]) < o[2] / 2 + pad then return false end
+		end
+		return math.abs(u) < info.half - pad
+	end
+	for _, side in ipairs({"n", "s", "e", "w"}) do
+		local info = rs.walls[side]
+		local function F(size, u, y, v, color, mat, shape, props)
+			return P(shell, size, info.base * CFrame.new(u, y, v), color, mat, shape, props)
+		end
+		if w == "galaxy" then
+			for i = 1, 45 do
+				local u, y = rng:NextNumber(-info.half + 0.5, info.half - 0.5), rng:NextNumber(1, Hh - 1)
+				if free(info, u, y, 0.3) then
+					local star = F(Vector3.new(0.2, 0.2, 0.05) * rng:NextNumber(0.6, 1.6), u, y, 0.53, i % 4 == 0 and C(170, 200, 255) or white, M.Neon, nil, noHit)
+					if i % 3 == 0 then anim({kind = "twinkle", part = star, speed = rng:NextNumber(1, 3), phase = rng:NextNumber(0, 6)}) end
+				end
+			end
+			for _ = 1, 3 do
+				F(Vector3.new(rng:NextNumber(8, 14), rng:NextNumber(4, 7), 0.05), rng:NextNumber(-info.half + 7, info.half - 7), rng:NextNumber(4, Hh - 4), 0.52,
+					Color3.fromHSV(0.7 + rng:NextNumber(0, 0.2), 0.7, 1), M.Neon, "Ellipsoid", {Transparency = 0.86, CanCollide = false, CanTouch = false, CastShadow = false})
+			end
+		elseif w == "fire" then
+			for _ = 1, 9 do
+				local u, y = rng:NextNumber(-info.half + 1, info.half - 1), rng:NextNumber(1.5, Hh - 2)
+				if free(info, u, y, 1.5) then
+					local crack = P(shell, Vector3.new(0.25, rng:NextNumber(2, 4), 0.05), info.base * CFrame.new(u, y, 0.53) * CFrame.Angles(0, 0, rng:NextNumber(-0.6, 0.6)), C(255, 120, 30), M.Neon, nil, noHit)
+					anim({kind = "pulse", part = crack, c1 = C(255, 70, 20), c2 = C(255, 200, 60), speed = rng:NextNumber(1.5, 3), phase = rng:NextNumber(0, 6)})
+				end
+			end
+			local strip = F(Vector3.new(info.half * 2, 0.2, 0.3), 0, 0.9, 0.85, C(0, 0, 0), M.SmoothPlastic, nil, hidden)
+			R.fxEmitter(strip, {Texture = "rbxasset://textures/particles/fire_main.dds", Rate = 10, Lifetime = NumberRange.new(0.6, 1.2), Speed = NumberRange.new(2, 4),
+				Size = NumberSequence.new(1.2, 0), LightEmission = 1, EmissionDirection = Enum.NormalId.Top, Color = ColorSequence.new(C(255, 200, 80), C(255, 60, 20))})
+		elseif w == "diamond" then
+			for u = -info.half + 2, info.half - 2, 4 do
+				for y = 2, Hh - 2, 4 do
+					if free(info, u, y, 1.9) then
+						P(shell, Vector3.new(2.6, 2.6, 0.08), info.base * CFrame.new(u, y, 0.55) * CFrame.Angles(0, 0, math.rad(45)), C(190, 240, 255):Lerp(white, rng:NextNumber(0, 0.4)), M.Glass, nil,
+							{Transparency = 0.2, Reflectance = 0.35, CanCollide = false, CanTouch = false})
+					end
+				end
+			end
+			local sheet = F(Vector3.new(info.half * 2, Hh - 2, 0.1), 0, Hh / 2, 0.65, C(0, 0, 0), M.SmoothPlastic, nil, hidden)
+			R.fxEmitter(sheet, {Texture = "rbxasset://textures/particles/sparkles_main.dds", Rate = 4, Lifetime = NumberRange.new(0.6, 1.2), Speed = NumberRange.new(0.1, 0.3),
+				Size = NumberSequence.new(0.35, 0), LightEmission = 1, Color = ColorSequence.new(C(200, 245, 255))})
+		elseif w == "matrix" then
+			for u = -info.half + 1, info.half - 1, 2 do
+				if colFree(info, u, 0.6) then
+					F(Vector3.new(0.18, Hh - 1.5, 0.04), u, Hh / 2, 0.53, C(20, 120, 40), M.Neon, nil, {Transparency = 0.75, CanCollide = false, CanTouch = false, CastShadow = false})
+					local drop = F(Vector3.new(0.22, 2.5, 0.05), u, Hh - 2, 0.55, C(120, 255, 140), M.Neon, nil, noHit)
+					anim({kind = "fall", part = drop, cf = info.base * CFrame.new(u, 0, 0.55), top = Hh - 1.5, range = Hh - 3, speed = rng:NextNumber(2, 5), phase = rng:NextNumber(0, 20)})
+				end
+			end
+		elseif w == "stripes" then
+			local col = 0
+			for u = -info.half + 1, info.half - 1, 2 do
+				col = col + 1
+				if col % 2 == 0 then
+					for y = 1.95, Hh - 1.5, 3.5 do
+						if free(info, u, y, 1.0) then
+							F(Vector3.new(1.95, 3.45, 0.05), u, y, 0.53, C(255, 120, 170), M.SmoothPlastic, nil, noHit)
+						end
+					end
+				end
+			end
+		elseif w == "water" then
+			for _ = 1, 6 do
+				local u, y = rng:NextNumber(-info.half + 6, info.half - 6), rng:NextNumber(2, Hh - 2)
+				anim({kind = "pulse", part = F(Vector3.new(rng:NextNumber(6, 12), 0.25, 0.05), u, y, 0.53, C(120, 200, 255), M.Neon, nil, {Transparency = 0.55, CanCollide = false, CanTouch = false, CastShadow = false}),
+					c1 = C(60, 140, 220), c2 = C(170, 235, 255), speed = rng:NextNumber(0.8, 1.6), phase = rng:NextNumber(0, 6)})
+			end
+			for _ = 1, 5 do
+				local u, h = rng:NextNumber(-info.half + 1, info.half - 1), rng:NextNumber(3, 6)
+				if free(info, u, 1, 0.6) then
+					F(Vector3.new(0.5, h, 0.2), u, h / 2 + 0.6, 0.62, C(50, 150, 70), M.SmoothPlastic, "Ellipsoid", noHit)
+				end
+			end
+			for k = 1, 2 do
+				local y = 3 + k * 4
+				local fish = F(Vector3.new(1.2, 0.6, 0.12), 0, y, 0.6, k == 1 and C(255, 130, 40) or C(80, 200, 255), M.SmoothPlastic, "Ellipsoid", noHit)
+				anim({kind = "swim", part = fish, cf = info.base * CFrame.new(0, y, 0.6), amp = info.half - 4, speed = rng:NextNumber(0.12, 0.2), phase = rng:NextNumber(0, 6)})
+			end
+		elseif w == "void" then
+			for _ = 1, 3 do
+				anim({kind = "glow", part = F(Vector3.new(rng:NextNumber(8, 14), rng:NextNumber(5, 8), 0.05), rng:NextNumber(-info.half + 7, info.half - 7), rng:NextNumber(4, Hh - 4), 0.52,
+					C(150, 60, 255), M.Neon, "Ellipsoid", {Transparency = 0.85, CanCollide = false, CanTouch = false, CastShadow = false}), speed = rng:NextNumber(0.6, 1.2), phase = rng:NextNumber(0, 6)})
+			end
+		end
+	end
+	if w == "rainbow" then
+		for i, piece in ipairs(rs.wallParts or {}) do
+			anim({kind = "hue", part = piece, speed = 0.05, phase = i * 0.07, sat = 0.5, val = 1})
+		end
+	end
+end
+
+-- animated floors and walls move in the room you are standing in (15 times a second)
+NeverYieldRoom.animate = function(s, dt)
+	s.animClock = (s.animClock or 0) + dt
+	s.animAcc = (s.animAcc or 0) + dt
+	if s.animAcc < 1 / 15 then return end
+	s.animAcc = 0
+	local rs = s.inside and s.room
+	if not rs or not rs.anim then return end
+	local t = s.animClock
+	for _, a in ipairs(rs.anim) do
+		local part = a.part
+		if a.kind == "hue" then
+			part.Color = Color3.fromHSV((t * a.speed + a.phase) % 1, a.sat, a.val)
+		elseif a.kind == "pulse" then
+			part.Color = a.c1:Lerp(a.c2, (math.sin(t * a.speed + a.phase) + 1) / 2)
+		elseif a.kind == "twinkle" then
+			part.Transparency = ((math.sin(t * a.speed + a.phase) + 1) / 2) ^ 3 * 0.85
+		elseif a.kind == "glow" then
+			part.Transparency = 0.75 + 0.2 * (math.sin(t * a.speed + a.phase) + 1) / 2
+		elseif a.kind == "fall" then
+			part.CFrame = a.cf * CFrame.new(0, a.top - (t * a.speed + a.phase) % a.range, 0)
+		elseif a.kind == "swim" then
+			local x = math.sin(t * a.speed + a.phase) * a.amp
+			part.CFrame = a.cf * CFrame.new(x, 0, 0) * CFrame.Angles(0, math.cos(t * a.speed + a.phase) >= 0 and 0 or math.pi, 0)
+		end
+	end
 end
 
 -- lamps follow the room's lights; the room you stand in also sets the game's lighting
