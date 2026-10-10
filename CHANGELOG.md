@@ -5,6 +5,7 @@ Versions before 1.11.3 were reconstructed from the Desktop `.bakN` backups (one 
 
 | Version | Date | Commands | Change |
 |---|---|---|---|
+| 1.24.1 | 10-10 | 634 | Pet tails fixed: fox, dragon, cat and dog tail segments were tilted the wrong way and floated off the body; now one connected curve |
 | 1.24.0 | 10-10 | 634 | 92 new achievements in every category (bronze to mythic) with 33 new trophy designs, all placeable in your room; new Secrets tab (hidden until unlocked); Completionist no longer needs secrets |
 | 1.23.4 | 10-10 | 634 | Room door view really shows your room now: seen from the front the doorway's corners were mirrored on screen, so the window strips were 0 pixels wide (invisible); `doordebug` also shows the window width |
 | 1.23.3 | 10-10 | 634 | Room door view: only solid visible parts (not effects, pets or players) hide the view; a failed view build is reported; new `doordebug` |

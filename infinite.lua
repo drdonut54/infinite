@@ -1,4 +1,4 @@
--- NeverYield v1.24.0 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.24.1 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.24.0" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.24.1" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -26245,9 +26245,9 @@ NeverYieldPets.species = {
 		{"Wedge", {0.2, 0.3, 0.24}, {-0.36, 1.06, -0.12}, {0, 90, 0}, "fixed", {255, 170, 190}}, {"Wedge", {0.2, 0.3, 0.24}, {0.36, 1.06, -0.12}, {0, -90, 0}, "fixed", {255, 170, 190}},
 		{"Ellipsoid", {0.6, 0.38, 0.3}, {0, 0.22, -0.72}, nil, "accent"},
 		{"Ball", {0.12, 0.12, 0.12}, {0, 0.36, -0.87}, nil, "fixed", {255, 130, 160}},
-		{"Ellipsoid", {0.18, 0.55, 0.18}, {0, -0.25, 0.95}, {-35, 0, 0}, "main"},
-		{"Ellipsoid", {0.18, 0.55, 0.18}, {0, 0.2, 1.15}, {-5, 0, 0}, "main"},
-		{"Ellipsoid", {0.2, 0.3, 0.2}, {0, 0.55, 1.12}, {20, 0, 0}, "accent"},
+		{"Ellipsoid", {0.18, 0.55, 0.18}, {0, -0.25, 0.95}, {24, 0, 0}, "main"},
+		{"Ellipsoid", {0.18, 0.55, 0.18}, {0, 0.2, 1.15}, {12, 0, 0}, "main"},
+		{"Ellipsoid", {0.2, 0.3, 0.2}, {0, 0.55, 1.12}, {-25, 0, 0}, "accent"},
 		{"Ellipsoid", {0.32, 0.22, 0.42}, {-0.3, -1.0, -0.25}, nil, "accent"}, {"Ellipsoid", {0.32, 0.22, 0.42}, {0.3, -1.0, -0.25}, nil, "accent"},
 		{"Ellipsoid", {0.32, 0.22, 0.42}, {-0.3, -1.0, 0.55}, nil, "main"}, {"Ellipsoid", {0.32, 0.22, 0.42}, {0.3, -1.0, 0.55}, nil, "main"},
 	}},
@@ -26259,7 +26259,7 @@ NeverYieldPets.species = {
 		{"Ellipsoid", {0.24, 0.18, 0.16}, {0, 0.36, -0.94}, nil, "fixed", {30, 25, 25}},
 		{"Ellipsoid", {0.2, 0.12, 0.2}, {0.08, -0.02, -0.86}, {20, 0, 0}, "fixed", {255, 120, 140}},
 		{"Ellipsoid", {0.3, 0.8, 0.5}, {-0.7, 0.35, -0.05}, {0, 0, 18}, "accent"}, {"Ellipsoid", {0.3, 0.8, 0.5}, {0.7, 0.35, -0.05}, {0, 0, -18}, "accent"},
-		{"Ellipsoid", {0.2, 0.6, 0.2}, {0, -0.15, 1.0}, {-50, 0, 0}, "main"},
+		{"Ellipsoid", {0.2, 0.6, 0.2}, {0, -0.15, 1.0}, {40, 0, 0}, "main"},
 		{"Ellipsoid", {0.34, 0.24, 0.44}, {-0.32, -1.0, -0.25}, nil, "main"}, {"Ellipsoid", {0.34, 0.24, 0.44}, {0.32, -1.0, -0.25}, nil, "main"},
 		{"Ellipsoid", {0.34, 0.24, 0.44}, {-0.32, -1.0, 0.6}, nil, "main"}, {"Ellipsoid", {0.34, 0.24, 0.44}, {0.32, -1.0, 0.6}, nil, "main"},
 	}},
@@ -26354,9 +26354,9 @@ NeverYieldPets.species = {
 		{"Ball", {0.13, 0.13, 0.13}, {0, 0.3, -0.92}, nil, "fixed", {30, 25, 25}},
 		{"Wedge", {0.36, 0.62, 0.45}, {-0.38, 1.18, -0.05}, {0, 90, 0}, "main"}, {"Wedge", {0.36, 0.62, 0.45}, {0.38, 1.18, -0.05}, {0, -90, 0}, "main"},
 		{"Wedge", {0.2, 0.36, 0.26}, {-0.38, 1.1, -0.13}, {0, 90, 0}, "fixed", {40, 30, 30}}, {"Wedge", {0.2, 0.36, 0.26}, {0.38, 1.1, -0.13}, {0, -90, 0}, "fixed", {40, 30, 30}},
-		{"Ellipsoid", {0.5, 0.5, 0.9}, {0, -0.25, 0.95}, {30, 0, 0}, "main"},
-		{"Ellipsoid", {0.6, 0.6, 0.9}, {0, 0.15, 1.45}, {5, 0, 0}, "main"},
-		{"Ellipsoid", {0.48, 0.48, 0.55}, {0, 0.45, 1.85}, {-20, 0, 0}, "accent"},
+		{"Ellipsoid", {0.5, 0.5, 0.9}, {0, -0.25, 0.95}, {-43, 0, 0}, "main"},
+		{"Ellipsoid", {0.6, 0.6, 0.9}, {0, 0.15, 1.45}, {-38, 0, 0}, "main"},
+		{"Ellipsoid", {0.48, 0.48, 0.55}, {0, 0.45, 1.85}, {-30, 0, 0}, "accent"},
 		{"Ellipsoid", {0.3, 0.22, 0.42}, {-0.28, -1.0, -0.2}, nil, "fixed", {50, 35, 30}}, {"Ellipsoid", {0.3, 0.22, 0.42}, {0.28, -1.0, -0.2}, nil, "fixed", {50, 35, 30}},
 		{"Ellipsoid", {0.3, 0.22, 0.42}, {-0.28, -1.0, 0.55}, nil, "fixed", {50, 35, 30}}, {"Ellipsoid", {0.3, 0.22, 0.42}, {0.28, -1.0, 0.55}, nil, "fixed", {50, 35, 30}},
 	}},
@@ -26393,8 +26393,8 @@ NeverYieldPets.species = {
 		{"Wedge", {0.08, 1.0, 1.1}, {-0.95, 0.35, 0.35}, {0, 0, 40}, "accent"}, {"Wedge", {0.08, 1.0, 1.1}, {0.95, 0.35, 0.35}, {0, 0, -40}, "accent"},
 		{"Block", {0.1, 0.1, 1.2}, {-0.75, 0.65, 0.35}, {0, 0, 40}, "main"}, {"Block", {0.1, 0.1, 1.2}, {0.75, 0.65, 0.35}, {0, 0, -40}, "main"},
 		{"Wedge", {0.1, 0.3, 0.3}, {0, 0.25, 0.4}, nil, "accent"}, {"Wedge", {0.1, 0.25, 0.25}, {0, 0.1, 0.8}, nil, "accent"},
-		{"Ellipsoid", {0.38, 0.38, 0.9}, {0, -0.5, 1.15}, {20, 0, 0}, "main"},
-		{"Ellipsoid", {0.28, 0.28, 0.7}, {0, -0.25, 1.7}, {-15, 0, 0}, "main"},
+		{"Ellipsoid", {0.38, 0.38, 0.9}, {0, -0.5, 1.15}, {-24, 0, 0}, "main"},
+		{"Ellipsoid", {0.28, 0.28, 0.7}, {0, -0.25, 1.7}, {-25, 0, 0}, "main"},
 		{"Wedge", {0.1, 0.35, 0.35}, {0, -0.08, 2.05}, nil, "accent"},
 		{"Ellipsoid", {0.34, 0.24, 0.44}, {-0.32, -1.0, -0.15}, nil, "main"}, {"Ellipsoid", {0.34, 0.24, 0.44}, {0.32, -1.0, -0.15}, nil, "main"},
 		{"Ellipsoid", {0.34, 0.24, 0.44}, {-0.32, -1.0, 0.65}, nil, "main"}, {"Ellipsoid", {0.34, 0.24, 0.44}, {0.32, -1.0, 0.65}, nil, "main"},
