@@ -1,4 +1,4 @@
--- NeverYield v1.11.3 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.12.0 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.11.3" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.12.0" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -5282,6 +5282,7 @@ CMDs[#CMDs + 1] = {NAME = 'filter [name/random]', DESC = 'Screen filter: noir, s
 CMDs[#CMDs + 1] = {NAME = 'unfilter', DESC = 'Removes the screen filter'}
 CMDs[#CMDs + 1] = {NAME = 'weather [type/random]', DESC = 'Weather with sound, clouds and lighting: snow, blizzard (the whole map snows over!), rain, storm (gets dark, thunder), sandstorm, aurora, stars, galaxy, bloodmoon, sakura, autumn, hearts, embers, fireflies, rainbow, meteors'}
 CMDs[#CMDs + 1] = {NAME = 'weathervolume [0-3]', DESC = 'Changes how loud the weather sounds are (default 1)'}
+CMDs[#CMDs + 1] = {NAME = 'skipweather / nexttrack', DESC = 'Weather sounds change by themselves every few minutes (plus owls, wolves, thunder, chimes...); this skips to another track now'}
 CMDs[#CMDs + 1] = {NAME = 'fuckoff / unloadny', DESC = 'Completely unloads NeverYield: turns everything off and removes the GUI'}
 CMDs[#CMDs + 1] = {NAME = 'END / theend', DESC = 'A black hole (only you see it) swallows the map and you, then takes you to a new server'}
 CMDs[#CMDs + 1] = {NAME = 'unweather / clearskies', DESC = 'Clears the weather'}
@@ -17246,6 +17247,86 @@ WackyState.weather = {
 	meteors = {sky = "space", clock = 0, meteors = true, tint = {230, 215, 255}, sound = {"space", 0.45}},
 }
 
+-- Several loops per weather sound (one is picked at random, then it crossfades to another every
+-- 1.5-2.5 minutes) plus one-shot accents on top. All ProSoundEffects audio, checked against the asset API.
+WackyState.assets.soundPools = {
+	rain = {9112853287, 9112853563, 9112853653, 9112794265, 9112856553},
+	stormloop = {9120016022, 9120020768, 9120020741, 9112794090},
+	snowwind = {9114228774, 9114228918, 9113203785, 9113203961},
+	blizzard = {9114228928, 9114625552, 9114625745, 9114625414},
+	sandstorm = {9114057128, 9114057104, 9118029799},
+	night = {9112764573, 9112836038, 9112764891, 9112881910, 9112810388},
+	fire = {9112780561, 9112780462, 9112906396, 9112907072},
+	space = {9125515916, 9119392583, 9119392328, 9116389698},
+	birds = {9125485532, 9119383684, 9118752742, 9116970949, 9116969481, 9112750044},
+}
+WackyState.assets.accents = {
+	winter = {9120051870, 9120052385, 9120749896},
+	howl = {9120789619, 9120052167, 9120790308, 9120790163},
+	thunderfar = {9120021237, 9120021259, 9120021267},
+	desert = {9113954299, 9113732046},
+	night = {9117182190, 9117182352, 9117182167, 9120051870},
+	chimes = {9120750346, 9120751091, 9120749896, 9120750051},
+	cosmic = {9119420108, 9116383749},
+	spooky = {9120790163, 9120790319, 9117182187},
+	fire = {9120827051},
+}
+for name, accent in pairs({
+	snow = {"winter", 0.3}, blizzard = {"howl", 0.35}, rain = {"thunderfar", 0.35}, storm = {"thunderfar", 0.5},
+	sandstorm = {"desert", 0.35}, aurora = {"chimes", 0.25}, stars = {"night", 0.3}, galaxy = {"cosmic", 0.25},
+	bloodmoon = {"spooky", 0.4}, sakura = {"chimes", 0.25}, autumn = {"chimes", 0.2}, hearts = {"chimes", 0.25},
+	embers = {"fire", 0.35}, fireflies = {"night", 0.3}, rainbow = {"chimes", 0.25}, meteors = {"cosmic", 0.25},
+}) do
+	if WackyState.weather[name] then
+		WackyState.weather[name].accents = accent
+	end
+end
+
+-- start a random loop from the pool (not the one in avoid), fading in
+WackyState.weatherTrack = function(poolName, volume, avoid)
+	local pool = WackyState.assets.soundPools[poolName] or {WackyState.assets.sounds[poolName]}
+	local choices = {}
+	for _, id in ipairs(pool) do
+		if id ~= avoid then
+			table.insert(choices, id)
+		end
+	end
+	if #choices == 0 then
+		choices = pool
+	end
+	local id = WackyState.pick(choices)
+	local loop = WackyState.sound(id, nil, 0, true, 0.95 + math.random() * 0.1)
+	loop:SetAttribute("BaseVolume", volume)
+	TweenService:Create(loop, TweenInfo.new(3), {Volume = volume * WackyState.weatherVolume}):Play()
+	table.insert(WackyState.weatherSounds, loop)
+	return loop, id
+end
+
+WackyState.fadeOutSound = function(sound, seconds)
+	for i = #WackyState.weatherSounds, 1, -1 do
+		if WackyState.weatherSounds[i] == sound then
+			table.remove(WackyState.weatherSounds, i)
+		end
+	end
+	pcall(function()
+		TweenService:Create(sound, TweenInfo.new(seconds), {Volume = 0}):Play()
+		Services.Debris:AddItem(sound, seconds + 0.5)
+	end)
+end
+
+WackyState.weatherAccent = function(poolName, volume)
+	local pool = WackyState.assets.accents[poolName]
+	if not pool then return end
+	for i = #WackyState.weatherSounds, 1, -1 do
+		if not WackyState.weatherSounds[i].Parent then
+			table.remove(WackyState.weatherSounds, i)
+		end
+	end
+	local sound = WackyState.sound(WackyState.pick(pool), nil, volume * WackyState.weatherVolume * (0.6 + math.random() * 0.4), false, 0.92 + math.random() * 0.16)
+	sound:SetAttribute("BaseVolume", volume)
+	table.insert(WackyState.weatherSounds, sound)
+end
+
 WackyState.makeEmitter = function(spec)
 	local emitter = Instance.new("ParticleEmitter")
 	emitter.Texture = WackyState.texture(spec.tex)
@@ -17963,12 +18044,13 @@ addcmd('weather',{},function(args, speaker)
 		})
 		WackyState.weatherDarkTween:Play()
 	end
+	local currentLoop, currentId
 	if preset.sound then
-		local loop = WackyState.sound(WackyState.assets.sounds[preset.sound[1]], nil, 0, true)
-		loop:SetAttribute("BaseVolume", preset.sound[2])
-		TweenService:Create(loop, TweenInfo.new(2), {Volume = preset.sound[2] * WackyState.weatherVolume}):Play()
-		table.insert(WackyState.weatherSounds, loop)
+		currentLoop, currentId = WackyState.weatherTrack(preset.sound[1], preset.sound[2])
 	end
+	local nextSwap = tick() + 90 + math.random() * 60
+	local nextAccent = tick() + 8 + math.random() * 12
+	WackyState.weatherSkip = false
 	if preset.accumulate then
 		WackyState.startSnowCover(speaker, preset.accumulate)
 	end
@@ -18015,6 +18097,20 @@ addcmd('weather',{},function(args, speaker)
 			nextStrike = t + 2 + math.random() * 5
 			task.spawn(WackyState.lightningStrike, speaker)
 		end
+		-- a different track every few minutes (or right away with skipweather)
+		if preset.sound and (t > nextSwap or WackyState.weatherSkip) then
+			WackyState.weatherSkip = false
+			nextSwap = t + 90 + math.random() * 60
+			local old = currentLoop
+			currentLoop, currentId = WackyState.weatherTrack(preset.sound[1], preset.sound[2], currentId)
+			if old then
+				WackyState.fadeOutSound(old, 4)
+			end
+		end
+		if preset.accents and t > nextAccent then
+			nextAccent = t + 12 + math.random() * 22
+			task.spawn(WackyState.weatherAccent, preset.accents[1], preset.accents[2])
+		end
 		if preset.meteors and t > nextMeteor then
 			nextMeteor = t + 0.25 + math.random() * 0.5
 			task.spawn(WackyState.launchMeteor, speaker)
@@ -18032,12 +18128,14 @@ end)
 
 WackyState.stopWeather = function(switching)
 	for _, sound in ipairs(WackyState.weatherSounds) do
-		if switching then
-			sound:Destroy()
-		else
-			TweenService:Create(sound, TweenInfo.new(1.5), {Volume = 0}):Play()
-			Services.Debris:AddItem(sound, 1.6)
-		end
+		pcall(function()
+			if switching then
+				sound:Destroy()
+			else
+				TweenService:Create(sound, TweenInfo.new(1.5), {Volume = 0}):Play()
+				Services.Debris:AddItem(sound, 1.6)
+			end
+		end)
 	end
 	WackyState.weatherSounds = {}
 	-- stop a darkening that is still fading in, then give the lighting back (instantly when switching)
@@ -18057,6 +18155,15 @@ end
 
 addcmd('unweather',{'noweather','clearskies'},function(args, speaker)
 	WackyState.stopWeather()
+end)
+
+addcmd('skipweather',{'nexttrack','weatherskip'},function(args, speaker)
+	if not WackyState.conns.weather then
+		notify('Weather', 'No weather is playing. Try weather rain first.')
+		return
+	end
+	WackyState.weatherSkip = true
+	notify('Weather', 'Switching to a different weather track...')
 end)
 
 addcmd('weathervolume',{'weathervol'},function(args, speaker)

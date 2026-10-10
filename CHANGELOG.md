@@ -5,6 +5,7 @@ Versions before 1.11.3 were reconstructed from the Desktop `.bakN` backups (one 
 
 | Version | Date | Commands | Change |
 |---|---|---|---|
+| 1.12.0 | 10-10 | 617 | Weather sounds vary: 3-6 verified loops per weather, crossfade to a new one every 1.5-2.5 min, plus one-shot accents (owls, wolves, distant thunder, coyotes, wind chimes, wood cracks); new `skipweather` |
 | 1.11.3 | 10-10 | 616 | Stats button in Settings (under Theme Studio); NeverYield shows its own version number in the title |
 | 1.11.3 | 10-10 02:02 | 616 | fixes / tweaks |
 | 1.11.2 | 10-10 02:02 | 616 | Emoji/symbols written as ASCII escape codes so Theme Studio shows real emoji even when Volt loads the file as ANSI |
