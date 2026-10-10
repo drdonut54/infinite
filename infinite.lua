@@ -1,4 +1,4 @@
--- NeverYield v1.21.0 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.21.1 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.21.0" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.21.1" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -21018,6 +21018,79 @@ NeverYieldAgartha.part = function(parent, size, cf, color, material, shape, prop
 	return p
 end
 
+-- sit on chairs / benches, sleep in the bed: a prompt welds you in place, jump to get up
+NeverYieldAgartha.standUp = function()
+	local A = NeverYieldAgartha
+	if A.sitConn then A.sitConn:Disconnect() A.sitConn = nil end
+	if A.sitWeld then
+		pcall(function() A.sitWeld:Destroy() end)
+		A.sitWeld = nil
+		pcall(function() A.zzz:Destroy() end)
+		local char = Players.LocalPlayer.Character
+		local hum = char and char:FindFirstChildOfClass("Humanoid")
+		local hrp = getRoot(char)
+		if hum then
+			hum.Sit = false
+			hum.PlatformStand = false
+		end
+		if hrp then hrp.CFrame = hrp.CFrame + Vector3.new(0, 2.5, 0) end
+	end
+end
+
+NeverYieldAgartha.sitDown = function(part, cf, sleep)
+	local A = NeverYieldAgartha
+	local char = Players.LocalPlayer.Character
+	local hum = char and char:FindFirstChildOfClass("Humanoid")
+	local hrp = getRoot(char)
+	if not hum or not hrp or hum.Health <= 0 then return end
+	A.standUp()
+	local lift = (hum.RigType == Enum.HumanoidRigType.R15) and 0.2 or 0
+	local target = cf + Vector3.new(0, lift, 0)
+	hrp.CFrame = target
+	if sleep then
+		hum.PlatformStand = true
+		local tag = Instance.new("BillboardGui")
+		tag.Size = UDim2.new(0, 80, 0, 40)
+		tag.StudsOffset = Vector3.new(0, 0, 2.5)
+		tag.Parent = hrp
+		local z = Instance.new("TextLabel")
+		z.BackgroundTransparency = 1
+		z.Size = UDim2.new(1, 0, 1, 0)
+		z.Font = Enum.Font.FredokaOne
+		z.TextScaled = true
+		z.Text = "Zzz"
+		z.TextColor3 = Color3.fromRGB(200, 220, 255)
+		z.TextStrokeTransparency = 0.3
+		z.Parent = tag
+		A.zzz = tag
+	else
+		hum.Sit = true
+	end
+	local weld = Instance.new("Weld")
+	weld.Part0 = part
+	weld.Part1 = hrp
+	weld.C0 = part.CFrame:ToObjectSpace(target)
+	weld.Parent = hrp
+	A.sitWeld = weld
+	A.sitConn = hum:GetPropertyChangedSignal("Jump"):Connect(function()
+		if hum.Jump then A.standUp() end
+	end)
+end
+
+NeverYieldAgartha.seat = function(part, cf, text, sleep)
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.ActionText = text or "Sit"
+	prompt.ObjectText = ""
+	prompt.HoldDuration = 0
+	prompt.MaxActivationDistance = 9
+	prompt.RequiresLineOfSight = false
+	prompt.KeyboardKeyCode = Enum.KeyCode.E
+	prompt.Parent = part
+	prompt.Triggered:Connect(function()
+		NeverYieldAgartha.sitDown(part, cf, sleep)
+	end)
+end
+
 -- build the island; O = the point on the grass in the middle of the island
 NeverYieldAgartha.build = function(O)
 	local folder = Instance.new("Model")
@@ -21166,7 +21239,10 @@ NeverYieldAgartha.build = function(O)
 		P(folder, Vector3.new(0.9, 0.9, 0.9), at(bx + lx, 8.2, bz + 5.3), frame, M.Wood, "Ball")
 	end
 	P(folder, Vector3.new(7.6, 2.6, 0.5), at(bx, 3.8, bz - 5.2), frame, M.Wood)
-	P(folder, Vector3.new(6.7, 1.1, 9.6), at(bx, 3.7, bz), Color3.fromRGB(245, 243, 238), M.Fabric)
+	local mattress = P(folder, Vector3.new(6.7, 1.1, 9.6), at(bx, 3.7, bz), Color3.fromRGB(245, 243, 238), M.Fabric)
+	NeverYieldAgartha.seat(mattress, at(bx + 2.6, 4.25 + 1.5, bz - 2) * CFrame.Angles(0, math.rad(-90), 0), "Sit")
+	NeverYieldAgartha.seat(P(folder, Vector3.new(6.7, 0.2, 2), at(bx, 4.3, bz + 2.5), Color3.fromRGB(245, 243, 238), M.Fabric, nil, {Transparency = 1}),
+		CFrame.lookAt(O + Vector3.new(bx, 5.1, bz + 0.6), O + Vector3.new(bx, 6.1, bz + 0.6), Vector3.new(0, 0, 1)), "Sleep", true)
 	P(folder, Vector3.new(7.0, 0.55, 6.6), at(bx, 4.35, bz - 1.4), Color3.fromRGB(110, 160, 220), M.Fabric)
 	P(folder, Vector3.new(7.05, 0.6, 1.2), at(bx, 4.4, bz + 1.9), Color3.fromRGB(245, 243, 238), M.Fabric)
 	for i = 0, 3 do
@@ -21217,7 +21293,8 @@ NeverYieldAgartha.build = function(O)
 		local base = at(cx, 0, cz) * CFrame.Angles(0, yaw, 0)
 		local wood = Color3.fromRGB(135, 88, 55)
 		P(folder, Vector3.new(2.2, 0.3, 2.2), base * CFrame.new(0, 3.5, 0), wood, M.Wood)
-		P(folder, Vector3.new(1.9, 0.25, 1.9), base * CFrame.new(0, 3.75, 0), Color3.fromRGB(200, 80, 90), M.Fabric)
+		local cushion = P(folder, Vector3.new(1.9, 0.25, 1.9), base * CFrame.new(0, 3.75, 0), Color3.fromRGB(200, 80, 90), M.Fabric)
+		NeverYieldAgartha.seat(cushion, base * CFrame.new(0, 3.9 + 1.5, -0.1), "Sit")
 		for _, lx in ipairs({-0.9, 0.9}) do
 			for _, lz in ipairs({-0.9, 0.9}) do
 				P(folder, Vector3.new(0.25, 1.75, 0.25), base * CFrame.new(lx, 2.5, lz), wood, M.Wood)
@@ -21286,7 +21363,8 @@ NeverYieldAgartha.build = function(O)
 	for _, side in ipairs({-1, 1}) do
 		P(folder, Vector3.new(0.8, 1.8, 3.2), at(ax + side * 1.7, 3.6, az), cushion:Lerp(Color3.new(0, 0, 0), 0.1), M.Fabric, "Ellipsoid")
 	end
-	P(folder, Vector3.new(2.6, 0.5, 2.4), at(ax, 3.8, az - 0.2), cushion:Lerp(Color3.new(1, 1, 1), 0.15), M.Fabric)
+	local armSeat = P(folder, Vector3.new(2.6, 0.5, 2.4), at(ax, 3.8, az - 0.2), cushion:Lerp(Color3.new(1, 1, 1), 0.15), M.Fabric)
+	NeverYieldAgartha.seat(armSeat, at(ax, 4.05 + 1.5, az - 0.4), "Sit")
 	-- potted plants and paintings
 	for _, pp in ipairs({{-14, hz - 11}, {14, hz - 11}, {-14, hz + 0.5}}) do
 		P(folder, Vector3.new(1.6, 1.6, 1.6), at(pp[1], 2.6, pp[2]), Color3.fromRGB(190, 100, 60), M.Slate, "Cylinder", {CFrame = at(pp[1], 2.6, pp[2]) * up})
@@ -21421,15 +21499,20 @@ NeverYieldAgartha.build = function(O)
 	end
 
 	-- pond with rocks and lily pads, a bench beside it
-	P(folder, Vector3.new(0.6, 18, 18), at(22, 0.05, -18) * up, Color3.fromRGB(80, 160, 220), M.Glass, "Cylinder", {Transparency = 0.25, Reflectance = 0.25})
+	NeverYieldAgartha.pondCenter, NeverYieldAgartha.pondRadius = O + Vector3.new(22, 0, -18), 8.8
+	local pondStandIn = P(folder, Vector3.new(0.6, 18, 18), at(22, 0.5, -18) * up, Color3.fromRGB(80, 160, 220), M.Glass, "Cylinder", {Transparency = 1, CanCollide = false})
+	pondStandIn:SetAttribute("ViewOnly", true)
 	for i = 1, 12 do
 		local a = i / 12 * math.pi * 2
 		P(folder, Vector3.new(2.6, 1.4, 2), at(22 + math.cos(a) * 9.4, 0.4, -18 + math.sin(a) * 9.4) * CFrame.Angles(0, a, 0), Color3.fromRGB(150, 145, 135), M.Slate, "Ellipsoid")
 	end
 	for _, lp in ipairs({{19, -16}, {25, -21}, {23, -14}}) do
-		P(folder, Vector3.new(0.2, 2.4, 2.4), at(lp[1], 0.4, lp[2]) * up, Color3.fromRGB(90, 170, 70), M.SmoothPlastic, "Cylinder")
+		P(folder, Vector3.new(0.2, 2.4, 2.4), at(lp[1], 0.8, lp[2]) * up, Color3.fromRGB(90, 170, 70), M.SmoothPlastic, "Cylinder", {CanCollide = false})
 	end
-	P(folder, Vector3.new(7, 0.5, 2), at(8, 2, -26), Color3.fromRGB(160, 115, 75), M.WoodPlanks)
+	local benchSeat = P(folder, Vector3.new(7, 0.5, 2), at(8, 2, -26), Color3.fromRGB(160, 115, 75), M.WoodPlanks)
+	for _, bxo in ipairs({-1.8, 1.8}) do
+		NeverYieldAgartha.seat(benchSeat, at(8 + bxo, 2.25 + 1.5, -25.8) * CFrame.Angles(0, math.pi, 0), "Sit")
+	end
 	P(folder, Vector3.new(7, 2, 0.5), at(8, 3, -26.9), Color3.fromRGB(160, 115, 75), M.WoodPlanks)
 	for _, x in ipairs({5, 11}) do
 		P(folder, Vector3.new(0.5, 2, 1.8), at(x, 1, -26), woodDark, M.Wood)
@@ -21547,25 +21630,6 @@ NeverYieldAgartha.makeGate = function(cf, worldModel, skyTop, skyBottom, face)
 	gui.PixelsPerStud = 40
 	gui.LightInfluence = 0
 	gui.Parent = pane
-	-- the view (ViewportFrames do not render inside CanvasGroups, so it sits right on the SurfaceGui)
-	local vp = Instance.new("ViewportFrame")
-	vp.Size = UDim2.new(1, 0, 1, 0)
-	vp.BackgroundColor3 = skyTop:Lerp(skyBottom, 0.35)
-	vp.BackgroundTransparency = 0
-	vp.Ambient = Color3.fromRGB(205, 195, 185)
-	vp.LightColor = Color3.fromRGB(255, 240, 220)
-	vp.LightDirection = Vector3.new(-0.5, -1, 0.4)
-	vp.Parent = gui
-	local vpCorner = Instance.new("UICorner")
-	vpCorner.CornerRadius = UDim.new(0.5, 0)
-	vpCorner.Parent = vp
-	local cam = Instance.new("Camera")
-	cam.Parent = vp
-	vp.CurrentCamera = cam
-	gate.cam = cam
-	if worldModel then
-		worldModel.Parent = vp
-	end
 	-- glass: a soft sheen sliding across, a rim of light around the edge
 	local sheen = Instance.new("Frame")
 	sheen.Size = UDim2.new(1, 0, 1, 0)
@@ -21594,6 +21658,88 @@ NeverYieldAgartha.makeGate = function(cf, worldModel, skyTop, skyBottom, face)
 	return gate
 end
 
+-- see-through window: a full-screen ViewportFrame with a camera mirrored through the doorways (so the
+-- perspective matches exactly), clipped to where the doorway is on your screen by two crossed rectangles
+NeverYieldAgartha.makeWindow = function(model, sky)
+	local screen = Instance.new("ScreenGui")
+	screen.Name = randomString()
+	screen.IgnoreGuiInset = true
+	screen.ResetOnSpawn = false
+	screen.DisplayOrder = -5
+	screen.Enabled = false
+	if not pcall(function() screen.Parent = gethui and gethui() or COREGUI end) then
+		screen.Parent = Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")
+	end
+	local win = {screen = screen, clips = {}}
+	for i = 1, 2 do
+		local clip = Instance.new("Frame")
+		clip.BackgroundTransparency = 1
+		clip.BorderSizePixel = 0
+		clip.ClipsDescendants = true
+		clip.Parent = screen
+		local vp = Instance.new("ViewportFrame")
+		vp.BackgroundColor3 = sky
+		vp.BackgroundTransparency = 0
+		vp.Ambient = Color3.fromRGB(205, 195, 185)
+		vp.LightColor = Color3.fromRGB(255, 240, 220)
+		vp.LightDirection = Vector3.new(-0.5, -1, 0.4)
+		vp.Parent = clip
+		local cam = Instance.new("Camera")
+		cam.Parent = vp
+		vp.CurrentCamera = cam
+		local copy = (i == 1) and model or model:Clone()
+		copy.Parent = vp
+		table.insert(win.clips, {frame = clip, vp = vp, cam = cam})
+	end
+	return win
+end
+
+NeverYieldAgartha.updateWindow = function(win, gate, other, frontSign, char)
+	local cam = workspace.CurrentCamera
+	local camPos = cam.CFrame.Position
+	local rel = gate.cf:PointToObjectSpace(camPos)
+	local center = gate.cf.Position
+	local sp, onScreen = cam:WorldToViewportPoint(center)
+	local visible = rel.Z * frontSign > 0.6 and sp.Z > 0 and gate.radius > 0.6 and (camPos - center).Magnitude < 400
+	if visible then
+		-- hidden behind a wall? (pets, effects and the island itself do not count)
+		local params = RaycastParams.new()
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		local skip = {char, gate.ring, gate.pane}
+		for _ = 1, 5 do
+			params.FilterDescendantsInstances = skip
+			local hit = workspace:Raycast(camPos, center - camPos, params)
+			if not hit then break end
+			if hit.Instance:GetAttribute("NYFx") then
+				table.insert(skip, hit.Instance)
+			else
+				visible = false
+				break
+			end
+		end
+	end
+	win.screen.Enabled = visible
+	if not visible then return end
+	local r = gate.radius * 0.97
+	local side = cam:WorldToViewportPoint(center + gate.cf.RightVector * r)
+	local top = cam:WorldToViewportPoint(center + gate.cf.UpVector * r)
+	local rx = math.max(4, (Vector2.new(side.X, side.Y) - Vector2.new(sp.X, sp.Y)).Magnitude)
+	local ry = math.max(4, (Vector2.new(top.X, top.Y) - Vector2.new(sp.X, sp.Y)).Magnitude)
+	local size = cam.ViewportSize
+	local virtual = other.cf:ToWorldSpace(gate.cf:ToObjectSpace(cam.CFrame))
+	for i, clip in ipairs(win.clips) do
+		local w = (i == 1) and rx * 1.96 or rx * 1.3
+		local h = (i == 1) and ry * 1.3 or ry * 1.96
+		local x, y = sp.X - w / 2, sp.Y - h / 2
+		clip.frame.Position = UDim2.new(0, x, 0, y)
+		clip.frame.Size = UDim2.new(0, w, 0, h)
+		clip.vp.Position = UDim2.new(0, -x, 0, -y)
+		clip.vp.Size = UDim2.new(0, size.X, 0, size.Y)
+		clip.cam.FieldOfView = cam.FieldOfView
+		clip.cam.CFrame = virtual
+	end
+end
+
 NeverYieldAgartha.layoutGate = function(gate, t)
 	local r = gate.radius
 	gate.ring.CFrame = gate.cf * CFrame.Angles(0, 0, t * 3)
@@ -21614,7 +21760,7 @@ NeverYieldAgartha.destroyGate = function(gate)
 end
 
 -- a frozen copy of what is around a spot (for the window back home)
-NeverYieldAgartha.snapshot = function(center, radius, limit)
+NeverYieldAgartha.snapshot = function(center, radius, limit, gateCF)
 	local model = Instance.new("Model")
 	local count = 0
 	local chars = {}
@@ -21623,7 +21769,8 @@ NeverYieldAgartha.snapshot = function(center, radius, limit)
 	end
 	for _, inst in ipairs(workspace:GetDescendants()) do
 		if count >= limit then break end
-		if inst:IsA("BasePart") and not inst:IsA("Terrain") and inst.Transparency < 0.95 and not inst:GetAttribute("NYFx") and (inst.Position - center).Magnitude < radius then
+		if inst:IsA("BasePart") and not inst:IsA("Terrain") and inst.Transparency < 0.95 and not inst:GetAttribute("NYFx") and (inst.Position - center).Magnitude < radius
+			and (not gateCF or gateCF:PointToObjectSpace(inst.Position).Z < 1) then
 			local owned, anc = false, inst.Parent
 			while anc and anc ~= workspace do
 				if chars[anc] then owned = true break end
@@ -21655,7 +21802,14 @@ NeverYieldAgartha.close = function()
 		A.leaveMood(s)
 	end
 	A.state = nil
+	A.standUp()
 	WackyState.disconnect("agartha")
+	for _, win in ipairs({s.homeWindow, s.awayWindow}) do
+		pcall(function() win.screen:Destroy() end)
+	end
+	pcall(function()
+		workspace.Terrain:FillCylinder(CFrame.new(A.pondCenter + Vector3.new(0, -1.3, 0)), 4, A.pondRadius + 0.5, Enum.Material.Air)
+	end)
 	A.destroyGate(s.homeGate)
 	A.destroyGate(s.awayGate)
 	pcall(function() s.land:Destroy() end)
@@ -21730,14 +21884,24 @@ addcmd('portal',{'agartha','gateway'},function(args, speaker)
 	local awayCF = CFrame.lookAt(awayPos, awayPos - Vector3.new(0, 0, 1))
 	local land = A.build(O)
 	land.Parent = workspace
+	-- real Roblox water in the pond
+	pcall(function()
+		workspace.Terrain:FillCylinder(CFrame.new(A.pondCenter + Vector3.new(0, -1.3, 0)), 4, A.pondRadius, Enum.Material.Water)
+	end)
 	local view = land:Clone()
 	for _, d in ipairs(view:GetDescendants()) do
-		if d:IsA("ParticleEmitter") or d:IsA("Light") then d:Destroy() end
+		if d:IsA("ParticleEmitter") or d:IsA("Light") or d:IsA("ProximityPrompt") then
+			d:Destroy()
+		elseif d:IsA("BasePart") and d:GetAttribute("ViewOnly") then
+			d.Transparency = 0.25
+		end
 	end
-	local homeView = A.snapshot(root.Position, 140, 450)
+	local homeView = A.snapshot(root.Position, 160, 450, homeCF)
 	local s = {land = land}
-	s.homeGate = A.makeGate(homeCF, view, Color3.fromRGB(130, 190, 255), Color3.fromRGB(255, 205, 170))
-	s.awayGate = A.makeGate(awayCF, homeView, Color3.fromRGB(150, 180, 220), Color3.fromRGB(200, 210, 230), Enum.NormalId.Back)
+	s.homeGate = A.makeGate(homeCF, nil, Color3.fromRGB(130, 190, 255), Color3.fromRGB(255, 205, 170))
+	s.awayGate = A.makeGate(awayCF, nil, Color3.fromRGB(150, 180, 220), Color3.fromRGB(200, 210, 230), Enum.NormalId.Back)
+	s.homeWindow = A.makeWindow(view, Color3.fromRGB(150, 200, 255))
+	s.awayWindow = A.makeWindow(homeView, Color3.fromRGB(170, 200, 235))
 	s.music = WackyState.sound(WackyState.pick(A.music), nil, 0, true)
 	s.birds = WackyState.sound(A.birds, nil, 0, true)
 	TweenService:Create(s.music, TweenInfo.new(2), {Volume = 0.05}):Play()
@@ -21754,17 +21918,10 @@ addcmd('portal',{'agartha','gateway'},function(args, speaker)
 			gate.radius = math.max(0.2, radius)
 			A.layoutGate(gate, t)
 		end
-		-- windows: a virtual camera on the other side mirrors yours
-		local cam = workspace.CurrentCamera
-		for _, pair in ipairs({{s.homeGate, s.awayGate}, {s.awayGate, s.homeGate}}) do
-			local gate, other = pair[1], pair[2]
-			-- stand where you are, but on the other side, and look through the far doorway;
-			-- the zoom matches how big the window looks from here, so the view lines up
-			local rel = gate.cf:PointToObjectSpace(cam.CFrame.Position)
-			local virtualPos = other.cf:PointToWorldSpace(rel)
-			local dist = math.max(0.5, rel.Magnitude)
-			gate.cam.CFrame = CFrame.lookAt(virtualPos, other.cf.Position, other.cf.UpVector)
-			gate.cam.FieldOfView = math.clamp(math.deg(2 * math.atan(gate.radius * 0.95 / dist)), 5, 110)
+		-- see-through windows (home shows Agartha, Agartha shows home) and the glass shimmer
+		A.updateWindow(s.homeWindow, s.homeGate, s.awayGate, -1, speaker.Character)
+		A.updateWindow(s.awayWindow, s.awayGate, s.homeGate, 1, speaker.Character)
+		for _, gate in ipairs({s.homeGate, s.awayGate}) do
 			gate.shine.Offset = Vector2.new(math.sin(t * 0.7) * 0.6, 0)
 		end
 		-- walking through
