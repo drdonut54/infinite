@@ -5,6 +5,7 @@ Versions before 1.11.3 were reconstructed from the Desktop `.bakN` backups (one 
 
 | Version | Date | Commands | Change |
 |---|---|---|---|
+| 1.24.7 | 10-10 | 634 | kas's own avatar sits on a garden bench behind the Agartha cottage, chilling with a Space Sandwich rebuilt from the Roblox catalog mesh |
 | 1.24.6 | 10-10 | 634 | Eggs crack with sound while they shake before hatching (faster, louder cracks + crack lines on the shell), then an egg-break sound |
 | 1.24.5 | 10-10 | 634 | Agartha fireplace back no longer clips through the cottage wall; portal command renamed to agartha (portal still works as an alias), agarthadebug likewise |
 | 1.24.4 | 10-10 | 634 | Pet skins (400) and hats (250) come from roll machines instead of direct buys: Roll 1 / Roll 5, spin-and-reveal, 1-in-N odds, duplicate refunds; Luck Potion works on rolls and is a modest boost |
