@@ -959,6 +959,13 @@ NeverYieldPortal.conn = RunService.RenderStepped:Connect(function()
 	if moved then
 		NeverYieldPortal.lastLayout = {xs, x, ys, y, s, visible}
 	end
+	if not visible then
+		if moved then
+			for _, ring in ipairs(NeverYieldPortal.rings) do ring.frame.Visible = false end
+			for _, spark in ipairs(NeverYieldPortal.sparks) do spark.Visible = false end
+		end
+		return
+	end
 	NeverYieldPortal.rimGradient.Rotation = (t * 140) % 360
 	for _, ring in ipairs(NeverYieldPortal.rings) do
 		if moved then
@@ -5236,7 +5243,10 @@ CMDs[#CMDs + 1] = {NAME = 'orbitcam / cinematic [speed] [distance]', DESC = 'Cam
 CMDs[#CMDs + 1] = {NAME = 'unorbitcam / uncinematic', DESC = 'Returns your camera to normal'}
 CMDs[#CMDs + 1] = {NAME = 'filter [name/random]', DESC = 'Screen filter: noir, sepia, vaporwave, nightvision, deepfried, underwater, thermal, dream'}
 CMDs[#CMDs + 1] = {NAME = 'unfilter', DESC = 'Removes the screen filter'}
-CMDs[#CMDs + 1] = {NAME = 'weather [type/random]', DESC = 'Local weather: snow, rain, embers, fireflies, rainbow, stars, galaxy'}
+CMDs[#CMDs + 1] = {NAME = 'weather [type/random]', DESC = 'Weather with sound, clouds and lighting: snow, blizzard (the whole map snows over!), rain, storm (gets dark, thunder), sandstorm, aurora, stars, galaxy, bloodmoon, sakura, autumn, hearts, embers, fireflies, rainbow, meteors'}
+CMDs[#CMDs + 1] = {NAME = 'weathervolume [0-3]', DESC = 'Changes how loud the weather sounds are (default 1)'}
+CMDs[#CMDs + 1] = {NAME = 'fuckoff / unloadny', DESC = 'Completely unloads NeverYield: turns everything off and removes the GUI'}
+CMDs[#CMDs + 1] = {NAME = 'END / theend', DESC = 'A black hole (only you see it) swallows the map and you, then takes you to a new server'}
 CMDs[#CMDs + 1] = {NAME = 'unweather / clearskies', DESC = 'Clears the weather'}
 CMDs[#CMDs + 1] = {NAME = 'confetti [amount]', DESC = 'Explodes confetti around you'}
 CMDs[#CMDs + 1] = {NAME = 'dancefloor / discofloor [size]', DESC = 'Spawns a flashing disco dance floor under you'}
@@ -5303,7 +5313,7 @@ CMDs[#CMDs + 1] = {NAME = 'spacemode / space', DESC = 'Purple space lighting, fl
 CMDs[#CMDs + 1] = {NAME = 'unspacemode / unspace', DESC = 'Comes back down to Earth'}
 CMDs[#CMDs + 1] = {NAME = 'portal / reopen', DESC = 'Replays the NeverYield portal opening animation'}
 CMDs[#CMDs + 1] = {NAME = '', DESC = ''}
-CMDs[#CMDs + 1] = {NAME = '--- LIMBS ---', DESC = 'Limb effects stack! Optional [speed] multiplier on each'}
+CMDs[#CMDs + 1] = {NAME = '--- LIMBS ---', DESC = 'Works on R6 and R15 (R15 also bends elbows/knees). Effects stack! Optional [speed] multiplier'}
 CMDs[#CMDs + 1] = {NAME = 'flail [speed]', DESC = 'Arms, legs and head flail around randomly'}
 CMDs[#CMDs + 1] = {NAME = 'windmill [speed]', DESC = 'Arms spin like windmills'}
 CMDs[#CMDs + 1] = {NAME = 'jelly / noodle [speed]', DESC = 'Every joint wobbles like jelly'}
@@ -5333,6 +5343,7 @@ CMDs[#CMDs + 1] = {NAME = 'breakdance / bboy', DESC = 'Upside down headspin brea
 CMDs[#CMDs + 1] = {NAME = 'randomlimbs / randompose', DESC = 'Turns on a random limb effect'}
 CMDs[#CMDs + 1] = {NAME = 'un<effect>  (e.g. unflail)', DESC = 'Turns off one limb effect'}
 CMDs[#CMDs + 1] = {NAME = 'unlimbs / resetlimbs', DESC = 'Turns off all limb effects'}
+CMDs[#CMDs + 1] = {NAME = 'limbdebug', DESC = 'Shows your rig type and which joints the limb effects found'}
 CMDs[#CMDs + 1] = {NAME = '--- MOVEMENT ---', DESC = ''}
 CMDs[#CMDs + 1] = {NAME = 'crabwalk / sidewalk', DESC = 'Walk sideways like a crab'}
 CMDs[#CMDs + 1] = {NAME = 'uncrabwalk', DESC = 'Walk normally'}
@@ -13588,19 +13599,21 @@ WackyState.bindCam = function(key, func)
 	RunService:BindToRenderStep(WackyState.binds[key], Enum.RenderPriority.Camera.Value + 1, func)
 end
 
-WackyState.partCache = setmetatable({}, {__mode = "k"})
 WackyState.parts = function(speaker)
 	local char = speaker.Character
 	if not char then return {} end
-	local cache = WackyState.partCache[char]
-	if cache and not cache.dirty then
-		return cache.list
+	if WackyState.partChar ~= char then
+		WackyState.partChar, WackyState.partList = char, nil
+		local function mark(d)
+			if d:IsA("BasePart") then
+				WackyState.partList = nil
+			end
+		end
+		WackyState.connect("partsAdded", char.DescendantAdded:Connect(mark))
+		WackyState.connect("partsRemoving", char.DescendantRemoving:Connect(mark))
 	end
-	if not cache then
-		cache = {}
-		WackyState.partCache[char] = cache
-		char.DescendantAdded:Connect(function() cache.dirty = true end)
-		char.DescendantRemoving:Connect(function() cache.dirty = true end)
+	if WackyState.partList then
+		return WackyState.partList
 	end
 	local parts = {}
 	for _, v in ipairs(char:GetDescendants()) do
@@ -13608,8 +13621,7 @@ WackyState.parts = function(speaker)
 			table.insert(parts, v)
 		end
 	end
-	cache.list = parts
-	cache.dirty = false
+	WackyState.partList = parts
 	return parts
 end
 
@@ -13887,55 +13899,7 @@ WackyState.weather = {
 	rainbow = {Rainbow = true, Rate = 200, Speed = NumberRange.new(6, 12), Size = 0.4, Lifetime = 8, Light = 1, Spread = 30},
 }
 
-addcmd('weather',{},function(args, speaker)
-	local names = {}
-	for k in pairs(WackyState.weather) do
-		table.insert(names, k)
-	end
-	table.sort(names)
-	local choice = args[1] and args[1]:lower() or "snow"
-	if choice == "random" then
-		choice = WackyState.pick(names)
-	end
-	local preset = WackyState.weather[choice]
-	if not preset then
-		notify('Weather', 'Unknown weather. Try: ' .. table.concat(names, ', ') .. ', random')
-		return
-	end
-	WackyState.disconnect("weather")
-	WackyState.clear("weather")
-	local cloud = WackyState.track("weather", Instance.new("Part"))
-	cloud.Name = randomString()
-	cloud.Anchored = true
-	cloud.CanCollide = false
-	cloud.CanQuery = false
-	cloud.CanTouch = false
-	cloud.Transparency = 1
-	cloud.Size = Vector3.new(120, 1, 120)
-	local emitter = Instance.new("ParticleEmitter")
-	emitter.EmissionDirection = Enum.NormalId.Bottom
-	emitter.Rate = preset.Rate
-	emitter.Speed = preset.Speed
-	emitter.Lifetime = NumberRange.new(preset.Lifetime)
-	emitter.Size = NumberSequence.new(preset.Size)
-	emitter.LightEmission = preset.Light
-	emitter.SpreadAngle = Vector2.new(preset.Spread, preset.Spread)
-	emitter.Color = preset.Rainbow and WackyState.rainbowSequence() or ColorSequence.new(preset.Color)
-	emitter.Parent = cloud
-	cloud.Parent = workspace
-	WackyState.connect("weather", RunService.Heartbeat:Connect(function()
-		local root = getRoot(speaker.Character)
-		if root then
-			cloud.CFrame = CFrame.new(root.Position + Vector3.new(0, 40, 0))
-		end
-	end))
-	notify('Weather', 'Forecast: ' .. choice .. '! Use unweather to clear the skies.')
-end)
-
-addcmd('unweather',{'noweather','clearskies'},function(args, speaker)
-	WackyState.disconnect("weather")
-	WackyState.clear("weather")
-end)
+-- weather / unweather live in WEATHER 2.0 further down
 
 -- Confetti and dance floor
 addcmd('confetti',{},function(args, speaker)
@@ -14140,6 +14104,14 @@ addcmd('jetpack',{},function(args, speaker)
 		local r = getRoot(char)
 		local hum = char and char:FindFirstChildOfClass("Humanoid")
 		if not r or not hum then return end
+		if fire.Parent ~= r then
+			fire = WackyState.track("jetpack", Instance.new("Fire"))
+			fire.Name = randomString()
+			fire.Size = 4
+			fire.Heat = -15
+			fire.Enabled = false
+			fire.Parent = r
+		end
 		local held = hum.Jump
 		if fire.Enabled ~= held then
 			pcall(function() fire.Enabled = held end)
@@ -14613,12 +14585,22 @@ addcmd('fireworks',{'firework'},function(args, speaker)
 			sparks.Color = ColorSequence.new(color, WackyState.randomColor())
 			sparks.Parent = shell
 			shell.Parent = workspace
+			pcall(function()
+				local launch = WackyState.sound(WackyState.assets.sounds.fwlaunch, shell, 0.7, false, 0.9 + math.random() * 0.3)
+				launch.RollOffMaxDistance = 300
+			end)
 			local up = TweenService:Create(shell, TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = shell.Position + Vector3.new(0, math.random(35, 55), 0)})
 			up:Play()
 			up.Completed:Wait()
 			shell.Transparency = 1
 			sparks:Emit(120)
-			Services.Debris:AddItem(shell, 3)
+			pcall(function()
+				local boom = WackyState.sound(WackyState.assets.sounds.fwboom, shell, 1, false, 1.2 + math.random() * 0.3)
+				boom.RollOffMaxDistance = 600
+				local crackle = WackyState.sound(WackyState.assets.sounds.fwcrackle, shell, 0.45, false, 0.9 + math.random() * 0.2)
+				crackle.RollOffMaxDistance = 400
+			end)
+			Services.Debris:AddItem(shell, 6)
 		end)
 	end
 end)
@@ -14886,12 +14868,26 @@ WackyState.getJoints = function(char)
 		return cache
 	end
 	local joints = {}
-	for _, motor in ipairs(char:GetDescendants()) do
-		if motor:IsA("Motor6D") then
-			local role = WackyState.jointRoles[(motor.Name:gsub(" ", "")):lower()]
-			if role and not joints[role] then
-				local r0 = motor.C0 - motor.C0.Position
-				joints[role] = {motor = motor, r0 = r0, r0inv = r0:Inverse()}
+	for _, joint in ipairs(char:GetDescendants()) do
+		-- classic rigs use Motor6D; upgraded R15 avatars use AnimationConstraint (same Transform idea,
+		-- but the joint frame comes from Attachment0 instead of C0)
+		local isMotor = joint:IsA("Motor6D")
+		local isConstraint = not isMotor and joint:IsA("AnimationConstraint")
+		if isMotor or isConstraint then
+			local role = WackyState.jointRoles[(joint.Name:gsub(" ", "")):lower()]
+			local enabled = true
+			pcall(function() enabled = joint.Enabled end)
+			local frame
+			if isMotor then
+				frame = joint.C0
+			elseif joint.Attachment0 then
+				frame = joint.Attachment0.CFrame
+			end
+			local current = role and joints[role]
+			local better = not current or (enabled and not current.enabled) or (enabled and isConstraint and current.motor:IsA("Motor6D"))
+			if role and frame and better then
+				local r0 = frame - frame.Position
+				joints[role] = {motor = joint, r0 = r0, r0inv = r0:Inverse(), enabled = enabled}
 			end
 		end
 	end
@@ -14971,9 +14967,12 @@ WackyState.limbFx.windmill = function(t, s)
 	return {rs = CFrame.Angles(t * 8 * s, 0, 0), ls = CFrame.Angles(t * 8 * s + math.pi, 0, 0)}
 end
 
+WackyState.jellyRoles = {"rs", "ls", "rh", "lh", "neck", "waist", "re", "le", "rk", "lk"}
+WackyState.chaosRoles = {"rs", "ls", "rh", "lh", "neck", "re", "le", "rk", "lk"}
+
 WackyState.limbFx.jelly = function(t, s)
 	local poses = {}
-	for i, role in ipairs({"rs", "ls", "rh", "lh", "neck", "waist", "re", "le", "rk", "lk"}) do
+	for i, role in ipairs(WackyState.jellyRoles) do
 		poses[role] = CFrame.Angles(math.sin(t * 6 * s + i) * 0.5, 0, math.cos(t * 5 * s + i * 1.7) * 0.4)
 	end
 	return poses
@@ -15099,7 +15098,7 @@ end
 
 WackyState.limbFx.limbchaos = function(t, s)
 	local poses = {}
-	for i, role in ipairs({"rs", "ls", "rh", "lh", "neck", "re", "le", "rk", "lk"}) do
+	for i, role in ipairs(WackyState.chaosRoles) do
 		poses[role] = CFrame.Angles(t * (2 + i) * s, t * (3 + i * 0.5) * s, t * (1 + i * 0.7) * s)
 	end
 	return poses
@@ -15189,6 +15188,29 @@ end)
 
 addcmd('unlimbs',{'resetlimbs','nolimbfx'},function(args, speaker)
 	WackyState.limbOff()
+end)
+
+addcmd('limbdebug',{'jointdebug'},function(args, speaker)
+	local char = speaker.Character
+	local hum = char and char:FindFirstChildOfClass("Humanoid")
+	if not hum then
+		notify('Limb Debug', 'No character found.')
+		return
+	end
+	WackyState.jointCache = nil
+	local joints = WackyState.getJoints(char)
+	local found, missing = {}, {}
+	for _, role in ipairs({"neck", "rs", "ls", "rh", "lh", "root", "waist", "re", "le", "rk", "lk"}) do
+		local joint = joints[role]
+		if joint then
+			table.insert(found, role .. "=" .. joint.motor.ClassName .. (joint.enabled and "" or "(off)"))
+		else
+			table.insert(missing, role)
+		end
+	end
+	local info = "Rig: " .. tostring(hum.RigType.Name) .. " | Found: " .. table.concat(found, ", ") .. " | Missing: " .. (#missing > 0 and table.concat(missing, ", ") or "none")
+	warn("[NeverYield limbdebug] " .. info)
+	notify('Limb Debug', info, 20)
 end)
 
 -- Movement
@@ -15448,15 +15470,16 @@ end)
 
 -- Jump tricks: watch for the moment a jump starts
 WackyState.onJump = function(key, callback)
-	local hooked, stateConn = nil, nil
+	local hooked = nil
+	local stateKey = key .. "State"
+	WackyState.disconnect(stateKey)
 	WackyState.connect(key, RunService.Heartbeat:Connect(function()
 		local hum = WackyState.humRoot(Players.LocalPlayer)
 		if hum and hum ~= hooked then
-			if stateConn then stateConn:Disconnect() end
 			hooked = hum
-			stateConn = hum.StateChanged:Connect(function(_, new)
+			WackyState.connect(stateKey, hum.StateChanged:Connect(function(_, new)
 				if not WackyState.conns[key] then
-					stateConn:Disconnect()
+					WackyState.disconnect(stateKey)
 					return
 				end
 				if new == Enum.HumanoidStateType.Jumping then
@@ -15465,7 +15488,7 @@ WackyState.onJump = function(key, callback)
 						callback(h, root)
 					end
 				end
-			end)
+			end))
 		end
 	end))
 end
@@ -15998,7 +16021,7 @@ NeverYieldTheme.step = function()
 	local theme = NeverYieldTheme.active
 	if not theme then return end
 	local now = tick()
-	if theme.particles and theme.rate and now - NeverYieldTheme.lastSpawn > 1 / theme.rate then
+	if theme.particles and theme.rate and NeverYieldPortal.scale > 0.05 and now - NeverYieldTheme.lastSpawn > 1 / theme.rate then
 		NeverYieldTheme.lastSpawn = now
 		NeverYieldTheme.emit(theme, NeverYieldTheme.layer())
 	end
@@ -16042,8 +16065,9 @@ NeverYieldTheme.apply = function(id, save)
 	for i, spark in ipairs(NeverYieldPortal.sparks) do
 		spark.BackgroundColor3 = NeverYieldTheme.rgb(theme.rim[(i % #theme.rim) + 1])
 	end
+	local tinted = NeverYieldTheme.sequence(theme, 0.55)
 	for _, gradient in ipairs(NeverYieldGradients) do
-		gradient.Color = NeverYieldTheme.sequence(theme, 0.55)
+		gradient.Color = tinted
 	end
 	for _, child in ipairs(NeverYieldTheme.layer():GetChildren()) do
 		child:Destroy()
@@ -16602,6 +16626,10 @@ NeverYieldTheme.openStudio = function(page)
 	}
 
 	NeverYieldTheme.studioConn = RunService.RenderStepped:Connect(function()
+		if not studio.Parent then
+			NeverYieldTheme.closeStudio()
+			return
+		end
 		local t = tick()
 		studioStrokeGradient.Rotation = (t * 120) % 360
 		bgGradient.Rotation = (t * 15) % 360
@@ -16700,6 +16728,1497 @@ task.spawn(function()
 	end
 end)
 -- ================== END NEVERYIELD THEME STUDIO ==================
+
+-- ==================== WEATHER 2.0 ====================
+-- Sound IDs are ProSoundEffects library audio (public domain on Roblox), checked against the public asset API.
+WackyState.assets = {
+	skies = {},
+	particles = {snowflake = "rbxassetid://1190797289", flake = "rbxassetid://1190797289", soft = "rbxassetid://242109931"},
+	sounds = {
+		rain = 9112853287, stormloop = 9120016022,
+		thunder1 = 9120021541, thunder2 = 9120019110, thunder3 = 9120020225,
+		snowwind = 9114228774, blizzard = 9114228928, sandstorm = 9114057128,
+		night = 9112764573, fire = 9112780561, space = 9125515916, meteor = 9120769331,
+		birds = 9125485532, fwlaunch = 9125805579, fwboom = 9120018172, fwcrackle = 9114447277,
+	},
+}
+WackyState.weatherVolume = 1
+WackyState.weatherSounds = {}
+
+WackyState.sound = function(id, parent, volume, looped, pitch)
+	local sound = Instance.new("Sound")
+	sound.Name = randomString()
+	sound.SoundId = "rbxassetid://" .. tostring(id)
+	sound.Volume = volume or 0.5
+	sound.Looped = looped or false
+	sound.PlaybackSpeed = pitch or 1
+	sound.Parent = parent or Services.SoundService
+	sound:Play()
+	if not looped then
+		sound.Ended:Connect(function()
+			sound:Destroy()
+		end)
+		Services.Debris:AddItem(sound, 30)
+	end
+	return sound
+end
+
+-- Swap Lighting/Terrain environment objects locally, keeping the game's originals to put back
+WackyState.env = {parked = {}, ours = {}}
+
+WackyState.envContainer = function(class)
+	if class == "Clouds" then
+		return workspace:FindFirstChildOfClass("Terrain")
+	end
+	return Lighting
+end
+
+WackyState.envSet = function(class, instance)
+	local container = WackyState.envContainer(class)
+	if not container then
+		instance:Destroy()
+		return
+	end
+	if not WackyState.env.parked[class] then
+		local parked = {}
+		for _, v in ipairs(container:GetChildren()) do
+			if v.ClassName == class then
+				table.insert(parked, v)
+				pcall(function() v.Parent = nil end)
+			end
+		end
+		WackyState.env.parked[class] = parked
+	end
+	if WackyState.env.ours[class] then
+		pcall(function() WackyState.env.ours[class]:Destroy() end)
+	end
+	WackyState.env.ours[class] = instance
+	instance.Parent = container
+end
+
+WackyState.envRestore = function(class)
+	if WackyState.env.ours[class] then
+		pcall(function() WackyState.env.ours[class]:Destroy() end)
+		WackyState.env.ours[class] = nil
+	end
+	local parked = WackyState.env.parked[class]
+	if parked then
+		local container = WackyState.envContainer(class)
+		for _, v in ipairs(parked) do
+			pcall(function() v.Parent = container end)
+		end
+		WackyState.env.parked[class] = nil
+	end
+end
+
+WackyState.makeSky = function(name)
+	local ids = WackyState.assets.skies[name]
+	if not ids then return nil end
+	local sky = Instance.new("Sky")
+	sky.Name = randomString()
+	sky.SkyboxBk = ids.bk
+	sky.SkyboxDn = ids.dn
+	sky.SkyboxFt = ids.ft
+	sky.SkyboxLf = ids.lf
+	sky.SkyboxRt = ids.rt
+	sky.SkyboxUp = ids.up
+	sky.StarCount = 3000
+	sky.CelestialBodiesShown = ids.celestial ~= false
+	return sky
+end
+
+WackyState.texture = function(kind)
+	return WackyState.assets.particles[kind] or "rbxasset://textures/particles/sparkles_main.dds"
+end
+
+WackyState.c3 = function(t)
+	return Color3.fromRGB(t[1], t[2], t[3])
+end
+
+-- Weather presets
+-- emitter.area: "above" (falls from a sheet overhead), "below" (rises), "around" (fills a box around you)
+WackyState.weather = {
+	snow = {sky = "winter", clock = 13, tint = {235, 240, 255}, sound = {"snowwind", 0.35}, accumulate = 60,
+		atmosphere = {density = 0.35, haze = 1.5, color = {220, 230, 245}, decay = {200, 210, 230}},
+		clouds = {cover = 0.8, density = 0.6, color = {245, 245, 255}},
+		bloom = {intensity = 0.6, size = 24, threshold = 0.85}, saturation = -0.1,
+		emitters = {
+			{tex = "flake", area = "around", box = {70, 36, 70}, offset = 12, dir = "Bottom", color = {255, 255, 255}, rate = 70, speed = {1.5, 3}, size = {0.3, 0.55}, life = 12, spread = 35, light = 0.15, spin = true, accel = {1.5, -0.5, 0}, wind = 2},
+			{tex = "soft", area = "above", color = {255, 255, 255}, rate = 260, speed = {5, 9}, size = {0.12, 0.24}, life = 9, spread = 25, light = 0.2, accel = {2, 0, 0}, wind = 2},
+			{tex = "soft", area = "around", box = {260, 70, 260}, offset = 20, dir = "Bottom", color = {235, 242, 255}, rate = 320, speed = {2, 4}, size = {0.1, 0.18}, life = 10, spread = 40, transparency = 0.35, accel = {1, -0.5, 0}, wind = 2},
+		}},
+	blizzard = {sky = "winter", clock = 13, tint = {230, 238, 255}, shake = 0.15, sound = {"blizzard", 0.8}, accumulate = 25,
+		dark = {brightness = 0.8, exposure = -0.2, ambient = {120, 125, 140}, outdoor = {130, 135, 150}},
+		atmosphere = {density = 0.6, haze = 3, color = {230, 235, 250}, decay = {210, 220, 240}},
+		clouds = {cover = 1, density = 0.9, color = {230, 230, 240}},
+		bloom = {intensity = 0.5, size = 24, threshold = 0.85}, saturation = -0.2,
+		emitters = {
+			{tex = "flake", area = "around", box = {60, 30, 60}, offset = 8, dir = "Bottom", color = {255, 255, 255}, rate = 260, speed = {12, 20}, size = {0.25, 0.45}, life = 4, spread = 40, light = 0.15, spin = true, accel = {40, -10, 10}, wind = 14},
+			{tex = "soft", area = "around", box = {140, 50, 140}, offset = 10, dir = "Bottom", color = {255, 255, 255}, rate = 900, speed = {20, 30}, size = {0.12, 0.22}, life = 4, spread = 30, light = 0.2, accel = {45, -10, 12}, wind = 16},
+			{tex = "soft", area = "around", box = {260, 70, 260}, offset = 20, dir = "Bottom", color = {230, 238, 252}, rate = 600, speed = {15, 25}, size = {0.1, 0.18}, life = 5, spread = 40, transparency = 0.4, accel = {40, -8, 10}, wind = 16},
+		}},
+	rain = {sky = "storm", tint = {205, 210, 220}, brightness = -0.05, sound = {"rain", 0.6},
+		dark = {brightness = 0.65, exposure = -0.35, ambient = {80, 82, 92}, outdoor = {90, 92, 102}},
+		atmosphere = {density = 0.4, haze = 1, color = {150, 155, 165}, decay = {110, 115, 125}},
+		clouds = {cover = 0.9, density = 0.8, color = {120, 125, 135}},
+		emitters = {{tex = "rain", area = "above", color = {180, 200, 235}, rate = 700, speed = {70, 90}, size = {0.15, 0.2}, life = 1.6, spread = 3, light = 0.05, streak = true}}},
+	storm = {sky = "storm", tint = {185, 190, 210}, brightness = -0.15, saturation = -0.3, lightning = true, shake = 0.05, sound = {"stormloop", 0.75}, clock = 17.5,
+		dark = {brightness = 0.35, exposure = -0.9, ambient = {40, 42, 52}, outdoor = {45, 48, 58}},
+		atmosphere = {density = 0.5, haze = 1.5, color = {110, 115, 130}, decay = {80, 85, 100}},
+		clouds = {cover = 1, density = 1, color = {80, 85, 95}},
+		emitters = {{tex = "rain", area = "above", color = {170, 190, 230}, rate = 1000, speed = {90, 110}, size = {0.15, 0.2}, life = 1.4, spread = 6, light = 0.05, streak = true, accel = {15, 0, 0}}}},
+	sandstorm = {tint = {255, 225, 180}, shake = 0.1, sound = {"sandstorm", 0.7},
+		atmosphere = {density = 0.65, haze = 3, color = {230, 190, 130}, decay = {200, 140, 80}},
+		emitters = {{tex = "dust", area = "around", color = {225, 180, 110}, rate = 350, speed = {35, 50}, size = {1.5, 3.5}, life = 3, spread = 15, transparency = 0.55, accel = {60, 0, 0}, spin = true}}},
+	aurora = {sky = "aurora", clock = 0, tint = {205, 255, 235}, aurora = true, sound = {"space", 0.4},
+		emitters = {{tex = "star", area = "around", color = {150, 255, 200}, rate = 25, speed = {0.3, 1}, size = {0.15, 0.3}, life = 12, spread = 180, light = 1}}},
+	stars = {sky = "starry", clock = 0, sound = {"night", 0.4},
+		emitters = {{tex = "star", area = "around", color = {255, 255, 255}, rate = 150, speed = {0.5, 2}, size = {0.15, 0.3}, life = 10, spread = 180, light = 1}}},
+	galaxy = {sky = "space", clock = 0, tint = {225, 205, 255}, sound = {"space", 0.45},
+		emitters = {{tex = "star", area = "around", color = {190, 140, 255}, rate = 180, speed = {1, 4}, size = {0.2, 0.4}, life = 10, spread = 180, light = 1}}},
+	bloodmoon = {sky = "bloodmoon", clock = 0, tint = {255, 165, 165}, brightness = -0.05, sound = {"fire", 0.3},
+		atmosphere = {density = 0.4, haze = 2, color = {130, 25, 25}, decay = {70, 0, 0}},
+		emitters = {{tex = "dust", area = "below", color = {255, 60, 30}, rate = 60, speed = {3, 8}, size = {0.2, 0.4}, life = 8, spread = 40, light = 1}}},
+	sakura = {sky = "pink", clock = 14, tint = {255, 238, 246}, sound = {"birds", 0.4},
+		emitters = {{tex = "petal", area = "above", color = {255, 190, 220}, rate = 120, speed = {3, 6}, size = {0.35, 0.6}, life = 10, spread = 40, spin = true, accel = {3, 0, 1}}}},
+	autumn = {sky = "sunset", clock = 16.8, tint = {255, 225, 195}, sound = {"birds", 0.35},
+		emitters = {{tex = "leaf", area = "above", gradient = {{230, 120, 30}, {200, 50, 20}, {240, 190, 60}}, rate = 80, speed = {3, 6}, size = {0.4, 0.7}, life = 10, spread = 45, spin = true, accel = {4, 0, 2}}}},
+	hearts = {sky = "pink", clock = 15, tint = {255, 220, 235}, sound = {"birds", 0.3},
+		emitters = {{tex = "heart", area = "below", color = {255, 90, 150}, rate = 50, speed = {3, 6}, size = {0.4, 0.7}, life = 8, spread = 30, light = 0.5}}},
+	embers = {sky = "bloodmoon", clock = 20, sound = {"fire", 0.45},
+		emitters = {{tex = "dust", area = "below", color = {255, 120, 30}, rate = 120, speed = {4, 10}, size = {0.2, 0.35}, life = 8, spread = 60, light = 1}}},
+	fireflies = {sky = "starry", clock = 21, sound = {"night", 0.5},
+		emitters = {{tex = "firefly", area = "around", color = {220, 255, 90}, rate = 40, speed = {1, 3}, size = {0.25, 0.4}, life = 10, spread = 180, light = 1}}},
+	rainbow = {sky = "day", clock = 12, sound = {"birds", 0.4},
+		emitters = {{tex = "star", area = "above", rainbow = true, rate = 200, speed = {6, 12}, size = {0.3, 0.5}, life = 8, spread = 30, light = 1}}},
+	meteors = {sky = "space", clock = 0, meteors = true, tint = {230, 215, 255}, sound = {"space", 0.45}},
+}
+
+WackyState.makeEmitter = function(spec)
+	local emitter = Instance.new("ParticleEmitter")
+	emitter.Texture = WackyState.texture(spec.tex)
+	emitter.Rate = spec.rate
+	emitter.Speed = NumberRange.new(spec.speed[1], spec.speed[2])
+	emitter.Lifetime = NumberRange.new(spec.life * 0.8, spec.life)
+	emitter.Size = NumberSequence.new(spec.size[1], spec.size[2])
+	emitter.LightEmission = spec.light or 0
+	emitter.SpreadAngle = Vector2.new(spec.spread, spec.spread)
+	emitter.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 1),
+		NumberSequenceKeypoint.new(0.1, spec.transparency or 0),
+		NumberSequenceKeypoint.new(0.85, spec.transparency or 0),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	if spec.rainbow then
+		emitter.Color = WackyState.rainbowSequence()
+	elseif spec.gradient then
+		local keys = {}
+		for i, c in ipairs(spec.gradient) do
+			table.insert(keys, ColorSequenceKeypoint.new((i - 1) / (#spec.gradient - 1), WackyState.c3(c)))
+		end
+		emitter.Color = ColorSequence.new(keys)
+	else
+		emitter.Color = ColorSequence.new(WackyState.c3(spec.color))
+	end
+	if spec.accel then
+		emitter.Acceleration = Vector3.new(spec.accel[1], spec.accel[2], spec.accel[3])
+	end
+	if spec.spin then
+		emitter.Rotation = NumberRange.new(0, 360)
+		emitter.RotSpeed = NumberRange.new(-120, 120)
+	end
+	if spec.streak then
+		emitter.Orientation = Enum.ParticleOrientation.VelocityParallel
+		emitter.Size = NumberSequence.new(spec.size[2])
+		pcall(function() emitter.Squash = NumberSequence.new(-2) end)
+	end
+	if spec.dir then
+		emitter.EmissionDirection = Enum.NormalId[spec.dir]
+		if spec.area == "around" then
+			pcall(function()
+				emitter.Shape = Enum.ParticleEmitterShape.Box
+				emitter.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
+			end)
+		end
+	elseif spec.area == "below" then
+		emitter.EmissionDirection = Enum.NormalId.Top
+	elseif spec.area == "around" then
+		emitter.EmissionDirection = Enum.NormalId.Front
+		pcall(function()
+			emitter.Shape = Enum.ParticleEmitterShape.Box
+			emitter.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
+		end)
+	else
+		emitter.EmissionDirection = Enum.NormalId.Bottom
+	end
+	return emitter
+end
+
+WackyState.weatherPart = function(area, box)
+	local part = WackyState.track("weather", Instance.new("Part"))
+	part.Name = randomString()
+	part.Anchored = true
+	part.CanCollide = false
+	part.CanQuery = false
+	part.CanTouch = false
+	part.Transparency = 1
+	part.Size = box and Vector3.new(box[1], box[2], box[3]) or (area == "around" and Vector3.new(120, 50, 120) or Vector3.new(140, 1, 140))
+	part.Parent = workspace
+	return part
+end
+
+WackyState.lightningStrike = function(speaker)
+	local root = getRoot(speaker.Character)
+	if not root then return end
+	local angle = math.random() * math.pi * 2
+	local dist = math.random(40, 120)
+	local ground = root.Position + Vector3.new(math.cos(angle) * dist, 0, math.sin(angle) * dist)
+	local params = RaycastParams.new()
+	params.FilterDescendantsInstances = {speaker.Character}
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	local hit = workspace:Raycast(ground + Vector3.new(0, 200, 0), Vector3.new(0, -400, 0), params)
+	local bottom = hit and hit.Position or (ground - Vector3.new(0, 3, 0))
+	local top = bottom + Vector3.new(math.random(-20, 20), 250, math.random(-20, 20))
+	local last = top
+	for i = 1, 10 do
+		local point = top:Lerp(bottom, i / 10)
+		if i < 10 then
+			point = point + Vector3.new(math.random(-8, 8), 0, math.random(-8, 8))
+		end
+		local bolt = Instance.new("Part")
+		bolt.Name = randomString()
+		bolt.Anchored = true
+		bolt.CanCollide = false
+		bolt.CanQuery = false
+		bolt.CanTouch = false
+		bolt.Material = Enum.Material.Neon
+		bolt.Color = Color3.fromRGB(210, 225, 255)
+		bolt.Size = Vector3.new(0.6, 0.6, (point - last).Magnitude)
+		bolt.CFrame = CFrame.lookAt((last + point) / 2, point)
+		bolt.Parent = workspace
+		Services.Debris:AddItem(bolt, 0.18)
+		last = point
+	end
+	local flash = Instance.new("ColorCorrectionEffect")
+	flash.Name = randomString()
+	flash.Brightness = 0.5
+	flash.Parent = Lighting
+	TweenService:Create(flash, TweenInfo.new(0.5), {Brightness = 0}):Play()
+	Services.Debris:AddItem(flash, 0.6)
+	task.delay(math.clamp(dist / 120, 0.2, 1.2), function()
+		local id = WackyState.assets.sounds[WackyState.pick({"thunder1", "thunder2", "thunder3"})]
+		WackyState.sound(id, nil, math.clamp(1.2 - dist / 200, 0.4, 1) * WackyState.weatherVolume, false, 0.9 + math.random() * 0.2)
+	end)
+end
+
+WackyState.makeAurora = function()
+	local anchor = WackyState.track("weather", Instance.new("Part"))
+	anchor.Name = randomString()
+	anchor.Anchored = true
+	anchor.CanCollide = false
+	anchor.CanQuery = false
+	anchor.CanTouch = false
+	anchor.Transparency = 1
+	anchor.Size = Vector3.new(1, 1, 1)
+	anchor.Parent = workspace
+	local beams = {}
+	local palettes = {
+		{{80, 255, 170}, {60, 200, 255}}, {{120, 255, 140}, {200, 90, 255}},
+		{{60, 255, 200}, {255, 90, 200}}, {{150, 255, 120}, {80, 160, 255}},
+	}
+	for i, palette in ipairs(palettes) do
+		local a0 = Instance.new("Attachment")
+		a0.Position = Vector3.new(-450, 220 + i * 18, -120 + i * 60)
+		a0.Parent = anchor
+		local a1 = Instance.new("Attachment")
+		a1.Position = Vector3.new(450, 220 + i * 18, -120 + i * 60)
+		a1.Parent = anchor
+		local beam = Instance.new("Beam")
+		beam.Attachment0 = a0
+		beam.Attachment1 = a1
+		beam.Width0 = 70
+		beam.Width1 = 70
+		beam.Segments = 40
+		beam.LightEmission = 1
+		beam.LightInfluence = 0
+		beam.FaceCamera = false
+		beam.Color = ColorSequence.new(WackyState.c3(palette[1]), WackyState.c3(palette[2]))
+		beam.Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.2, 0.55),
+			NumberSequenceKeypoint.new(0.8, 0.55), NumberSequenceKeypoint.new(1, 1),
+		})
+		beam.Parent = anchor
+		table.insert(beams, beam)
+	end
+	return anchor, beams
+end
+
+WackyState.launchMeteor = function(speaker)
+	local root = getRoot(speaker.Character)
+	if not root then return end
+	local start = root.Position + Vector3.new(math.random(-250, 250), math.random(180, 260), math.random(-250, 250))
+	local finish = start + Vector3.new(math.random(-200, 200), -math.random(150, 220), math.random(-200, 200))
+	local meteor = Instance.new("Part")
+	meteor.Name = randomString()
+	meteor.Shape = Enum.PartType.Ball
+	meteor.Size = Vector3.new(3, 3, 3)
+	meteor.Anchored = true
+	meteor.CanCollide = false
+	meteor.CanQuery = false
+	meteor.CanTouch = false
+	meteor.Material = Enum.Material.Neon
+	meteor.Color = Color3.fromRGB(255, 200, 140)
+	meteor.Position = start
+	local a0 = Instance.new("Attachment")
+	a0.Position = Vector3.new(0, 1.2, 0)
+	a0.Parent = meteor
+	local a1 = Instance.new("Attachment")
+	a1.Position = Vector3.new(0, -1.2, 0)
+	a1.Parent = meteor
+	local trail = Instance.new("Trail")
+	trail.Attachment0 = a0
+	trail.Attachment1 = a1
+	trail.Lifetime = 0.8
+	trail.LightEmission = 1
+	trail.FaceCamera = true
+	trail.Color = ColorSequence.new(Color3.fromRGB(255, 230, 180), Color3.fromRGB(200, 120, 255))
+	trail.Transparency = NumberSequence.new(0, 1)
+	trail.WidthScale = NumberSequence.new(1, 0)
+	trail.Parent = meteor
+	meteor.Parent = workspace
+	TweenService:Create(meteor, TweenInfo.new(1.6 + math.random(), Enum.EasingStyle.Linear), {Position = finish}):Play()
+	Services.Debris:AddItem(meteor, 3)
+	if math.random() < 0.3 then
+		task.delay(0.8, function()
+			WackyState.sound(WackyState.assets.sounds.meteor, nil, 0.25 * WackyState.weatherVolume, false, 0.8 + math.random() * 0.4)
+		end)
+	end
+end
+
+-- Detailed snow: the whole map (floors, roofs, platforms and terrain) turns snowy,
+-- plus footprints with crunches, snow on your head and shoulders, frosty
+-- breath, frost creeping in at the screen edges and sparkles on the snow.
+-- Everything melts away (and every part gets its original look back) when the weather stops.
+WackyState.snowTextures = {flake = "rbxassetid://1190797289", soft = "rbxassetid://242109931"}
+WackyState.snowWhite = Color3.fromRGB(244, 247, 255)
+WackyState.snowTerrainMaterials = {"Grass", "LeafyGrass", "Ground", "Mud", "Sand", "Rock", "Slate", "Basalt", "Limestone", "Sandstone",
+	"Pavement", "Asphalt", "Cobblestone", "Concrete", "Brick", "Salt", "Snow", "Glacier"}
+
+WackyState.snowApplyMap = function(entry, level)
+	local part = entry.part
+	if not part.Parent then return end
+	entry.applied = level
+	part.Color = entry.color:Lerp(WackyState.snowWhite, math.clamp(level * 1.3, 0, 0.92))
+	if entry.union ~= nil and level > 0 then
+		part.UsePartColor = true
+	end
+	if level >= 0.35 then
+		if part.Material ~= Enum.Material.Snow then
+			part.Material = Enum.Material.Snow
+		end
+	elseif part.Material ~= entry.material then
+		part.Material = entry.material
+	end
+end
+
+WackyState.snowRestoreAll = function(cover)
+	for _, entry in ipairs(cover.mapParts) do
+		pcall(function()
+			local part = entry.part
+			part.Color = entry.color
+			part.Material = entry.material
+			if entry.union ~= nil then
+				part.UsePartColor = entry.union
+			end
+		end)
+	end
+	cover.mapParts = {}
+	if cover.terrain then
+		for mat, color in pairs(cover.terrainColors) do
+			pcall(function() cover.terrain:SetMaterialColor(mat, color) end)
+		end
+		if cover.decoration ~= nil then
+			pcall(function() cover.terrain.Decoration = cover.decoration end)
+		end
+	end
+end
+
+WackyState.stopSnowCover = function(instant)
+	WackyState.disconnect("snowcover")
+	WackyState.disconnect("snowmapadded")
+	local cover = WackyState.snowCover
+	WackyState.snowCover = nil
+	if not cover then return end
+	local function finish()
+		WackyState.snowRestoreAll(cover)
+		for _, obj in ipairs(cover.cleanup) do
+			pcall(function() obj:Destroy() end)
+		end
+	end
+	if instant then
+		finish()
+		return
+	end
+	local fade = TweenInfo.new(4, Enum.EasingStyle.Sine)
+	for _, c in pairs(cover.cells) do
+		if c then
+			TweenService:Create(c.part, fade, {Transparency = 1, Size = Vector3.new(c.part.Size.X, 0.02, c.part.Size.Z)}):Play()
+		end
+	end
+	for _, obj in ipairs(cover.fadeables) do
+		pcall(function()
+			if obj:IsA("ImageLabel") then
+				TweenService:Create(obj, fade, {ImageTransparency = 1}):Play()
+			elseif obj:IsA("GuiObject") then
+				TweenService:Create(obj, fade, {BackgroundTransparency = 1}):Play()
+			else
+				TweenService:Create(obj, fade, {Transparency = 1}):Play()
+			end
+		end)
+	end
+	-- melt the map back over ~4 seconds, then restore everything exactly
+	task.spawn(function()
+		local startLevel, started = cover.level, tick()
+		local index = 1
+		while tick() - started < 4 do
+			local level = startLevel * (1 - (tick() - started) / 4)
+			local n = #cover.mapParts
+			for _ = 1, math.min(1500, n) do
+				if index > n then index = 1 end
+				pcall(WackyState.snowApplyMap, cover.mapParts[index], level)
+				index = index + 1
+			end
+			if cover.terrain then
+				for mat, color in pairs(cover.terrainColors) do
+					pcall(function() cover.terrain:SetMaterialColor(mat, color:Lerp(WackyState.snowWhite, math.clamp(level * 1.3, 0, 0.9))) end)
+				end
+			end
+			RunService.Heartbeat:Wait()
+		end
+		finish()
+	end)
+end
+
+WackyState.startSnowCover = function(speaker, fullTime)
+	WackyState.stopSnowCover(true)
+	local folder = Instance.new("Folder")
+	folder.Name = randomString()
+	folder.Parent = workspace
+	local cover = {
+		folder = folder, cells = {}, count = 0, start = tick(), fullTime = fullTime, level = 0,
+		lastScan = 0, lastGrow = 0, prints = {}, lastPrint = nil, printSide = 1, seed = math.random() * 100,
+		cleanup = {folder}, fadeables = {}, char = nil, caps = {}, nextBreath = 0,
+		mapParts = {}, mapSet = setmetatable({}, {__mode = "k"}), mapIndex = 1, terrainColors = {},
+	}
+	WackyState.snowCover = cover
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+
+	-- Whole map: find floor-like parts everywhere (in the background, a chunk per frame)
+	local skipMaterials = {[Enum.Material.Water] = true, [Enum.Material.Neon] = true, [Enum.Material.Glass] = true, [Enum.Material.ForceField] = true}
+	local function isGround(part)
+		if part:IsA("Terrain") or part.Transparency >= 0.8 or skipMaterials[part.Material] then return false end
+		if part:IsDescendantOf(folder) or part:IsDescendantOf(workspace.CurrentCamera) then return false end
+		if part:IsA("MeshPart") and part.TextureID ~= "" then return false end
+		local parent = part.Parent
+		for _ = 1, 3 do
+			if not parent or parent == workspace then break end
+			if parent:FindFirstChildOfClass("Humanoid") then return false end
+			parent = parent.Parent
+		end
+		local cf, size = part.CFrame, part.Size
+		local ax, ay, az = math.abs(cf.RightVector.Y), math.abs(cf.UpVector.Y), math.abs(cf.LookVector.Y)
+		if math.max(ax, ay, az) < 0.8 then return false end
+		local thick, w, d
+		if ay >= ax and ay >= az then
+			thick, w, d = size.Y, size.X, size.Z
+		elseif ax >= az then
+			thick, w, d = size.X, size.Y, size.Z
+		else
+			thick, w, d = size.Z, size.X, size.Y
+		end
+		return math.min(w, d) >= 2.5 and w * d >= 12 and thick <= math.max(6, math.min(w, d) * 0.6)
+	end
+	local function addMapPart(part)
+		if cover.mapSet[part] or #cover.mapParts >= 25000 or not isGround(part) then return end
+		cover.mapSet[part] = true
+		local union
+		if part:IsA("UnionOperation") then
+			union = part.UsePartColor
+		end
+		table.insert(cover.mapParts, {part = part, color = part.Color, material = part.Material, union = union, applied = -1})
+	end
+	task.spawn(function()
+		local all = workspace:GetDescendants()
+		for i, inst in ipairs(all) do
+			if WackyState.snowCover ~= cover then return end
+			if inst:IsA("BasePart") then
+				pcall(addMapPart, inst)
+			end
+			if i % 2000 == 0 then
+				task.wait()
+			end
+		end
+	end)
+	WackyState.connect("snowmapadded", workspace.DescendantAdded:Connect(function(inst)
+		if inst:IsA("BasePart") then
+			task.defer(function()
+				if WackyState.snowCover == cover then
+					pcall(addMapPart, inst)
+				end
+			end)
+		end
+	end))
+
+	-- Terrain turns snowy too
+	local terrain = workspace:FindFirstChildOfClass("Terrain")
+	if terrain then
+		cover.terrain = terrain
+		for _, name in ipairs(WackyState.snowTerrainMaterials) do
+			pcall(function()
+				local mat = Enum.Material[name]
+				cover.terrainColors[mat] = terrain:GetMaterialColor(mat)
+			end)
+		end
+		pcall(function() cover.decoration = terrain.Decoration end)
+	end
+
+	-- Sparkles glinting on the snow surface
+	local glintPart = Instance.new("Part")
+	glintPart.Name = randomString()
+	glintPart.Anchored = true
+	glintPart.CanCollide = false
+	glintPart.CanQuery = false
+	glintPart.CanTouch = false
+	glintPart.Transparency = 1
+	glintPart.Size = Vector3.new(80, 1, 80)
+	glintPart.Parent = folder
+	local glints = Instance.new("ParticleEmitter")
+	glints.Texture = WackyState.snowTextures.soft
+	glints.Rate = 0
+	glints.Speed = NumberRange.new(0)
+	glints.Lifetime = NumberRange.new(0.25, 0.6)
+	glints.LightEmission = 1
+	glints.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.5, 0.18), NumberSequenceKeypoint.new(1, 0)})
+	glints.Color = ColorSequence.new(Color3.fromRGB(235, 245, 255))
+	glints.EmissionDirection = Enum.NormalId.Top
+	pcall(function()
+		glints.Shape = Enum.ParticleEmitterShape.Box
+		glints.ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface
+	end)
+	glints.Parent = glintPart
+
+	-- Frost creeping in from the screen edges
+	local screen = WackyState.overlay()
+	local frost = Instance.new("Frame")
+	frost.Name = randomString()
+	frost.BackgroundTransparency = 1
+	frost.Size = UDim2.new(1, 0, 1, 0)
+	frost.Parent = screen
+	table.insert(cover.cleanup, frost)
+	local edges = {}
+	for _, e in ipairs({{UDim2.new(0, 0, 0, 0), UDim2.new(1, 0, 0.16, 0), 90}, {UDim2.new(0, 0, 0.84, 0), UDim2.new(1, 0, 0.16, 0), 270},
+		{UDim2.new(0, 0, 0, 0), UDim2.new(0.12, 0, 1, 0), 0}, {UDim2.new(0.88, 0, 0, 0), UDim2.new(0.12, 0, 1, 0), 180}}) do
+		local edge = Instance.new("Frame")
+		edge.BorderSizePixel = 0
+		edge.BackgroundColor3 = Color3.fromRGB(225, 240, 255)
+		edge.BackgroundTransparency = 1
+		edge.Position = e[1]
+		edge.Size = e[2]
+		local gradient = Instance.new("UIGradient")
+		gradient.Rotation = e[3]
+		gradient.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 1)})
+		gradient.Parent = edge
+		edge.Parent = frost
+		table.insert(edges, edge)
+		table.insert(cover.fadeables, edge)
+	end
+	local crystals = {}
+	for i = 1, 18 do
+		local crystal = Instance.new("ImageLabel")
+		crystal.BackgroundTransparency = 1
+		crystal.Image = WackyState.snowTextures.flake
+		crystal.ImageTransparency = 1
+		crystal.ImageColor3 = Color3.fromRGB(230, 242, 255)
+		local size = math.random(40, 110)
+		crystal.Size = UDim2.new(0, size, 0, size)
+		crystal.AnchorPoint = Vector2.new(0.5, 0.5)
+		local corner = i % 4
+		local cx = (corner == 0 or corner == 2) and math.random() * 0.12 or 1 - math.random() * 0.12
+		local cy = (corner < 2) and math.random() * 0.2 or 1 - math.random() * 0.2
+		crystal.Position = UDim2.new(cx, 0, cy, 0)
+		crystal.Rotation = math.random(0, 59)
+		crystal.Parent = frost
+		table.insert(crystals, {label = crystal, delay = math.random()})
+		table.insert(cover.fadeables, crystal)
+	end
+
+	-- Snow settling on your head and shoulders, plus frosty breath
+	local function setupCharacter(char)
+		for _, cap in ipairs(cover.caps) do
+			pcall(function() cap.part:Destroy() end)
+		end
+		cover.caps = {}
+		cover.breath = nil
+		cover.char = char
+		if not char then return end
+		local head = char:FindFirstChild("Head")
+		local torso = char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
+		local function addCap(parent, offset, width, depth)
+			if not parent then return end
+			local part = Instance.new("Part")
+			part.Name = randomString()
+			part.Material = Enum.Material.Snow
+			part.Color = Color3.fromRGB(248, 250, 255)
+			part.CanCollide = false
+			part.CanQuery = false
+			part.CanTouch = false
+			part.Massless = true
+			part.CastShadow = false
+			part.Transparency = 1
+			part.Size = Vector3.new(width, 0.05, depth)
+			local mesh = Instance.new("SpecialMesh")
+			mesh.MeshType = Enum.MeshType.Sphere
+			mesh.Parent = part
+			local weld = Instance.new("Weld")
+			weld.Part0 = parent
+			weld.Part1 = part
+			weld.Parent = part
+			part.Parent = folder
+			table.insert(cover.caps, {part = part, weld = weld, parent = parent, offset = offset})
+			table.insert(cover.fadeables, part)
+		end
+		if head then
+			addCap(head, Vector3.new(0, head.Size.Y / 2, 0), head.Size.X * 0.85, head.Size.Z * 0.85)
+			local attachment = Instance.new("Attachment")
+			attachment.Name = randomString()
+			attachment.Position = Vector3.new(0, -head.Size.Y * 0.15, -head.Size.Z / 2)
+			attachment.Parent = head
+			table.insert(cover.cleanup, attachment)
+			local breath = Instance.new("ParticleEmitter")
+			breath.Texture = WackyState.snowTextures.soft
+			breath.Rate = 0
+			breath.EmissionDirection = Enum.NormalId.Front
+			breath.Speed = NumberRange.new(1.5, 3)
+			breath.SpreadAngle = Vector2.new(15, 15)
+			breath.Lifetime = NumberRange.new(1, 1.6)
+			breath.Drag = 2
+			breath.Acceleration = Vector3.new(0, 0.6, 0)
+			breath.Size = NumberSequence.new(0.25, 1.4)
+			breath.Transparency = NumberSequence.new(0.55, 1)
+			breath.Color = ColorSequence.new(Color3.fromRGB(240, 246, 255))
+			breath.Parent = attachment
+			table.insert(cover.cleanup, breath)
+			cover.breath = breath
+		end
+		if torso then
+			local w = torso.Size.X
+			addCap(torso, Vector3.new(-w * 0.3, torso.Size.Y / 2, 0), w * 0.36, torso.Size.Z * 0.9)
+			addCap(torso, Vector3.new(w * 0.3, torso.Size.Y / 2, 0), w * 0.36, torso.Size.Z * 0.9)
+		end
+	end
+
+	local stepIds = {9125965076, 9125965053}
+	WackyState.connect("snowcover", RunService.Heartbeat:Connect(function()
+		local now = tick()
+		local char = speaker.Character
+		local root = getRoot(char)
+		local hum = char and char:FindFirstChildOfClass("Humanoid")
+		if char ~= cover.char then
+			setupCharacter(char)
+			params.FilterDescendantsInstances = {folder, char}
+		end
+		-- whole-map snow: update a slice of parts every frame
+		local n = #cover.mapParts
+		if n > 0 then
+			for _ = 1, math.min(700, n) do
+				if cover.mapIndex > n then cover.mapIndex = 1 end
+				local entry = cover.mapParts[cover.mapIndex]
+				cover.mapIndex = cover.mapIndex + 1
+				if math.abs(entry.applied - cover.level) > 0.01 then
+					pcall(WackyState.snowApplyMap, entry, cover.level)
+				end
+			end
+		end
+		if now - cover.lastGrow > 0.4 then
+			cover.lastGrow = now
+			local level = math.clamp((now - cover.start) / cover.fullTime, 0, 1)
+			if level ~= cover.level then
+				cover.level = level
+				for _, edge in ipairs(edges) do
+					edge.BackgroundTransparency = 1 - level * 0.55
+				end
+				for _, crystal in ipairs(crystals) do
+					crystal.label.ImageTransparency = 1 - math.clamp((level - crystal.delay * 0.5) * 1.6, 0, 0.75)
+				end
+				for _, cap in ipairs(cover.caps) do
+					local thick = 0.06 + level * 0.35
+					cap.part.Size = Vector3.new(cap.part.Size.X, thick, cap.part.Size.Z)
+					cap.part.Transparency = math.max(0, 1 - level * 2.5)
+					cap.weld.C0 = CFrame.new(cap.offset + Vector3.new(0, thick * 0.3, 0))
+				end
+				if cover.terrain then
+					for mat, color in pairs(cover.terrainColors) do
+						pcall(function() cover.terrain:SetMaterialColor(mat, color:Lerp(WackyState.snowWhite, math.clamp(level * 1.3, 0, 0.9))) end)
+					end
+					if level > 0.3 and cover.decoration then
+						pcall(function() cover.terrain.Decoration = false end)
+					end
+				end
+			end
+			local clock = Lighting.ClockTime
+			glints.Rate = (clock > 7 and clock < 17.5) and (40 * level) or (8 * level)
+		end
+		if root then
+			glintPart.CFrame = CFrame.new(root.Position - Vector3.new(0, (hum and hum.HipHeight or 2) + root.Size.Y / 2 - 0.4, 0))
+		end
+		if cover.breath and now > cover.nextBreath then
+			cover.nextBreath = now + 2.5 + math.random() * 1.5
+			cover.breath:Emit(5)
+		end
+		-- Footprints with a crunch, once the snow has started to settle
+		if root and hum and cover.level > 0.15 and hum.FloorMaterial ~= Enum.Material.Air then
+			local pos = root.Position
+			if not cover.lastPrint or (pos - cover.lastPrint).Magnitude > 2.4 then
+				local dir = hum.MoveDirection.Magnitude > 0.1 and hum.MoveDirection or root.CFrame.LookVector
+				dir = Vector3.new(dir.X, 0, dir.Z).Unit
+				local side = Vector3.new(-dir.Z, 0, dir.X) * 0.55 * cover.printSide
+				cover.printSide = -cover.printSide
+				cover.lastPrint = pos
+				local hit = workspace:Raycast(pos + side, Vector3.new(0, -12, 0), params)
+				if hit then
+					local footprint = Instance.new("Part")
+					footprint.Name = randomString()
+					footprint.Anchored = true
+					footprint.CanCollide = false
+					footprint.CanQuery = false
+					footprint.CanTouch = false
+					footprint.CastShadow = false
+					footprint.Material = Enum.Material.Snow
+					footprint.Color = Color3.fromRGB(198, 210, 228)
+					footprint.Size = Vector3.new(0.75, 0.04, 1.25)
+					local at = hit.Position + hit.Normal * 0.03
+					footprint.CFrame = CFrame.lookAt(at, at + dir)
+					footprint.Parent = folder
+					table.insert(cover.prints, footprint)
+					table.insert(cover.fadeables, footprint)
+					if #cover.prints > 160 then
+						pcall(function() table.remove(cover.prints, 1):Destroy() end)
+					end
+					WackyState.sound(stepIds[math.random(1, #stepIds)], nil, 0.18 * WackyState.weatherVolume, false, 0.9 + math.random() * 0.3)
+				end
+			end
+		end
+	end))
+end
+
+addcmd('weather',{},function(args, speaker)
+	local names = {}
+	for k in pairs(WackyState.weather) do
+		table.insert(names, k)
+	end
+	table.sort(names)
+	local choice = args[1] and args[1]:lower() or "snow"
+	if choice == "random" then
+		choice = WackyState.pick(names)
+	end
+	local preset = WackyState.weather[choice]
+	if not preset then
+		notify('Weather', 'Unknown weather. Try: ' .. table.concat(names, ', ') .. ', random', 10)
+		return
+	end
+	WackyState.stopWeather(true)
+	if not WackyState.saved.weatherClock then
+		WackyState.saved.weatherClock = Lighting.ClockTime
+	end
+	if preset.clock then
+		Lighting.ClockTime = preset.clock
+	end
+	if preset.sky then
+		local sky = WackyState.makeSky(preset.sky)
+		if sky then
+			WackyState.envSet("Sky", sky)
+		end
+	end
+	if preset.atmosphere then
+		local a = preset.atmosphere
+		local atmosphere = Instance.new("Atmosphere")
+		atmosphere.Name = randomString()
+		atmosphere.Density = a.density
+		atmosphere.Haze = a.haze
+		atmosphere.Color = WackyState.c3(a.color)
+		atmosphere.Decay = WackyState.c3(a.decay)
+		atmosphere.Glare = 0
+		atmosphere.Offset = 0.1
+		WackyState.envSet("Atmosphere", atmosphere)
+	end
+	if preset.clouds then
+		pcall(function()
+			local c = preset.clouds
+			local clouds = Instance.new("Clouds")
+			clouds.Name = randomString()
+			clouds.Cover = c.cover
+			clouds.Density = c.density
+			clouds.Color = WackyState.c3(c.color)
+			WackyState.envSet("Clouds", clouds)
+		end)
+	end
+	if preset.tint or preset.brightness then
+		local cc = WackyState.track("weather", Instance.new("ColorCorrectionEffect"))
+		cc.Name = randomString()
+		cc.TintColor = preset.tint and WackyState.c3(preset.tint) or Color3.new(1, 1, 1)
+		cc.Brightness = preset.brightness or 0
+		cc.Saturation = preset.saturation or 0
+		cc.Parent = Lighting
+	end
+	if preset.bloom then
+		local bloom = WackyState.track("weather", Instance.new("BloomEffect"))
+		bloom.Name = randomString()
+		bloom.Intensity = preset.bloom.intensity
+		bloom.Size = preset.bloom.size
+		bloom.Threshold = preset.bloom.threshold
+		bloom.Parent = Lighting
+	end
+	if preset.dark then
+		local d = preset.dark
+		local base = {Brightness = Lighting.Brightness, Ambient = Lighting.Ambient, OutdoorAmbient = Lighting.OutdoorAmbient, ExposureCompensation = Lighting.ExposureCompensation}
+		WackyState.saved.weatherLight = base
+		TweenService:Create(Lighting, TweenInfo.new(6, Enum.EasingStyle.Sine), {
+			Brightness = base.Brightness * d.brightness,
+			Ambient = WackyState.c3(d.ambient),
+			OutdoorAmbient = WackyState.c3(d.outdoor),
+			ExposureCompensation = base.ExposureCompensation + d.exposure,
+		}):Play()
+	end
+	if preset.sound then
+		local loop = WackyState.sound(WackyState.assets.sounds[preset.sound[1]], nil, 0, true)
+		loop:SetAttribute("BaseVolume", preset.sound[2])
+		TweenService:Create(loop, TweenInfo.new(2), {Volume = preset.sound[2] * WackyState.weatherVolume}):Play()
+		table.insert(WackyState.weatherSounds, loop)
+	end
+	if preset.accumulate then
+		WackyState.startSnowCover(speaker, preset.accumulate)
+	end
+	local holders = {}
+	for _, spec in ipairs(preset.emitters or {}) do
+		local part = WackyState.weatherPart(spec.area, spec.box)
+		local emitter = WackyState.makeEmitter(spec)
+		emitter.Parent = part
+		table.insert(holders, {part = part, area = spec.area, offset = spec.offset, emitter = emitter, spec = spec})
+	end
+	local aurora, beams
+	if preset.aurora then
+		aurora, beams = WackyState.makeAurora()
+	end
+	local nextStrike = tick() + 2
+	local nextMeteor = 0
+	WackyState.connect("weather", RunService.Heartbeat:Connect(function()
+		local root = getRoot(speaker.Character)
+		if not root then return end
+		local pos = root.Position
+		local t = tick()
+		for i, holder in ipairs(holders) do
+			local offset = holder.offset and Vector3.new(0, holder.offset, 0) or (holder.area == "below" and Vector3.new(0, -4, 0) or holder.area == "around" and Vector3.new(0, 10, 0) or Vector3.new(0, 45, 0))
+			holder.part.CFrame = CFrame.new(pos + offset)
+			local spec = holder.spec
+			if spec.wind then
+				local base = spec.accel or {0, 0, 0}
+				local gust = spec.wind
+				holder.emitter.Acceleration = Vector3.new(
+					base[1] + math.sin(t * 0.45 + i) * gust + math.noise(t * 0.3, i) * gust,
+					base[2],
+					base[3] + math.cos(t * 0.33 + i) * gust * 0.6
+				)
+			end
+		end
+		if aurora then
+			aurora.CFrame = CFrame.new(pos.X, pos.Y, pos.Z)
+			for i, beam in ipairs(beams) do
+				beam.CurveSize0 = math.sin(t * 0.5 + i) * 120
+				beam.CurveSize1 = math.cos(t * 0.4 + i * 1.7) * 120
+			end
+		end
+		if preset.lightning and t > nextStrike then
+			nextStrike = t + 2 + math.random() * 5
+			task.spawn(WackyState.lightningStrike, speaker)
+		end
+		if preset.meteors and t > nextMeteor then
+			nextMeteor = t + 0.25 + math.random() * 0.5
+			task.spawn(WackyState.launchMeteor, speaker)
+		end
+	end))
+	if preset.shake then
+		WackyState.bindCam("weathershake", function()
+			local cam = workspace.CurrentCamera
+			local s = preset.shake
+			cam.CFrame = cam.CFrame * CFrame.new((math.random() - 0.5) * s, (math.random() - 0.5) * s, 0)
+		end)
+	end
+	notify('Weather', 'Forecast: ' .. choice .. '! Use unweather to clear the skies.')
+end)
+
+WackyState.stopWeather = function(switching)
+	for _, sound in ipairs(WackyState.weatherSounds) do
+		if switching then
+			sound:Destroy()
+		else
+			TweenService:Create(sound, TweenInfo.new(1.5), {Volume = 0}):Play()
+			Services.Debris:AddItem(sound, 1.6)
+		end
+	end
+	WackyState.weatherSounds = {}
+	local light = WackyState.saved.weatherLight
+	if light then
+		WackyState.saved.weatherLight = nil
+		if switching then
+			for prop, value in pairs(light) do
+				Lighting[prop] = value
+			end
+		else
+			TweenService:Create(Lighting, TweenInfo.new(3, Enum.EasingStyle.Sine), light):Play()
+		end
+	end
+	WackyState.stopSnowCover(false)
+	WackyState.disconnect("weather")
+	WackyState.clear("weather")
+	WackyState.unbindCam("weathershake")
+	if not WackyState.skyCommand then
+		WackyState.envRestore("Sky")
+	end
+	WackyState.envRestore("Atmosphere")
+	WackyState.envRestore("Clouds")
+	if WackyState.saved.weatherClock then
+		Lighting.ClockTime = WackyState.saved.weatherClock
+		WackyState.saved.weatherClock = nil
+	end
+end
+
+addcmd('unweather',{'noweather','clearskies'},function(args, speaker)
+	WackyState.stopWeather()
+end)
+
+addcmd('weathervolume',{'weathervol'},function(args, speaker)
+	WackyState.weatherVolume = math.clamp(WackyState.num(args[1], 1), 0, 3)
+	for _, sound in ipairs(WackyState.weatherSounds) do
+		sound.Volume = (sound:GetAttribute("BaseVolume") or 0.5) * WackyState.weatherVolume
+	end
+	notify('Weather', 'Weather sound volume set to ' .. WackyState.weatherVolume)
+end)
+-- ================== END WEATHER 2.0 ==================
+
+-- ==================== NEVERYIELD UNLOAD ====================
+WackyState.classicOffCommands = {
+	"unfly", "unvfly", "uncframefly", "unfloat", "unswim", "unnoclip", "unspin", "unfreecam", "noesp", "nochams",
+	"unview", "unloopspeed", "unloopjumppower", "unautojump", "unedgejump", "unhatspin", "unfling", "unwalltp",
+	"unautoclick", "unstareat", "unautokeypress", "unloopoof", "unloopgoto", "unloopbring", "nospam", "unspasm",
+	"untpwalk", "unantivoid", "unantifling", "unloopfullbright", "uninvisibleparts",
+}
+
+addcmd('fuckoff',{'unloadny','unloadscript'},function(args, speaker)
+	if WackyState.unloading then return end
+	WackyState.unloading = true
+
+	-- 1. everything NeverYield added
+	for _, name in ipairs(WackyState.undoList) do
+		local cmd = findCmd(name)
+		if cmd then
+			pcall(cmd.FUNC, {}, speaker)
+		end
+	end
+	pcall(WackyState.limbOff)
+	pcall(WackyState.stopWeather, true)
+	pcall(WackyState.stopSnowCover, true)
+	pcall(NeverYieldTheme.closeStudio)
+	for key in pairs(WackyState.conns) do
+		pcall(WackyState.disconnect, key)
+	end
+	for key in pairs(WackyState.binds) do
+		pcall(WackyState.unbindCam, key)
+	end
+	for key in pairs(WackyState.objects) do
+		pcall(WackyState.clear, key)
+	end
+	pcall(function() NeverYieldTheme.conn:Disconnect() end)
+	pcall(function() NeverYieldPortal.conn:Disconnect() end)
+	for _, list in ipairs({NeverYieldPortal.rings or {}, NeverYieldPortal.sparks or {}}) do
+		for _, item in ipairs(list) do
+			pcall(function() (item.frame or item):Destroy() end)
+		end
+	end
+	pcall(function() WackyState.screen:Destroy() end)
+
+	-- 2. the classic Infinite Yield toggles
+	for _, name in ipairs(WackyState.classicOffCommands) do
+		local cmd = findCmd(name)
+		if cmd then
+			pcall(cmd.FUNC, {"nonotify"}, speaker)
+		end
+	end
+	pcall(function()
+		local cam = workspace.CurrentCamera
+		cam.CameraType = Enum.CameraType.Custom
+		local hum = speaker.Character and speaker.Character:FindFirstChildOfClass("Humanoid")
+		if hum then
+			cam.CameraSubject = hum
+		end
+	end)
+
+	-- 3. stop reacting to chat, the prefix key, keybinds and teleports
+	KeepInfYield = false
+	pcall(function() table.clear(binds) end)
+	pcall(function() table.clear(cmds) end)
+
+	-- 4. remove the GUI and let the script be executed again later
+	pcall(function()
+		Services.StarterGui:SetCore("SendNotification", {Title = "NeverYield", Text = "Unloaded. Execute the script again to bring it back.", Duration = 5})
+	end)
+	pcall(function()
+		if PARENT and PARENT:IsA("ScreenGui") and PARENT.Name ~= "RobloxGui" then
+			PARENT:Destroy()
+		else
+			ScaledHolder:Destroy()
+		end
+	end)
+	pcall(function()
+		getgenv().IY_LOADED = nil
+		getgenv().IY_CUSTOM_LOADED = nil
+	end)
+end)
+-- ================== END NEVERYIELD UNLOAD ==================
+
+-- ==================== THE END ====================
+-- A black hole only you can see swallows the map, then you, then server hops you out.
+-- Everything here is client-side: the server and other players are not affected.
+WackyState.endSounds = {rumble = 9114031727, drone = 9114353261, suck = 9125805781, implode = 9120704346, boom = 9120769331}
+
+addcmd('end',{'theend','blackholeleave'},function(args, speaker)
+	if WackyState.ending then return end
+	local char = speaker.Character
+	local root = getRoot(char)
+	if not root then
+		notify('END', 'You need a character to end the world.')
+		return
+	end
+	WackyState.ending = true
+	local camera = workspace.CurrentCamera
+	local folder = Instance.new("Folder")
+	folder.Name = randomString()
+	folder.Parent = workspace
+	pcall(function()
+		if PARENT and PARENT:IsA("ScreenGui") and PARENT.Name ~= "RobloxGui" then
+			PARENT.Enabled = false
+		end
+	end)
+
+	local hum = char:FindFirstChildOfClass("Humanoid")
+
+	local look = camera.CFrame.LookVector * Vector3.new(1, 0, 1)
+	if look.Magnitude < 0.1 then
+		look = root.CFrame.LookVector * Vector3.new(1, 0, 1)
+	end
+	look = look.Unit
+	local center = root.Position + look * 140 + Vector3.new(0, 45, 0)
+	local tilt = CFrame.Angles(math.rad(16), 0, math.rad(9))
+	local diskUp = tilt.UpVector
+	local radius = 2
+
+	local function ball(color, material, transparency)
+		local p = Instance.new("Part")
+		p.Name = randomString()
+		p.Shape = Enum.PartType.Ball
+		p.Anchored = true
+		p.CanCollide = false
+		p.CanQuery = false
+		p.CanTouch = false
+		p.CastShadow = false
+		p.Color = color
+		p.Material = material
+		p.Transparency = transparency
+		p.Size = Vector3.new(1, 1, 1)
+		p.Position = center
+		p.Parent = folder
+		return p
+	end
+	local core = ball(Color3.new(0, 0, 0), Enum.Material.SmoothPlastic, 0)
+	local horizon = ball(Color3.fromRGB(140, 70, 255), Enum.Material.ForceField, 0)
+	local glow = ball(Color3.fromRGB(255, 140, 60), Enum.Material.Neon, 0.88)
+
+	-- accretion disk: glowing debris orbiting in a tilted ring
+	local disk = {}
+	for i = 1, 120 do
+		local p = Instance.new("Part")
+		p.Name = randomString()
+		p.Anchored = true
+		p.CanCollide = false
+		p.CanQuery = false
+		p.CanTouch = false
+		p.CastShadow = false
+		p.Material = Enum.Material.Neon
+		local r = 1.3 + math.random() ^ 1.4 * 2.4
+		p.Color = Color3.fromRGB(255, 200, 120):Lerp(Color3.fromRGB(150, 60, 255), math.clamp((r - 1.3) / 2.4, 0, 1))
+		p.Parent = folder
+		table.insert(disk, {part = p, r = r, a = math.random() * math.pi * 2, h = (math.random() - 0.5) * 0.15, s = 0.5 + math.random()})
+	end
+
+	-- matter streaking inward from all around
+	local shell = Instance.new("Part")
+	shell.Name = randomString()
+	shell.Shape = Enum.PartType.Ball
+	shell.Anchored = true
+	shell.CanCollide = false
+	shell.CanQuery = false
+	shell.CanTouch = false
+	shell.Transparency = 1
+	shell.Position = center
+	shell.Parent = folder
+	local streaks = Instance.new("ParticleEmitter")
+	streaks.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	streaks.Rate = 120
+	streaks.LightEmission = 1
+	streaks.Color = ColorSequence.new(Color3.fromRGB(255, 190, 120), Color3.fromRGB(160, 80, 255))
+	streaks.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.2, 0.2), NumberSequenceKeypoint.new(1, 0.6)})
+	streaks.Orientation = Enum.ParticleOrientation.VelocityParallel
+	pcall(function()
+		streaks.Shape = Enum.ParticleEmitterShape.Sphere
+		streaks.ShapeInOut = Enum.ParticleEmitterShapeInOut.Inward
+		streaks.ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface
+	end)
+	streaks.Parent = shell
+
+	-- screen mood
+	local cc = Instance.new("ColorCorrectionEffect")
+	cc.Name = randomString()
+	cc.Parent = Lighting
+	local bloom = Instance.new("BloomEffect")
+	bloom.Name = randomString()
+	bloom.Intensity = 0.4
+	bloom.Size = 30
+	bloom.Threshold = 0.8
+	bloom.Parent = Lighting
+	local blur = Instance.new("BlurEffect")
+	blur.Name = randomString()
+	blur.Size = 0
+	blur.Parent = Lighting
+
+	local function loop(id, volume)
+		local s = WackyState.sound(id, nil, 0, true)
+		TweenService:Create(s, TweenInfo.new(4), {Volume = volume}):Play()
+		return s
+	end
+	local rumble = loop(WackyState.endSounds.rumble, 1)
+	local drone = loop(WackyState.endSounds.drone, 0.5)
+
+	-- gather the whole map (except player characters), nearest to the hole first
+	local playerChars = {}
+	for _, plr in ipairs(Players:GetPlayers()) do
+		if plr.Character then
+			playerChars[plr.Character] = true
+		end
+	end
+	local queue = {}
+	local all = workspace:GetDescendants()
+	for i, inst in ipairs(all) do
+		if inst:IsA("BasePart") and not inst:IsA("Terrain") and not inst:IsDescendantOf(folder) and not inst:IsDescendantOf(camera) then
+			local owner, anc = false, inst.Parent
+			while anc and anc ~= workspace do
+				if playerChars[anc] then
+					owner = true
+					break
+				end
+				anc = anc.Parent
+			end
+			if not owner then
+				table.insert(queue, {part = inst, dist = (inst.Position - center).Magnitude})
+			end
+		end
+		if i % 5000 == 0 then
+			task.wait()
+		end
+	end
+	table.sort(queue, function(a, b) return a.dist < b.dist end)
+
+	local phase = "swallow"
+	local start = tick()
+	local swallowTime = 18
+	local captured = 0
+	local active = {}
+	local shake = 0
+	local clone, cloneStart, cloneFrom
+	local hidden = {}
+
+	local function hideCharacter(model)
+		for _, d in ipairs(model:GetDescendants()) do
+			if d:IsA("BasePart") or d:IsA("Decal") then
+				pcall(function() d.LocalTransparencyModifier = 1 end)
+				table.insert(hidden, d)
+			end
+		end
+	end
+
+	local function capture(entry, now)
+		local part = entry.part
+		if not part.Parent then return end
+		pcall(function()
+			part.Anchored = true
+			part.CanCollide = false
+			part.CanQuery = false
+			part.CanTouch = false
+		end)
+		if #active > 900 then
+			pcall(function() part:Destroy() end)
+			return
+		end
+		table.insert(active, {
+			part = part, offset = part.Position - center, rot = part.CFrame - part.Position, size = part.Size,
+			big = part.Size.Magnitude > 250, trans = part.Transparency, start = now,
+			dur = math.clamp(entry.dist / 160, 1.3, 3.4),
+		})
+	end
+
+	local baseFov = camera.FieldOfView
+	WackyState.bindCam("theend", function()
+		local t = tick() - start
+		local s = shake
+		camera.CFrame = camera.CFrame * CFrame.new((math.random() - 0.5) * s, (math.random() - 0.5) * s, 0) * CFrame.Angles(0, 0, (math.random() - 0.5) * s * 0.02)
+		camera.FieldOfView = math.clamp(baseFov + math.min(t, 20) * 1.3, baseFov, 100)
+	end)
+
+	local nameLabel = WackyState.bigLabel("THE END IS NEAR", Color3.fromRGB(220, 190, 255))
+	TweenService:Create(nameLabel, TweenInfo.new(4), {TextTransparency = 1, TextStrokeTransparency = 1}):Play()
+	Services.Debris:AddItem(nameLabel, 4.5)
+	task.delay(4, function()
+		local run = WackyState.bigLabel("RUN.", Color3.fromRGB(255, 90, 90))
+		TweenService:Create(run, TweenInfo.new(2.5), {TextTransparency = 1, TextStrokeTransparency = 1}):Play()
+		Services.Debris:AddItem(run, 3)
+	end)
+
+	local finished = false
+	WackyState.connect("theend", RunService.Heartbeat:Connect(function(dt)
+		local now = tick()
+		local t = now - start
+
+		-- grow the hole
+		if phase == "swallow" then
+			radius = 2 + (math.min(t, swallowTime) / swallowTime) ^ 2 * 85 + math.max(0, t - swallowTime) * 4
+		elseif phase == "player" then
+			radius = math.min(radius + dt * 12, 120)
+		end
+		core.Size = Vector3.new(1, 1, 1) * radius * 2
+		horizon.Size = core.Size * 1.12
+		glow.Size = core.Size * 1.6
+		core.Position, horizon.Position, glow.Position, shell.Position = center, center, center, center
+		shell.Size = Vector3.new(1, 1, 1) * radius * 8
+		streaks.Speed = NumberRange.new(radius * 2.2, radius * 3)
+		streaks.Lifetime = NumberRange.new(1.2, 1.5)
+		streaks.Size = NumberSequence.new(math.max(0.3, radius * 0.06), 0)
+		streaks.Rate = 60 + radius * 4
+		for _, d in ipairs(disk) do
+			d.a = d.a + dt * 2.4 / (d.r ^ 1.5) * d.s
+			local r = radius * d.r
+			d.part.Size = Vector3.new(1, 1, 1) * math.max(0.4, radius * 0.07 * d.s)
+			d.part.CFrame = CFrame.new(center + tilt:VectorToWorldSpace(Vector3.new(math.cos(d.a) * r, d.h * r, math.sin(d.a) * r)))
+		end
+		local mood = math.clamp(radius / 90, 0, 1)
+		cc.TintColor = Color3.new(1, 1, 1):Lerp(Color3.fromRGB(190, 160, 255), mood)
+		cc.Saturation = -0.4 * mood
+		cc.Contrast = 0.35 * mood
+		bloom.Intensity = 0.4 + mood * 1.4
+		shake = 0.2 + mood * 2.2
+
+		-- swallow the map, nearest first, faster and faster
+		if phase == "swallow" then
+			local target = math.floor(#queue * math.clamp(t / swallowTime, 0, 1) ^ 1.6)
+			local budget = 250
+			while captured < target and budget > 0 do
+				captured = captured + 1
+				budget = budget - 1
+				capture(queue[captured], now)
+			end
+			if t > swallowTime * 0.6 and not WackyState.endOthersHidden then
+				WackyState.endOthersHidden = true
+				for _, plr in ipairs(Players:GetPlayers()) do
+					if plr ~= speaker and plr.Character then
+						hideCharacter(plr.Character)
+					end
+				end
+			end
+			if t > swallowTime * 0.75 and not WackyState.endTerrainGone then
+				WackyState.endTerrainGone = true
+				pcall(function() workspace.Terrain:Clear() end)
+			end
+			if t >= swallowTime then
+				while captured < #queue do
+					captured = captured + 1
+					capture(queue[captured], now)
+				end
+			end
+			-- the pull on me: I can run, but not forever
+			local toHole = center - root.Position
+			local d = toHole.Magnitude
+			if d < radius * 1.25 + 4 or not root.Parent then
+				while captured < #queue do
+					captured = captured + 1
+					capture(queue[captured], now)
+				end
+				root.Anchored = true
+				phase = "player"
+				-- now the real me gets pulled in
+				clone = char
+				for _, d in ipairs(char:GetDescendants()) do
+					if d:IsA("BasePart") then
+						pcall(function() d.CanCollide = false end)
+					end
+				end
+				cloneStart = now
+				cloneFrom = clone and clone:GetPivot()
+				WackyState.sound(WackyState.endSounds.suck, nil, 1)
+			else
+				local pull = math.min(4 + t * 3 + radius * 0.8, 300) * math.clamp(180 / (d + 30), 0.35, 3)
+				local lift = workspace.Gravity * math.clamp((t - 4) / swallowTime, 0, 1.1)
+				if root.Position.Y < center.Y - 120 then
+					lift = workspace.Gravity * 1.6
+				end
+				root.AssemblyLinearVelocity = root.AssemblyLinearVelocity + (toHole.Unit * pull + Vector3.new(0, lift, 0)) * dt
+				if hum and pull > 40 and math.random() < dt * 2 then
+					pcall(function() hum:ChangeState(Enum.HumanoidStateType.Freefall) end)
+				end
+			end
+		end
+
+		-- everything captured spirals into the hole
+		for i = #active, 1, -1 do
+			local a = active[i]
+			local p = (now - a.start) / a.dur
+			if p >= 1 or not a.part.Parent then
+				pcall(function() a.part:Destroy() end)
+				table.remove(active, i)
+			else
+				local e = p * p
+				local spin = e * math.pi * 3 * (1 + 80 / (a.offset.Magnitude + 1))
+				local rotated = CFrame.fromAxisAngle(diskUp, spin):VectorToWorldSpace(a.offset)
+				rotated = rotated - diskUp * rotated:Dot(diskUp) * e
+				pcall(function()
+					a.part.CFrame = CFrame.new(center + rotated * (1 - e)) * a.rot * CFrame.Angles(e * 5, e * 3, e * 2)
+					if a.big then
+						a.part.Transparency = math.max(a.trans, e)
+					elseif p > 0.5 then
+						a.part.Size = a.size * math.max(0.05, 1 - (p - 0.5) * 1.9)
+					end
+				end)
+			end
+		end
+
+		-- keep hidden characters hidden (the camera scripts like to reset this)
+		for _, d in ipairs(hidden) do
+			if d.Parent then
+				d.LocalTransparencyModifier = 1
+			end
+		end
+
+		-- me, spaghettified
+		if phase == "player" then
+			blur.Size = math.min(24, blur.Size + dt * 6)
+			if clone and cloneFrom then
+				local p = math.clamp((now - cloneStart) / 4, 0, 1)
+				local e = p * p
+				local offset = cloneFrom.Position - center
+				local spin = e * math.pi * 4
+				local rotated = CFrame.fromAxisAngle(diskUp, spin):VectorToWorldSpace(offset) * (1 - e)
+				pcall(function()
+					clone:PivotTo(CFrame.new(center + rotated) * (cloneFrom - cloneFrom.Position) * CFrame.Angles(e * 8, e * 5, e * 3))
+					if math.floor(now * 30) % 2 == 0 then
+						clone:ScaleTo(math.max(0.05, 1 - e * 0.95))
+					end
+				end)
+				if p >= 1 then
+					hideCharacter(clone)
+					clone = nil
+				end
+			elseif not finished and (#active == 0 or (cloneStart and now - cloneStart > 5)) then
+				phase = "collapse"
+			end
+		end
+
+		-- the hole collapses into a flash, then black
+		if phase == "collapse" and not finished then
+			finished = true
+			WackyState.sound(WackyState.endSounds.implode, nil, 1)
+			task.spawn(function()
+				local screen = WackyState.overlay()
+				local white = Instance.new("Frame")
+				white.BorderSizePixel = 0
+				white.BackgroundColor3 = Color3.new(1, 1, 1)
+				white.BackgroundTransparency = 1
+				white.Size = UDim2.new(1, 0, 1, 0)
+				white.ZIndex = 50
+				white.Parent = screen
+				local shrinkStart, from = tick(), radius
+				while tick() - shrinkStart < 0.8 do
+					radius = from * (1 - (tick() - shrinkStart) / 0.8) ^ 2 + 0.05
+					RunService.Heartbeat:Wait()
+				end
+				WackyState.sound(WackyState.endSounds.boom, nil, 1)
+				white.BackgroundTransparency = 0
+				for _, d in ipairs(disk) do
+					pcall(function() d.part:Destroy() end)
+				end
+				pcall(function() folder:Destroy() end)
+				phase = "done"
+				task.wait(0.15)
+				local black = Instance.new("Frame")
+				black.BorderSizePixel = 0
+				black.BackgroundColor3 = Color3.new(0, 0, 0)
+				black.Size = UDim2.new(1, 0, 1, 0)
+				black.ZIndex = 49
+				black.Parent = screen
+				TweenService:Create(white, TweenInfo.new(1.5), {BackgroundTransparency = 1}):Play()
+				TweenService:Create(rumble, TweenInfo.new(2), {Volume = 0}):Play()
+				TweenService:Create(drone, TweenInfo.new(2), {Volume = 0}):Play()
+				local title = Instance.new("TextLabel")
+				title.BackgroundTransparency = 1
+				title.AnchorPoint = Vector2.new(0.5, 0.5)
+				title.Position = UDim2.new(0.5, 0, 0.45, 0)
+				title.Size = UDim2.new(0.7, 0, 0.14, 0)
+				title.Font = Enum.Font.FredokaOne
+				title.TextScaled = true
+				title.Text = "THE END"
+				title.TextColor3 = Color3.new(1, 1, 1)
+				title.TextTransparency = 1
+				title.ZIndex = 51
+				title.Parent = screen
+				local sub = Instance.new("TextLabel")
+				sub.BackgroundTransparency = 1
+				sub.AnchorPoint = Vector2.new(0.5, 0.5)
+				sub.Position = UDim2.new(0.5, 0, 0.56, 0)
+				sub.Size = UDim2.new(0.6, 0, 0.04, 0)
+				sub.Font = Enum.Font.Gotham
+				sub.TextScaled = true
+				sub.Text = "travelling to a new universe..."
+				sub.TextColor3 = Color3.fromRGB(200, 180, 255)
+				sub.TextTransparency = 1
+				sub.ZIndex = 51
+				sub.Parent = screen
+				TweenService:Create(title, TweenInfo.new(1.5), {TextTransparency = 0}):Play()
+				task.wait(0.8)
+				TweenService:Create(sub, TweenInfo.new(1.5), {TextTransparency = 0}):Play()
+				task.wait(2)
+				WackyState.disconnect("theend")
+				WackyState.unbindCam("theend")
+				local hop = findCmd("serverhop")
+				if hop then
+					pcall(hop.FUNC, {}, speaker)
+				end
+				task.wait(12)
+				sub.Text = "no new universe found... rejoining this one"
+				local rj = findCmd("rejoin")
+				if rj then
+					pcall(rj.FUNC, {}, speaker)
+				end
+			end)
+		end
+	end))
+end)
+-- ================== END THE END ==================
 
 addcmd('removecmd',{'deletecmd'},function(args, speaker)
 	removecmd(args[1])
