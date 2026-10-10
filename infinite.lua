@@ -6981,7 +6981,7 @@ Close_4.MouseButton1Click:Connect(function()
 end)
 
 -- Your own copy of the script: rejoin / serverhop / keepiy load this in the next server
-CustomSourceURL = "https://raw.githubusercontent.com/kassvance54-lgtm/infinite/refs/heads/main/infinite"
+CustomSourceURL = "https://raw.githubusercontent.com/drdonut54/infinite/main/infinite.lua"
 local TeleportCheck = false
 Players.LocalPlayer.OnTeleport:Connect(function(State)
 	if KeepInfYield and (not TeleportCheck) and queueteleport then
