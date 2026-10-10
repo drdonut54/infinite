@@ -1,4 +1,4 @@
--- NeverYield v1.23.4 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.24.0 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.23.4" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.24.0" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -28646,7 +28646,7 @@ NeverYieldAch.tiers = {
 	mythic = {name = "Mythic", color = Color3.fromRGB(200, 90, 255), material = Enum.Material.Neon, base = Color3.fromRGB(15, 10, 25), baseMat = Enum.Material.Slate, order = 5, glow = true},
 }
 NeverYieldAch.cats = {{"all", "All"}, {"basics", "Basics"}, {"neveryield", "NeverYield"}, {"minigames", "Minigames"}, {"pets", "Pets"},
-	{"explorer", "Explorer"}, {"social", "Social"}, {"milestones", "Milestones"}, {"settings", "Settings"}}
+	{"explorer", "Explorer"}, {"social", "Social"}, {"milestones", "Milestones"}, {"secrets", "Secrets"}, {"settings", "Settings"}}
 
 -- helpers that read your saves
 NeverYieldAch.cmd = function(name)
@@ -28859,11 +28859,187 @@ def("marathon", "Marathon", "Walk 100,000 studs", "milestones", "silver", "shoe"
 def("trophy10", "Trophy Hunter", "Earn 10 trophies", "milestones", "silver", "cup", 10, function() return A.count() end)
 def("trophy25", "Trophy Case", "Earn 25 trophies", "milestones", "gold", "cup", 25, function() return A.count() end)
 def("trophy50", "Hall of Fame", "Earn 50 trophies", "milestones", "diamond", "cup", 50, function() return A.count() end)
-def("trophyall", "Completionist", "Earn every other trophy", "milestones", "mythic", "crown", 0, function() return A.count() end)
+def("trophyall", "Completionist", "Earn every other trophy (secrets not needed)", "milestones", "mythic", "crown", 0, function() return A.countWhere(function(d) return not d.hidden end) end)
+
+-- ---------- v1.24.0: 90 more achievements (secrets hide their name and goal until unlocked) ----------
+A.countWhere = function(test)
+	local n = 0
+	for id in pairs(A.data and A.data.unlocked or {}) do
+		local d = A.byId[id]
+		if d and test(d) then n = n + 1 end
+	end
+	return n
+end
+A.maxOf = function(tbl, field)
+	local best = 0
+	for _, e in pairs(tbl or {}) do
+		if type(e) == "table" then best = math.max(best, tonumber(e[field]) or 0) end
+	end
+	return best
+end
+A.cmds = function(list)
+	local n = 0
+	for _, name in ipairs(list) do n = n + A.cmd(name) end
+	return n
+end
+A.pets = function()
+	return NeverYieldPets.data and NeverYieldPets.data.pets or {}
+end
+A.stat = function(key)
+	return NeverYieldStats.data and NeverYieldStats.data[key] or {}
+end
+A.variety = function()
+	return A.size(A.stat("commands"))
+end
+A.when = function(test)
+	local ok, t = pcall(os.date, "*t")
+	return (ok and type(t) == "table" and test(t)) and 1 or 0
+end
+A.room = function()
+	local R = NeverYieldRoom
+	if R and not R.data and R.load and not A.roomTried then
+		A.roomTried = true
+		pcall(R.load)
+	end
+	return R and R.data
+end
+A.root = function()
+	local char = Players.LocalPlayer.Character
+	return char and getRoot(char)
+end
+A.secret = function(id, name, desc, tier, topper, goal, value, accent)
+	def(id, name, desc, "secrets", tier, topper, goal, value, accent)
+	NeverYieldAch.defs[#NeverYieldAch.defs].hidden = true
+end
+
+-- basics
+cmdDef("btools", "Builder", "Use btools", "basics", "bronze", "hammer", "btools", 1)
+cmdDef("freecam", "Director's Cut", "Use freecam 10 times", "basics", "silver", "camera", "freecam", 10)
+cmdDef("fullbright", "Lights On", "Use fullbright", "basics", "bronze", "bulb", "fullbright", 1)
+cmdDef("xray", "See Through Walls", "Use xray", "basics", "bronze", "eye", "xray", 1, {120, 255, 170})
+cmdDef("infjump", "Sky Walker", "Use infjump", "basics", "bronze", "spring", "infjump", 1)
+cmdDef("swim", "Air Swimmer", "Use swim", "basics", "bronze", "fish", "swim", 1)
+cmdDef("gravity", "Moon Boots", "Change gravity 10 times", "basics", "silver", "magnet", "gravity", 10)
+cmdDef("headsit", "Hat Trick", "Use headsit 10 times", "basics", "silver", "tophat", "headsit", 10)
+cmdDef("fly1000", "Pilot License", "Use fly 1,000 times", "basics", "diamond", "wings", "fly", 1000, {120, 200, 255})
+def("variety25", "Jack of All Trades", "Use 25 different commands", "basics", "silver", "keyboard", 25, A.variety)
+def("variety100", "Swiss Army Knife", "Use 100 different commands", "basics", "gold", "keyboard", 100, A.variety, {255, 80, 80})
+def("variety250", "Walking Encyclopedia", "Use 250 different commands", "basics", "diamond", "book", 250, A.variety, {90, 130, 255})
+def("cmd50000", "Ascended Admin", "Run 50,000 commands", "basics", "mythic", "keyboard", 50000, function() return A.total("commands") end, {200, 90, 255})
+-- NeverYield commands
+cmdDef("fireworks", "Fourth of July", "Use fireworks 10 times", "neveryield", "silver", "firework", "fireworks", 10)
+cmdDef("nuke", "Tactical Nuke", "Use nuke", "neveryield", "gold", "mushroom", "nuke", 1)
+cmdDef("tornado", "Twister", "Use tornado", "neveryield", "silver", "tornado", "tornado", 1)
+cmdDef("spacemode", "Lost in Space", "Use spacemode", "neveryield", "bronze", "ufo", "spacemode", 1)
+cmdDef("theme10", "Fashion Forward", "Change your theme 10 times", "neveryield", "silver", "palette", "theme", 10)
+def("styled", "Style Points", "Use outline and frame", "neveryield", "bronze", "rainbow", 2, function() return math.min(A.cmd("outline"), 1) + math.min(A.cmd("frame"), 1) end)
+cmdDef("chaos", "Agent of Chaos", "Use chaos 5 times", "neveryield", "gold", "dice", "chaos", 5, {255, 70, 70})
+cmdDef("matrix", "Red Pill", "Enter the matrix", "neveryield", "silver", "pill", "matrix", 1)
+cmdDef("emojirain", "Make It Rain", "Use emojirain", "neveryield", "bronze", "umbrella", "emojirain", 1)
+cmdDef("theend10", "Destroyer of Worlds", "Witness THE END 10 times", "neveryield", "diamond", "blackhole", "end", 10, {170, 90, 255})
+cmdDef("moon5", "Groundhog Day", "Bring down the moon 5 times", "neveryield", "diamond", "moon", "moon", 5)
+cmdDef("midas25", "King Midas", "Use midas 25 times", "neveryield", "diamond", "crown", "midas", 25, {255, 215, 60})
+def("partyroom", "Party Animal", "Switch a room to Party lighting", "neveryield", "gold", "bulb", 1, function() return A.data.flags.partyRoom and 1 or 0 end, {255, 80, 200})
+def("decorator25", "Showroom", "Place 25 things around your house", "neveryield", "diamond", "house", 25, function() return A.data.flags.roomItems or 0 end, {150, 235, 255})
+-- minigames
+def("diamondrounds", "Rush Hour", "Play 25 rounds of Diamond Rush", "minigames", "silver", "pickaxe", 25, function() return A.mg("diamondRounds") end)
+def("diamondbest100", "Gem Rush", "Score 100 in one Diamond Rush", "minigames", "diamond", "pickaxe", 100, function() return A.mg("diamondBest") end, {120, 255, 220})
+def("diamond100k", "Dragon's Hoard", "Collect 100,000 diamond points", "minigames", "mythic", "gem", 100000, function() return A.mg("diamondTotal") end, {255, 90, 120})
+def("clownkills50", "Sharpshooter", "Shoot 50 clowns in one run", "minigames", "gold", "target", 50, function() return A.mg("clownBestKills") end)
+def("clownkills150", "One Clown Army", "Shoot 150 clowns in one run", "minigames", "diamond", "target", 150, function() return A.mg("clownBestKills") end, {255, 200, 40})
+def("clowntime", "Big Top Veteran", "Survive 30 minutes of clowns in total", "minigames", "silver", "hourglass", 30, function() return A.mg("clownTotalTime") / 60 end)
+def("clownbesttime", "Last One Standing", "Survive 10 minutes in one clown run", "minigames", "gold", "hourglass", 10, function() return A.mg("clownBestTime") / 60 end, {255, 70, 70})
+def("clownruns", "Season Pass", "Play 50 clown runs", "minigames", "silver", "clown", 50, function() return A.mg("clownRounds") end, {90, 220, 120})
+def("clownfly250", "Balloon Popper", "Shoot 250 flying clowns", "minigames", "diamond", "balloon", 250, function() return A.mg("clownFlyingKills") end)
+def("arcade", "Arcade Regular", "Play 10 Diamond Rushes and 10 clown runs", "minigames", "gold", "dice", 10, function() return math.min(A.mg("diamondRounds"), A.mg("clownRounds")) end, {80, 160, 255})
+-- pets
+def("fed100", "Chef", "Feed your pets 100 times", "pets", "silver", "bowl", 100, function() return A.pet("fed") end)
+def("fed1000", "Master Chef", "Feed your pets 1,000 times", "pets", "gold", "bowl", 1000, function() return A.pet("fed") end, {255, 200, 60})
+def("released10", "Free Bird", "Release 10 pets", "pets", "bronze", "wings", 10, function() return A.pet("released") end, {150, 220, 255})
+def("hatch1000", "Egg Empire", "Hatch 1,000 eggs", "pets", "diamond", "egg", 1000, function() return A.pet("hatched") end, {150, 235, 255})
+def("hatch5000", "Mother Hen", "Hatch 5,000 eggs", "pets", "mythic", "egg", 5000, function() return A.pet("hatched") end, {255, 215, 90})
+def("level50", "Soulmates", "Get a pet to level 50", "pets", "diamond", "heart", 50, function() return A.maxOf(A.pets(), "level") end, {255, 60, 140})
+def("gen5", "Family Tree", "Breed a generation 5 pet", "pets", "gold", "tree", 5, function() return A.maxOf(A.pets(), "gen") end)
+def("shiny10", "Shiny Hunter", "Own 10 shiny pets", "pets", "diamond", "sparkle", 10, function()
+	local n = 0
+	for _, pet in pairs(A.pets()) do
+		if pet.shiny then n = n + 1 end
+	end
+	return n
+end, {255, 250, 170})
+def("secretall", "Secret Society", "Hatch every SECRET species", "pets", "mythic", "paw", math.max(1, #(NeverYieldPets.secretSpecies or {})), function()
+	local n = 0
+	for _, sec in ipairs(NeverYieldPets.secretSpecies or {}) do
+		if NeverYieldPets.data and NeverYieldPets.data.discovered[sec.id] then n = n + 1 end
+	end
+	return n
+end, {120, 60, 220})
+def("effectsall", "Special FX Studio", "Find every pet effect", "pets", "mythic", "sparkle", math.max(1, #(NeverYieldPets.effects or {})), function() return A.size(NeverYieldPets.data and NeverYieldPets.data.effectsFound) end, {255, 120, 255})
+def("hatsall", "Mad Hatter", "Own every pet hat", "pets", "gold", "tophat", math.max(1, #(NeverYieldPets.hats or {})), function() return A.size(NeverYieldPets.data and NeverYieldPets.data.hats) end, {120, 90, 200})
+def("daily7", "Daily Devotion", "Reach a 7 day daily reward streak", "pets", "gold", "flame", 7, function() return NeverYieldPets.data and NeverYieldPets.data.streak or 0 end)
+def("petcoins250k", "Pet Millionaire", "Earn 250,000 pet coins", "pets", "diamond", "coin", 250000, function() return A.pet("coinsEarned") end)
+-- explorer
+def("games1000", "Roblox Archaeologist", "Visit 1,000 different games", "explorer", "mythic", "compass", 1000, gamesVisited)
+def("visits100", "Regular Customer", "Join the same game 100 times", "explorer", "gold", "compass", 100, function() return A.maxOf(A.stat("games"), "visits") end, {255, 170, 60})
+def("onegame24", "Main Game", "Play one game for 24 hours", "explorer", "gold", "hourglass", 24, function() return A.maxOf(A.stat("games"), "playtime") / 3600 end, {90, 200, 255})
+def("onegame100", "Dedicated", "Play one game for 100 hours", "explorer", "diamond", "hourglass", 100, function() return A.maxOf(A.stat("games"), "playtime") / 3600 end, {255, 90, 200})
+def("distance1m", "Around the World", "Travel 1,000,000 studs", "explorer", "gold", "compass", 1000000, function() return A.total("distance") end, {80, 220, 140})
+def("distance10m", "To the Moon and Back", "Travel 10,000,000 studs", "explorer", "mythic", "ufo", 10000000, function() return A.total("distance") end, {120, 255, 170})
+cmdDef("hop100", "Hopaholic", "Use serverhop 100 times", "explorer", "gold", "globe", "serverhop", 100, {255, 120, 60})
+-- social and combat
+def("words10k", "Novelist", "Type 10,000 words in chat", "social", "gold", "book", 10000, function() return A.total("words") end, {200, 70, 60})
+def("words100k", "Bestselling Author", "Type 100,000 words in chat", "social", "diamond", "book", 100000, function() return A.total("words") end, {60, 90, 200})
+def("npc100", "Monster Hunter", "Defeat 100 NPCs", "social", "silver", "sword", 100, function() return A.total("npcKills") end, {120, 255, 120})
+def("npc1000", "Dungeon Crawler", "Defeat 1,000 NPCs", "social", "gold", "sword", 1000, function() return A.total("npcKills") end, {60, 200, 90})
+def("kill10000", "Mythical Warrior", "Get 10,000 kills", "social", "diamond", "sword", 10000, function() return A.total("kills") end, {150, 235, 255})
+def("streak20", "Legendary", "Get a 20 kill streak", "social", "diamond", "flame", 20, function() return A.total("bestStreak") end, {255, 90, 40})
+def("streak30", "NEVERYIELD", "Get a 30 kill streak", "social", "mythic", "flame", 30, function() return A.total("bestStreak") end, {200, 90, 255})
+def("buddy", "Best Buddy", "Spend 5 hours in servers with one person", "social", "gold", "medal", 5, function() return A.maxOf(A.stat("players"), "time") / 3600 end, {255, 120, 200})
+def("deaths1000", "Professional Ragdoll", "Die 1,000 times", "social", "silver", "skull", 1000, function() return A.total("deaths") end, {120, 200, 255})
+def("met10000", "Famous", "Meet 10,000 people", "social", "mythic", "medal", 10000, function() return A.total("playersMet") end, {255, 215, 60})
+-- milestones
+def("play1000", "Retirement Plan", "Play for 1,000 hours", "milestones", "mythic", "hourglass", 1000, playHours, {150, 235, 255})
+def("sessions250", "Day One Fan", "Load NeverYield 250 times", "milestones", "gold", "flame", 250, function() return A.total("sessions") end, {255, 170, 60})
+def("sessions1000", "Can't Stop, Won't Stop", "Load NeverYield 1,000 times", "milestones", "diamond", "flame", 1000, function() return A.total("sessions") end, {120, 200, 255})
+def("jumps10k", "Pogo Stick", "Jump 10,000 times", "milestones", "silver", "spring", 10000, function() return A.total("jumps") end)
+def("jumps100k", "Kangaroo", "Jump 100,000 times", "milestones", "gold", "spring", 100000, function() return A.total("jumps") end, {255, 150, 60})
+def("life1h", "Untouchable", "Stay alive for 1 hour (minutes)", "milestones", "gold", "medal", 60, function() return A.total("longestLife") / 60 end, {80, 220, 140})
+def("diamond5", "Diamond Collection", "Earn 5 Diamond trophies", "milestones", "diamond", "cup", 5, function() return A.countWhere(function(d) return d.tier == "diamond" and d.id ~= "diamond5" end) end, {150, 235, 255})
+def("mythic1", "Mythical", "Earn a Mythic trophy", "milestones", "mythic", "medal", 1, function() return A.countWhere(function(d) return d.tier == "mythic" and d.id ~= "mythic1" and d.id ~= "trophyall" end) end, {200, 90, 255})
+def("trophy100", "Trophy Room", "Earn 100 trophies", "milestones", "mythic", "cup", 100, function() return A.count() end)
+-- secrets
+A.secret("nightowl", "Night Owl", "Play at 3 AM", "silver", "owl", 1, function() return A.when(function(t) return t.hour == 3 end) end)
+A.secret("earlybird", "Early Bird", "Play between 5 and 6 AM", "bronze", "sun", 1, function() return A.when(function(t) return t.hour == 5 end) end)
+A.secret("halloween", "Trick or Treat", "Play on Halloween", "gold", "pumpkin", 1, function() return A.when(function(t) return t.month == 10 and t.day == 31 end) end)
+A.secret("christmas", "Ho Ho Ho", "Play on Christmas Day", "gold", "present", 1, function() return A.when(function(t) return t.month == 12 and t.day == 25 end) end)
+A.secret("newyear", "Happy New Year", "Play on New Year's Day", "gold", "firework", 1, function() return A.when(function(t) return t.month == 1 and t.day == 1 end) end, {255, 215, 60})
+A.secret("leapday", "Once Every Four Years", "Play on February 29th", "mythic", "hourglass", 1, function() return A.when(function(t) return t.month == 2 and t.day == 29 end) end, {120, 255, 220})
+A.secret("friday13", "Unlucky", "Play on Friday the 13th", "diamond", "blackcat", 1, function() return A.when(function(t) return t.wday == 6 and t.day == 13 end) end)
+A.secret("alone", "Forever Alone", "Be the only player in a server", "bronze", "ghost", 1, function() return #Players:GetPlayers() == 1 and 1 or 0 end, {170, 200, 255})
+A.secret("packed", "Packed House", "Be in a server with 40 or more players", "silver", "people", 40, function() return #Players:GetPlayers() end, {255, 200, 80})
+A.secret("cloudnine", "Cloud Nine", "Get 5,000 studs up into the sky", "silver", "rocket", 1, function()
+	local root = A.root()
+	return (root and root.Position.Y >= 5000) and 1 or 0
+end, {150, 220, 255})
+A.secret("speeddemon", "Speed Demon", "Run with a walk speed of 250 or more", "silver", "bolt", 1, function()
+	local char = Players.LocalPlayer.Character
+	local hum = char and char:FindFirstChildOfClass("Humanoid")
+	return (hum and hum.WalkSpeed >= 250) and 1 or 0
+end, {255, 60, 60})
+A.secret("answer", "The Answer", "Own exactly 42 pets", "gold", "question", 1, function() return A.size(A.pets()) == 42 and 1 or 0 end, {90, 200, 255})
+A.secret("ragequit", "Rage Quit", "Unload NeverYield with fuckoff 10 times", "silver", "flame", 10, function() return A.cmd("fuckoff") end, {255, 60, 60})
+A.secret("debugger", "Debugger", "Run the debug commands 5 times", "bronze", "bug", 5, function() return A.cmds({"doordebug", "portaldebug", "themedebug", "limbdebug"}) end)
+A.secret("lightswitch", "Who Turned Off the Lights?", "Flip a light switch 50 times", "bronze", "bulb", 50, function() return A.data.flags.switchFlips or 0 end, {255, 230, 140})
+A.secret("fullhouse", "Moving In", "Decorate all four rooms of your house", "gold", "house", 4, function() return A.data.flags.roomsDecorated or 0 end, {120, 255, 170})
 
 -- Completionist: every other trophy
 for _, d in ipairs(NeverYieldAch.defs) do
-	if d.id == "trophyall" then d.goal = #NeverYieldAch.defs - 1 end
+	if d.id == "trophyall" then
+		d.goal = -1
+		for _, other in ipairs(NeverYieldAch.defs) do
+			if not other.hidden then d.goal = d.goal + 1 end
+		end
+	end
 end
 NeverYieldAch.byId = {}
 for _, d in ipairs(NeverYieldAch.defs) do
@@ -29186,6 +29362,332 @@ NeverYieldAch.trophy = function(d, silhouette)
 		for _, side in ipairs({-1, 1}) do
 			m(Vector3.new(0.1, 0.5, 0.6), at(side * 0.32, y + 0.85, 0.35) * CFrame.Angles(0, 0, side * 0.5))
 		end
+	elseif t == "hammer" then
+		local handle = at(0, y + 0.95, 0) * CFrame.Angles(0, 0, 0.35)
+		c(Vector3.new(0.18, 1.7, 0.18), handle, Color3.fromRGB(150, 100, 60), M.Wood)
+		local head = handle * CFrame.new(0, 0.85, 0)
+		m(Vector3.new(0.9, 0.38, 0.38), head)
+		a(Vector3.new(0.12, 0.42, 0.42), head * CFrame.new(-0.46, 0, 0), nil, M.Neon)
+		m(Vector3.new(0.3, 0.3, 0.3), at(0, y + 0.15, 0))
+	elseif t == "camera" then
+		for i = 0, 2 do
+			m(Vector3.new(0.1, 1.0, 0.1), at(0, y + 0.45, 0) * CFrame.Angles(0, i * math.pi * 2 / 3, 0) * CFrame.Angles(0.35, 0, 0))
+		end
+		c(Vector3.new(1.2, 0.75, 0.6), at(0, y + 1.25, 0), Color3.fromRGB(35, 35, 40), M.SmoothPlastic)
+		m(Vector3.new(0.45, 0.55, 0.55), at(0, y + 1.25, -0.45) * CFrame.Angles(0, math.pi / 2, 0), "Cylinder")
+		c(Vector3.new(0.47, 0.38, 0.38), at(0, y + 1.25, -0.46) * CFrame.Angles(0, math.pi / 2, 0), Color3.fromRGB(80, 140, 220), M.Glass, "Cylinder")
+		a(Vector3.new(0.25, 0.15, 0.1), at(0.38, y + 1.7, -0.1), nil, M.Neon)
+		c(Vector3.new(0.12, 0.12, 0.06), at(-0.4, y + 1.45, -0.31), Color3.fromRGB(255, 50, 50), M.Neon, "Ball")
+	elseif t == "bulb" then
+		for i = 0, 2 do
+			m(Vector3.new(0.16, 0.5 - i * 0.04, 0.5 - i * 0.04), at(0, y + 0.1 + i * 0.18, 0) * up, "Cylinder")
+		end
+		c(Vector3.new(1.25, 1.35, 1.25), at(0, y + 1.25, 0), Color3.fromRGB(255, 250, 225), M.Glass, "Ellipsoid", {Transparency = 0.35})
+		a(Vector3.new(0.35, 0.35, 0.35), at(0, y + 1.2, 0), "Ball", M.Neon, {Color = d.accent and accent or Color3.fromRGB(255, 220, 120)})
+		m(Vector3.new(0.05, 0.5, 0.05), at(0, y + 0.85, 0))
+	elseif t == "spring" then
+		for i = 0, 5 do
+			m(Vector3.new(0.12, 0.9, 0.9), at(0, y + 0.2 + i * 0.26, 0) * CFrame.Angles((i % 2 == 0) and 0.18 or -0.18, 0, math.pi / 2), "Cylinder")
+		end
+		c(Vector3.new(1.3, 0.55, 0.55), at(0, y + 0.85, 0) * up, Color3.fromRGB(20, 18, 30), M.SmoothPlastic, "Cylinder")
+		a(Vector3.new(0.5, 0.5, 0.5), at(0, y + 1.85, 0), "Ball", M.Neon)
+	elseif t == "fish" then
+		local scale = d.accent and accent or Color3.fromRGB(255, 150, 50)
+		m(Vector3.new(0.14, 0.75, 0.14), at(0, y + 0.37, 0))
+		a(Vector3.new(1.4, 0.8, 0.45), at(0, y + 1.3, 0), "Ellipsoid", M.SmoothPlastic, {Color = scale})
+		for _, side in ipairs({-1, 1}) do
+			a(Vector3.new(0.5, 0.18, 0.12), at(0.85, y + 1.3 + side * 0.15, 0) * CFrame.Angles(0, 0, side * 0.7), nil, M.SmoothPlastic, {Color = scale})
+			c(Vector3.new(0.16, 0.16, 0.16), at(-0.42, y + 1.4, side * 0.2), Color3.fromRGB(15, 15, 20), M.SmoothPlastic, "Ball")
+		end
+		m(Vector3.new(0.5, 0.22, 0.08), at(0, y + 1.72, 0) * CFrame.Angles(0, 0, -0.3))
+		for i = 1, 3 do
+			c(Vector3.new(0.14, 0.14, 0.14), at(-0.8 - i * 0.12, y + 1.4 + i * 0.25, 0), Color3.fromRGB(190, 230, 255), M.Glass, "Ball", {Transparency = 0.3})
+		end
+	elseif t == "magnet" then
+		local red = d.accent and accent or Color3.fromRGB(220, 40, 50)
+		for _, side in ipairs({-1, 1}) do
+			c(Vector3.new(0.4, 1.1, 0.4), at(side * 0.45, y + 1.35, 0), red, M.SmoothPlastic)
+			m(Vector3.new(0.42, 0.3, 0.42), at(side * 0.45, y + 2.0, 0))
+			c(Vector3.new(0.08, 0.35, 0.05), at(side * 0.45, y + 2.4, 0) * CFrame.Angles(0, 0, side * 0.5), Color3.fromRGB(150, 220, 255), M.Neon)
+		end
+		c(Vector3.new(1.3, 0.4, 0.4), at(0, y + 0.65, 0), red, M.SmoothPlastic)
+		m(Vector3.new(0.16, 0.45, 0.16), at(0, y + 0.22, 0))
+	elseif t == "tophat" then
+		local felt = Color3.fromRGB(25, 22, 28)
+		m(Vector3.new(0.14, 0.5, 0.14), at(0, y + 0.25, 0))
+		c(Vector3.new(0.12, 1.5, 1.5), at(0, y + 0.55, 0) * up, felt, M.Fabric, "Cylinder")
+		c(Vector3.new(1.2, 0.95, 0.95), at(0, y + 1.2, 0) * up, felt, M.Fabric, "Cylinder")
+		a(Vector3.new(0.22, 0.98, 0.98), at(0, y + 0.75, 0) * up, "Cylinder", M.Fabric, {Color = d.accent and accent or Color3.fromRGB(200, 40, 60)})
+		m(Vector3.new(0.22, 0.22, 0.06), at(0.25, y + 0.75, -0.48))
+	elseif t == "keyboard" then
+		local kb = at(0, y + 1.1, 0) * CFrame.Angles(math.rad(-60), 0, 0)
+		m(Vector3.new(0.14, 0.75, 0.14), at(0, y + 0.4, 0.15))
+		c(Vector3.new(1.9, 0.15, 0.75), kb, Color3.fromRGB(30, 30, 38), M.SmoothPlastic)
+		for row = 0, 2 do
+			for k = 0, 5 do
+				local lit = (row + k) % 4 == 0
+				P(model, Vector3.new(0.24, 0.06, 0.17), kb * CFrame.new(-0.72 + k * 0.29, 0.1, -0.2 + row * 0.2),
+					lit and accent or Color3.fromRGB(70, 70, 85), lit and M.Neon or M.SmoothPlastic)
+			end
+		end
+		c(Vector3.new(0.9, 0.06, 0.12), kb * CFrame.new(0, 0.1, 0.27), Color3.fromRGB(70, 70, 85), M.SmoothPlastic)
+	elseif t == "book" then
+		local cover = d.accent and accent or Color3.fromRGB(140, 50, 50)
+		m(Vector3.new(0.14, 0.6, 0.14), at(0, y + 0.3, 0))
+		m(Vector3.new(0.12, 1.25, 0.16), at(0, y + 1.25, 0.03))
+		for _, side in ipairs({-1, 1}) do
+			local leaf = at(0, y + 1.25, 0) * CFrame.Angles(0, side * 0.35, 0)
+			a(Vector3.new(0.86, 1.2, 0.07), leaf * CFrame.new(side * 0.43, 0, 0), nil, M.Fabric, {Color = cover})
+			c(Vector3.new(0.78, 1.08, 0.06), leaf * CFrame.new(side * 0.42, 0, -0.06), Color3.fromRGB(250, 245, 230), M.SmoothPlastic)
+			for line = 0, 3 do
+				c(Vector3.new(0.55, 0.04, 0.02), leaf * CFrame.new(side * 0.42, 0.3 - line * 0.18, -0.1), Color3.fromRGB(120, 115, 110), M.SmoothPlastic)
+			end
+		end
+		c(Vector3.new(0.08, 0.5, 0.02), at(0, y + 0.75, -0.08), Color3.fromRGB(230, 40, 60), M.Fabric)
+	elseif t == "firework" then
+		m(Vector3.new(0.1, 1.0, 0.1), at(0, y + 0.5, 0))
+		local center = y + 1.65
+		for i = 0, 7 do
+			local ang = i / 8 * math.pi * 2
+			local col = d.accent and accent or Color3.fromHSV(i / 8, 0.7, 1)
+			P(model, Vector3.new(0.1, 0.6, 0.1), at(0, center, 0) * CFrame.Angles(0, 0, ang) * CFrame.new(0, 0.42, 0), col, M.Neon)
+			P(model, Vector3.new(0.18, 0.18, 0.18), at(0, center, 0) * CFrame.Angles(0, 0, ang) * CFrame.new(0, 0.8, 0), col, M.Neon, "Ball")
+		end
+		m(Vector3.new(0.3, 0.3, 0.3), at(0, center, 0), "Ball")
+	elseif t == "mushroom" then
+		c(Vector3.new(1.2, 0.5, 1.2), at(0, y + 0.25, 0), Color3.fromRGB(120, 110, 100), M.SmoothPlastic, "Ellipsoid")
+		c(Vector3.new(1.1, 0.42, 0.42), at(0, y + 0.95, 0) * up, Color3.fromRGB(230, 150, 80), M.SmoothPlastic, "Cylinder")
+		m(Vector3.new(0.15, 0.95, 0.95), at(0, y + 1.0, 0) * up, "Cylinder")
+		a(Vector3.new(1.7, 0.95, 1.7), at(0, y + 1.8, 0), "Ellipsoid", M.Neon, {Color = d.accent and accent or Color3.fromRGB(255, 140, 50)})
+		c(Vector3.new(1.2, 0.5, 1.2), at(0, y + 2.18, 0), Color3.fromRGB(255, 220, 140), M.Neon, "Ellipsoid")
+	elseif t == "tornado" then
+		for i = 0, 6 do
+			local r = 0.3 + i * 0.2
+			c(Vector3.new(0.28, r, r), at(math.sin(i * 0.9) * 0.12, y + 0.2 + i * 0.3, 0) * up, Color3.fromRGB(170 - i * 8, 175 - i * 8, 190 - i * 6), M.SmoothPlastic, "Cylinder", {Transparency = 0.15})
+		end
+		m(Vector3.new(0.3, 0.25, 0.3), at(0.75, y + 1.2, -0.2) * CFrame.Angles(0.4, 0.3, 0.6))
+		a(Vector3.new(0.2, 0.2, 0.2), at(-0.7, y + 1.8, -0.3), "Ball", M.Neon)
+	elseif t == "ufo" then
+		c(Vector3.new(1.0, 0.75, 0.75), at(0, y + 0.55, 0) * up, Color3.fromRGB(150, 255, 170), M.Neon, "Cylinder", {Transparency = 0.6})
+		m(Vector3.new(1.9, 0.42, 1.9), at(0, y + 1.3, 0), "Ellipsoid")
+		c(Vector3.new(0.95, 0.75, 0.95), at(0, y + 1.55, 0), Color3.fromRGB(150, 220, 255), M.Glass, "Ellipsoid", {Transparency = 0.3})
+		c(Vector3.new(0.3, 0.3, 0.3), at(0, y + 1.6, 0), Color3.fromRGB(120, 230, 120), M.SmoothPlastic, "Ball")
+		for i = 0, 5 do
+			local ang = i / 6 * math.pi * 2
+			a(Vector3.new(0.16, 0.16, 0.16), at(math.cos(ang) * 0.8, y + 1.3, math.sin(ang) * 0.8), "Ball", M.Neon)
+		end
+	elseif t == "palette" then
+		m(Vector3.new(0.14, 0.7, 0.14), at(0, y + 0.35, 0))
+		local face = at(0, y + 1.45, 0)
+		c(Vector3.new(0.12, 1.6, 1.6), face * CFrame.Angles(0, math.pi / 2, 0), Color3.fromRGB(205, 160, 105), M.Wood, "Cylinder")
+		for i = 0, 4 do
+			local ang = 0.5 + i * 0.95
+			c(Vector3.new(0.28, 0.28, 0.12), face * CFrame.new(math.cos(ang) * 0.5, math.sin(ang) * 0.5, -0.08), Color3.fromHSV(i / 5, 0.8, 1), M.SmoothPlastic, "Ellipsoid")
+		end
+		local brush = face * CFrame.new(0.25, -0.1, -0.18) * CFrame.Angles(0, 0, -0.6)
+		c(Vector3.new(0.08, 1.3, 0.08), brush, Color3.fromRGB(150, 100, 60), M.Wood)
+		m(Vector3.new(0.12, 0.16, 0.12), brush * CFrame.new(0, 0.6, 0))
+		a(Vector3.new(0.12, 0.2, 0.12), brush * CFrame.new(0, 0.76, 0), "Ellipsoid", M.Neon)
+	elseif t == "rainbow" then
+		for band = 0, 3 do
+			local r = 1.0 - band * 0.18
+			for i = 0, 8 do
+				local ang = i / 8 * math.pi
+				P(model, Vector3.new(0.2, 0.2, 0.2), at(math.cos(ang) * r, y + 0.5 + math.sin(ang) * r, 0), Color3.fromHSV(band * 0.15, 0.8, 1), M.Neon, "Ball")
+			end
+		end
+		for _, side in ipairs({-1, 1}) do
+			c(Vector3.new(0.65, 0.45, 0.45), at(side * 0.85, y + 0.45, 0), Color3.fromRGB(245, 248, 255), M.SmoothPlastic, "Ellipsoid")
+		end
+		m(Vector3.new(1.9, 0.2, 0.5), at(0, y + 0.1, 0))
+	elseif t == "dice" then
+		local face = d.accent and accent or Color3.fromRGB(245, 245, 250)
+		local cube = at(-0.15, y + 0.65, 0) * CFrame.Angles(0, 0.4, 0)
+		a(Vector3.new(1.2, 1.2, 1.2), cube, nil, M.SmoothPlastic, {Color = face})
+		for _, p in ipairs({{-0.3, 0.3}, {0.3, 0.3}, {0, 0}, {-0.3, -0.3}, {0.3, -0.3}}) do
+			c(Vector3.new(0.2, 0.2, 0.06), cube * CFrame.new(p[1], p[2], -0.6), Color3.fromRGB(20, 20, 25), M.SmoothPlastic, "Ellipsoid")
+		end
+		for _, p in ipairs({{-0.3, -0.3}, {0.3, 0.3}}) do
+			c(Vector3.new(0.2, 0.06, 0.2), cube * CFrame.new(p[1], 0.6, p[2]), Color3.fromRGB(20, 20, 25), M.SmoothPlastic, "Ellipsoid")
+		end
+		local small = at(0.35, y + 1.6, -0.05) * CFrame.Angles(0.5, 0.7, 0.3)
+		m(Vector3.new(0.6, 0.6, 0.6), small)
+		c(Vector3.new(0.14, 0.14, 0.04), small * CFrame.new(0, 0, -0.3), Color3.fromRGB(20, 20, 25), M.SmoothPlastic, "Ellipsoid")
+	elseif t == "pill" then
+		a(Vector3.new(0.1, 1.6, 1.6), at(0, y + 0.08, 0) * up, "Cylinder", M.Neon, {Color = Color3.fromRGB(60, 255, 90), Transparency = 0.3})
+		for i, col in ipairs({{230, 40, 50}, {50, 110, 240}}) do
+			local cf = at((i - 1.5) * 0.75, y + 1.0 + (i - 1) * 0.45, 0) * CFrame.Angles(0, 0, 0.5 - (i - 1) * 1.0)
+			local color = Color3.fromRGB(col[1], col[2], col[3])
+			c(Vector3.new(0.6, 0.42, 0.42), cf, color, M.SmoothPlastic, "Cylinder")
+			c(Vector3.new(0.42, 0.42, 0.42), cf * CFrame.new(-0.3, 0, 0), color, M.SmoothPlastic, "Ball")
+			c(Vector3.new(0.42, 0.42, 0.42), cf * CFrame.new(0.3, 0, 0), Color3.fromRGB(245, 245, 245), M.SmoothPlastic, "Ball")
+			m(Vector3.new(0.12, 0.6, 0.12), at((i - 1.5) * 0.75, y + 0.4 + (i - 1) * 0.22, 0) * CFrame.new(0, 0, 0), nil, {Size = Vector3.new(0.12, 0.6 + (i - 1) * 0.45, 0.12)})
+		end
+	elseif t == "umbrella" then
+		c(Vector3.new(0.1, 1.5, 0.1), at(0, y + 0.95, 0), Color3.fromRGB(60, 45, 35), M.Wood)
+		c(Vector3.new(0.35, 0.1, 0.1), at(0.14, y + 0.22, 0), Color3.fromRGB(60, 45, 35), M.Wood)
+		a(Vector3.new(1.9, 0.7, 1.9), at(0, y + 1.75, 0), "Ellipsoid", M.Fabric, {Color = d.accent and accent or Color3.fromRGB(255, 90, 140)})
+		m(Vector3.new(0.12, 0.3, 0.12), at(0, y + 2.18, 0))
+		for i = 0, 3 do
+			local ang = i / 4 * math.pi * 2 + 0.4
+			c(Vector3.new(0.12, 0.22, 0.12), at(math.cos(ang) * 1.0, y + 1.0 + (i % 2) * 0.3, math.sin(ang) * 1.0), Color3.fromRGB(150, 210, 255), M.Glass, "Ellipsoid", {Transparency = 0.2})
+		end
+	elseif t == "pickaxe" then
+		local handle = at(0, y + 1.0, 0) * CFrame.Angles(0, 0, -0.4)
+		c(Vector3.new(0.16, 1.9, 0.16), handle, Color3.fromRGB(140, 95, 55), M.Wood)
+		local head = handle * CFrame.new(0, 0.88, 0)
+		for _, side in ipairs({-1, 1}) do
+			m(Vector3.new(0.65, 0.2, 0.2), head * CFrame.new(side * 0.3, -0.05, 0) * CFrame.Angles(0, 0, -side * 0.3))
+		end
+		a(Vector3.new(0.45, 0.45, 0.45), at(0.45, y + 0.3, -0.3) * CFrame.Angles(0.5, 0.5, 0), nil, M.Glass, {Color = d.accent and accent or Color3.fromRGB(150, 230, 255), Transparency = 0.15})
+	elseif t == "target" then
+		m(Vector3.new(0.14, 0.7, 0.14), at(0, y + 0.35, 0))
+		for i, r in ipairs({1.6, 1.2, 0.8, 0.4}) do
+			P(model, Vector3.new(0.1 + i * 0.05, r, r), at(0, y + 1.5, 0) * CFrame.Angles(0, math.pi / 2, 0), i % 2 == 1 and Color3.fromRGB(230, 40, 50) or Color3.fromRGB(245, 245, 245), M.SmoothPlastic, "Cylinder")
+		end
+		local arrow = at(0.12, y + 1.58, -0.55) * CFrame.Angles(0.2, -0.25, 0)
+		c(Vector3.new(0.07, 0.07, 0.9), arrow, Color3.fromRGB(120, 85, 50), M.Wood)
+		a(Vector3.new(0.2, 0.2, 0.15), arrow * CFrame.new(0, 0, -0.45), nil, M.Neon)
+	elseif t == "hourglass" then
+		for _, yy in ipairs({0.12, 2.0}) do
+			m(Vector3.new(0.18, 1.2, 1.2), at(0, y + yy, 0) * up, "Cylinder")
+		end
+		for _, side in ipairs({-1, 1}) do
+			m(Vector3.new(0.1, 1.9, 0.1), at(side * 0.5, y + 1.06, 0))
+		end
+		for _, yy in ipairs({0.62, 1.5}) do
+			c(Vector3.new(0.85, 0.95, 0.85), at(0, y + yy, 0), Color3.fromRGB(220, 240, 255), M.Glass, "Ellipsoid", {Transparency = 0.5})
+		end
+		local sand = d.accent and accent or Color3.fromRGB(240, 200, 110)
+		a(Vector3.new(0.6, 0.4, 0.6), at(0, y + 0.42, 0), "Ellipsoid", M.Sand, {Color = sand})
+		a(Vector3.new(0.45, 0.28, 0.45), at(0, y + 1.33, 0), "Ellipsoid", M.Sand, {Color = sand})
+		a(Vector3.new(0.05, 0.5, 0.05), at(0, y + 1.0, 0), nil, M.Sand, {Color = sand})
+	elseif t == "bowl" then
+		a(Vector3.new(0.45, 1.4, 1.4), at(0, y + 0.23, 0) * up, "Cylinder", M.SmoothPlastic, {Color = d.accent and accent or Color3.fromRGB(230, 70, 70)})
+		for i = 0, 6 do
+			local ang = i / 7 * math.pi * 2
+			c(Vector3.new(0.26, 0.26, 0.26), at(math.cos(ang) * 0.35, y + 0.5, math.sin(ang) * 0.35), Color3.fromRGB(150, 95, 50), M.SmoothPlastic, "Ball")
+		end
+		m(Vector3.new(0.1, 0.8, 0.1), at(0, y + 0.85, 0))
+		local bone = at(0, y + 1.45, 0) * CFrame.Angles(0, 0, 0.3)
+		c(Vector3.new(1.0, 0.24, 0.24), bone, Color3.fromRGB(245, 240, 225), M.SmoothPlastic)
+		for _, side in ipairs({-1, 1}) do
+			for _, k in ipairs({-1, 1}) do
+				c(Vector3.new(0.32, 0.32, 0.32), bone * CFrame.new(side * 0.52, k * 0.13, 0), Color3.fromRGB(245, 240, 225), M.SmoothPlastic, "Ball")
+			end
+		end
+	elseif t == "tree" then
+		c(Vector3.new(0.35, 1.2, 0.35), at(0, y + 0.6, 0), Color3.fromRGB(110, 75, 45), M.Wood)
+		for _, b in ipairs({{0, 1.7, 0.8}, {-0.45, 1.4, 0.6}, {0.45, 1.4, 0.6}, {0, 2.15, 0.55}}) do
+			a(Vector3.new(b[3] * 1.5, b[3] * 1.5, b[3] * 1.5), at(b[1], y + b[2], 0), "Ball", M.Grass, {Color = d.accent and accent or Color3.fromRGB(80, 170, 80)})
+		end
+		for _, f in ipairs({{-0.35, 1.25}, {0.4, 1.6}, {0, 1.95}, {-0.2, 1.7}}) do
+			m(Vector3.new(0.2, 0.2, 0.2), at(f[1], y + f[2], -0.55), "Ball")
+		end
+	elseif t == "flame" then
+		m(Vector3.new(0.8, 0.8, 0.8), at(0, y + 0.55, 0) * up, "Cylinder")
+		m(Vector3.new(0.2, 1.0, 1.0), at(0, y + 0.95, 0) * up, "Cylinder")
+		a(Vector3.new(0.75, 1.2, 0.75), at(0, y + 1.45, 0), "Ellipsoid", M.Neon, {Color = d.accent and accent or Color3.fromRGB(255, 120, 30)})
+		c(Vector3.new(0.5, 0.8, 0.5), at(0, y + 1.35, -0.12), Color3.fromRGB(255, 220, 80), M.Neon, "Ellipsoid")
+		c(Vector3.new(0.35, 0.6, 0.35), at(0.1, y + 2.1, 0), Color3.fromRGB(255, 150, 40), M.Neon, "Ellipsoid")
+	elseif t == "compass" then
+		m(Vector3.new(0.14, 0.6, 0.14), at(0, y + 0.3, 0))
+		local face = at(0, y + 1.35, 0)
+		m(Vector3.new(0.25, 1.5, 1.5), face * CFrame.Angles(0, math.pi / 2, 0), "Cylinder")
+		c(Vector3.new(0.27, 1.25, 1.25), face * CFrame.Angles(0, math.pi / 2, 0), Color3.fromRGB(245, 240, 225), M.SmoothPlastic, "Cylinder")
+		local needle = face * CFrame.Angles(0, 0, 0.5)
+		c(Vector3.new(0.14, 0.5, 0.05), needle * CFrame.new(0, 0.25, -0.15), d.accent and accent or Color3.fromRGB(230, 40, 40), M.Neon)
+		c(Vector3.new(0.14, 0.5, 0.05), needle * CFrame.new(0, -0.25, -0.15), Color3.fromRGB(40, 40, 50), M.SmoothPlastic)
+		m(Vector3.new(0.14, 0.14, 0.14), face * CFrame.new(0, 0, -0.17), "Ball")
+		m(Vector3.new(0.1, 0.35, 0.35), face * CFrame.new(0, 0.82, 0) * CFrame.Angles(0, math.pi / 2, 0), "Cylinder")
+	elseif t == "medal" then
+		for _, side in ipairs({-1, 1}) do
+			a(Vector3.new(0.35, 1.1, 0.06), at(side * 0.25, y + 1.95, 0.05) * CFrame.Angles(0, 0, -side * 0.35), nil, M.Fabric, {Color = d.accent and accent or Color3.fromRGB(60, 110, 230)})
+		end
+		m(Vector3.new(0.14, 0.5, 0.14), at(0, y + 0.25, 0))
+		m(Vector3.new(0.18, 1.1, 1.1), at(0, y + 1.0, 0) * CFrame.Angles(0, math.pi / 2, 0), "Cylinder")
+		for i = 0, 4 do
+			local ang = i / 5 * math.pi * 2
+			a(Vector3.new(0.16, 0.36, 0.06), at(0, y + 1.0, -0.1) * CFrame.Angles(0, 0, ang) * CFrame.new(0, 0.16, 0), nil, M.Neon)
+		end
+	elseif t == "owl" then
+		local feathers = d.accent and accent or Color3.fromRGB(130, 95, 70)
+		m(Vector3.new(0.14, 0.4, 0.14), at(0, y + 0.2, 0))
+		c(Vector3.new(1.5, 0.18, 0.18), at(0, y + 0.45, 0), Color3.fromRGB(100, 70, 45), M.Wood)
+		a(Vector3.new(1.0, 1.3, 0.85), at(0, y + 1.2, 0), "Ellipsoid", M.SmoothPlastic, {Color = feathers})
+		c(Vector3.new(0.7, 0.8, 0.2), at(0, y + 1.05, -0.32), Color3.fromRGB(225, 205, 175), M.SmoothPlastic, "Ellipsoid")
+		for _, side in ipairs({-1, 1}) do
+			c(Vector3.new(0.38, 0.38, 0.1), at(side * 0.22, y + 1.45, -0.4), Color3.fromRGB(250, 250, 245), M.SmoothPlastic, "Ellipsoid")
+			c(Vector3.new(0.2, 0.2, 0.1), at(side * 0.22, y + 1.45, -0.45), Color3.fromRGB(255, 200, 40), M.Neon, "Ellipsoid")
+			a(Vector3.new(0.15, 0.35, 0.15), at(side * 0.32, y + 1.9, 0) * CFrame.Angles(0, 0, -side * 0.3), nil, M.SmoothPlastic, {Color = feathers})
+			c(Vector3.new(0.14, 0.08, 0.2), at(side * 0.15, y + 0.56, -0.12), Color3.fromRGB(240, 160, 40), M.SmoothPlastic)
+		end
+		c(Vector3.new(0.12, 0.18, 0.12), at(0, y + 1.28, -0.45), Color3.fromRGB(240, 160, 40), M.SmoothPlastic, "Ellipsoid")
+		c(Vector3.new(0.5, 0.5, 0.1), at(0.6, y + 2.2, 0.2), Color3.fromRGB(240, 235, 210), M.Neon, "Ellipsoid")
+	elseif t == "sun" then
+		m(Vector3.new(0.14, 0.6, 0.14), at(0, y + 0.3, 0))
+		local center = y + 1.4
+		c(Vector3.new(0.9, 0.9, 0.9), at(0, center, 0), Color3.fromRGB(255, 210, 60), M.Neon, "Ball")
+		for i = 0, 9 do
+			a(Vector3.new(0.12, 0.35, 0.08), at(0, center, 0) * CFrame.Angles(0, 0, i / 10 * math.pi * 2) * CFrame.new(0, 0.68, 0), nil, M.Neon,
+				{Color = d.accent and accent or Color3.fromRGB(255, 160, 40)})
+		end
+		for _, side in ipairs({-1, 1}) do
+			c(Vector3.new(0.12, 0.16, 0.06), at(side * 0.17, center + 0.1, -0.45), Color3.fromRGB(60, 30, 10), M.SmoothPlastic, "Ellipsoid")
+		end
+		c(Vector3.new(0.35, 0.08, 0.06), at(0, center - 0.15, -0.44), Color3.fromRGB(60, 30, 10), M.SmoothPlastic, "Ellipsoid")
+	elseif t == "pumpkin" then
+		for i = 0, 3 do
+			c(Vector3.new(1.5, 1.1, 0.7), at(0, y + 0.75, 0) * CFrame.Angles(0, i * math.pi / 4, 0), Color3.fromRGB(240, 130, 30), M.SmoothPlastic, "Ellipsoid")
+		end
+		c(Vector3.new(0.18, 0.35, 0.18), at(0, y + 1.42, 0) * CFrame.Angles(0, 0, 0.2), Color3.fromRGB(80, 120, 40), M.Wood)
+		local glow = d.accent and accent or Color3.fromRGB(255, 220, 80)
+		for _, side in ipairs({-1, 1}) do
+			P(model, Vector3.new(0.24, 0.22, 0.08), at(side * 0.28, y + 0.92, -0.73) * CFrame.Angles(0, 0, side * 0.3), glow, M.Neon)
+		end
+		P(model, Vector3.new(0.18, 0.14, 0.08), at(0, y + 0.76, -0.75), glow, M.Neon)
+		P(model, Vector3.new(0.65, 0.14, 0.08), at(0, y + 0.55, -0.72), glow, M.Neon, "Ellipsoid")
+	elseif t == "present" then
+		a(Vector3.new(1.3, 1.1, 1.3), at(0, y + 0.55, 0), nil, M.SmoothPlastic, {Color = d.accent and accent or Color3.fromRGB(220, 40, 60)})
+		m(Vector3.new(1.34, 1.14, 0.25), at(0, y + 0.55, 0))
+		m(Vector3.new(0.25, 1.14, 1.34), at(0, y + 0.55, 0))
+		for _, side in ipairs({-1, 1}) do
+			m(Vector3.new(0.55, 0.4, 0.18), at(side * 0.27, y + 1.28, 0) * CFrame.Angles(0, 0, side * 0.5), "Ellipsoid")
+		end
+		m(Vector3.new(0.26, 0.26, 0.26), at(0, y + 1.2, 0), "Ball")
+	elseif t == "blackcat" then
+		local fur = Color3.fromRGB(20, 18, 24)
+		m(Vector3.new(1.1, 0.2, 0.9), at(0, y + 0.1, 0), "Ellipsoid")
+		c(Vector3.new(0.9, 1.0, 0.8), at(0, y + 0.65, 0.05), fur, M.SmoothPlastic, "Ellipsoid")
+		c(Vector3.new(0.75, 0.7, 0.7), at(0, y + 1.4, -0.05), fur, M.SmoothPlastic, "Ellipsoid")
+		for _, side in ipairs({-1, 1}) do
+			c(Vector3.new(0.22, 0.3, 0.12), at(side * 0.22, y + 1.78, -0.05) * CFrame.Angles(0, 0, -side * 0.3), fur, M.SmoothPlastic)
+			a(Vector3.new(0.15, 0.15, 0.06), at(side * 0.15, y + 1.45, -0.38), "Ellipsoid", M.Neon, {Color = d.accent and accent or Color3.fromRGB(180, 255, 80)})
+		end
+		local tail = at(0.4, y + 0.55, 0.35) * CFrame.Angles(0, 0, -0.35)
+		c(Vector3.new(0.13, 0.7, 0.13), tail * CFrame.new(0, 0.35, 0), fur, M.SmoothPlastic)
+		c(Vector3.new(0.13, 0.5, 0.13), tail * CFrame.new(0, 0.7, 0) * CFrame.Angles(0, 0, 0.9) * CFrame.new(0, 0.22, 0), fur, M.SmoothPlastic)
+		m(Vector3.new(0.1, 0.66, 0.66), at(0, y + 1.1, -0.02) * up, "Cylinder")
+	elseif t == "question" then
+		local glow = d.accent and accent or Color3.fromRGB(255, 220, 80)
+		for _, pt in ipairs({{-0.35, 1.8}, {-0.25, 2.05}, {0, 2.15}, {0.25, 2.05}, {0.35, 1.8}, {0.25, 1.55}, {0.05, 1.4}, {0, 1.15}, {0, 0.95}}) do
+			P(model, Vector3.new(0.26, 0.26, 0.26), at(pt[1], y + pt[2], 0), glow, M.Neon, "Ball")
+		end
+		P(model, Vector3.new(0.3, 0.3, 0.3), at(0, y + 0.55, 0), glow, M.Neon, "Ball")
+		m(Vector3.new(0.14, 0.4, 0.14), at(0, y + 0.2, 0))
+	elseif t == "bug" then
+		m(Vector3.new(0.6, 0.5, 0.6), at(0, y + 0.25, 0))
+		local shell = d.accent and accent or Color3.fromRGB(60, 200, 90)
+		a(Vector3.new(1.0, 0.6, 1.3), at(0, y + 0.95, 0.1), "Ellipsoid", M.SmoothPlastic, {Color = shell, Reflectance = 0.2})
+		c(Vector3.new(0.04, 0.62, 1.2), at(0, y + 0.96, 0.12), Color3.fromRGB(25, 25, 30), M.SmoothPlastic)
+		c(Vector3.new(0.45, 0.45, 0.45), at(0, y + 0.95, -0.65), Color3.fromRGB(25, 25, 30), M.SmoothPlastic, "Ball")
+		for _, side in ipairs({-1, 1}) do
+			for i = 0, 2 do
+				c(Vector3.new(0.5, 0.07, 0.07), at(side * 0.55, y + 0.72, -0.3 + i * 0.35) * CFrame.Angles(0, 0, side * 0.5), Color3.fromRGB(25, 25, 30), M.SmoothPlastic)
+			end
+			c(Vector3.new(0.05, 0.5, 0.05), at(side * 0.15, y + 1.35, -0.8) * CFrame.Angles(-0.5, 0, -side * 0.3), Color3.fromRGB(25, 25, 30), M.SmoothPlastic)
+			c(Vector3.new(0.1, 0.1, 0.06), at(side * 0.12, y + 1.0, -0.86), Color3.fromRGB(255, 80, 80), M.Neon, "Ball")
+		end
 	else
 		m(Vector3.new(1, 1, 1), at(0, y + 0.7, 0), "Ball")
 	end
@@ -29402,12 +29904,13 @@ NeverYieldAch.open = function(cat)
 	ui.fill.Parent = ui.bar
 	P.button(panel, "X", UDim2.new(1, -46, 0, 14), UDim2.new(0, 32, 0, 32), Color3.fromRGB(150, 50, 80), NeverYieldAch.close)
 	ui.tabButtons = {}
+	local tabW = math.floor(688 / #NeverYieldAch.cats)
 	for i, info in ipairs(NeverYieldAch.cats) do
-		ui.tabButtons[info[1]] = P.button(panel, info[2], UDim2.new(0, 16 + (i - 1) * 77, 0, 58), UDim2.new(0, 73, 0, 28), nil, function()
+		ui.tabButtons[info[1]] = P.button(panel, info[2], UDim2.new(0, 16 + (i - 1) * tabW, 0, 58), UDim2.new(0, tabW - 4, 0, 28), nil, function()
 			ui.cat, ui.page = info[1], 1
 			ui.refresh()
 		end)
-		ui.tabButtons[info[1]].TextSize = 12
+		ui.tabButtons[info[1]].TextSize = 11
 	end
 	ui.body = Instance.new("Frame")
 	ui.body.BackgroundTransparency = 1
@@ -29457,17 +29960,21 @@ NeverYieldAch.open = function(cat)
 			local when = data.unlocked[d.id]
 			local card = P.card(ui.body, UDim2.new(0, col * 172, 0, row * 168), UDim2.new(0, 164, 0, 160), when and tier.color or Color3.fromRGB(60, 55, 90))
 			if not when then card.BackgroundColor3 = Color3.fromRGB(28, 24, 48) end
-			local _, model = NeverYieldAch.preview(card, d, UDim2.new(0, 22, 0, 0), UDim2.new(0, 120, 0, 74), not when)
+			local secret = d.hidden and not when
+			local _, model = NeverYieldAch.preview(card, secret and {tier = d.tier, topper = "question"} or d, UDim2.new(0, 22, 0, 0), UDim2.new(0, 120, 0, 74), not when)
 			if when then table.insert(ui.spinners, model) end
 			P.label(card, {Position = UDim2.new(0, 6, 0, 74), Size = UDim2.new(1, -12, 0, 18), TextSize = 14, TextTruncate = Enum.TextTruncate.AtEnd,
-				Text = d.name, TextColor3 = when and Color3.new(1, 1, 1) or Color3.fromRGB(170, 165, 200)})
+				Text = secret and "???" or d.name, TextColor3 = when and Color3.new(1, 1, 1) or Color3.fromRGB(170, 165, 200)})
 			P.label(card, {Position = UDim2.new(0, 6, 0, 92), Size = UDim2.new(1, -12, 0, 28), TextSize = 11, TextWrapped = true,
-				TextColor3 = Color3.fromRGB(190, 185, 220), Text = d.desc})
+				TextColor3 = Color3.fromRGB(190, 185, 220), Text = secret and "Secret achievement. Keep playing to find it!" or d.desc})
 			local v, goal = NeverYieldAch.progress(d)
 			if when then
 				P.label(card, {Position = UDim2.new(0, 6, 0, 124), Size = UDim2.new(1, -12, 0, 14), TextSize = 11, TextColor3 = tier.color, Text = tier.name .. " trophy"})
 				P.label(card, {Position = UDim2.new(0, 6, 0, 140), Size = UDim2.new(1, -12, 0, 14), TextSize = 10, TextColor3 = Color3.fromRGB(170, 165, 200),
 					Text = "unlocked " .. os.date("%b %d, %Y", when)})
+			elseif secret then
+				P.bar(card, UDim2.new(0, 10, 0, 128), UDim2.new(1, -20, 0, 16), 0, tier.color, "???")
+				P.label(card, {Position = UDim2.new(0, 6, 0, 145), Size = UDim2.new(1, -12, 0, 12), TextSize = 10, TextColor3 = tier.color, Text = tier.name})
 			else
 				local shown = goal >= 1000 and NeverYieldStats.num(math.floor(math.min(v, goal))) or tostring(math.floor(math.min(v, goal) * 10) / 10)
 				P.bar(card, UDim2.new(0, 10, 0, 128), UDim2.new(1, -20, 0, 16), math.min(1, v / math.max(goal, 1)), tier.color,
