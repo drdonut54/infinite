@@ -5,6 +5,10 @@ Versions before 1.11.3 were reconstructed from the Desktop `.bakN` backups (one 
 
 | Version | Date | Commands | Change |
 |---|---|---|---|
+| 1.15.1 | 10-10 | 624 | Breakdance is a real looping routine (toprock, windmill, headspin, freeze); lean pivots at the feet; headstand on the head; moonwalk slides its legs; crabwalk crab pose; blink stops at walls; dash is a real burst |
+| 1.15.0 | 10-10 | 624 | New `moon`: angry-faced moon falls with a masked imp, countdown, quakes, impact fireball, then shop to a new server (`moon` alias moved off moongravity) |
+| 1.14.1 | 10-10 | 623 | Horror 2.0: pitch-black fog, The Watcher hunts you (moves only when unseen), flashlight flicker, heartbeat/whispers/static, jumpscare that kills you (`horror safe` = no dying) |
+| 1.14.0 | 10-10 | 623 | Pet Hub replaces the cube pet: 10 species, 11 skins, eggs + hatch popups, food, hunger/happiness, levels to 50, tricks, coins, breeding, index; Settings button |
 | 1.13.2 | 10-10 | 621 | Diamond Rush: diamonds were invisible (only the hitbox moved to the sky, the glass stayed behind); whole model now moves together, glass slightly more solid |
 | 1.13.1 | 10-10 | 621 | Review fixes: statsreset also resets this server's counters; stats save reports failed writes; lighting effects only cut short the fade of the properties they use; damaged stats backups get a timestamp |
 | 1.13.0 | 10-10 | 621 | New `midas` (everything you touch turns gold) and `diamond` Diamond Rush mini-game (diamond models rain down, popups, music, score/timer, saved best); snow footsteps spaced out with 8 varied clips |

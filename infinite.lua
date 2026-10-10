@@ -1,4 +1,4 @@
--- NeverYield v1.13.2 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.15.1 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.13.2" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.15.1" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -515,7 +515,7 @@ SettingsHolder.BorderSizePixel = 0
 SettingsHolder.Size = UDim2.new(1,0,1,0)
 SettingsHolder.ScrollBarImageColor3 = Color3.fromRGB(86, 50, 160)
 SettingsHolder.BottomImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
-SettingsHolder.CanvasSize = UDim2.new(0, 0, 0, 265)
+SettingsHolder.CanvasSize = UDim2.new(0, 0, 0, 295)
 SettingsHolder.MidImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
 SettingsHolder.ScrollBarThickness = 8
 SettingsHolder.TopImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
@@ -602,6 +602,12 @@ StatsButton.Position = UDim2.new(0, 5, 0, 85)
 StatsButton.Size = UDim2.new(1, -10, 0, 25)
 StatsButton.Name = "Stats"
 StatsButton.Parent = SettingsHolder
+
+PetsButton = makeSettingsButton("Pet Hub", "")
+PetsButton.Position = UDim2.new(0, 5, 0, 115)
+PetsButton.Size = UDim2.new(1, -10, 0, 25)
+PetsButton.Name = "Pets"
+PetsButton.Parent = SettingsHolder
 do
 	-- no stats icon in IY's asset pack, so show an emoji in the icon spot
 	local icon = StatsButton:FindFirstChild("Icon")
@@ -616,16 +622,21 @@ do
 	emoji.Text = "\u{1F4CA}"
 	emoji.ZIndex = 10
 	emoji.Parent = StatsButton
+	local petIcon = PetsButton:FindFirstChild("Icon")
+	if petIcon then petIcon.Visible = false end
+	local paw = emoji:Clone()
+	paw.Text = "\u{1F43E}"
+	paw.Parent = PetsButton
 end
 
 Keybinds = makeSettingsButton("Edit Keybinds",getcustomasset("infiniteyield/assets/editkeybinds.png"))
-Keybinds.Position = UDim2.new(0, 5, 0, 115)
+Keybinds.Position = UDim2.new(0, 5, 0, 145)
 Keybinds.Size = UDim2.new(1, -10, 0, 25)
 Keybinds.Name = "Keybinds"
 Keybinds.Parent = SettingsHolder
 
 Aliases = makeSettingsButton("Edit Aliases",getcustomasset("infiniteyield/assets/editaliases.png"))
-Aliases.Position = UDim2.new(0, 5, 0, 145)
+Aliases.Position = UDim2.new(0, 5, 0, 175)
 Aliases.Size = UDim2.new(1, -10, 0, 25)
 Aliases.Name = "Aliases"
 Aliases.Parent = SettingsHolder
@@ -669,19 +680,19 @@ On.TextColor3 = Color3.new(0, 0, 0)
 On.ZIndex = 10
 
 Positions = makeSettingsButton("Edit/Goto Waypoints",getcustomasset("infiniteyield/assets/editwaypoints.png"))
-Positions.Position = UDim2.new(0, 5, 0, 175)
+Positions.Position = UDim2.new(0, 5, 0, 205)
 Positions.Size = UDim2.new(1, -10, 0, 25)
 Positions.Name = "Waypoints"
 Positions.Parent = SettingsHolder
 
 EventBind = makeSettingsButton("Edit Event Binds",getcustomasset("infiniteyield/assets/bindsandplugins.png"),759)
-EventBind.Position = UDim2.new(0, 5, 0, 235)
+EventBind.Position = UDim2.new(0, 5, 0, 265)
 EventBind.Size = UDim2.new(1, -10, 0, 25)
 EventBind.Name = "EventBinds"
 EventBind.Parent = SettingsHolder
 
 Plugins = makeSettingsButton("Manage Plugins",getcustomasset("infiniteyield/assets/bindsandplugins.png"),743)
-Plugins.Position = UDim2.new(0, 5, 0, 205)
+Plugins.Position = UDim2.new(0, 5, 0, 235)
 Plugins.Size = UDim2.new(1, -10, 0, 25)
 Plugins.Name = "Plugins"
 Plugins.Parent = SettingsHolder
@@ -4225,6 +4236,14 @@ ColorsButton.MouseButton1Click:Connect(function()
 	end
 end)
 
+PetsButton.MouseButton1Click:Connect(function()
+	local ok, err = pcall(function() NeverYieldPets.open() end)
+	if not ok then
+		pcall(function() NeverYieldPets.close() end)
+		notify('Pet Hub', 'Could not open: ' .. tostring(err))
+	end
+end)
+
 StatsButton.MouseButton1Click:Connect(function()
 	local ok, err = pcall(function() NeverYieldStats.open() end)
 	if not ok then
@@ -5285,11 +5304,12 @@ CMDs[#CMDs + 1] = {NAME = 'weathervolume [0-3]', DESC = 'Changes how loud the we
 CMDs[#CMDs + 1] = {NAME = 'skipweather / nexttrack', DESC = 'Weather sounds change by themselves every few minutes (plus owls, wolves, thunder, chimes...); this skips to another track now'}
 CMDs[#CMDs + 1] = {NAME = 'fuckoff / unloadny', DESC = 'Completely unloads NeverYield: turns everything off and removes the GUI'}
 CMDs[#CMDs + 1] = {NAME = 'END / theend', DESC = 'A black hole (only you see it) swallows the map and you, then takes you to a new server'}
+CMDs[#CMDs + 1] = {NAME = 'moon / moonfall', DESC = 'An angry-faced moon falls on the map while a masked imp giggles at you; countdown, quakes, impact, then shop to a new server (only you see it)'}
 CMDs[#CMDs + 1] = {NAME = 'unweather / clearskies', DESC = 'Clears the weather'}
 CMDs[#CMDs + 1] = {NAME = 'confetti [amount]', DESC = 'Explodes confetti around you'}
 CMDs[#CMDs + 1] = {NAME = 'dancefloor / discofloor [size]', DESC = 'Spawns a flashing disco dance floor under you'}
 CMDs[#CMDs + 1] = {NAME = 'undancefloor', DESC = 'Removes the dance floor'}
-CMDs[#CMDs + 1] = {NAME = 'moongravity / moon [gravity]', DESC = 'Low gravity (default 30)'}
+CMDs[#CMDs + 1] = {NAME = 'moongravity / lowgravity [gravity]', DESC = 'Low gravity (default 30)'}
 CMDs[#CMDs + 1] = {NAME = 'normalgravity / unmoon', DESC = 'Restores normal gravity'}
 CMDs[#CMDs + 1] = {NAME = 'pogo / bunnyhop', DESC = 'Makes you bounce constantly'}
 CMDs[#CMDs + 1] = {NAME = 'unpogo / unbunnyhop', DESC = 'Stops bouncing'}
@@ -5323,8 +5343,6 @@ CMDs[#CMDs + 1] = {NAME = 'aura [color]', DESC = 'Glowing particle aura (rainbow
 CMDs[#CMDs + 1] = {NAME = 'unaura', DESC = 'Removes the aura'}
 CMDs[#CMDs + 1] = {NAME = 'halo [color]', DESC = 'Spinning ring of light above your head'}
 CMDs[#CMDs + 1] = {NAME = 'unhalo', DESC = 'Removes the halo'}
-CMDs[#CMDs + 1] = {NAME = 'pet / companion [name]', DESC = 'A little cube buddy that follows you around'}
-CMDs[#CMDs + 1] = {NAME = 'unpet', DESC = 'Sends your pet home'}
 CMDs[#CMDs + 1] = {NAME = 'nuke / kaboom', DESC = 'Harmless visual explosion with screen flash and shake'}
 CMDs[#CMDs + 1] = {NAME = 'fireworks [count]', DESC = 'Launches a fireworks show around you'}
 CMDs[#CMDs + 1] = {NAME = 'timelapse [speed]', DESC = 'Fast-forwards the day/night cycle'}
@@ -5333,7 +5351,7 @@ CMDs[#CMDs + 1] = {NAME = 'sunset / goldenhour', DESC = 'Warm sunset lighting'}
 CMDs[#CMDs + 1] = {NAME = 'unsunset', DESC = 'Removes the sunset'}
 CMDs[#CMDs + 1] = {NAME = 'flashlight / torch', DESC = 'Puts a flashlight on you'}
 CMDs[#CMDs + 1] = {NAME = 'unflashlight', DESC = 'Turns off the flashlight'}
-CMDs[#CMDs + 1] = {NAME = 'horror / spookymode', DESC = 'Dark spooky lighting plus a flashlight'}
+CMDs[#CMDs + 1] = {NAME = 'horror / hunt [safe]', DESC = 'Lights out, black fog, and The Watcher hunts you: it only moves when you are not looking at it. If it reaches you: jumpscare and you die (horror safe = no dying)'}
 CMDs[#CMDs + 1] = {NAME = 'unhorror', DESC = 'Turns the lights back on'}
 CMDs[#CMDs + 1] = {NAME = 'matrix', DESC = 'Green vision + low gravity. There is no spoon'}
 CMDs[#CMDs + 1] = {NAME = 'unmatrix / bluepill', DESC = 'Leaves the matrix'}
@@ -5425,6 +5443,11 @@ CMDs[#CMDs + 1] = {NAME = 'midas / goldtouch', DESC = 'Everything you touch (and
 CMDs[#CMDs + 1] = {NAME = 'unmidas', DESC = 'Turns everything back to normal'}
 CMDs[#CMDs + 1] = {NAME = 'diamond / diamondrush [seconds]', DESC = 'Mini-game: diamonds rain from the sky, collect them before time runs out (pink = 3, golden = 10). Music, popups and a saved best score'}
 CMDs[#CMDs + 1] = {NAME = 'undiamond', DESC = 'Stops a Diamond Rush round'}
+CMDs[#CMDs + 1] = {NAME = '--- PET HUB ---', DESC = ''}
+CMDs[#CMDs + 1] = {NAME = 'pets / pethub / pet [tab]', DESC = 'Opens the Pet Hub (also in Settings): hatch eggs, collect 10 species and 11 skins, feed, level up (to 50), rename and breed pets. Tabs: pets, eggs, shop, breed, index'}
+CMDs[#CMDs + 1] = {NAME = 'unpet', DESC = 'Sends all following pets back to the Pet Hub'}
+CMDs[#CMDs + 1] = {NAME = 'feedpets / feedall', DESC = 'Feeds your following pets with the cheapest food you have'}
+CMDs[#CMDs + 1] = {NAME = 'petcoins', DESC = 'Shows your pet coins (pets find coins, walking with pets, daily reward, Diamond Rush)'}
 CMDs[#CMDs + 1] = {NAME = '--- STATS TRACKER ---', DESC = ''}
 CMDs[#CMDs + 1] = {NAME = 'stats / mystats [tab]', DESC = '(Also a button in Settings) Your lifetime stats across every game: kills, deaths, K/D, streaks, playtime, games, chat, people, commands. Tabs: overview, combat, games, chat, people, commands'}
 CMDs[#CMDs + 1] = {NAME = 'killcount / kd', DESC = 'Quick kills and deaths for this server and all time'}
@@ -14144,7 +14167,7 @@ addcmd('undancefloor',{'undiscofloor','nodancefloor'},function(args, speaker)
 end)
 
 -- Movement tricks
-addcmd('moongravity',{'moon','lowgravity'},function(args, speaker)
+addcmd('moongravity',{'lowgravity','moongrav'},function(args, speaker)
 	WackyState.saved.gravity = WackyState.saved.gravity or workspace.Gravity
 	workspace.Gravity = WackyState.num(args[1], 30)
 end)
@@ -14184,12 +14207,14 @@ addcmd('moonwalk',{},function(args, speaker)
 			root.CFrame = CFrame.lookAt(pos, pos - Vector3.new(dir.X, 0, dir.Z))
 		end
 	end))
+	WackyState.limbOn('moonwalklegs', args[1])
 	notify('Moonwalk', 'Hee-hee! Walk around to moonwalk. Use unmoonwalk to stop.')
 end)
 
 addcmd('unmoonwalk',{'nomoonwalk'},function(args, speaker)
 	if not WackyState.conns.moonwalk then return end
 	WackyState.disconnect("moonwalk")
+	WackyState.limbOff('moonwalklegs')
 	local hum = speaker.Character and speaker.Character:FindFirstChildOfClass("Humanoid")
 	if hum then
 		hum.AutoRotate = true
@@ -14641,73 +14666,6 @@ addcmd('unhalo',{'nohalo'},function(args, speaker)
 	WackyState.clear("halo")
 end)
 
--- Pet companion
-WackyState.petNames = {"Sir Cubes", "Blocky", "Mr. Bobble", "Lil Noob", "Sparkles", "Captain Oof", "Pebble", "Nugget"}
-
-addcmd('pet',{'companion'},function(args, speaker)
-	local name = getstring(1, args)
-	if name == "" then
-		name = WackyState.pick(WackyState.petNames)
-	end
-	WackyState.disconnect("pet")
-	WackyState.clear("pet")
-	local body = WackyState.track("pet", Instance.new("Part"))
-	body.Name = randomString()
-	body.Size = Vector3.new(1.4, 1.4, 1.4)
-	body.Material = Enum.Material.Neon
-	body.Anchored = true
-	body.CanCollide = false
-	body.CanQuery = false
-	body.CanTouch = false
-	local face = Instance.new("SurfaceGui")
-	face.Face = Enum.NormalId.Front
-	face.Parent = body
-	local faceText = Instance.new("TextLabel")
-	faceText.Size = UDim2.new(1, 0, 1, 0)
-	faceText.BackgroundTransparency = 1
-	faceText.Text = "^_^"
-	faceText.TextScaled = true
-	faceText.Font = Enum.Font.GothamBold
-	faceText.TextColor3 = Color3.new(0, 0, 0)
-	faceText.Parent = face
-	local tag = Instance.new("BillboardGui")
-	tag.Size = UDim2.new(0, 120, 0, 24)
-	tag.StudsOffset = Vector3.new(0, 1.6, 0)
-	tag.AlwaysOnTop = true
-	tag.Parent = body
-	local tagText = Instance.new("TextLabel")
-	tagText.Size = UDim2.new(1, 0, 1, 0)
-	tagText.BackgroundTransparency = 1
-	tagText.Text = name
-	tagText.TextScaled = true
-	tagText.Font = Enum.Font.GothamBold
-	tagText.TextColor3 = Color3.new(1, 1, 1)
-	tagText.TextStrokeTransparency = 0.3
-	tagText.Parent = tag
-	body.Parent = workspace
-	local faces = {"^_^", "o_o", ":3", "^o^", "-_-", ">_<", "owo"}
-	local lastFace = 0
-	WackyState.connect("pet", RunService.Heartbeat:Connect(function()
-		local root = getRoot(speaker.Character)
-		if not root then return end
-		local t = tick()
-		local target = (root.CFrame * CFrame.new(3, 1.5 + math.sin(t * 3) * 0.4, 2)).Position
-		local pos = body.Position:Lerp(target, 0.12)
-		body.CFrame = CFrame.lookAt(pos, workspace.CurrentCamera.CFrame.Position)
-		body.Color = WackyState.rainbow(0.15)
-		if t - lastFace > 2.5 then
-			lastFace = t
-			faceText.Text = WackyState.pick(faces)
-		end
-	end))
-	notify('Pet', 'Say hi to ' .. name .. '! Use unpet to send them home.')
-end)
-
-addcmd('unpet',{'nopet'},function(args, speaker)
-	WackyState.disconnect("pet")
-	WackyState.clear("pet")
-end)
-
 -- Explosions and fireworks (visual only, no damage)
 addcmd('nuke',{'kaboom'},function(args, speaker)
 	local root = getRoot(speaker.Character)
@@ -14849,27 +14807,7 @@ addcmd('unflashlight',{'untorch','noflashlight'},function(args, speaker)
 	WackyState.forget("flashlight")
 end)
 
-addcmd('horror',{'spookymode'},function(args, speaker)
-	WackyState.lightClaim("horror", {"ClockTime", "Brightness"})
-	Lighting.ClockTime = 0
-	Lighting.Brightness = 0
-	WackyState.clear("horror")
-	local cc = WackyState.track("horror", Instance.new("ColorCorrectionEffect"))
-	cc.Name = randomString()
-	cc.Brightness = -0.2
-	cc.Contrast = 0.4
-	cc.Saturation = -0.6
-	cc.TintColor = Color3.fromRGB(255, 160, 160)
-	cc.Parent = Lighting
-	execCmd('flashlight', speaker)
-	notify('Horror', 'Something is watching you... Use unhorror to turn the lights back on.')
-end)
-
-addcmd('unhorror',{'unspookymode'},function(args, speaker)
-	WackyState.clear("horror")
-	execCmd('unflashlight', speaker)
-	WackyState.lightRelease("horror")
-end)
+-- horror / unhorror live in HORROR 2.0 further down
 
 addcmd('matrix',{'thereisnospoon'},function(args, speaker)
 	execCmd('filter nightvision', speaker)
@@ -14955,10 +14893,10 @@ addcmd('stopwatch',{'timer'},function(args, speaker)
 	end
 end)
 
-for _, cmd in ipairs({'skin random', 'aura', 'halo', 'pet', 'nuke', 'fireworks 6', 'timelapse 4', 'sunset', 'horror', 'matrix', 'flop', 'zoomies', 'joke', 'wouldyourather'}) do
+for _, cmd in ipairs({'skin random', 'aura', 'halo', 'nuke', 'fireworks 6', 'timelapse 4', 'sunset', 'horror safe', 'matrix', 'flop', 'zoomies', 'joke', 'wouldyourather'}) do
 	table.insert(WackyState.chaosList, cmd)
 end
-for _, cmd in ipairs({'unskin', 'unaura', 'unhalo', 'unpet', 'untimelapse', 'unsunset', 'unhorror', 'unflashlight', 'unmatrix'}) do
+for _, cmd in ipairs({'unskin', 'unaura', 'unhalo', 'untimelapse', 'unsunset', 'unhorror', 'unflashlight', 'unmatrix'}) do
 	table.insert(WackyState.undoList, cmd)
 end
 -- ================ END WACKY COMMANDS 2 ================
@@ -15274,8 +15212,10 @@ WackyState.limbFx.limbchaos = function(t, s)
 	return poses
 end
 
+-- root poses may include a small move (parent part space): used to drop to the floor or pivot at the feet
 WackyState.limbFx.lean = function(t, s)
-	return {root = CFrame.Angles(-math.rad(35 * s), 0, 0)}
+	local feet = CFrame.new(0, -3, 0)
+	return {root = feet * CFrame.Angles(-math.rad(math.min(45, 35 * s)), 0, 0) * feet:Inverse(), rs = CFrame.Angles(0.15, 0, 0.1), ls = CFrame.Angles(0.15, 0, -0.1)}
 end
 
 WackyState.limbFx.twist = function(t, s)
@@ -15283,13 +15223,108 @@ WackyState.limbFx.twist = function(t, s)
 end
 
 WackyState.limbFx.headstand = function(t, s)
-	return {root = CFrame.Angles(math.pi, 0, 0)}
+	local sway = math.sin(t * 2 * s) * 0.05
+	return {
+		root = CFrame.new(0, -0.5, 0) * CFrame.Angles(math.pi, 0, sway),
+		rs = CFrame.Angles(0, 0, 2.7), ls = CFrame.Angles(0, 0, -2.7),
+		re = CFrame.Angles(0.4, 0, 0), le = CFrame.Angles(0.4, 0, 0),
+		rh = CFrame.Angles(0, 0, -0.25), lh = CFrame.Angles(0, 0, 0.25),
+	}
 end
 
+-- Breakdance: a real routine that loops - toprock, drop into a windmill, headspin, freeze
+WackyState.breakMoves = {
+	{length = 3, pose = function(t)
+		local step = math.sin(t * 6)
+		return {
+			root = CFrame.new(0, math.abs(step) * 0.25, 0) * CFrame.Angles(0, math.sin(t * 3) * 0.45, 0),
+			rs = CFrame.Angles(step * 0.9, 0, 0.35), ls = CFrame.Angles(-step * 0.9, 0, -0.35),
+			re = CFrame.Angles(1.1, 0, 0), le = CFrame.Angles(1.1, 0, 0),
+			rh = CFrame.Angles(math.max(0, step) * 0.9, 0, -0.1), lh = CFrame.Angles(math.max(0, -step) * 0.9, 0, 0.1),
+			rk = CFrame.Angles(-math.max(0, step) * 1.1, 0, 0), lk = CFrame.Angles(-math.max(0, -step) * 1.1, 0, 0),
+			neck = CFrame.Angles(math.abs(step) * 0.15, 0, 0),
+		}
+	end},
+	{length = 4, pose = function(t)
+		-- windmill: on the floor, spinning on the back and shoulders, legs in a wide V
+		local spin = t * 7
+		return {
+			root = CFrame.new(0, -2, 0) * CFrame.Angles(0, spin, 0) * CFrame.Angles(math.pi / 2, 0, math.sin(spin) * 0.7),
+			rh = CFrame.Angles(0.2, 0, -0.9 + math.sin(spin) * 0.3), lh = CFrame.Angles(0.2, 0, 0.9 - math.sin(spin) * 0.3),
+			rs = CFrame.Angles(0, 0, 1.4), ls = CFrame.Angles(0, 0, -1.4),
+			neck = CFrame.Angles(0.3, 0, 0),
+		}
+	end},
+	{length = 3.5, pose = function(t)
+		-- headspin: upside down on the head, legs up in a V, arms bracing
+		return {
+			root = CFrame.new(0, -0.6, 0) * CFrame.Angles(0, t * 11, 0) * CFrame.Angles(math.pi, 0, 0),
+			rh = CFrame.Angles(0, 0, -0.45), lh = CFrame.Angles(0, 0, 0.45),
+			rs = CFrame.Angles(0, 0, 2.5), ls = CFrame.Angles(0, 0, -2.5),
+			re = CFrame.Angles(0.6, 0, 0), le = CFrame.Angles(0.6, 0, 0),
+		}
+	end},
+	{length = 1.8, pose = function(t)
+		-- freeze: tipped over on one hand, legs tucked
+		return {
+			root = CFrame.new(0, -1.7, 0) * CFrame.Angles(0, 0.4, math.rad(68)),
+			rs = CFrame.Angles(0, 0, 0.15), ls = CFrame.Angles(0, 0, -2.6),
+			rh = CFrame.Angles(1.3, 0, 0), lh = CFrame.Angles(-0.3, 0, 0.5),
+			rk = CFrame.Angles(-1.4, 0, 0), lk = CFrame.Angles(-0.4, 0, 0),
+			neck = CFrame.Angles(0, 0.5, -0.3),
+		}
+	end},
+}
+
 WackyState.limbFx.breakdance = function(t, s)
+	local moves = WackyState.breakMoves
+	local total = 0
+	for _, m in ipairs(moves) do total = total + m.length end
+	local clock = (t * s) % total
+	local index, into = 1, clock
+	for i, m in ipairs(moves) do
+		if into < m.length then
+			index = i
+			break
+		end
+		into = into - m.length
+	end
+	local current = moves[index].pose(t * s)
+	-- blend from the previous move for the first 0.35 s
+	local blend = math.clamp(into / 0.35, 0, 1)
+	if blend < 1 then
+		local previous = moves[(index - 2) % #moves + 1].pose(t * s)
+		local mixed = {}
+		for role, cf in pairs(current) do
+			mixed[role] = (previous[role] or CFrame.new()):Lerp(cf, blend)
+		end
+		for role, cf in pairs(previous) do
+			if not mixed[role] then mixed[role] = cf:Lerp(CFrame.new(), blend) end
+		end
+		return mixed
+	end
+	return current
+end
+
+-- moonwalk legs: one leg glides back straight while the other is bent up on its toe, then swap
+WackyState.limbFx.moonwalklegs = function(t, s)
+	local a = math.sin(t * 5 * s)
 	return {
-		root = CFrame.Angles(math.pi, t * 8 * s, 0),
-		rh = CFrame.Angles(math.sin(t * 10 * s) * 1.2, 0, 0.8), lh = CFrame.Angles(-math.sin(t * 10 * s) * 1.2, 0, -0.8),
+		rh = CFrame.Angles(-0.35 * math.max(0, a) + 0.2 * math.max(0, -a), 0, 0),
+		lh = CFrame.Angles(-0.35 * math.max(0, -a) + 0.2 * math.max(0, a), 0, 0),
+		rk = CFrame.Angles(-0.8 * math.max(0, -a), 0, 0), lk = CFrame.Angles(-0.8 * math.max(0, a), 0, 0),
+		rs = CFrame.Angles(0.2 * a, 0, 0.12), ls = CFrame.Angles(-0.2 * a, 0, -0.12),
+	}
+end
+
+-- crab pose: arms out with claws up, legs wide, claws snapping
+WackyState.limbFx.crab = function(t, s)
+	local snap = math.max(0, math.sin(t * 9 * s)) * 0.5
+	return {
+		rs = CFrame.Angles(0, 0, 1.25), ls = CFrame.Angles(0, 0, -1.25),
+		re = CFrame.Angles(1.5 - snap, 0, 0), le = CFrame.Angles(1.5 - snap, 0, 0),
+		rh = CFrame.Angles(0, 0, -0.35), lh = CFrame.Angles(0, 0, 0.35),
+		rk = CFrame.Angles(-0.45, 0, 0), lk = CFrame.Angles(-0.45, 0, 0),
 	}
 end
 
@@ -15402,12 +15437,14 @@ addcmd('crabwalk',{'sidewalk'},function(args, speaker)
 			root.CFrame = CFrame.lookAt(pos, pos + Vector3.new(-dir.Z, 0, dir.X))
 		end
 	end))
+	WackyState.limbOn('crab', args[1])
 	notify('Crab Walk', 'Scuttle scuttle. Use uncrabwalk to walk normally.')
 end)
 
 addcmd('uncrabwalk',{'unsidewalk'},function(args, speaker)
 	if not WackyState.conns.crabwalk then return end
 	WackyState.disconnect("crabwalk")
+	WackyState.limbOff('crab')
 	local hum = WackyState.humRoot(speaker)
 	if hum then hum.AutoRotate = true end
 end)
@@ -15568,6 +15605,15 @@ addcmd('dash',{},function(args, speaker)
 	local dir = (hum and hum.MoveDirection.Magnitude > 0.1) and hum.MoveDirection or root.CFrame.LookVector
 	local power = WackyState.num(args[1], 120)
 	root.AssemblyLinearVelocity = Vector3.new(dir.X * power, root.AssemblyLinearVelocity.Y + 10, dir.Z * power)
+	local flat = Vector3.new(dir.X, 0, dir.Z)
+	if flat.Magnitude > 0.05 then
+		local push = Instance.new("BodyVelocity")
+		push.Name = randomString()
+		push.MaxForce = Vector3.new(math.huge, 0, math.huge)
+		push.Velocity = flat.Unit * power * 0.6
+		push.Parent = root
+		Services.Debris:AddItem(push, 0.18)
+	end
 	local trail = Instance.new("Fire")
 	trail.Name = randomString()
 	trail.Size = 4
@@ -15580,7 +15626,24 @@ end)
 addcmd('blink',{'blinkforward'},function(args, speaker)
 	local hum, root = WackyState.humRoot(speaker)
 	if not root then return end
-	root.CFrame = root.CFrame + root.CFrame.LookVector * WackyState.num(args[1], 10)
+	local distance = WackyState.num(args[1], 10)
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = {speaker.Character}
+	local look = root.CFrame.LookVector
+	local hit = workspace:Raycast(root.Position, look * distance, params)
+	if hit then
+		distance = math.max(0, (hit.Position - root.Position).Magnitude - 2)
+	end
+	local from = root.Position
+	root.CFrame = root.CFrame + look * distance
+	-- a quick shimmer where you were
+	local ghost = Instance.new("Part")
+	ghost.Anchored, ghost.CanCollide, ghost.CanQuery, ghost.CanTouch, ghost.Transparency = true, false, false, false, 1
+	ghost.Position = from
+	ghost.Parent = workspace
+	WackyState.burst(ghost, Color3.fromRGB(200, 170, 255), Color3.fromRGB(120, 220, 255), 16, 8)
+	Services.Debris:AddItem(ghost, 1)
 end)
 
 addcmd('multijump',{'doublejump'},function(args, speaker)
@@ -18247,6 +18310,7 @@ addcmd('fuckoff',{'unloadny','unloadscript'},function(args, speaker)
 	pcall(NeverYieldTheme.closeStudio)
 	pcall(WackyState.lightReleaseAll)
 	pcall(function() NeverYieldStats.stop() end)
+	pcall(function() NeverYieldPets.stop() end)
 	for key in pairs(WackyState.conns) do
 		pcall(WackyState.disconnect, key)
 	end
@@ -18968,6 +19032,920 @@ addcmd('end',{'theend','blackholeleave'},function(args, speaker)
 end)
 -- ================== END THE END ==================
 
+-- ==================== THE MOON ====================
+-- A huge angry-faced moon (homage to Majora's Mask, built from parts) falls on the map while a masked
+-- imp giggles at you. Countdown, quakes, the map lifts off, impact fireball, then "shop" (serverhop)
+-- to a new server. Everything is client-side.
+WackyState.moonSounds = {bell = 9114352428, laugh = 9113787508, rumble = 9114222660, quake = 9114219445, drone = 9114353374, gong = 9114630466,
+	booms = {9114224593, 9114224721, 9114224432, 9114224431}}
+
+WackyState.moonPiece = function(model, root, size, cf, color, material, shape)
+	local p
+	if shape == "Wedge" then
+		p = Instance.new("WedgePart")
+	else
+		p = Instance.new("Part")
+		if shape == "Ball" then p.Shape = Enum.PartType.Ball end
+	end
+	p.Name = randomString()
+	p.Size = size
+	p.Color = color
+	p.Material = material or Enum.Material.SmoothPlastic
+	p.CanCollide = false
+	p.CanQuery = false
+	p.CanTouch = false
+	p.CastShadow = false
+	p.Massless = true
+	p.TopSurface = Enum.SurfaceType.Smooth
+	p.BottomSurface = Enum.SurfaceType.Smooth
+	p:SetAttribute("NYFx", true)
+	if shape == "Ellipsoid" then
+		local mesh = Instance.new("SpecialMesh")
+		mesh.MeshType = Enum.MeshType.Sphere
+		mesh.Parent = p
+	end
+	p.CFrame = root.CFrame * cf
+	local weld = Instance.new("WeldConstraint")
+	weld.Part0 = root
+	weld.Part1 = p
+	weld.Parent = p
+	p.Parent = model
+	return p
+end
+
+WackyState.moonRoot = function()
+	local model = Instance.new("Model")
+	model.Name = randomString()
+	local root = Instance.new("Part")
+	root.Name = randomString()
+	root.Size = Vector3.new(1, 1, 1)
+	root.Transparency = 1
+	root.Anchored = true
+	root.CanCollide = false
+	root.CanQuery = false
+	root.CanTouch = false
+	root:SetAttribute("NYFx", true)
+	root.Parent = model
+	model.PrimaryPart = root
+	return model, root
+end
+
+-- a spot on the moon's surface; x/y are across the face (front is -Z), returns a CFrame facing outwards
+WackyState.moonSurface = function(R, x, y, lift)
+	local z = -math.sqrt(math.max(0.02, 1 - x * x - y * y))
+	local d = Vector3.new(x, y, z).Unit
+	local pos = d * R * (lift or 1)
+	return CFrame.lookAt(pos, pos * 2)
+end
+
+WackyState.makeMoon = function(R)
+	local model, root = WackyState.moonRoot()
+	local piece = WackyState.moonPiece
+	local skin = Color3.fromRGB(196, 182, 150)
+	piece(model, root, Vector3.new(2, 2, 2) * R, CFrame.new(), skin, Enum.Material.Slate, "Ball")
+	-- craters everywhere except the face
+	for _ = 1, 16 do
+		local d
+		repeat
+			d = Vector3.new(math.random() * 2 - 1, math.random() * 2 - 1, math.random() * 2 - 1)
+		until d.Magnitude > 0.2 and d.Unit.Z > -0.5
+		d = d.Unit
+		local w = R * (0.18 + math.random() * 0.3)
+		local pos = d * R * 0.985
+		piece(model, root, Vector3.new(w, w, w * 0.22), CFrame.lookAt(pos, pos * 2), Color3.fromRGB(150, 138, 112), Enum.Material.Slate, "Ellipsoid")
+	end
+	local surf = WackyState.moonSurface
+	-- glaring eyes
+	for _, side in ipairs({-1, 1}) do
+		local x = 0.36 * side
+		piece(model, root, Vector3.new(0.4, 0.32, 0.12) * R, surf(R, x, 0.2, 0.99), Color3.fromRGB(250, 232, 170), Enum.Material.SmoothPlastic, "Ellipsoid")
+		piece(model, root, Vector3.new(0.21, 0.21, 0.1) * R, surf(R, x - 0.04 * side, 0.19, 1.005), Color3.fromRGB(255, 140, 20), Enum.Material.Neon, "Ellipsoid")
+		piece(model, root, Vector3.new(0.08, 0.08, 0.06) * R, surf(R, x - 0.07 * side, 0.19, 1.012), Color3.fromRGB(10, 5, 5), Enum.Material.SmoothPlastic, "Ellipsoid")
+		-- angry brow, inner end down
+		piece(model, root, Vector3.new(0.46, 0.08, 0.1) * R, surf(R, x, 0.43, 1.0) * CFrame.Angles(0, 0, math.rad(22 * side)), Color3.fromRGB(120, 100, 75), Enum.Material.Slate, "Block")
+		-- deep shadows under the eyes
+		piece(model, root, Vector3.new(0.36, 0.1, 0.08) * R, surf(R, x, 0.02, 0.995), Color3.fromRGB(140, 120, 95), Enum.Material.Slate, "Ellipsoid")
+	end
+	-- big nose
+	piece(model, root, Vector3.new(0.18, 0.34, 0.26) * R, surf(R, 0, -0.04, 1.0), Color3.fromRGB(185, 170, 138), Enum.Material.Slate, "Ellipsoid")
+	-- grimace full of teeth
+	piece(model, root, Vector3.new(0.78, 0.22, 0.1) * R, surf(R, 0, -0.42, 0.995), Color3.fromRGB(40, 18, 12), Enum.Material.SmoothPlastic, "Ellipsoid")
+	for i = 0, 8 do
+		local x = -0.32 + i * 0.08
+		piece(model, root, Vector3.new(0.065, 0.09, 0.07) * R, surf(R, x, -0.355, 1.004), Color3.fromRGB(240, 232, 205), Enum.Material.SmoothPlastic, "Block")
+		piece(model, root, Vector3.new(0.065, 0.09, 0.07) * R, surf(R, x + 0.04, -0.485, 1.004), Color3.fromRGB(240, 232, 205), Enum.Material.SmoothPlastic, "Block")
+	end
+	return model, root
+end
+
+-- the masked imp: small cloaked figure with a spiky heart-shaped mask and glowing eyes
+WackyState.makeImp = function()
+	local model, root = WackyState.moonRoot()
+	local piece = WackyState.moonPiece
+	local cloth, skin, hat = Color3.fromRGB(110, 70, 45), Color3.fromRGB(150, 110, 70), Color3.fromRGB(125, 85, 50)
+	piece(model, root, Vector3.new(1.2, 1.6, 0.9), CFrame.new(0, 0, 0), cloth, Enum.Material.Fabric, "Ellipsoid")
+	piece(model, root, Vector3.new(0.25, 1.1, 0.25), CFrame.new(-0.3, -1.2, 0), skin, nil, "Block")
+	piece(model, root, Vector3.new(0.25, 1.1, 0.25), CFrame.new(0.3, -1.2, 0), skin, nil, "Block")
+	piece(model, root, Vector3.new(0.22, 1.0, 0.22), CFrame.new(-0.75, 0.1, 0) * CFrame.Angles(0, 0, math.rad(-35)), skin, nil, "Block")
+	piece(model, root, Vector3.new(0.22, 1.0, 0.22), CFrame.new(0.75, 0.1, 0) * CFrame.Angles(0, 0, math.rad(35)), skin, nil, "Block")
+	piece(model, root, Vector3.new(0.9, 0.9, 0.9), CFrame.new(0, 1.05, 0), skin, nil, "Ball")
+	-- pointy hat: brim + stacked rings getting smaller
+	piece(model, root, Vector3.new(1.7, 0.18, 1.7), CFrame.new(0, 1.45, 0), hat, Enum.Material.Fabric, "Ellipsoid")
+	for i = 1, 5 do
+		local w = 0.95 - i * 0.16
+		piece(model, root, Vector3.new(w, 0.22, w), CFrame.new(0, 1.5 + i * 0.2, 0.05 * i), hat, Enum.Material.Fabric, "Ellipsoid")
+	end
+	-- heart-shaped mask in front of the face
+	local maskColor, trim = Color3.fromRGB(150, 40, 120), Color3.fromRGB(240, 200, 80)
+	piece(model, root, Vector3.new(0.75, 0.9, 0.16), CFrame.new(-0.28, 1.15, -0.55) * CFrame.Angles(0, 0, math.rad(25)), maskColor, nil, "Ellipsoid")
+	piece(model, root, Vector3.new(0.75, 0.9, 0.16), CFrame.new(0.28, 1.15, -0.55) * CFrame.Angles(0, 0, math.rad(-25)), maskColor, nil, "Ellipsoid")
+	piece(model, root, Vector3.new(0.55, 0.55, 0.15), CFrame.new(0, 0.78, -0.55) * CFrame.Angles(0, 0, math.rad(45)), maskColor, nil, "Block")
+	for _, side in ipairs({-1, 1}) do
+		piece(model, root, Vector3.new(0.34, 0.34, 0.08), CFrame.new(0.27 * side, 1.18, -0.65), trim, Enum.Material.Neon, "Ellipsoid")
+		piece(model, root, Vector3.new(0.2, 0.2, 0.06), CFrame.new(0.27 * side, 1.18, -0.69), Color3.fromRGB(120, 230, 60), Enum.Material.Neon, "Ellipsoid")
+		piece(model, root, Vector3.new(0.07, 0.07, 0.04), CFrame.new(0.27 * side, 1.18, -0.72), Color3.new(0, 0, 0), nil, "Ellipsoid")
+	end
+	-- spikes around the mask
+	for i = 0, 7 do
+		local a = math.rad(-150 + i * (300 / 7))
+		local x, y = math.cos(a) * 0.72, math.sin(a) * 0.62 + 1.0
+		piece(model, root, Vector3.new(0.08, 0.32, 0.16), CFrame.new(x, y, -0.55) * CFrame.Angles(0, 0, a - math.pi / 2), trim, nil, "Wedge")
+	end
+	local glow = Instance.new("PointLight")
+	glow.Color = Color3.fromRGB(200, 255, 120)
+	glow.Range = 10
+	glow.Brightness = 1
+	glow.Parent = root
+	return model, root
+end
+
+addcmd('moon',{'moonfall','finalhours'},function(args, speaker)
+	if WackyState.mooning or WackyState.ending then return end
+	local char = speaker.Character
+	local root = getRoot(char)
+	if not root then
+		notify('Moon', 'You need a character.')
+		return
+	end
+	WackyState.mooning = true
+	local ms = WackyState.moonSounds
+	local camera = workspace.CurrentCamera
+	local folder = Instance.new("Folder")
+	folder.Name = randomString()
+	folder.Parent = workspace
+	pcall(WackyState.stopWeather, true)
+	pcall(function()
+		if PARENT and PARENT:IsA("ScreenGui") and PARENT.Name ~= "RobloxGui" then PARENT.Enabled = false end
+	end)
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = {char, folder}
+
+	local look = camera.CFrame.LookVector * Vector3.new(1, 0, 1)
+	if look.Magnitude < 0.1 then look = root.CFrame.LookVector * Vector3.new(1, 0, 1) end
+	look = look.Unit
+	local R = 180
+	local impactXZ = root.Position + look * 380
+	local hit = workspace:Raycast(Vector3.new(impactXZ.X, root.Position.Y + 80, impactXZ.Z), Vector3.new(0, -300, 0), params)
+	local groundY = hit and hit.Position.Y or (root.Position.Y - 3)
+	local impact = Vector3.new(impactXZ.X, groundY + R * 0.3, impactXZ.Z)
+	local startPos = impact + look * 900 + Vector3.new(0, 1150, 0)
+
+	-- blood-orange sky
+	WackyState.lightClaim("moon", {"ClockTime", "Brightness", "Ambient", "OutdoorAmbient", "ExposureCompensation"})
+	TweenService:Create(Lighting, TweenInfo.new(6), {ClockTime = 17.7, Ambient = Color3.fromRGB(120, 60, 40), OutdoorAmbient = Color3.fromRGB(150, 80, 50)}):Play()
+	local atmosphere = Instance.new("Atmosphere")
+	atmosphere.Name = randomString()
+	atmosphere.Density = 0.38
+	atmosphere.Color = Color3.fromRGB(255, 150, 90)
+	atmosphere.Decay = Color3.fromRGB(180, 60, 30)
+	atmosphere.Glare = 0.4
+	atmosphere.Haze = 2
+	WackyState.envSet("Atmosphere", atmosphere)
+	local cc = Instance.new("ColorCorrectionEffect")
+	cc.Name = randomString()
+	cc.TintColor = Color3.fromRGB(255, 200, 165)
+	cc.Saturation = 0.15
+	cc.Contrast = 0.15
+	cc.Parent = Lighting
+	local bloom = Instance.new("BloomEffect")
+	bloom.Name = randomString()
+	bloom.Intensity = 0.8
+	bloom.Size = 30
+	bloom.Threshold = 0.8
+	bloom.Parent = Lighting
+
+	local moon, moonRoot = WackyState.makeMoon(R)
+	moon:PivotTo(CFrame.lookAt(startPos, root.Position))
+	moon.Parent = folder
+	local imp, impRoot = WackyState.makeImp()
+	local impStart = root.Position + look * 12 + Vector3.new(0, 2.5, 0)
+	imp:PivotTo(CFrame.lookAt(impStart, root.Position + Vector3.new(0, 2.5, 0)))
+	imp.Parent = folder
+
+	local rumble = WackyState.sound(ms.rumble, nil, 0, true)
+	local drone = WackyState.sound(ms.drone, nil, 0, true)
+	TweenService:Create(drone, TweenInfo.new(5), {Volume = 0.5}):Play()
+
+	local stages = {{0, "THE MOON IS FALLING"}, {11, "24 HOURS REMAIN"}, {22, "6 HOURS REMAIN"}, {32, "1 HOUR REMAINS"}, {41, "MINUTES REMAIN"}}
+	local stageIndex = 0
+	local fallTime = 50
+	local shake = 0
+	WackyState.bindCam("moon", function()
+		if shake > 0 then
+			camera.CFrame = camera.CFrame * CFrame.new((math.random() - 0.5) * shake, (math.random() - 0.5) * shake, 0)
+		end
+	end)
+
+	-- the map, nearest to the impact first (player characters are left alone)
+	local playerChars = {}
+	for _, plr in ipairs(Players:GetPlayers()) do
+		if plr.Character then playerChars[plr.Character] = true end
+	end
+	local queue = {}
+	for i, inst in ipairs(workspace:GetDescendants()) do
+		if inst:IsA("BasePart") and not inst:IsA("Terrain") and not inst:IsDescendantOf(folder) and not inst:IsDescendantOf(camera) and not inst:GetAttribute("NYFx") then
+			local owner, anc = false, inst.Parent
+			while anc and anc ~= workspace do
+				if playerChars[anc] then owner = true break end
+				anc = anc.Parent
+			end
+			if not owner then
+				table.insert(queue, {part = inst, dist = (inst.Position - impact).Magnitude})
+			end
+		end
+		if i % 5000 == 0 then task.wait() end
+	end
+	table.sort(queue, function(a, b) return a.dist < b.dist end)
+	local lifted, flying = 0, {}
+
+	local function launch(entry, now, power)
+		local part = entry.part
+		if not part.Parent then return end
+		pcall(function()
+			part.Anchored = true
+			part.CanCollide = false
+			part.CanQuery = false
+			part.CanTouch = false
+		end)
+		if #flying > 450 then
+			pcall(function() part:Destroy() end)
+			return
+		end
+		local away = part.Position - impact
+		away = Vector3.new(away.X, 0, away.Z)
+		away = away.Magnitude > 0.1 and away.Unit or Vector3.new(1, 0, 0)
+		table.insert(flying, {part = part, from = part.CFrame, start = now, color = part.Color, power = power,
+			vel = away * power * (0.6 + math.random() * 0.6) + Vector3.new(0, power * (0.5 + math.random()), 0),
+			spin = Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5) * 6, trans = part.Transparency})
+	end
+
+	local start = tick()
+	local phase = "fall"
+	local finished = false
+	WackyState.connect("moon", RunService.Heartbeat:Connect(function(dt)
+		local now = tick()
+		local t = now - start
+		local r = getRoot(speaker.Character)
+
+		-- countdown with a bell toll
+		local nextStage = stages[stageIndex + 1]
+		if nextStage and t >= nextStage[1] then
+			stageIndex = stageIndex + 1
+			WackyState.sound(ms.bell, nil, 0.9, false, 1 - stageIndex * 0.06)
+			local label = WackyState.bigLabel(nextStage[2], Color3.fromRGB(255, 225, 190))
+			label.Font = Enum.Font.Fantasy
+			TweenService:Create(label, TweenInfo.new(3.5), {TextTransparency = 1, TextStrokeTransparency = 1}):Play()
+			Services.Debris:AddItem(label, 3.6)
+		end
+
+		-- the imp giggles, then flies up to the moon
+		if imp.Parent then
+			if t < 9 then
+				local bob = math.sin(t * 2.5) * 0.4
+				local target = r and (r.Position + Vector3.new(0, 2.5, 0)) or impStart
+				imp:PivotTo(CFrame.lookAt(impStart + Vector3.new(0, bob, 0), target) * CFrame.Angles(0, 0, math.sin(t * 1.7) * 0.15))
+				if math.floor(t / 2.8) ~= math.floor((t - dt) / 2.8) then
+					WackyState.sound(ms.laugh, impRoot, 0.9, false, 0.75 + math.random() * 0.1)
+				end
+			else
+				local p = math.clamp((t - 9) / 4, 0, 1)
+				local pos = impStart:Lerp(moonRoot.Position, p * p)
+				imp:PivotTo(CFrame.new(pos) * CFrame.Angles(0, t * 6, 0))
+				if p >= 1 then imp:Destroy() end
+			end
+		end
+
+		if phase == "fall" then
+			local p = math.clamp(t / fallTime, 0, 1)
+			local e = p ^ 2.4
+			local pos = startPos:Lerp(impact, e)
+			moon:PivotTo(CFrame.lookAt(pos, r and r.Position or impact) * CFrame.Angles(0, 0, math.sin(t * 0.5) * 0.03))
+			shake = 0.1 + e * 2.6
+			rumble.Volume = 0.2 + e * 0.8
+			bloom.Intensity = 0.8 + e * 1.2
+			cc.TintColor = Color3.fromRGB(255, math.floor(200 - e * 70), math.floor(165 - e * 90))
+			-- the map starts tearing itself up towards the moon
+			if t > 28 then
+				local target = math.floor(#queue * 0.25 * math.clamp((t - 28) / 22, 0, 1))
+				local budget = 30
+				while lifted < target and budget > 0 do
+					lifted = lifted + 1
+					budget = budget - 1
+					launch(queue[lifted], now, 18)
+				end
+			end
+			if p >= 1 then
+				phase = "impact"
+				shake = 4
+				for _, id in ipairs(ms.booms) do
+					WackyState.sound(id, nil, 1, false, 0.7 + math.random() * 0.2)
+				end
+				WackyState.sound(ms.gong, nil, 0.8, false, 0.6)
+				-- fireball and shockwave
+				local ball = WackyState.endPart(folder)
+				ball.Shape = Enum.PartType.Ball
+				ball.Material = Enum.Material.Neon
+				ball.Color = Color3.fromRGB(255, 170, 70)
+				ball.Transparency = 0.1
+				ball.Position = impact
+				TweenService:Create(ball, TweenInfo.new(3.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = Vector3.new(2048, 2048, 2048), Transparency = 0.5, Color = Color3.fromRGB(255, 90, 30)}):Play()
+				local ring = WackyState.endPart(folder)
+				ring.Shape = Enum.PartType.Cylinder
+				ring.Material = Enum.Material.Neon
+				ring.Color = Color3.fromRGB(255, 230, 180)
+				ring.Transparency = 0.2
+				ring.Size = Vector3.new(4, 10, 10)
+				ring.CFrame = CFrame.new(groundY and Vector3.new(impact.X, groundY + 2, impact.Z) or impact) * CFrame.Angles(0, 0, math.pi / 2)
+				TweenService:Create(ring, TweenInfo.new(2.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = Vector3.new(4, 2048, 2048), Transparency = 1}):Play()
+				start = now
+			end
+		elseif phase == "impact" then
+			-- everything is blown away, nearest first
+			local budget = 140
+			while lifted < #queue and budget > 0 do
+				lifted = lifted + 1
+				budget = budget - 1
+				launch(queue[lifted], now, 120)
+			end
+			shake = math.max(0.5, 4 - t)
+			if t > 1.6 and not finished then
+				finished = true
+				task.spawn(function()
+					local screen = WackyState.overlay()
+					local glow = Instance.new("Frame")
+					glow.Size = UDim2.new(1, 0, 1, 0)
+					glow.BorderSizePixel = 0
+					glow.BackgroundColor3 = Color3.fromRGB(255, 170, 90)
+					glow.BackgroundTransparency = 1
+					glow.ZIndex = 50
+					glow.Parent = screen
+					TweenService:Create(glow, TweenInfo.new(0.8), {BackgroundTransparency = 0, BackgroundColor3 = Color3.new(1, 1, 1)}):Play()
+					task.wait(1.2)
+					local black = Instance.new("Frame")
+					black.Size = UDim2.new(1, 0, 1, 0)
+					black.BorderSizePixel = 0
+					black.BackgroundColor3 = Color3.new(0, 0, 0)
+					black.ZIndex = 49
+					black.Parent = screen
+					TweenService:Create(glow, TweenInfo.new(2), {BackgroundTransparency = 1}):Play()
+					TweenService:Create(rumble, TweenInfo.new(2), {Volume = 0}):Play()
+					TweenService:Create(drone, TweenInfo.new(2), {Volume = 0}):Play()
+					WackyState.disconnect("moon")
+					WackyState.unbindCam("moon")
+					pcall(function() folder:Destroy() end)
+					local title = WackyState.bigLabel("THE MOON HAS FALLEN", Color3.fromRGB(255, 210, 170))
+					title.Font = Enum.Font.Fantasy
+					title.ZIndex = 51
+					title.Parent = screen
+					local sub = Instance.new("TextLabel")
+					sub.BackgroundTransparency = 1
+					sub.AnchorPoint = Vector2.new(0.5, 0.5)
+					sub.Position = UDim2.new(0.5, 0, 0.56, 0)
+					sub.Size = UDim2.new(0.6, 0, 0.04, 0)
+					sub.Font = Enum.Font.Gotham
+					sub.TextScaled = true
+					sub.Text = "finding a new world..."
+					sub.TextColor3 = Color3.fromRGB(255, 190, 150)
+					sub.ZIndex = 51
+					sub.Parent = screen
+					task.wait(2.5)
+					local hop = findCmd("shop") or findCmd("serverhop")
+					if hop then pcall(hop.FUNC, {}, speaker) end
+					task.wait(12)
+					sub.Text = "no new world found... rejoining this one"
+					local rj = findCmd("rejoin")
+					if rj then pcall(rj.FUNC, {}, speaker) end
+					-- still here: teleporting is blocked, so give the screen back
+					task.wait(15)
+					sub.Text = "couldn't leave this server. the map stays gone until you rejoin."
+					task.wait(3)
+					for _, obj in ipairs({black, title, sub, glow, cc, bloom, rumble, drone}) do
+						pcall(function() obj:Destroy() end)
+					end
+					WackyState.envRestore("Atmosphere")
+					pcall(function() WackyState.lightRelease("moon", 2) end)
+					pcall(function()
+						if PARENT and PARENT:IsA("ScreenGui") then PARENT.Enabled = true end
+					end)
+					WackyState.mooning = false
+					notify('Moon', 'Teleport failed, so you are still in this server. Use rejoin (or leave) to get the map back.', 10)
+				end)
+			end
+		end
+
+		-- flying debris: thrown up and away, burning as it goes
+		for i = #flying, 1, -1 do
+			local f = flying[i]
+			local age = now - f.start
+			if age > 4 or not f.part.Parent then
+				pcall(function() f.part:Destroy() end)
+				table.remove(flying, i)
+			else
+				local offset = f.vel * age + Vector3.new(0, -9 * age * age, 0) * (f.power > 50 and 0.3 or -0.6)
+				pcall(function()
+					f.part.CFrame = (f.from + offset) * CFrame.Angles(f.spin.X * age, f.spin.Y * age, f.spin.Z * age)
+					local heat = math.clamp(age / 2.5, 0, 1)
+					f.part.Color = f.color:Lerp(Color3.fromRGB(255, 140, 50), heat)
+					if heat > 0.6 and not f.burning then
+						f.burning = true
+						f.part.Material = Enum.Material.Neon
+					end
+					f.part.Transparency = math.max(f.trans, (age - 2.5) / 1.5)
+				end)
+			end
+		end
+	end))
+	notify('Moon', 'Look up.', 6)
+end)
+-- ================== END THE MOON ==================
+
+-- ==================== HORROR 2.0 ====================
+-- The lights die, black fog rolls in and The Watcher hunts you. It only moves while you are NOT
+-- looking at it (keep it in view / in your flashlight) and it walks through walls. If it reaches
+-- you: jumpscare, and your character dies. Only on your screen. "horror safe" = no dying.
+WackyState.horrorSounds = {
+	drones = {9114353372, 9114353056, 9113586892},
+	whispers = {9126214610, 9126213995, 9126214321, 9126214304, 9126214616, 9126213743},
+	creaks = {9120834836, 9120830282, 9114837821, 9120832817, 9114837202, 9120835880},
+	breath = {9114556036, 9113586144, 9113802218},
+	steps = {9114166413, 9114166629, 9114165468},
+	knock = {9114140465, 9114140362, 9114140683},
+	thump = 9119661511, static = 9113115842, burst = 9119580756, hit = 9125484743, scream = 9118843202,
+}
+WackyState.horrorLines = {"IT SEES YOU", "DON'T LOOK AWAY", "behind you", "it's getting closer", "you can't hide", "keep the light on",
+	"don't blink", "RUN", "it knows where you are", "why did you turn around", "it's faster now", "you're not alone"}
+
+WackyState.horrorFont = function()
+	local ok, font = pcall(function() return Enum.Font.Creepster end)
+	return ok and font or Enum.Font.Antique
+end
+
+-- tall, thin silhouette with glowing eyes; pivot is at its feet
+WackyState.horrorFigure = function()
+	local model = Instance.new("Model")
+	model.Name = randomString()
+	local root = Instance.new("Part")
+	root.Name = randomString()
+	root.Size = Vector3.new(1, 1, 1)
+	root.Transparency = 1
+	root.Anchored = true
+	root.CanCollide = false
+	root.CanQuery = false
+	root.CanTouch = false
+	root:SetAttribute("NYFx", true)
+	root.Parent = model
+	model.PrimaryPart = root
+	local black = Color3.fromRGB(6, 6, 8)
+	local eyes = {}
+	local function add(size, pos, rollDeg, ellipsoid, color, neon)
+		local p = Instance.new("Part")
+		p.Name = randomString()
+		p.Size = size
+		p.Color = color or black
+		p.Material = neon and Enum.Material.Neon or Enum.Material.SmoothPlastic
+		p.Reflectance = 0
+		p.CastShadow = false
+		p.CanCollide = false
+		p.CanQuery = false
+		p.CanTouch = false
+		p.Massless = true
+		p:SetAttribute("NYFx", true)
+		if ellipsoid then
+			local mesh = Instance.new("SpecialMesh")
+			mesh.MeshType = Enum.MeshType.Sphere
+			mesh.Parent = p
+		end
+		p.CFrame = root.CFrame * CFrame.new(pos) * CFrame.Angles(0, 0, math.rad(rollDeg or 0))
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0 = root
+		weld.Part1 = p
+		weld.Parent = p
+		p.Parent = model
+		return p
+	end
+	add(Vector3.new(0.45, 5.2, 0.45), Vector3.new(-0.45, 2.6, 0), 2)
+	add(Vector3.new(0.45, 5.2, 0.45), Vector3.new(0.45, 2.6, 0), -2)
+	add(Vector3.new(1.5, 3.4, 0.7), Vector3.new(0, 6.8, 0), 0)
+	add(Vector3.new(0.35, 5.8, 0.35), Vector3.new(-1.05, 5.6, 0), 6)
+	add(Vector3.new(0.35, 5.8, 0.35), Vector3.new(1.05, 5.6, 0), -6)
+	add(Vector3.new(0.5, 0.9, 0.5), Vector3.new(0, 8.9, 0), 0)
+	local head = add(Vector3.new(1.3, 1.8, 1.3), Vector3.new(0, 10, 0), 12, true)
+	for _, x in ipairs({-0.28, 0.28}) do
+		table.insert(eyes, add(Vector3.new(0.22, 0.22, 0.22), Vector3.new(x, 10.15, -0.6), 0, true, Color3.fromRGB(200, 30, 30), true))
+	end
+	local glow = Instance.new("PointLight")
+	glow.Color = Color3.fromRGB(255, 40, 40)
+	glow.Range = 8
+	glow.Brightness = 0.6
+	glow.Parent = head
+	return model, root, eyes
+end
+
+WackyState.horrorGround = function(x, z, fromY, params)
+	local hit = workspace:Raycast(Vector3.new(x, fromY + 15, z), Vector3.new(0, -70, 0), params)
+	return hit and hit.Position.Y or (fromY - 3)
+end
+
+WackyState.horrorSoundAt = function(id, root, distance, volume, pitch)
+	local a = math.random() * math.pi * 2
+	local p = Instance.new("Part")
+	p.Anchored = true
+	p.CanCollide = false
+	p.CanQuery = false
+	p.CanTouch = false
+	p.Transparency = 1
+	p.Size = Vector3.new(1, 1, 1)
+	p.Position = root.Position + Vector3.new(math.cos(a) * distance, 0, math.sin(a) * distance)
+	p.Parent = workspace
+	local s = WackyState.sound(id, p, volume, false, pitch or 1)
+	s.RollOffMinDistance = 8
+	s.RollOffMaxDistance = 140
+	Services.Debris:AddItem(p, 12)
+end
+
+WackyState.horrorJumpscare = function(speaker, h)
+	local screen = WackyState.overlay()
+	local frame = Instance.new("Frame")
+	frame.Size = UDim2.new(1, 0, 1, 0)
+	frame.BackgroundColor3 = Color3.new(0, 0, 0)
+	frame.BorderSizePixel = 0
+	frame.ZIndex = 90
+	frame.Parent = screen
+	local face = Instance.new("Frame")
+	face.AnchorPoint = Vector2.new(0.5, 0.5)
+	face.Position = UDim2.new(0.5, 0, 0.5, 0)
+	face.Size = UDim2.new(1, 0, 1, 0)
+	face.BackgroundTransparency = 1
+	face.ZIndex = 91
+	face.Parent = frame
+	local faceScale = Instance.new("UIScale")
+	faceScale.Scale = 0.55
+	faceScale.Parent = face
+	local function circle(parent, pos, size, color, z)
+		local c = Instance.new("Frame")
+		c.AnchorPoint = Vector2.new(0.5, 0.5)
+		c.Position = pos
+		c.Size = size
+		c.BackgroundColor3 = color
+		c.BorderSizePixel = 0
+		c.ZIndex = z
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(0.5, 0)
+		corner.Parent = c
+		c.Parent = parent
+		return c
+	end
+	for _, x in ipairs({0.33, 0.67}) do
+		local eye = circle(face, UDim2.new(x, 0, 0.34, 0), UDim2.new(0.2, 0, 0.26, 0), Color3.fromRGB(255, 250, 240), 92)
+		local glow = Instance.new("UIStroke")
+		glow.Color = Color3.fromRGB(255, 30, 30)
+		glow.Thickness = 10
+		glow.Transparency = 0.2
+		glow.Parent = eye
+		circle(eye, UDim2.new(0.5, 0, 0.55, 0), UDim2.new(0.18, 0, 0.14, 0), Color3.new(0, 0, 0), 93)
+	end
+	local mouth = circle(face, UDim2.new(0.5, 0, 0.72, 0), UDim2.new(0.6, 0, 0.24, 0), Color3.fromRGB(90, 0, 0), 92)
+	for i = 0, 11 do
+		for _, top in ipairs({true, false}) do
+			local tooth = Instance.new("Frame")
+			tooth.AnchorPoint = Vector2.new(0.5, 0.5)
+			tooth.Position = UDim2.new(0.08 + i * 0.077, 0, top and 0.12 or 0.88, 0)
+			tooth.Size = UDim2.new(0, 22, 0, 22)
+			tooth.Rotation = 45
+			tooth.BackgroundColor3 = Color3.fromRGB(240, 235, 220)
+			tooth.BorderSizePixel = 0
+			tooth.ZIndex = 93
+			tooth.Parent = mouth
+		end
+	end
+	local hs = WackyState.horrorSounds
+	WackyState.sound(hs.hit, nil, 1)
+	WackyState.sound(hs.scream, nil, 0.85, false, 0.75)
+	WackyState.sound(hs.burst, nil, 1)
+	TweenService:Create(faceScale, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1.25}):Play()
+	h.shakeBoost = 3
+	local start = tick()
+	while tick() - start < 1.2 do
+		face.Position = UDim2.new(0.5, math.random(-18, 18), 0.5, math.random(-18, 18))
+		RunService.RenderStepped:Wait()
+	end
+	h.shakeBoost = 0
+	h.deaths = (h.deaths or 0) + 1
+	if not h.safe then
+		pcall(function()
+			local hum = speaker.Character and speaker.Character:FindFirstChildOfClass("Humanoid")
+			if hum then hum.Health = 0 end
+		end)
+	end
+	TweenService:Create(frame, TweenInfo.new(0.8), {BackgroundTransparency = 1}):Play()
+	for _, d in ipairs(face:GetDescendants()) do
+		if d:IsA("Frame") then TweenService:Create(d, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play() end
+	end
+	Services.Debris:AddItem(frame, 0.9)
+	notify('Horror', h.safe and 'It got you... (safe mode, you live)' or ('THE WATCHER GOT YOU (' .. h.deaths .. ')'), 6)
+	-- give the next life a head start
+	task.wait(h.safe and 2 or 6)
+	if WackyState.horrorState == h then
+		local root = getRoot(speaker.Character)
+		if root then
+			local back = root.CFrame.LookVector * -90
+			h.pos = Vector3.new(root.Position.X + back.X, root.Position.Y - 3, root.Position.Z + back.Z)
+		end
+		h.start = tick() - 20
+		h.caught = false
+	end
+end
+
+addcmd('horror',{'spookymode','hunt'},function(args, speaker)
+	if WackyState.horrorState then
+		notify('Horror', 'It is already hunting you. Use unhorror to make it stop.')
+		return
+	end
+	local root = getRoot(speaker.Character)
+	if not root then return end
+	local safe = args[1] and args[1]:lower() == "safe"
+	pcall(WackyState.stopWeather, true)
+	local hs = WackyState.horrorSounds
+	local h = {safe = safe, start = tick(), sounds = {}, caught = false, danger = 0, shakeBoost = 0}
+	WackyState.horrorState = h
+	WackyState.clear("horror")
+
+	-- darkness and black fog
+	WackyState.lightClaim("horror", {"ClockTime", "Brightness", "Ambient", "OutdoorAmbient", "ExposureCompensation", "FogEnd", "FogStart", "FogColor"})
+	Lighting.ClockTime = 0
+	TweenService:Create(Lighting, TweenInfo.new(3), {Brightness = 0, Ambient = Color3.fromRGB(8, 6, 10), OutdoorAmbient = Color3.fromRGB(10, 8, 12),
+		ExposureCompensation = -0.8, FogStart = 0, FogEnd = 70, FogColor = Color3.new(0, 0, 0)}):Play()
+	local atmosphere = Instance.new("Atmosphere")
+	atmosphere.Name = randomString()
+	atmosphere.Density = 0.62
+	atmosphere.Offset = 0
+	atmosphere.Color = Color3.fromRGB(12, 8, 10)
+	atmosphere.Decay = Color3.fromRGB(25, 0, 0)
+	atmosphere.Glare = 0
+	atmosphere.Haze = 2.4
+	WackyState.envSet("Atmosphere", atmosphere)
+	local cc = WackyState.track("horror", Instance.new("ColorCorrectionEffect"))
+	cc.Name = randomString()
+	cc.Brightness = -0.08
+	cc.Contrast = 0.35
+	cc.Saturation = -0.75
+	cc.TintColor = Color3.fromRGB(255, 190, 190)
+	cc.Parent = Lighting
+	local blur = WackyState.track("horror", Instance.new("BlurEffect"))
+	blur.Name = randomString()
+	blur.Size = 0
+	blur.Parent = Lighting
+
+	-- vignette, static and creepy text on screen
+	local screen = WackyState.overlay()
+	local layer = WackyState.track("horror", Instance.new("Frame"))
+	layer.Name = randomString()
+	layer.BackgroundTransparency = 1
+	layer.Size = UDim2.new(1, 0, 1, 0)
+	layer.ZIndex = 30
+	layer.Parent = screen
+	for _, e in ipairs({{UDim2.new(0, 0, 0, 0), UDim2.new(1, 0, 0.3, 0), 90}, {UDim2.new(0, 0, 0.7, 0), UDim2.new(1, 0, 0.3, 0), 270},
+		{UDim2.new(0, 0, 0, 0), UDim2.new(0.25, 0, 1, 0), 0}, {UDim2.new(0.75, 0, 0, 0), UDim2.new(0.25, 0, 1, 0), 180}}) do
+		local edge = Instance.new("Frame")
+		edge.BorderSizePixel = 0
+		edge.BackgroundColor3 = Color3.new(0, 0, 0)
+		edge.Position = e[1]
+		edge.Size = e[2]
+		edge.ZIndex = 30
+		local g = Instance.new("UIGradient")
+		g.Rotation = e[3]
+		g.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.05), NumberSequenceKeypoint.new(1, 1)})
+		g.Parent = edge
+		edge.Parent = layer
+	end
+	local static = Instance.new("Frame")
+	static.BackgroundTransparency = 1
+	static.Size = UDim2.new(1, 0, 1, 0)
+	static.Visible = false
+	static.ZIndex = 31
+	static.Parent = layer
+	local specks = {}
+	for i = 1, 70 do
+		local s = Instance.new("Frame")
+		s.BorderSizePixel = 0
+		s.Size = UDim2.new(0, math.random(2, 7), 0, math.random(1, 3))
+		s.ZIndex = 31
+		s.Parent = static
+		table.insert(specks, s)
+	end
+	local line = Instance.new("TextLabel")
+	line.AnchorPoint = Vector2.new(0.5, 0.5)
+	line.Position = UDim2.new(0.5, 0, 0.78, 0)
+	line.Size = UDim2.new(0.8, 0, 0.08, 0)
+	line.BackgroundTransparency = 1
+	line.Font = WackyState.horrorFont()
+	line.TextScaled = true
+	line.TextColor3 = Color3.fromRGB(200, 20, 20)
+	line.TextStrokeTransparency = 0.4
+	line.TextTransparency = 1
+	line.ZIndex = 32
+	line.Parent = layer
+
+	-- sound bed
+	local drone = WackyState.sound(WackyState.pick(hs.drones), nil, 0, true)
+	TweenService:Create(drone, TweenInfo.new(4), {Volume = 0.5}):Play()
+	local staticLoop = WackyState.sound(hs.static, nil, 0, true)
+	h.sounds = {drone, staticLoop}
+
+	-- The Watcher appears far behind you
+	local figure, froot, eyes = WackyState.horrorFigure()
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = {speaker.Character, figure}
+	local back = root.CFrame.LookVector * -70
+	h.pos = Vector3.new(root.Position.X + back.X, WackyState.horrorGround(root.Position.X + back.X, root.Position.Z + back.Z, root.Position.Y, params), root.Position.Z + back.Z)
+	figure:PivotTo(CFrame.new(h.pos))
+	figure.Parent = workspace
+	h.figure = figure
+
+	local t0 = tick()
+	local nextWhisper, nextCreak, nextLine, nextBehind, nextFlicker, nextBeat = t0 + 6, t0 + 4, t0 + 10, t0 + 40, t0 + 5, t0
+	local light
+	WackyState.bindCam("horrorshake", function()
+		local s = (h.danger > 0.6 and (h.danger - 0.6) * 0.5 or 0) + (h.shakeBoost or 0)
+		if s > 0 then
+			local cam = workspace.CurrentCamera
+			cam.CFrame = cam.CFrame * CFrame.new((math.random() - 0.5) * s, (math.random() - 0.5) * s, 0)
+		end
+	end)
+	WackyState.connect("horror", RunService.Heartbeat:Connect(function(dt)
+		local t = tick()
+		local char = speaker.Character
+		local r = getRoot(char)
+		if not r or not figure.Parent then return end
+		params.FilterDescendantsInstances = {char, figure}
+
+		-- your flashlight (comes back after you respawn) and its flicker
+		if not light or not light.Parent then
+			light = WackyState.track("horror", Instance.new("SpotLight"))
+			light.Name = randomString()
+			light.Face = Enum.NormalId.Front
+			light.Range = 45
+			light.Angle = 40
+			light.Brightness = 4
+			light.Shadows = true
+			light.Color = Color3.fromRGB(255, 240, 220)
+			light.Parent = r
+		end
+		if t > nextFlicker then
+			nextFlicker = t + 5 + math.random() * 9
+			local l = light
+			task.spawn(function()
+				local dies = math.random() < 0.18
+				for _ = 1, math.random(2, 5) do
+					l.Enabled = false
+					task.wait(0.05 + math.random() * 0.08)
+					l.Enabled = true
+					task.wait(0.05 + math.random() * 0.12)
+				end
+				if dies then
+					l.Enabled = false
+					task.wait(1.2 + math.random())
+					l.Enabled = true
+				end
+			end)
+		end
+
+		-- is it in view? (on screen, in front of you, nothing in the way)
+		local flat = Vector3.new(h.pos.X - r.Position.X, 0, h.pos.Z - r.Position.Z)
+		local dist = flat.Magnitude
+		local cam = workspace.CurrentCamera
+		local headPos = h.pos + Vector3.new(0, 9, 0)
+		local screenPos, onScreen = cam:WorldToViewportPoint(headPos)
+		local looking = false
+		if onScreen and screenPos.Z > 0 and dist < 150 then
+			looking = workspace:Raycast(cam.CFrame.Position, headPos - cam.CFrame.Position, params) == nil
+		end
+
+		-- it moves only while you're not looking, faster as time goes on, straight through walls
+		if not looking and not h.caught then
+			local speed = math.min(17, 6 + (t - h.start) * 0.05)
+			if dist > 0.1 then
+				local step = math.min(dist, speed * dt)
+				local nx, nz = h.pos.X - flat.Unit.X * step, h.pos.Z - flat.Unit.Z * step
+				h.pos = Vector3.new(nx, WackyState.horrorGround(nx, nz, r.Position.Y, params), nz)
+			end
+		end
+		if dist > 130 then
+			local behind = r.CFrame.LookVector * -60
+			local nx, nz = r.Position.X + behind.X, r.Position.Z + behind.Z
+			h.pos = Vector3.new(nx, WackyState.horrorGround(nx, nz, r.Position.Y, params), nz)
+		end
+		local twitch = looking and CFrame.new() or CFrame.Angles(0, 0, (math.random() - 0.5) * 0.06)
+		figure:PivotTo(CFrame.lookAt(h.pos, Vector3.new(r.Position.X, h.pos.Y, r.Position.Z)) * twitch)
+		for _, e in ipairs(eyes) do
+			e.Color = looking and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(200, 30, 30)
+		end
+
+		-- the closer it is, the worse it gets
+		local danger = math.clamp(1 - (dist - 6) / 60, 0, 1)
+		h.danger = danger
+		staticLoop.Volume = danger ^ 2 * 0.5
+		cc.Saturation = -0.75 - danger * 0.25
+		cc.TintColor = Color3.fromRGB(255, math.floor(190 - danger * 120), math.floor(190 - danger * 120))
+		blur.Size = danger * 6
+		static.Visible = danger > 0.35
+		if static.Visible then
+			for _, s in ipairs(specks) do
+				s.Position = UDim2.new(math.random(), 0, math.random(), 0)
+				local g = math.random(120, 255)
+				s.BackgroundColor3 = Color3.fromRGB(g, g, g)
+				s.BackgroundTransparency = 1 - (danger - 0.35) * 0.9
+			end
+		end
+		if t > nextBeat then
+			nextBeat = t + (1.3 - danger * 0.85)
+			WackyState.sound(hs.thump, nil, 0.2 + danger * 0.6, false, 1.7)
+			task.delay(0.18, function() WackyState.sound(hs.thump, nil, 0.15 + danger * 0.5, false, 1.95) end)
+		end
+		if t > nextWhisper then
+			nextWhisper = t + math.max(4, 10 + math.random() * 14 - danger * 8)
+			WackyState.horrorSoundAt(WackyState.pick(hs.whispers), r, 8 + math.random() * 10, 0.7, 0.9 + math.random() * 0.2)
+		end
+		if t > nextCreak then
+			nextCreak = t + 9 + math.random() * 12
+			local roll = math.random()
+			local id = roll < 0.55 and WackyState.pick(hs.creaks) or roll < 0.85 and WackyState.pick(hs.steps) or WackyState.pick(hs.knock)
+			WackyState.horrorSoundAt(id, r, 10 + math.random() * 20, 0.6, 0.85 + math.random() * 0.2)
+		end
+		if t > nextLine then
+			nextLine = t + 14 + math.random() * 16
+			line.Text = WackyState.pick(WackyState.horrorLines)
+			line.Rotation = math.random(-4, 4)
+			TweenService:Create(line, TweenInfo.new(0.4), {TextTransparency = 0.05}):Play()
+			task.delay(2.2, function()
+				if line.Parent then TweenService:Create(line, TweenInfo.new(1), {TextTransparency = 1}):Play() end
+			end)
+		end
+		-- sometimes it is right behind you for a moment
+		if t > nextBehind and dist > 35 then
+			nextBehind = t + 30 + math.random() * 30
+			local ghost = figure:Clone()
+			local behind = cam.CFrame.LookVector * Vector3.new(1, 0, 1)
+			if behind.Magnitude > 0.1 then
+				behind = behind.Unit * -7
+				local gp = Vector3.new(r.Position.X + behind.X, WackyState.horrorGround(r.Position.X + behind.X, r.Position.Z + behind.Z, r.Position.Y, params), r.Position.Z + behind.Z)
+				ghost:PivotTo(CFrame.lookAt(gp, Vector3.new(r.Position.X, gp.Y, r.Position.Z)))
+				ghost.Parent = workspace
+				WackyState.sound(WackyState.pick(hs.breath), nil, 0.8, false, 0.8)
+				Services.Debris:AddItem(ghost, 1.3)
+			end
+		end
+		-- caught
+		if dist < 4.2 and not h.caught then
+			h.caught = true
+			task.spawn(WackyState.horrorJumpscare, speaker, h)
+		end
+	end))
+	notify('Horror', safe and 'The lights are out... (safe mode: it can catch you, but you live)' or
+		"Something is out there. It only moves when you're not looking. Don't let it reach you. (unhorror to stop)", 10)
+end)
+
+addcmd('unhorror',{'unspookymode','unhunt'},function(args, speaker)
+	local h = WackyState.horrorState
+	if not h then return end
+	WackyState.horrorState = nil
+	WackyState.disconnect("horror")
+	WackyState.unbindCam("horrorshake")
+	WackyState.clear("horror")
+	for _, s in ipairs(h.sounds) do
+		pcall(function()
+			TweenService:Create(s, TweenInfo.new(1.5), {Volume = 0}):Play()
+			Services.Debris:AddItem(s, 1.6)
+		end)
+	end
+	pcall(function() h.figure:Destroy() end)
+	WackyState.envRestore("Atmosphere")
+	WackyState.lightRelease("horror", 2)
+end)
+-- ================== END HORROR 2.0 ==================
+
 -- ==================== MIDAS & DIAMOND RUSH ====================
 WackyState.midasGold = Color3.fromRGB(255, 196, 48)
 WackyState.gemSounds = {9114619224, 9114618734, 9114618921, 9114619221} -- ProSoundEffects glass tinks
@@ -19309,11 +20287,15 @@ WackyState.diamondStop = function(showResults)
 		best = mg.diamondBest
 		NeverYieldStats.dirty = true
 	end)
+	local petCoins = g.score * 2
+	pcall(function()
+		if petCoins > 0 then NeverYieldPets.addCoins(petCoins) end
+	end)
 	WackyState.sound(WackyState.diamondSting, nil, 0.6)
 	local card, scale = WackyState.diamondCard(380, 250)
 	WackyState.diamondText(card, "TIME'S UP!", 14, 44, 38, Enum.Font.FredokaOne, Color3.fromRGB(190, 240, 255))
 	WackyState.diamondText(card, "\u{1F48E} " .. g.score .. " points", 64, 40, 30, Enum.Font.FredokaOne)
-	WackyState.diamondText(card, g.counts[1] .. " diamonds  |  " .. g.counts[2] .. " pink  |  " .. g.counts[3] .. " golden", 106, 22, 15, Enum.Font.Gotham, Color3.fromRGB(210, 220, 255))
+	WackyState.diamondText(card, g.counts[1] .. " diamonds  |  " .. g.counts[2] .. " pink  |  " .. g.counts[3] .. " golden" .. (petCoins > 0 and ("  |  +" .. petCoins .. " pet coins") or ""), 106, 22, 15, Enum.Font.Gotham, Color3.fromRGB(210, 220, 255))
 	WackyState.diamondText(card, newBest and "NEW BEST!" or ("Best: " .. best), 136, 30, newBest and 24 or 18, Enum.Font.FredokaOne, newBest and Color3.fromRGB(255, 215, 90) or Color3.fromRGB(200, 200, 230))
 	local close = Instance.new("TextButton")
 	close.Name = randomString()
@@ -20477,6 +21459,1707 @@ end)
 
 pcall(NeverYieldStats.start)
 -- ================== END NEVERYIELD STATS ==================
+
+-- ==================== NEVERYIELD PETS ====================
+-- Pet Hub: collect, hatch, feed, level up, reskin and breed pets. Saved in NeverYield_pets.json
+-- (executor workspace), only you see the pets. Pets are part models built from code, so they
+-- need no uploaded assets.
+NeverYieldPets = {file = "NeverYield_pets.json", dirty = false, lastSave = 0, spawned = {}, maxPets = 60}
+
+NeverYieldPets.rarities = {
+	{id = "common", name = "Common", color = Color3.fromRGB(205, 205, 215), sell = 15},
+	{id = "uncommon", name = "Uncommon", color = Color3.fromRGB(110, 230, 120), sell = 35},
+	{id = "rare", name = "Rare", color = Color3.fromRGB(90, 170, 255), sell = 80},
+	{id = "epic", name = "Epic", color = Color3.fromRGB(190, 100, 255), sell = 200},
+	{id = "legendary", name = "Legendary", color = Color3.fromRGB(255, 190, 60), sell = 500},
+	{id = "mythic", name = "Mythic", color = Color3.fromRGB(255, 90, 150), sell = 1500},
+}
+NeverYieldPets.rarityIndex = {}
+for i, r in ipairs(NeverYieldPets.rarities) do
+	NeverYieldPets.rarityIndex[r.id] = i
+end
+
+-- part = {shape, size, position, rotation (degrees), role}. Front of a pet is -Z.
+-- shapes: Ball, Block, Ellipsoid (block + sphere mesh), Wedge. roles: main, accent, eye, light, fixed (keeps its colour)
+NeverYieldPets.species = {
+	{id = "blocky", name = "Blocky", rarity = "common", main = {120, 200, 255}, accent = {255, 255, 255}, parts = {
+		{"Block", {1.6, 1.6, 1.6}, {0, 0, 0}, nil, "main"},
+		{"Ball", {0.3, 0.3, 0.3}, {-0.35, 0.2, -0.8}, nil, "eye"}, {"Ball", {0.3, 0.3, 0.3}, {0.35, 0.2, -0.8}, nil, "eye"},
+		{"Block", {0.5, 0.08, 0.05}, {0, -0.25, -0.81}, nil, "eye"},
+	}},
+	{id = "slime", name = "Slime", rarity = "common", main = {110, 230, 120}, accent = {200, 255, 200}, glass = 0.25, parts = {
+		{"Ellipsoid", {2.0, 1.4, 2.0}, {0, -0.1, 0}, nil, "main"},
+		{"Ellipsoid", {0.9, 0.5, 0.9}, {0, 0.45, 0}, nil, "accent"},
+		{"Ball", {0.3, 0.3, 0.3}, {-0.35, 0.2, -0.85}, nil, "eye"}, {"Ball", {0.3, 0.3, 0.3}, {0.35, 0.2, -0.85}, nil, "eye"},
+	}},
+	{id = "bunny", name = "Bunny", rarity = "common", main = {245, 240, 235}, accent = {255, 170, 200}, parts = {
+		{"Ellipsoid", {1.4, 1.3, 1.5}, {0, -0.3, 0}, nil, "main"},
+		{"Ball", {1.1, 1.1, 1.1}, {0, 0.55, -0.4}, nil, "main"},
+		{"Ellipsoid", {0.28, 0.95, 0.16}, {-0.25, 1.4, -0.4}, {0, 0, 8}, "main"}, {"Ellipsoid", {0.28, 0.95, 0.16}, {0.25, 1.4, -0.4}, {0, 0, -8}, "main"},
+		{"Ellipsoid", {0.14, 0.6, 0.05}, {-0.25, 1.4, -0.49}, {0, 0, 8}, "accent"}, {"Ellipsoid", {0.14, 0.6, 0.05}, {0.25, 1.4, -0.49}, {0, 0, -8}, "accent"},
+		{"Ball", {0.45, 0.45, 0.45}, {0, -0.25, 0.8}, nil, "accent"},
+		{"Ball", {0.18, 0.18, 0.18}, {-0.22, 0.65, -0.92}, nil, "eye"}, {"Ball", {0.18, 0.18, 0.18}, {0.22, 0.65, -0.92}, nil, "eye"},
+	}},
+	{id = "cat", name = "Cat", rarity = "uncommon", main = {255, 170, 90}, accent = {255, 240, 220}, parts = {
+		{"Ellipsoid", {1.2, 1.0, 1.7}, {0, -0.35, 0.1}, nil, "main"},
+		{"Ball", {1.1, 1.1, 1.1}, {0, 0.4, -0.6}, nil, "main"},
+		{"Wedge", {0.3, 0.42, 0.35}, {-0.3, 1.02, -0.55}, {0, 90, 0}, "main"}, {"Wedge", {0.3, 0.42, 0.35}, {0.3, 1.02, -0.55}, {0, -90, 0}, "main"},
+		{"Ellipsoid", {0.55, 0.4, 0.3}, {0, 0.25, -1.08}, nil, "accent"},
+		{"Ellipsoid", {0.18, 0.95, 0.18}, {0, 0.15, 1.0}, {-30, 0, 0}, "main"},
+		{"Ball", {0.2, 0.2, 0.2}, {-0.24, 0.5, -1.1}, nil, "eye"}, {"Ball", {0.2, 0.2, 0.2}, {0.24, 0.5, -1.1}, nil, "eye"},
+	}},
+	{id = "dog", name = "Dog", rarity = "uncommon", main = {200, 150, 100}, accent = {120, 80, 50}, parts = {
+		{"Ellipsoid", {1.3, 1.1, 1.8}, {0, -0.35, 0.1}, nil, "main"},
+		{"Ball", {1.15, 1.15, 1.15}, {0, 0.45, -0.65}, nil, "main"},
+		{"Ellipsoid", {0.55, 0.42, 0.55}, {0, 0.3, -1.2}, nil, "main"},
+		{"Ball", {0.2, 0.2, 0.2}, {0, 0.42, -1.48}, nil, "eye"},
+		{"Ellipsoid", {0.25, 0.75, 0.42}, {-0.58, 0.35, -0.6}, {0, 0, 15}, "accent"}, {"Ellipsoid", {0.25, 0.75, 0.42}, {0.58, 0.35, -0.6}, {0, 0, -15}, "accent"},
+		{"Ellipsoid", {0.18, 0.7, 0.18}, {0, 0.1, 1.05}, {-40, 0, 0}, "accent"},
+		{"Ball", {0.2, 0.2, 0.2}, {-0.25, 0.6, -1.15}, nil, "eye"}, {"Ball", {0.2, 0.2, 0.2}, {0.25, 0.6, -1.15}, nil, "eye"},
+	}},
+	{id = "penguin", name = "Penguin", rarity = "uncommon", main = {35, 40, 55}, accent = {250, 250, 255}, parts = {
+		{"Ellipsoid", {1.4, 1.8, 1.3}, {0, 0, 0}, nil, "main"},
+		{"Ellipsoid", {1.0, 1.35, 0.4}, {0, -0.12, -0.5}, nil, "accent"},
+		{"Ellipsoid", {0.38, 0.16, 0.42}, {0, 0.42, -0.75}, nil, "fixed", {255, 170, 40}},
+		{"Ellipsoid", {0.2, 1.0, 0.6}, {-0.75, 0, 0}, {0, 0, 15}, "main"}, {"Ellipsoid", {0.2, 1.0, 0.6}, {0.75, 0, 0}, {0, 0, -15}, "main"},
+		{"Ball", {0.2, 0.2, 0.2}, {-0.25, 0.62, -0.6}, nil, "eye"}, {"Ball", {0.2, 0.2, 0.2}, {0.25, 0.62, -0.6}, nil, "eye"},
+	}},
+	{id = "ghost", name = "Ghost", rarity = "rare", main = {240, 245, 255}, accent = {200, 210, 255}, glass = 0.3, parts = {
+		{"Ball", {1.5, 1.5, 1.5}, {0, 0.3, 0}, nil, "main"},
+		{"Ellipsoid", {1.45, 1.5, 1.45}, {0, -0.35, 0}, nil, "main"},
+		{"Ellipsoid", {0.5, 0.5, 0.5}, {0, -1.05, 0.1}, nil, "accent"},
+		{"Ellipsoid", {0.26, 0.42, 0.1}, {-0.3, 0.42, -0.72}, nil, "eye"}, {"Ellipsoid", {0.26, 0.42, 0.1}, {0.3, 0.42, -0.72}, nil, "eye"},
+		{"Ellipsoid", {0.3, 0.22, 0.1}, {0, 0.05, -0.74}, nil, "eye"},
+	}},
+	{id = "robot", name = "Robot", rarity = "rare", main = {170, 180, 195}, accent = {80, 90, 110}, parts = {
+		{"Block", {1.4, 1.2, 1.0}, {0, -0.35, 0}, nil, "main"},
+		{"Block", {1.1, 0.9, 0.9}, {0, 0.72, 0}, nil, "main"},
+		{"Block", {0.9, 0.25, 0.06}, {0, 0.78, -0.47}, nil, "light"},
+		{"Block", {0.9, 0.5, 0.06}, {0, -0.3, -0.52}, nil, "accent"},
+		{"Block", {0.08, 0.5, 0.08}, {0, 1.4, 0}, nil, "accent"},
+		{"Ball", {0.28, 0.28, 0.28}, {0, 1.72, 0}, nil, "light"},
+		{"Block", {0.25, 0.8, 0.25}, {-0.85, -0.35, 0}, nil, "accent"}, {"Block", {0.25, 0.8, 0.25}, {0.85, -0.35, 0}, nil, "accent"},
+	}},
+	{id = "fox", name = "Fox", rarity = "epic", main = {255, 120, 40}, accent = {255, 250, 245}, parts = {
+		{"Ellipsoid", {1.2, 1.0, 1.7}, {0, -0.35, 0.1}, nil, "main"},
+		{"Ball", {1.05, 1.05, 1.05}, {0, 0.4, -0.6}, nil, "main"},
+		{"Ellipsoid", {0.5, 0.36, 0.6}, {0, 0.25, -1.12}, nil, "accent"},
+		{"Wedge", {0.3, 0.55, 0.4}, {-0.3, 1.05, -0.55}, {0, 90, 0}, "main"}, {"Wedge", {0.3, 0.55, 0.4}, {0.3, 1.05, -0.55}, {0, -90, 0}, "main"},
+		{"Ellipsoid", {0.55, 0.55, 1.4}, {0, 0.1, 1.15}, {25, 0, 0}, "main"},
+		{"Ellipsoid", {0.42, 0.42, 0.5}, {0, 0.38, 1.75}, {25, 0, 0}, "accent"},
+		{"Ball", {0.16, 0.16, 0.16}, {0, 0.32, -1.42}, nil, "eye"},
+		{"Ball", {0.19, 0.19, 0.19}, {-0.23, 0.52, -1.08}, nil, "eye"}, {"Ball", {0.19, 0.19, 0.19}, {0.23, 0.52, -1.08}, nil, "eye"},
+	}},
+	{id = "dragon", name = "Dragon", rarity = "legendary", main = {90, 200, 120}, accent = {255, 210, 90}, parts = {
+		{"Ellipsoid", {1.4, 1.2, 1.9}, {0, -0.25, 0.1}, nil, "main"},
+		{"Ellipsoid", {1.0, 0.9, 1.2}, {0, 0.6, -0.8}, nil, "main"},
+		{"Ellipsoid", {0.6, 0.45, 0.6}, {0, 0.45, -1.4}, nil, "main"},
+		{"Wedge", {0.15, 0.45, 0.3}, {-0.25, 1.15, -0.6}, nil, "accent"}, {"Wedge", {0.15, 0.45, 0.3}, {0.25, 1.15, -0.6}, nil, "accent"},
+		{"Wedge", {0.1, 1.0, 1.4}, {-0.95, 0.45, 0.2}, {0, 0, 35}, "accent"}, {"Wedge", {0.1, 1.0, 1.4}, {0.95, 0.45, 0.2}, {0, 0, -35}, "accent"},
+		{"Ellipsoid", {0.35, 0.35, 1.3}, {0, -0.25, 1.4}, {15, 0, 0}, "main"},
+		{"Ellipsoid", {0.6, 0.35, 0.9}, {0, -0.45, -0.1}, nil, "accent"},
+		{"Ball", {0.2, 0.2, 0.2}, {-0.25, 0.78, -1.32}, nil, "light"}, {"Ball", {0.2, 0.2, 0.2}, {0.25, 0.78, -1.32}, nil, "light"},
+	}},
+}
+NeverYieldPets.speciesById = {}
+for _, s in ipairs(NeverYieldPets.species) do
+	NeverYieldPets.speciesById[s.id] = s
+end
+
+NeverYieldPets.skins = {
+	{id = "classic", name = "Classic", rarity = "common", price = 0},
+	{id = "candy", name = "Candy", rarity = "rare", price = 300, main = {255, 170, 215}, accent = {255, 255, 255}},
+	{id = "ice", name = "Ice", rarity = "rare", price = 300, main = {170, 220, 255}, accent = {240, 250, 255}, material = "Ice"},
+	{id = "toxic", name = "Toxic", rarity = "rare", price = 350, main = {90, 200, 60}, accent = {170, 255, 80}, accentNeon = true},
+	{id = "midnight", name = "Midnight", rarity = "rare", price = 350, main = {40, 30, 80}, accent = {160, 100, 255}, accentNeon = true},
+	{id = "lava", name = "Lava", rarity = "epic", price = 800, main = {70, 25, 15}, accent = {255, 110, 20}, material = "CrackedLava", accentNeon = true},
+	{id = "shadow", name = "Shadow", rarity = "epic", price = 800, main = {18, 18, 22}, accent = {60, 10, 15}, eye = {255, 40, 50}, eyeNeon = true},
+	{id = "diamond", name = "Diamond", rarity = "epic", price = 900, main = {165, 235, 255}, accent = {230, 250, 255}, material = "Glass", glass = 0.2},
+	{id = "gold", name = "Gold", rarity = "epic", price = 1000, main = {255, 196, 48}, accent = {255, 230, 140}, material = "Foil"},
+	{id = "galaxy", name = "Galaxy", rarity = "legendary", price = 2500, main = {40, 25, 100}, accent = {255, 120, 230}, accentNeon = true, animated = "galaxy"},
+	{id = "rainbow", name = "Rainbow", rarity = "mythic", price = 6000, main = {255, 80, 80}, accent = {255, 255, 255}, accentNeon = true, animated = "rainbow"},
+}
+NeverYieldPets.skinById = {}
+for _, s in ipairs(NeverYieldPets.skins) do
+	NeverYieldPets.skinById[s.id] = s
+end
+
+NeverYieldPets.foods = {
+	{id = "berry", name = "Berry", icon = "\u{1F353}", hunger = 15, happy = 5, xp = 5, price = 10},
+	{id = "cookie", name = "Cookie", icon = "\u{1F36A}", hunger = 25, happy = 15, xp = 12, price = 25},
+	{id = "steak", name = "Steak", icon = "\u{1F969}", hunger = 50, happy = 10, xp = 30, price = 60},
+	{id = "cake", name = "Cake", icon = "\u{1F370}", hunger = 40, happy = 45, xp = 50, price = 120},
+	{id = "apple", name = "Golden Apple", icon = "\u{1F34E}", hunger = 100, happy = 100, xp = 220, price = 500},
+}
+NeverYieldPets.foodById = {}
+for _, f in ipairs(NeverYieldPets.foods) do
+	NeverYieldPets.foodById[f.id] = f
+end
+
+NeverYieldPets.eggs = {
+	{id = "basic", name = "Basic Egg", price = 100, hatch = 15, color = {235, 225, 200}, spots = {180, 150, 110},
+		species = {common = 70, uncommon = 25, rare = 5}, skins = {common = 85, rare = 13, epic = 2}, shiny = 0.01},
+	{id = "fancy", name = "Fancy Egg", price = 400, hatch = 30, color = {150, 200, 255}, spots = {255, 150, 220},
+		species = {common = 30, uncommon = 40, rare = 22, epic = 7, legendary = 1}, skins = {common = 60, rare = 28, epic = 10, legendary = 2}, shiny = 0.02},
+	{id = "mythic", name = "Mythic Egg", price = 1500, hatch = 60, color = {60, 30, 110}, spots = {255, 200, 80},
+		species = {uncommon = 20, rare = 40, epic = 28, legendary = 12}, skins = {common = 30, rare = 35, epic = 25, legendary = 8, mythic = 2}, shiny = 0.05},
+}
+NeverYieldPets.eggById = {}
+for _, e in ipairs(NeverYieldPets.eggs) do
+	NeverYieldPets.eggById[e.id] = e
+end
+
+NeverYieldPets.traits = {
+	{id = "lucky", name = "Lucky", desc = "+50% coins found"},
+	{id = "speedy", name = "Speedy", desc = "+25% walking coins"},
+	{id = "glutton", name = "Glutton", desc = "gets hungry faster, +30% XP"},
+	{id = "sleepy", name = "Sleepy", desc = "stays happy longer"},
+	{id = "bouncy", name = "Bouncy", desc = "bounces around"},
+	{id = "tiny", name = "Tiny", desc = "extra small"},
+	{id = "giant", name = "Giant", desc = "extra big"},
+	{id = "sparkly", name = "Sparkly", desc = "always sparkles"},
+}
+NeverYieldPets.traitById = {}
+for _, t in ipairs(NeverYieldPets.traits) do
+	NeverYieldPets.traitById[t.id] = t
+end
+
+NeverYieldPets.petNames = {"Nugget", "Pebble", "Mochi", "Biscuit", "Sprout", "Pixel", "Noodle", "Waffles", "Bean", "Comet", "Pudding",
+	"Ziggy", "Pickle", "Muffin", "Taco", "Boba", "Clover", "Sir Fluff", "Captain Oof", "Gizmo", "Toast", "Jellybean", "Sushi", "Marshmallow"}
+NeverYieldPets.slots = {{count = 4, price = 1000}, {count = 5, price = 3000}}
+NeverYieldPets.coinSound = 9114619224
+NeverYieldPets.heart = "rbxassetid://249529864"
+
+-- ---------- data ----------
+NeverYieldPets.blank = function()
+	return {version = 1, coins = 200, nextId = 1, pets = {}, equipped = {}, food = {berry = 3, cookie = 1}, eggs = {},
+		skins = {classic = true}, discovered = {}, slots = 3, lastDecay = os.time(), lastDaily = "", streak = 0,
+		stats = {hatched = 0, bred = 0, fed = 0, coinsEarned = 0, released = 0}, created = os.time()}
+end
+
+NeverYieldPets.load = function()
+	local data
+	pcall(function()
+		if isfile and isfile(NeverYieldPets.file) then
+			local raw = readfile(NeverYieldPets.file)
+			local ok, decoded = pcall(function() return HttpService:JSONDecode(raw) end)
+			if ok and type(decoded) == "table" then
+				data = decoded
+			elseif type(raw) == "string" and raw ~= "" then
+				writefile("NeverYield_pets_broken_" .. os.date("%Y%m%d_%H%M%S") .. ".json", raw, true)
+			end
+		end
+	end)
+	local fresh = data == nil
+	local blank = NeverYieldPets.blank()
+	data = data or blank
+	for k, v in pairs(blank) do
+		if type(data[k]) ~= type(v) then
+			data[k] = v
+		end
+	end
+	for k, v in pairs(blank.stats) do
+		if type(data.stats[k]) ~= "number" then data.stats[k] = v end
+	end
+	data.skins.classic = true
+	-- JSON turns the equipped id list into numbers or strings; keep them as strings
+	local eq = {}
+	for _, id in ipairs(data.equipped) do
+		if data.pets[tostring(id)] then table.insert(eq, tostring(id)) end
+	end
+	data.equipped = eq
+	NeverYieldPets.data = data
+	return fresh
+end
+
+NeverYieldPets.save = function()
+	if not NeverYieldPets.data then return false end
+	local ok, encoded = pcall(function() return HttpService:JSONEncode(NeverYieldPets.data) end)
+	local wrote = false
+	if ok and encoded then
+		pcall(function()
+			wrote = writefile ~= nil and writefile(NeverYieldPets.file, encoded, true) == true
+		end)
+	end
+	NeverYieldPets.lastSave = os.clock()
+	if wrote then NeverYieldPets.dirty = false end
+	return wrote
+end
+
+NeverYieldPets.addCoins = function(amount, reason)
+	local data = NeverYieldPets.data
+	if not data or amount == 0 then return end
+	amount = math.floor(amount)
+	data.coins = math.max(0, data.coins + amount)
+	if amount > 0 then
+		data.stats.coinsEarned = data.stats.coinsEarned + amount
+	end
+	NeverYieldPets.dirty = true
+	if NeverYieldPets.refresh then pcall(NeverYieldPets.refresh) end
+end
+
+NeverYieldPets.xpNeeded = function(level)
+	return math.floor(40 * level ^ 1.4)
+end
+
+NeverYieldPets.hasTrait = function(pet, id)
+	for _, t in ipairs(pet.traits or {}) do
+		if t == id then return true end
+	end
+	return false
+end
+
+NeverYieldPets.rarityOf = function(pet)
+	-- a pet's rarity is the best of its species and its skin (shiny bumps it one step)
+	local s = NeverYieldPets.speciesById[pet.species]
+	local k = NeverYieldPets.skinById[pet.skin] or NeverYieldPets.skins[1]
+	local i = math.max(NeverYieldPets.rarityIndex[s and s.rarity or "common"] or 1, NeverYieldPets.rarityIndex[k.rarity] or 1)
+	if pet.shiny then i = math.min(#NeverYieldPets.rarities, i + 1) end
+	return NeverYieldPets.rarities[i]
+end
+
+NeverYieldPets.weighted = function(weights)
+	local total = 0
+	for _, w in pairs(weights) do total = total + w end
+	local roll = math.random() * total
+	local keys = {}
+	for k in pairs(weights) do table.insert(keys, k) end
+	table.sort(keys, function(a, b) return (NeverYieldPets.rarityIndex[a] or 0) < (NeverYieldPets.rarityIndex[b] or 0) end)
+	for _, k in ipairs(keys) do
+		roll = roll - weights[k]
+		if roll <= 0 then return k end
+	end
+	return keys[#keys]
+end
+
+NeverYieldPets.pickOf = function(list, rarity)
+	local pool = {}
+	for _, item in ipairs(list) do
+		if item.rarity == rarity then table.insert(pool, item) end
+	end
+	if #pool == 0 then pool = {list[1]} end
+	return pool[math.random(1, #pool)]
+end
+
+NeverYieldPets.randomTraits = function()
+	local t1 = NeverYieldPets.traits[math.random(1, #NeverYieldPets.traits)].id
+	local traits = {t1}
+	if math.random() < 0.3 then
+		local t2 = NeverYieldPets.traits[math.random(1, #NeverYieldPets.traits)].id
+		if t2 ~= t1 and not ((t1 == "tiny" and t2 == "giant") or (t1 == "giant" and t2 == "tiny")) then
+			table.insert(traits, t2)
+		end
+	end
+	return traits
+end
+
+NeverYieldPets.newPet = function(species, skin, shiny, traits, gen, parents)
+	local data = NeverYieldPets.data
+	local id = tostring(data.nextId)
+	data.nextId = data.nextId + 1
+	local pet = {id = id, name = NeverYieldPets.petNames[math.random(1, #NeverYieldPets.petNames)], species = species, skin = skin,
+		shiny = shiny or false, traits = traits or NeverYieldPets.randomTraits(), level = 1, xp = 0, hunger = 80, happy = 80,
+		gen = gen or 1, parents = parents or {}, born = os.time(), breedReady = 0}
+	data.pets[id] = pet
+	data.skins[skin] = true
+	data.discovered[species] = true
+	NeverYieldPets.dirty = true
+	return pet
+end
+
+NeverYieldPets.petCount = function()
+	local n = 0
+	for _ in pairs(NeverYieldPets.data.pets) do n = n + 1 end
+	return n
+end
+
+NeverYieldPets.sortedPets = function()
+	local list = {}
+	for _, pet in pairs(NeverYieldPets.data.pets) do
+		table.insert(list, pet)
+	end
+	table.sort(list, function(a, b)
+		local ea, eb = NeverYieldPets.isEquipped(a.id), NeverYieldPets.isEquipped(b.id)
+		if ea ~= eb then return ea end
+		local ra, rb = NeverYieldPets.rarityIndex[NeverYieldPets.rarityOf(a).id], NeverYieldPets.rarityIndex[NeverYieldPets.rarityOf(b).id]
+		if ra ~= rb then return ra > rb end
+		if a.level ~= b.level then return a.level > b.level end
+		return tonumber(a.id) < tonumber(b.id)
+	end)
+	return list
+end
+
+NeverYieldPets.isEquipped = function(id)
+	for _, e in ipairs(NeverYieldPets.data.equipped) do
+		if e == id then return true end
+	end
+	return false
+end
+
+-- hunger and happiness drain over real time (also while you're offline, up to a day)
+NeverYieldPets.decay = function()
+	local data = NeverYieldPets.data
+	local now = os.time()
+	local minutes = math.clamp((now - (data.lastDecay or now)) / 60, 0, 1440)
+	data.lastDecay = now
+	if minutes <= 0 then return end
+	for _, pet in pairs(data.pets) do
+		local hungerRate = NeverYieldPets.hasTrait(pet, "glutton") and 0.9 or 0.6
+		local happyRate = NeverYieldPets.hasTrait(pet, "sleepy") and 0.15 or 0.3
+		if (pet.hunger or 0) < 20 then happyRate = happyRate * 2 end
+		pet.hunger = math.max(0, (pet.hunger or 0) - hungerRate * minutes)
+		pet.happy = math.max(0, (pet.happy or 0) - happyRate * minutes)
+	end
+	NeverYieldPets.dirty = true
+end
+
+NeverYieldPets.giveXp = function(pet, amount)
+	if pet.level >= 50 then return false end
+	if NeverYieldPets.hasTrait(pet, "glutton") then amount = amount * 1.3 end
+	if (pet.hunger or 0) < 20 then amount = amount * 0.5 end
+	pet.xp = pet.xp + amount
+	local leveled = false
+	while pet.level < 50 and pet.xp >= NeverYieldPets.xpNeeded(pet.level) do
+		pet.xp = pet.xp - NeverYieldPets.xpNeeded(pet.level)
+		pet.level = pet.level + 1
+		leveled = true
+	end
+	NeverYieldPets.dirty = true
+	if leveled then
+		notify('Pets', pet.name .. ' reached level ' .. pet.level .. '!' .. ((pet.level == 5 and ' Now it can breed and do backflips.') or (pet.level == 10 and ' It learned to spin!') or ''))
+		NeverYieldPets.effect(pet, "level")
+		if NeverYieldPets.spawned[pet.id] then
+			NeverYieldPets.despawn(pet.id)
+			NeverYieldPets.spawn(pet)
+		end
+	end
+	return leveled
+end
+
+NeverYieldPets.feed = function(pet, foodId)
+	local data = NeverYieldPets.data
+	local food = NeverYieldPets.foodById[foodId]
+	if not food or (data.food[foodId] or 0) <= 0 then
+		notify('Pets', 'You have no ' .. (food and food.name or 'food') .. '. Buy some in the Shop.')
+		return false
+	end
+	if pet.hunger >= 100 and pet.happy >= 100 then
+		notify('Pets', pet.name .. ' is full!')
+		return false
+	end
+	data.food[foodId] = data.food[foodId] - 1
+	pet.hunger = math.min(100, pet.hunger + food.hunger)
+	pet.happy = math.min(100, pet.happy + food.happy)
+	data.stats.fed = data.stats.fed + 1
+	NeverYieldPets.giveXp(pet, food.xp)
+	NeverYieldPets.effect(pet, "hearts")
+	WackyState.sound(NeverYieldPets.coinSound, nil, 0.4, false, 1.5)
+	NeverYieldPets.dirty = true
+	return true
+end
+
+NeverYieldPets.buyEgg = function(eggId)
+	local data = NeverYieldPets.data
+	local egg = NeverYieldPets.eggById[eggId]
+	if data.coins < egg.price then
+		notify('Pets', 'Not enough coins for a ' .. egg.name .. ' (' .. egg.price .. ').')
+		return false
+	end
+	if #data.eggs >= 8 then
+		notify('Pets', 'Your egg nest is full (8). Hatch some first!')
+		return false
+	end
+	NeverYieldPets.addCoins(-egg.price)
+	table.insert(data.eggs, {kind = eggId, ready = os.time() + egg.hatch})
+	notify('Pets', 'Bought a ' .. egg.name .. '! It hatches in ' .. egg.hatch .. ' seconds (Eggs tab).')
+	return true
+end
+
+-- what comes out of an egg (shop egg or bred egg)
+NeverYieldPets.rollEgg = function(egg)
+	if egg.bred then
+		return egg.species, egg.skin, egg.shiny, egg.traits, egg.gen, egg.parents
+	end
+	local def = NeverYieldPets.eggById[egg.kind] or NeverYieldPets.eggs[1]
+	local species = NeverYieldPets.pickOf(NeverYieldPets.species, NeverYieldPets.weighted(def.species)).id
+	local skin = NeverYieldPets.pickOf(NeverYieldPets.skins, NeverYieldPets.weighted(def.skins)).id
+	return species, skin, math.random() < def.shiny, nil, 1, {}
+end
+
+NeverYieldPets.hatch = function(index)
+	local data = NeverYieldPets.data
+	local egg = data.eggs[index]
+	if not egg then return end
+	if os.time() < egg.ready then
+		notify('Pets', 'Not ready yet! ' .. (egg.ready - os.time()) .. ' seconds left.')
+		return
+	end
+	if NeverYieldPets.petCount() >= NeverYieldPets.maxPets then
+		notify('Pets', 'Your pet storage is full (' .. NeverYieldPets.maxPets .. '). Release a pet first.')
+		return
+	end
+	table.remove(data.eggs, index)
+	local species, skin, shiny, traits, gen, parents = NeverYieldPets.rollEgg(egg)
+	local newSpecies = not data.discovered[species]
+	local pet = NeverYieldPets.newPet(species, skin, shiny, traits, gen, parents)
+	data.stats.hatched = data.stats.hatched + 1
+	if #data.equipped < data.slots then
+		NeverYieldPets.equip(pet.id)
+	end
+	NeverYieldPets.save()
+	pcall(NeverYieldPets.hatchPopup, egg, pet, newSpecies)
+	if NeverYieldPets.refresh then pcall(NeverYieldPets.refresh) end
+end
+
+-- Breeding: species from either parent (sometimes a surprise), skin from either parent with a mutation chance
+NeverYieldPets.breedCost = 100
+NeverYieldPets.canBreed = function(pet)
+	return pet and pet.level >= 5 and os.time() >= (pet.breedReady or 0)
+end
+
+NeverYieldPets.breed = function(a, b)
+	local data = NeverYieldPets.data
+	if not (a and b) or a.id == b.id then
+		notify('Pets', 'Pick two different pets.')
+		return false
+	end
+	if not (NeverYieldPets.canBreed(a) and NeverYieldPets.canBreed(b)) then
+		notify('Pets', 'Both pets need to be level 5+ and rested.')
+		return false
+	end
+	if data.coins < NeverYieldPets.breedCost then
+		notify('Pets', 'Breeding costs ' .. NeverYieldPets.breedCost .. ' coins.')
+		return false
+	end
+	if #data.eggs >= 8 then
+		notify('Pets', 'Your egg nest is full (8). Hatch some first!')
+		return false
+	end
+	NeverYieldPets.addCoins(-NeverYieldPets.breedCost)
+	local roll = math.random()
+	local species
+	if roll < 0.45 then
+		species = a.species
+	elseif roll < 0.9 then
+		species = b.species
+	else
+		-- surprise: a species at least as rare as the rarer parent
+		local best = math.max(NeverYieldPets.rarityIndex[NeverYieldPets.speciesById[a.species].rarity], NeverYieldPets.rarityIndex[NeverYieldPets.speciesById[b.species].rarity])
+		local pool = {}
+		for _, s in ipairs(NeverYieldPets.species) do
+			if NeverYieldPets.rarityIndex[s.rarity] >= best then table.insert(pool, s.id) end
+		end
+		species = pool[math.random(1, #pool)]
+	end
+	local skin = math.random() < 0.5 and a.skin or b.skin
+	local gen = math.max(a.gen or 1, b.gen or 1) + 1
+	if math.random() < 0.15 + math.min(0.15, gen * 0.01) then
+		local weights = {common = 40, rare = 35, epic = 18, legendary = 6, mythic = 1}
+		skin = NeverYieldPets.pickOf(NeverYieldPets.skins, NeverYieldPets.weighted(weights)).id
+	end
+	local shiny = math.random() < ((a.shiny or b.shiny) and 0.1 or 0.02)
+	local traits = {}
+	for _, parent in ipairs({a, b}) do
+		local list = parent.traits or {}
+		if #list > 0 and math.random() < 0.6 then
+			local t = list[math.random(1, #list)]
+			if not table.find(traits, t) then table.insert(traits, t) end
+		end
+	end
+	if #traits == 0 or math.random() < 0.15 then
+		local t = NeverYieldPets.traits[math.random(1, #NeverYieldPets.traits)].id
+		if not table.find(traits, t) then table.insert(traits, t) end
+	end
+	while #traits > 2 do table.remove(traits) end
+	if table.find(traits, "tiny") and table.find(traits, "giant") then table.remove(traits, table.find(traits, "giant")) end
+	local now = os.time()
+	a.breedReady, b.breedReady = now + 300, now + 300
+	table.insert(data.eggs, {kind = "bred", bred = true, ready = now + 120, species = species, skin = skin, shiny = shiny, traits = traits,
+		gen = gen, parents = {a.name, b.name}})
+	data.stats.bred = data.stats.bred + 1
+	NeverYieldPets.dirty = true
+	notify('Pets', a.name .. ' and ' .. b.name .. ' made an egg! It hatches in 2 minutes (Eggs tab).')
+	return true
+end
+
+-- ---------- models ----------
+NeverYieldPets.colorOf = function(t)
+	return Color3.fromRGB(t[1], t[2], t[3])
+end
+
+NeverYieldPets.build = function(pet, scale)
+	local species = NeverYieldPets.speciesById[pet.species] or NeverYieldPets.species[1]
+	local skin = NeverYieldPets.skinById[pet.skin] or NeverYieldPets.skins[1]
+	local model = Instance.new("Model")
+	model.Name = randomString()
+	local root = Instance.new("Part")
+	root.Name = randomString()
+	root.Size = Vector3.new(1, 1, 1)
+	root.Transparency = 1
+	root.Anchored = true
+	root.CanCollide = false
+	root.CanQuery = false
+	root.CanTouch = false
+	root:SetAttribute("NYFx", true)
+	root.Parent = model
+	model.PrimaryPart = root
+	local roles = {main = {}, accent = {}, eye = {}, light = {}}
+	for _, spec in ipairs(species.parts) do
+		local shape, size, pos, rot, role, fixed = spec[1], spec[2], spec[3], spec[4], spec[5], spec[6]
+		local p
+		if shape == "Wedge" then
+			p = Instance.new("WedgePart")
+		else
+			p = Instance.new("Part")
+			if shape == "Ball" then
+				p.Shape = Enum.PartType.Ball
+			end
+		end
+		p.Name = randomString()
+		p.Size = Vector3.new(size[1], size[2], size[3]) * scale
+		if shape == "Ellipsoid" then
+			local mesh = Instance.new("SpecialMesh")
+			mesh.MeshType = Enum.MeshType.Sphere
+			mesh.Parent = p
+		end
+		p.CanCollide = false
+		p.CanQuery = false
+		p.CanTouch = false
+		p.Massless = true
+		p.CastShadow = false
+		p.TopSurface = Enum.SurfaceType.Smooth
+		p.BottomSurface = Enum.SurfaceType.Smooth
+		p.Material = Enum.Material.SmoothPlastic
+		p:SetAttribute("NYFx", true)
+		local cf = CFrame.new(pos[1] * scale, pos[2] * scale, pos[3] * scale)
+		if rot then
+			cf = cf * CFrame.Angles(math.rad(rot[1]), math.rad(rot[2]), math.rad(rot[3]))
+		end
+		p.CFrame = root.CFrame * cf
+		-- colours and materials from the skin
+		if role == "fixed" then
+			p.Color = NeverYieldPets.colorOf(fixed)
+		elseif role == "eye" then
+			p.Color = skin.eye and NeverYieldPets.colorOf(skin.eye) or Color3.fromRGB(20, 20, 25)
+			if skin.eyeNeon then p.Material = Enum.Material.Neon end
+		elseif role == "light" then
+			p.Color = skin.accent and NeverYieldPets.colorOf(skin.accent) or Color3.fromRGB(90, 230, 255)
+			p.Material = Enum.Material.Neon
+		else
+			local base = role == "main" and (skin.main or species.main) or (skin.accent or species.accent)
+			p.Color = NeverYieldPets.colorOf(base)
+			if skin.material then
+				p.Material = Enum.Material[skin.material]
+			end
+			if role == "accent" and skin.accentNeon then
+				p.Material = Enum.Material.Neon
+			end
+			local glass = skin.glass or species.glass
+			if glass then
+				p.Transparency = glass
+			end
+			if skin.material == "Glass" or skin.material == "Foil" then
+				p.Reflectance = 0.2
+			end
+		end
+		if roles[role] then table.insert(roles[role], p) end
+		p.Anchored = false
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0 = root
+		weld.Part1 = p
+		weld.Parent = p
+		p.Parent = model
+	end
+	if pet.shiny or NeverYieldPets.hasTrait(pet, "sparkly") or skin.animated then
+		local sparkle = Instance.new("ParticleEmitter")
+		sparkle.Texture = WackyState.sparkleTexture or "rbxasset://textures/particles/sparkles_main.dds"
+		sparkle.Rate = pet.shiny and 8 or 4
+		sparkle.Speed = NumberRange.new(0.5, 1.5)
+		sparkle.SpreadAngle = Vector2.new(180, 180)
+		sparkle.Lifetime = NumberRange.new(0.5, 1)
+		sparkle.LightEmission = 1
+		sparkle.Size = NumberSequence.new(0.35 * scale, 0)
+		sparkle.Color = pet.shiny and ColorSequence.new(Color3.fromRGB(255, 250, 200), Color3.fromRGB(255, 200, 80)) or ColorSequence.new(Color3.new(1, 1, 1))
+		sparkle.Parent = root
+	end
+	return model, root, roles, skin
+end
+
+NeverYieldPets.scaleOf = function(pet)
+	local s = 1 + math.min(pet.level, 50) * 0.01
+	if NeverYieldPets.hasTrait(pet, "tiny") then s = s * 0.75 end
+	if NeverYieldPets.hasTrait(pet, "giant") then s = s * 1.35 end
+	if pet.shiny then s = s * 1.08 end
+	return s
+end
+
+NeverYieldPets.spawn = function(pet)
+	if NeverYieldPets.spawned[pet.id] then return end
+	local scale = NeverYieldPets.scaleOf(pet)
+	local model, root, roles, skin = NeverYieldPets.build(pet, scale)
+	local rarity = NeverYieldPets.rarityOf(pet)
+	local tag = Instance.new("BillboardGui")
+	tag.Name = randomString()
+	tag.Size = UDim2.new(0, 160, 0, 44)
+	tag.StudsOffset = Vector3.new(0, 1.9 * scale, 0)
+	tag.MaxDistance = 70
+	tag.LightInfluence = 0
+	tag.Parent = root
+	local nameLabel = Instance.new("TextLabel")
+	nameLabel.BackgroundTransparency = 1
+	nameLabel.Size = UDim2.new(1, 0, 0, 22)
+	nameLabel.Font = Enum.Font.FredokaOne
+	nameLabel.TextScaled = true
+	nameLabel.TextColor3 = rarity.color
+	nameLabel.TextStrokeTransparency = 0.3
+	nameLabel.Parent = tag
+	local barBack = Instance.new("Frame")
+	barBack.AnchorPoint = Vector2.new(0.5, 0)
+	barBack.Position = UDim2.new(0.5, 0, 0, 25)
+	barBack.Size = UDim2.new(0, 70, 0, 6)
+	barBack.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+	barBack.BorderSizePixel = 0
+	barBack.Parent = tag
+	NeverYieldPortal.corner(barBack, UDim.new(0, 3))
+	local bar = Instance.new("Frame")
+	bar.BorderSizePixel = 0
+	bar.BackgroundColor3 = Color3.fromRGB(255, 170, 70)
+	bar.Parent = barBack
+	NeverYieldPortal.corner(bar, UDim.new(0, 3))
+	local mood = Instance.new("TextLabel")
+	mood.BackgroundTransparency = 1
+	mood.Position = UDim2.new(0.5, 40, 0, 18)
+	mood.Size = UDim2.new(0, 22, 0, 22)
+	mood.TextScaled = true
+	mood.Text = ""
+	mood.Parent = tag
+	local char = Players.LocalPlayer.Character
+	local hrp = getRoot(char)
+	model:PivotTo(hrp and hrp.CFrame * CFrame.new(0, 0, 4) or CFrame.new(0, 50, 0))
+	model.Parent = workspace
+	NeverYieldPets.spawned[pet.id] = {pet = pet, model = model, root = root, roles = roles, skin = skin, scale = scale, name = nameLabel,
+		bar = bar, mood = mood, seed = math.random() * 10, nextCoin = tick() + 30 + math.random() * 40, nextTrick = tick() + 15 + math.random() * 20,
+		trick = nil, trickStart = 0, pos = model:GetPivot().Position, walked = 0}
+end
+
+NeverYieldPets.despawn = function(id)
+	local s = NeverYieldPets.spawned[id]
+	if s then
+		pcall(function() s.model:Destroy() end)
+		NeverYieldPets.spawned[id] = nil
+	end
+end
+
+NeverYieldPets.equip = function(id)
+	local data = NeverYieldPets.data
+	if NeverYieldPets.isEquipped(id) then
+		for i, e in ipairs(data.equipped) do
+			if e == id then table.remove(data.equipped, i) break end
+		end
+		NeverYieldPets.despawn(id)
+	else
+		if #data.equipped >= data.slots then
+			notify('Pets', 'All ' .. data.slots .. ' pet slots are full. Unequip one first (more slots in the Shop).')
+			return
+		end
+		table.insert(data.equipped, id)
+		if data.pets[id] then NeverYieldPets.spawn(data.pets[id]) end
+	end
+	NeverYieldPets.dirty = true
+	if NeverYieldPets.refresh then pcall(NeverYieldPets.refresh) end
+end
+
+NeverYieldPets.effect = function(pet, kind)
+	local s = NeverYieldPets.spawned[pet.id]
+	if not s then return end
+	local e = Instance.new("ParticleEmitter")
+	e.Rate = 0
+	e.SpreadAngle = Vector2.new(60, 60)
+	e.LightEmission = kind == "level" and 1 or 0.3
+	e.EmissionDirection = Enum.NormalId.Top
+	if kind == "hearts" then
+		e.Texture = NeverYieldPets.heart
+		e.Speed = NumberRange.new(3, 5)
+		e.Lifetime = NumberRange.new(0.8, 1.2)
+		e.Size = NumberSequence.new(0.6, 0)
+		e.Acceleration = Vector3.new(0, 2, 0)
+		e.Parent = s.root
+		e:Emit(8)
+	else
+		e.Texture = WackyState.sparkleTexture or "rbxasset://textures/particles/sparkles_main.dds"
+		e.Speed = NumberRange.new(6, 12)
+		e.SpreadAngle = Vector2.new(180, 180)
+		e.Lifetime = NumberRange.new(0.6, 1)
+		e.Size = NumberSequence.new(0.6, 0)
+		e.Color = ColorSequence.new(Color3.fromRGB(255, 240, 150), Color3.fromRGB(120, 220, 255))
+		e.Parent = s.root
+		e:Emit(30)
+		WackyState.sound(WackyState.diamondSting or NeverYieldPets.coinSound, nil, 0.35)
+	end
+	Services.Debris:AddItem(e, 2)
+end
+
+-- floating "+12" over a pet that found coins
+NeverYieldPets.popText = function(root, text, color)
+	local tag = Instance.new("BillboardGui")
+	tag.Size = UDim2.new(0, 100, 0, 30)
+	tag.AlwaysOnTop = true
+	tag.StudsOffset = Vector3.new(0, 2.5, 0)
+	tag.Parent = root
+	local l = Instance.new("TextLabel")
+	l.BackgroundTransparency = 1
+	l.Size = UDim2.new(1, 0, 1, 0)
+	l.Font = Enum.Font.FredokaOne
+	l.TextScaled = true
+	l.Text = text
+	l.TextColor3 = color
+	l.TextStrokeTransparency = 0.2
+	l.Parent = tag
+	TweenService:Create(tag, TweenInfo.new(1), {StudsOffset = Vector3.new(0, 5, 0)}):Play()
+	TweenService:Create(l, TweenInfo.new(1), {TextTransparency = 1, TextStrokeTransparency = 1}):Play()
+	Services.Debris:AddItem(tag, 1.1)
+end
+
+-- formation slots behind you
+NeverYieldPets.offsets = {Vector3.new(-3.2, 0, 3), Vector3.new(3.2, 0, 3), Vector3.new(0, 0, 5), Vector3.new(-5.5, 0, 5.5), Vector3.new(5.5, 0, 5.5)}
+
+NeverYieldPets.step = function(dt)
+	local data = NeverYieldPets.data
+	local char = Players.LocalPlayer.Character
+	local hrp = getRoot(char)
+	local hum = char and char:FindFirstChildOfClass("Humanoid")
+	local t = tick()
+	local moving = hum and hum.MoveDirection.Magnitude > 0.1
+	local yaw = hrp and CFrame.new(hrp.Position) * CFrame.Angles(0, select(2, hrp.CFrame:ToEulerAnglesYXZ()), 0)
+	for index, id in ipairs(data.equipped) do
+		local s = NeverYieldPets.spawned[id]
+		local pet = data.pets[id]
+		if s and pet and s.model.Parent and hrp then
+			local offset = NeverYieldPets.offsets[index] or Vector3.new(0, 0, 4 + index)
+			local target = (yaw * CFrame.new(offset)).Position
+			local floatY = hrp.Position.Y - (hum and hum.HipHeight or 2) * 0.6 + 0.4 * s.scale
+			local bounce = NeverYieldPets.hasTrait(pet, "bouncy") and 0.6 or 0.25
+			local hop = moving and math.abs(math.sin(t * 9 + s.seed)) * bounce * 1.6 or math.sin(t * 2 + s.seed) * bounce * 0.5
+			local speed = NeverYieldPets.hasTrait(pet, "speedy") and 0.2 or 0.13
+			if (pet.hunger or 0) < 20 then speed = speed * 0.6 end
+			local current = s.pos
+			local goal = Vector3.new(target.X, floatY, target.Z)
+			if (goal - current).Magnitude > 60 then current = goal end
+			local nextPos = current:Lerp(goal, math.clamp(speed * dt * 60, 0, 1))
+			local travel = ((nextPos - current) * Vector3.new(1, 0, 1)).Magnitude
+			s.walked = s.walked + travel
+			s.pos = nextPos
+			local face = hrp.CFrame.LookVector * Vector3.new(1, 0, 1)
+			if travel > 0.02 then face = (nextPos - current) * Vector3.new(1, 0, 1) end
+			if face.Magnitude < 0.01 then face = Vector3.new(0, 0, -1) end
+			local cf = CFrame.lookAt(nextPos, nextPos + face.Unit) * CFrame.new(0, hop, 0)
+			-- tricks
+			if s.trick then
+				local p = (t - s.trickStart) / 0.7
+				if p >= 1 then
+					s.trick = nil
+				elseif s.trick == "flip" then
+					cf = cf * CFrame.new(0, math.sin(p * math.pi) * 2, 0) * CFrame.Angles(-p * math.pi * 2, 0, 0)
+				elseif s.trick == "spin" then
+					cf = cf * CFrame.new(0, math.sin(p * math.pi) * 1.2, 0) * CFrame.Angles(0, p * math.pi * 2, 0)
+				else
+					cf = cf * CFrame.new(0, math.sin(p * math.pi) * 1.5, 0)
+				end
+			elseif t > s.nextTrick then
+				s.nextTrick = t + 18 + math.random() * 22
+				if (pet.happy or 0) > 50 then
+					s.trick = (pet.level >= 10 and math.random() < 0.4) and "spin" or (pet.level >= 5 and math.random() < 0.5) and "flip" or "hop"
+					s.trickStart = t
+				end
+			end
+			s.root.CFrame = cf
+			-- animated skins
+			if s.skin.animated == "rainbow" then
+				local c = Color3.fromHSV((t * 0.25 + s.seed) % 1, 0.75, 1)
+				for _, p in ipairs(s.roles.main) do p.Color = c end
+				for _, p in ipairs(s.roles.accent) do p.Color = Color3.fromHSV((t * 0.25 + s.seed + 0.5) % 1, 0.6, 1) end
+			elseif s.skin.animated == "galaxy" then
+				local c = Color3.fromHSV(0.7 + math.sin(t * 0.6 + s.seed) * 0.08, 0.8, 0.45)
+				for _, p in ipairs(s.roles.main) do p.Color = c end
+			end
+			-- tag
+			s.name.Text = pet.name .. "  Lv " .. pet.level .. (pet.shiny and " *" or "")
+			s.bar.Size = UDim2.new(math.clamp(pet.hunger / 100, 0, 1), 0, 1, 0)
+			s.bar.BackgroundColor3 = pet.hunger < 20 and Color3.fromRGB(255, 80, 80) or Color3.fromRGB(255, 170, 70)
+			s.mood.Text = pet.hunger < 20 and "\u{1F356}" or (pet.happy > 80 and "\u{1F496}" or "")
+			-- walking: xp and coins
+			if s.walked >= 12 then
+				local steps = math.floor(s.walked / 12)
+				s.walked = s.walked - steps * 12
+				NeverYieldPets.giveXp(pet, steps)
+				NeverYieldPets.walkCoins = (NeverYieldPets.walkCoins or 0) + steps * (NeverYieldPets.hasTrait(pet, "speedy") and 1.25 or 1)
+			end
+			-- finding coins
+			if t > s.nextCoin then
+				s.nextCoin = t + 40 + math.random() * 40
+				if (pet.hunger or 0) >= 20 then
+					local coins = math.random(4, 10) + pet.level
+					if NeverYieldPets.hasTrait(pet, "lucky") then coins = math.floor(coins * 1.5) end
+					NeverYieldPets.addCoins(coins)
+					NeverYieldPets.popText(s.root, "+" .. coins .. " \u{1F4B0}", Color3.fromRGB(255, 215, 80))
+					WackyState.sound(NeverYieldPets.coinSound, nil, 0.35, false, 1.3 + math.random() * 0.2)
+				end
+			end
+		elseif pet and not s then
+			NeverYieldPets.spawn(pet)
+		end
+	end
+	if (NeverYieldPets.walkCoins or 0) >= 10 then
+		local whole = math.floor(NeverYieldPets.walkCoins / 10)
+		NeverYieldPets.walkCoins = NeverYieldPets.walkCoins - whole * 10
+		NeverYieldPets.addCoins(whole)
+	end
+end
+
+-- ---------- UI ----------
+NeverYieldPets.ui = {}
+NeverYieldPets.tabs = {{"pets", "My Pets"}, {"eggs", "Eggs"}, {"shop", "Shop"}, {"breed", "Breed"}, {"index", "Index"}}
+
+NeverYieldPets.label = function(parent, props)
+	local l = Instance.new("TextLabel")
+	l.Name = randomString()
+	l.BackgroundTransparency = 1
+	l.BorderSizePixel = 0
+	l.Font = Enum.Font.GothamBold
+	l.TextSize = 13
+	l.TextColor3 = Color3.new(1, 1, 1)
+	l.ZIndex = 22
+	for k, v in pairs(props) do l[k] = v end
+	l.Parent = parent
+	return l
+end
+
+NeverYieldPets.button = function(parent, text, pos, size, color, onClick)
+	local b = Instance.new("TextButton")
+	b.Name = randomString()
+	b.Position = pos
+	b.Size = size
+	b.AutoButtonColor = true
+	b.BorderSizePixel = 0
+	b.BackgroundColor3 = color or Color3.fromRGB(60, 50, 110)
+	b.Font = Enum.Font.GothamBold
+	b.TextSize = 13
+	b.TextColor3 = Color3.new(1, 1, 1)
+	b.TextWrapped = true
+	b.Text = text
+	b.ZIndex = 23
+	NeverYieldPortal.corner(b, UDim.new(0, 10))
+	b.Parent = parent
+	if onClick then
+		b.MouseButton1Click:Connect(function()
+			local ok, err = pcall(onClick)
+			if not ok then notify('Pets', 'Error: ' .. tostring(err)) end
+		end)
+	end
+	return b
+end
+
+NeverYieldPets.bar = function(parent, pos, size, fraction, color, text)
+	local back = Instance.new("Frame")
+	back.Position = pos
+	back.Size = size
+	back.BackgroundColor3 = Color3.fromRGB(25, 22, 45)
+	back.BorderSizePixel = 0
+	back.ZIndex = 22
+	NeverYieldPortal.corner(back, UDim.new(0, 6))
+	back.Parent = parent
+	local fill = Instance.new("Frame")
+	fill.Size = UDim2.new(math.clamp(fraction, 0, 1), 0, 1, 0)
+	fill.BackgroundColor3 = color
+	fill.BorderSizePixel = 0
+	fill.ZIndex = 23
+	NeverYieldPortal.corner(fill, UDim.new(0, 6))
+	fill.Parent = back
+	NeverYieldPets.label(back, {Size = UDim2.new(1, 0, 1, 0), Text = text, TextSize = 11, ZIndex = 24})
+	return back
+end
+
+-- 3D preview of a pet (or an egg) inside the UI
+NeverYieldPets.preview = function(parent, pet, pos, size, spin)
+	local vp = Instance.new("ViewportFrame")
+	vp.Name = randomString()
+	vp.Position = pos
+	vp.Size = size
+	vp.BackgroundTransparency = 1
+	vp.Ambient = Color3.fromRGB(170, 170, 190)
+	vp.LightColor = Color3.new(1, 1, 1)
+	vp.LightDirection = Vector3.new(-1, -1.5, 1)
+	vp.ZIndex = 22
+	vp.Parent = parent
+	local model = pet and NeverYieldPets.build(pet, 1)
+	if model then
+		model:PivotTo(CFrame.new(0, 0, 0) * CFrame.Angles(0, math.rad(200), 0))
+		model.Parent = vp
+	end
+	local cam = Instance.new("Camera")
+	cam.FieldOfView = 40
+	cam.CFrame = CFrame.lookAt(Vector3.new(0, 1.6, -6.2), Vector3.new(0, 0.1, 0))
+	cam.Parent = vp
+	vp.CurrentCamera = cam
+	if spin and model then
+		table.insert(NeverYieldPets.ui.spinners, model)
+	end
+	return vp, model
+end
+
+NeverYieldPets.eggPreview = function(parent, eggDef, pos, size)
+	local vp = Instance.new("ViewportFrame")
+	vp.Position = pos
+	vp.Size = size
+	vp.BackgroundTransparency = 1
+	vp.Ambient = Color3.fromRGB(170, 170, 190)
+	vp.LightDirection = Vector3.new(-1, -1.5, 1)
+	vp.ZIndex = 22
+	vp.Parent = parent
+	local egg = Instance.new("Part")
+	egg.Size = Vector3.new(1.6, 2.1, 1.6)
+	egg.Color = NeverYieldPets.colorOf(eggDef.color)
+	egg.Material = Enum.Material.SmoothPlastic
+	egg.CFrame = CFrame.new(0, 0, 0)
+	local mesh = Instance.new("SpecialMesh")
+	mesh.MeshType = Enum.MeshType.Sphere
+	mesh.Parent = egg
+	egg.Parent = vp
+	for i = 1, 5 do
+		local spot = Instance.new("Part")
+		spot.Size = Vector3.new(0.35, 0.35, 0.12)
+		spot.Color = NeverYieldPets.colorOf(eggDef.spots)
+		local m2 = Instance.new("SpecialMesh")
+		m2.MeshType = Enum.MeshType.Sphere
+		m2.Parent = spot
+		local a = i * 1.25
+		spot.CFrame = CFrame.Angles(0, a, 0) * CFrame.new(0, (i % 3 - 1) * 0.45, -0.78)
+		spot.Parent = vp
+	end
+	local cam = Instance.new("Camera")
+	cam.FieldOfView = 40
+	cam.CFrame = CFrame.lookAt(Vector3.new(0, 0.8, -5.2), Vector3.new(0, 0, 0))
+	cam.Parent = vp
+	vp.CurrentCamera = cam
+	return vp, egg
+end
+
+NeverYieldPets.close = function()
+	WackyState.disconnect("petsUi")
+	for _, c in ipairs(NeverYieldPets.ui.drag or {}) do pcall(function() c:Disconnect() end) end
+	if NeverYieldPets.ui.screen then pcall(function() NeverYieldPets.ui.screen:Destroy() end) end
+	NeverYieldPets.ui = {}
+	NeverYieldPets.refresh = nil
+end
+
+NeverYieldPets.open = function(tab)
+	if NeverYieldPets.ui.panel and NeverYieldPets.ui.panel.Parent then
+		if tab then
+			NeverYieldPets.ui.tab = tab
+			NeverYieldPets.ui.detail = nil
+			NeverYieldPets.refresh()
+		else
+			NeverYieldPets.close()
+		end
+		return
+	end
+	NeverYieldPets.close()
+	pcall(NeverYieldPets.decay)
+	local ui = NeverYieldPets.ui
+	ui.tab, ui.page, ui.spinners = tab or "pets", 1, {}
+	local screen = Instance.new("ScreenGui")
+	screen.Name = randomString()
+	screen.ResetOnSpawn = false
+	screen.IgnoreGuiInset = true
+	screen.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	screen.DisplayOrder = 2147483645
+	if not pcall(function() screen.Parent = gethui and gethui() or COREGUI end) then
+		screen.Parent = Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")
+	end
+	ui.screen = screen
+	local panel = Instance.new("Frame")
+	panel.Name = randomString()
+	panel.AnchorPoint = Vector2.new(0.5, 0.5)
+	panel.Position = UDim2.new(0.5, 0, 0.5, 0)
+	panel.Size = UDim2.new(0, 680, 0, 460)
+	panel.BackgroundColor3 = Color3.fromRGB(22, 18, 44)
+	panel.BorderSizePixel = 0
+	panel.Active = true
+	panel.ZIndex = 20
+	NeverYieldPortal.corner(panel, UDim.new(0, 18))
+	local _, strokeGradient = NeverYieldPortal.stroke(panel, 3, 0)
+	strokeGradient.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 170, 90)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 120, 200)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 170, 90)),
+	})
+	local scale = Instance.new("UIScale")
+	scale.Scale = 0.8
+	scale.Parent = panel
+	panel.Parent = screen
+	ui.panel = panel
+	local title = NeverYieldPets.label(panel, {Position = UDim2.new(0, 20, 0, 10), Size = UDim2.new(0, 260, 0, 40), Font = Enum.Font.FredokaOne,
+		TextSize = 34, Text = "\u{1F43E} PET HUB", TextXAlignment = Enum.TextXAlignment.Left, Active = true})
+	local titleGradient = Instance.new("UIGradient")
+	titleGradient.Color = ColorSequence.new(Color3.fromRGB(255, 210, 120), Color3.fromRGB(255, 140, 210))
+	titleGradient.Parent = title
+	ui.coins = NeverYieldPets.label(panel, {Position = UDim2.new(1, -300, 0, 14), Size = UDim2.new(0, 200, 0, 32), Font = Enum.Font.FredokaOne,
+		TextSize = 24, TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = Color3.fromRGB(255, 215, 90)})
+	NeverYieldPets.button(panel, "X", UDim2.new(1, -46, 0, 14), UDim2.new(0, 32, 0, 32), Color3.fromRGB(150, 50, 80), NeverYieldPets.close)
+	ui.tabButtons = {}
+	for i, info in ipairs(NeverYieldPets.tabs) do
+		ui.tabButtons[info[1]] = NeverYieldPets.button(panel, info[2], UDim2.new(0, 20 + (i - 1) * 128, 0, 58), UDim2.new(0, 120, 0, 30), nil, function()
+			ui.tab, ui.page, ui.detail = info[1], 1, nil
+			NeverYieldPets.refresh()
+		end)
+	end
+	ui.body = Instance.new("Frame")
+	ui.body.BackgroundTransparency = 1
+	ui.body.Position = UDim2.new(0, 16, 0, 98)
+	ui.body.Size = UDim2.new(1, -32, 1, -112)
+	ui.body.ZIndex = 21
+	ui.body.Parent = panel
+
+	NeverYieldPets.refresh = function()
+		local data = NeverYieldPets.data
+		ui.coins.Text = "\u{1F4B0} " .. NeverYieldStats.num(data.coins)
+		for id, b in pairs(ui.tabButtons) do
+			b.BackgroundColor3 = id == ui.tab and Color3.fromRGB(255, 140, 90) or Color3.fromRGB(60, 50, 110)
+		end
+		ui.spinners = {}
+		for _, c in ipairs(ui.body:GetChildren()) do c:Destroy() end
+		local builder = NeverYieldPets.pages[ui.tab]
+		if ui.tab == "pets" and ui.detail then builder = NeverYieldPets.pages.detail end
+		local ok, err = pcall(builder, ui.body, ui)
+		if not ok then
+			NeverYieldPets.label(ui.body, {Size = UDim2.new(1, 0, 0, 40), Text = "Error: " .. tostring(err)})
+		end
+	end
+
+	local dragging, dragStart, startPos = false, nil, nil
+	ui.drag = {
+		title.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				dragging, dragStart, startPos = true, input.Position, panel.Position
+			end
+		end),
+		UserInputService.InputEnded:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
+		end),
+		UserInputService.InputChanged:Connect(function(input)
+			if not dragging or not panel.Parent then return end
+			if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
+			local delta = input.Position - dragStart
+			panel.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+		end),
+	}
+	local lastLive = 0
+	WackyState.connect("petsUi", RunService.RenderStepped:Connect(function()
+		if not panel.Parent then
+			NeverYieldPets.close()
+			return
+		end
+		local t = tick()
+		strokeGradient.Rotation = (t * 90) % 360
+		for _, m in ipairs(ui.spinners) do
+			if m.Parent then m:PivotTo(CFrame.Angles(0, math.rad(200) + t * 0.8, 0)) end
+		end
+		-- egg timers tick down live
+		if ui.tab == "eggs" and t - lastLive > 1 then
+			lastLive = t
+			NeverYieldPets.refresh()
+		end
+	end))
+	TweenService:Create(scale, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+	NeverYieldPets.refresh()
+end
+
+NeverYieldPets.pages = {}
+
+NeverYieldPets.pager = function(body, ui, pages, y)
+	if pages <= 1 then return end
+	NeverYieldPets.button(body, "<", UDim2.new(0.5, -90, 0, y), UDim2.new(0, 40, 0, 26), nil, function()
+		ui.page = math.max(1, ui.page - 1)
+		NeverYieldPets.refresh()
+	end)
+	NeverYieldPets.label(body, {Position = UDim2.new(0.5, -45, 0, y), Size = UDim2.new(0, 90, 0, 26), Text = ui.page .. " / " .. pages})
+	NeverYieldPets.button(body, ">", UDim2.new(0.5, 50, 0, y), UDim2.new(0, 40, 0, 26), nil, function()
+		ui.page = math.min(pages, ui.page + 1)
+		NeverYieldPets.refresh()
+	end)
+end
+
+NeverYieldPets.pages.pets = function(body, ui)
+	local data = NeverYieldPets.data
+	local list = NeverYieldPets.sortedPets()
+	NeverYieldPets.label(body, {Size = UDim2.new(1, 0, 0, 20), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(210, 200, 255),
+		Text = #list .. "/" .. NeverYieldPets.maxPets .. " pets  |  " .. #data.equipped .. "/" .. data.slots .. " following  |  click a pet for details"})
+	if #list == 0 then
+		NeverYieldPets.label(body, {Position = UDim2.new(0, 0, 0, 120), Size = UDim2.new(1, 0, 0, 40), TextSize = 18,
+			Text = "No pets yet! Buy an egg in the Shop, then hatch it in the Eggs tab."})
+		return
+	end
+	local perPage = 12
+	local pages = math.max(1, math.ceil(#list / perPage))
+	ui.page = math.clamp(ui.page, 1, pages)
+	for i = 1, perPage do
+		local pet = list[(ui.page - 1) * perPage + i]
+		if not pet then break end
+		local col, row = (i - 1) % 6, math.floor((i - 1) / 6)
+		local rarity = NeverYieldPets.rarityOf(pet)
+		local card = Instance.new("TextButton")
+		card.Name = randomString()
+		card.Text = ""
+		card.AutoButtonColor = true
+		card.Position = UDim2.new(0, col * 108, 0, 26 + row * 148)
+		card.Size = UDim2.new(0, 100, 0, 140)
+		card.BackgroundColor3 = Color3.fromRGB(38, 32, 70)
+		card.BorderSizePixel = 0
+		card.ZIndex = 21
+		NeverYieldPortal.corner(card, UDim.new(0, 12))
+		local stroke = Instance.new("UIStroke")
+		stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		stroke.Color = rarity.color
+		stroke.Thickness = NeverYieldPets.isEquipped(pet.id) and 3 or 1.5
+		stroke.Parent = card
+		card.Parent = body
+		NeverYieldPets.preview(card, pet, UDim2.new(0, 4, 0, 4), UDim2.new(1, -8, 0, 84), false)
+		NeverYieldPets.label(card, {Position = UDim2.new(0, 4, 0, 88), Size = UDim2.new(1, -8, 0, 18), Text = pet.name, TextTruncate = Enum.TextTruncate.AtEnd})
+		NeverYieldPets.label(card, {Position = UDim2.new(0, 4, 0, 106), Size = UDim2.new(1, -8, 0, 14), TextSize = 11, TextColor3 = rarity.color,
+			Text = "Lv " .. pet.level .. " " .. (pet.shiny and "Shiny " or "") .. rarity.name})
+		NeverYieldPets.bar(card, UDim2.new(0, 10, 0, 123), UDim2.new(1, -20, 0, 10), pet.hunger / 100, pet.hunger < 20 and Color3.fromRGB(255, 80, 80) or Color3.fromRGB(255, 170, 70), "")
+		if NeverYieldPets.isEquipped(pet.id) then
+			NeverYieldPets.label(card, {Position = UDim2.new(1, -26, 0, 4), Size = UDim2.new(0, 22, 0, 22), TextScaled = true, Text = "\u{1F43E}"})
+		end
+		card.MouseButton1Click:Connect(function()
+			ui.detail = pet.id
+			NeverYieldPets.refresh()
+		end)
+	end
+	NeverYieldPets.pager(body, ui, pages, 324)
+end
+
+NeverYieldPets.pages.detail = function(body, ui)
+	local data = NeverYieldPets.data
+	local pet = data.pets[ui.detail]
+	if not pet then
+		ui.detail = nil
+		NeverYieldPets.pages.pets(body, ui)
+		return
+	end
+	local species = NeverYieldPets.speciesById[pet.species]
+	local skin = NeverYieldPets.skinById[pet.skin] or NeverYieldPets.skins[1]
+	local rarity = NeverYieldPets.rarityOf(pet)
+	NeverYieldPets.button(body, "< Back", UDim2.new(0, 0, 0, 0), UDim2.new(0, 80, 0, 26), nil, function()
+		ui.detail = nil
+		NeverYieldPets.refresh()
+	end)
+	local stage = Instance.new("Frame")
+	stage.Position = UDim2.new(0, 0, 0, 34)
+	stage.Size = UDim2.new(0, 240, 0, 240)
+	stage.BackgroundColor3 = Color3.fromRGB(38, 32, 70)
+	stage.BorderSizePixel = 0
+	stage.ZIndex = 21
+	NeverYieldPortal.corner(stage, UDim.new(0, 16))
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = rarity.color
+	stroke.Thickness = 2
+	stroke.Parent = stage
+	stage.Parent = body
+	NeverYieldPets.preview(stage, pet, UDim2.new(0, 0, 0, 0), UDim2.new(1, 0, 1, 0), true)
+	-- skin picker under the preview
+	local owned = {}
+	for _, s in ipairs(NeverYieldPets.skins) do
+		if data.skins[s.id] then table.insert(owned, s.id) end
+	end
+	local function cycleSkin(dir)
+		local i = table.find(owned, pet.skin) or 1
+		pet.skin = owned[((i - 1 + dir) % #owned) + 1]
+		NeverYieldPets.dirty = true
+		if NeverYieldPets.spawned[pet.id] then
+			NeverYieldPets.despawn(pet.id)
+			NeverYieldPets.spawn(pet)
+		end
+		NeverYieldPets.refresh()
+	end
+	NeverYieldPets.button(body, "<", UDim2.new(0, 0, 0, 282), UDim2.new(0, 36, 0, 28), nil, function() cycleSkin(-1) end)
+	NeverYieldPets.label(body, {Position = UDim2.new(0, 40, 0, 282), Size = UDim2.new(0, 160, 0, 28), TextSize = 14,
+		Text = "Skin: " .. skin.name .. " (" .. #owned .. " owned)"})
+	NeverYieldPets.button(body, ">", UDim2.new(0, 204, 0, 282), UDim2.new(0, 36, 0, 28), nil, function() cycleSkin(1) end)
+
+	-- info column
+	local x = 256
+	local nameBox = Instance.new("TextBox")
+	nameBox.Position = UDim2.new(0, x, 0, 0)
+	nameBox.Size = UDim2.new(0, 260, 0, 34)
+	nameBox.BackgroundColor3 = Color3.fromRGB(38, 32, 70)
+	nameBox.BorderSizePixel = 0
+	nameBox.Font = Enum.Font.FredokaOne
+	nameBox.TextSize = 24
+	nameBox.TextColor3 = Color3.new(1, 1, 1)
+	nameBox.Text = pet.name
+	nameBox.ClearTextOnFocus = false
+	nameBox.ZIndex = 23
+	NeverYieldPortal.corner(nameBox, UDim.new(0, 10))
+	nameBox.Parent = body
+	nameBox.FocusLost:Connect(function()
+		local newName = nameBox.Text:gsub("^%s+", ""):gsub("%s+$", ""):sub(1, 20)
+		if newName ~= "" then
+			pet.name = newName
+			NeverYieldPets.dirty = true
+		end
+		NeverYieldPets.refresh()
+	end)
+	NeverYieldPets.label(body, {Position = UDim2.new(0, x + 268, 0, 0), Size = UDim2.new(0, 120, 0, 34), TextSize = 12, TextColor3 = Color3.fromRGB(190, 180, 230),
+		TextXAlignment = Enum.TextXAlignment.Left, Text = "(click name\nto rename)"})
+	local traitNames = {}
+	for _, t in ipairs(pet.traits or {}) do
+		local def = NeverYieldPets.traitById[t]
+		if def then table.insert(traitNames, def.name .. " (" .. def.desc .. ")") end
+	end
+	local lines = {
+		{(pet.shiny and "Shiny " or "") .. rarity.name .. " " .. (species and species.name or pet.species), rarity.color},
+		{"Generation " .. (pet.gen or 1) .. ((pet.parents and #pet.parents == 2) and ("  |  parents: " .. pet.parents[1] .. " + " .. pet.parents[2]) or ""), nil},
+		{"Traits: " .. (#traitNames > 0 and table.concat(traitNames, ", ") or "none"), nil},
+		{NeverYieldPets.canBreed(pet) and "Ready to breed" or (pet.level < 5 and "Breeds at level 5" or ("Resting: " .. math.max(0, (pet.breedReady or 0) - os.time()) .. "s")), nil},
+	}
+	for i, line in ipairs(lines) do
+		NeverYieldPets.label(body, {Position = UDim2.new(0, x, 0, 38 + (i - 1) * 20), Size = UDim2.new(0, 390, 0, 20), TextSize = 13,
+			TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Text = line[1], TextColor3 = line[2] or Color3.fromRGB(220, 215, 255)})
+	end
+	local need = NeverYieldPets.xpNeeded(pet.level)
+	NeverYieldPets.bar(body, UDim2.new(0, x, 0, 122), UDim2.new(0, 390, 0, 20), pet.level >= 50 and 1 or pet.xp / need, Color3.fromRGB(110, 200, 255),
+		"Level " .. pet.level .. (pet.level >= 50 and "  (MAX)" or ("  -  " .. math.floor(pet.xp) .. " / " .. need .. " XP")))
+	NeverYieldPets.bar(body, UDim2.new(0, x, 0, 148), UDim2.new(0, 390, 0, 20), pet.hunger / 100, pet.hunger < 20 and Color3.fromRGB(255, 80, 80) or Color3.fromRGB(255, 170, 70),
+		"Hunger " .. math.floor(pet.hunger) .. "%")
+	NeverYieldPets.bar(body, UDim2.new(0, x, 0, 174), UDim2.new(0, 390, 0, 20), pet.happy / 100, Color3.fromRGB(255, 120, 200), "Happiness " .. math.floor(pet.happy) .. "%")
+	-- food row
+	NeverYieldPets.label(body, {Position = UDim2.new(0, x, 0, 202), Size = UDim2.new(0, 200, 0, 18), TextXAlignment = Enum.TextXAlignment.Left, Text = "Feed:"})
+	for i, food in ipairs(NeverYieldPets.foods) do
+		NeverYieldPets.button(body, food.icon .. " " .. (data.food[food.id] or 0), UDim2.new(0, x + (i - 1) * 78, 0, 222), UDim2.new(0, 72, 0, 34), Color3.fromRGB(90, 60, 40), function()
+			if NeverYieldPets.feed(pet, food.id) then NeverYieldPets.refresh() end
+		end)
+	end
+	-- actions
+	local equipped = NeverYieldPets.isEquipped(pet.id)
+	NeverYieldPets.button(body, equipped and "Unequip" or "Equip", UDim2.new(0, x, 0, 270), UDim2.new(0, 124, 0, 38), equipped and Color3.fromRGB(120, 80, 60) or Color3.fromRGB(60, 160, 90), function()
+		NeverYieldPets.equip(pet.id)
+	end)
+	NeverYieldPets.button(body, "Pet \u{1F496}", UDim2.new(0, x + 132, 0, 270), UDim2.new(0, 124, 0, 38), Color3.fromRGB(190, 70, 140), function()
+		if os.clock() - (pet.lastPetted or 0) < 10 then
+			notify('Pets', pet.name .. ' was just petted. Give it a moment!')
+			return
+		end
+		pet.lastPetted = os.clock()
+		pet.happy = math.min(100, pet.happy + 10)
+		NeverYieldPets.giveXp(pet, 3)
+		NeverYieldPets.effect(pet, "hearts")
+		NeverYieldPets.dirty = true
+		NeverYieldPets.refresh()
+	end)
+	local releaseValue = math.floor(NeverYieldPets.rarityOf(pet).sell * (1 + pet.level / 10))
+	local releaseButton
+	releaseButton = NeverYieldPets.button(body, "Release (+" .. releaseValue .. ")", UDim2.new(0, x + 264, 0, 270), UDim2.new(0, 126, 0, 38), Color3.fromRGB(150, 50, 60), function()
+		if not ui.confirmRelease or ui.confirmRelease ~= pet.id then
+			ui.confirmRelease = pet.id
+			releaseButton.Text = "Click again to confirm"
+			task.delay(3, function() if ui.confirmRelease == pet.id then ui.confirmRelease = nil end end)
+			return
+		end
+		ui.confirmRelease = nil
+		if NeverYieldPets.isEquipped(pet.id) then NeverYieldPets.equip(pet.id) end
+		data.pets[pet.id] = nil
+		data.stats.released = data.stats.released + 1
+		NeverYieldPets.addCoins(releaseValue)
+		notify('Pets', pet.name .. ' went to live on a farm. +' .. releaseValue .. ' coins.')
+		ui.detail = nil
+		NeverYieldPets.refresh()
+	end)
+end
+
+NeverYieldPets.pages.eggs = function(body, ui)
+	local data = NeverYieldPets.data
+	NeverYieldPets.label(body, {Size = UDim2.new(1, 0, 0, 20), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(210, 200, 255),
+		Text = #data.eggs .. "/8 eggs in your nest. Buy eggs in the Shop or breed pets."})
+	if #data.eggs == 0 then
+		NeverYieldPets.label(body, {Position = UDim2.new(0, 0, 0, 120), Size = UDim2.new(1, 0, 0, 40), TextSize = 18, Text = "Your nest is empty."})
+		return
+	end
+	for i, egg in ipairs(data.eggs) do
+		local col, row = (i - 1) % 4, math.floor((i - 1) / 4)
+		local def = egg.bred and {name = "Bred Egg", color = {255, 230, 240}, spots = {255, 140, 200}} or NeverYieldPets.eggById[egg.kind] or NeverYieldPets.eggs[1]
+		local card = Instance.new("Frame")
+		card.Position = UDim2.new(0, col * 162, 0, 28 + row * 160)
+		card.Size = UDim2.new(0, 154, 0, 152)
+		card.BackgroundColor3 = Color3.fromRGB(38, 32, 70)
+		card.BorderSizePixel = 0
+		card.ZIndex = 21
+		NeverYieldPortal.corner(card, UDim.new(0, 12))
+		card.Parent = body
+		NeverYieldPets.eggPreview(card, def, UDim2.new(0, 27, 0, 4), UDim2.new(0, 100, 0, 70))
+		NeverYieldPets.label(card, {Position = UDim2.new(0, 4, 0, 76), Size = UDim2.new(1, -8, 0, 18), Text = def.name ..
+			(egg.bred and egg.parents and #egg.parents == 2 and "" or "")})
+		local left = egg.ready - os.time()
+		if left > 0 then
+			NeverYieldPets.label(card, {Position = UDim2.new(0, 4, 0, 96), Size = UDim2.new(1, -8, 0, 18), TextColor3 = Color3.fromRGB(200, 200, 230),
+				Text = string.format("Hatching in %d:%02d", math.floor(left / 60), left % 60)})
+		end
+		NeverYieldPets.button(card, left > 0 and "Wait..." or "Hatch!", UDim2.new(0, 14, 0, 116), UDim2.new(1, -28, 0, 30),
+			left > 0 and Color3.fromRGB(70, 65, 100) or Color3.fromRGB(255, 150, 60), function()
+				NeverYieldPets.hatch(i)
+			end)
+	end
+end
+
+NeverYieldPets.pages.shop = function(body, ui)
+	local data = NeverYieldPets.data
+	NeverYieldPets.label(body, {Size = UDim2.new(1, 0, 0, 20), TextXAlignment = Enum.TextXAlignment.Left, Text = "EGGS"})
+	for i, egg in ipairs(NeverYieldPets.eggs) do
+		local card = Instance.new("Frame")
+		card.Position = UDim2.new(0, (i - 1) * 140, 0, 22)
+		card.Size = UDim2.new(0, 132, 0, 132)
+		card.BackgroundColor3 = Color3.fromRGB(38, 32, 70)
+		card.BorderSizePixel = 0
+		card.ZIndex = 21
+		NeverYieldPortal.corner(card, UDim.new(0, 12))
+		card.Parent = body
+		NeverYieldPets.eggPreview(card, egg, UDim2.new(0, 21, 0, 2), UDim2.new(0, 90, 0, 62))
+		NeverYieldPets.label(card, {Position = UDim2.new(0, 4, 0, 64), Size = UDim2.new(1, -8, 0, 18), Text = egg.name})
+		NeverYieldPets.label(card, {Position = UDim2.new(0, 4, 0, 80), Size = UDim2.new(1, -8, 0, 14), TextSize = 10, TextColor3 = Color3.fromRGB(200, 200, 230),
+			Text = egg.id == "basic" and "mostly common" or egg.id == "fancy" and "rare to legendary" or "epic + legendary, mythic skins"})
+		NeverYieldPets.button(card, "\u{1F4B0} " .. egg.price, UDim2.new(0, 12, 0, 98), UDim2.new(1, -24, 0, 28), Color3.fromRGB(60, 160, 90), function()
+			if NeverYieldPets.buyEgg(egg.id) then NeverYieldPets.refresh() end
+		end)
+	end
+	-- slots
+	local nextSlot
+	for _, s in ipairs(NeverYieldPets.slots) do
+		if data.slots < s.count then nextSlot = s break end
+	end
+	local slotCard = Instance.new("Frame")
+	slotCard.Position = UDim2.new(0, 430, 0, 22)
+	slotCard.Size = UDim2.new(0, 214, 0, 132)
+	slotCard.BackgroundColor3 = Color3.fromRGB(38, 32, 70)
+	slotCard.BorderSizePixel = 0
+	slotCard.ZIndex = 21
+	NeverYieldPortal.corner(slotCard, UDim.new(0, 12))
+	slotCard.Parent = body
+	NeverYieldPets.label(slotCard, {Position = UDim2.new(0, 8, 0, 10), Size = UDim2.new(1, -16, 0, 40), TextSize = 16, TextWrapped = true,
+		Text = "Pet slots: " .. data.slots .. (nextSlot and ("\nUnlock slot " .. nextSlot.count) or "\n(maxed)")})
+	if nextSlot then
+		NeverYieldPets.button(slotCard, "\u{1F4B0} " .. nextSlot.price, UDim2.new(0, 30, 0, 80), UDim2.new(1, -60, 0, 34), Color3.fromRGB(60, 160, 90), function()
+			if data.coins < nextSlot.price then
+				notify('Pets', 'Not enough coins.')
+				return
+			end
+			NeverYieldPets.addCoins(-nextSlot.price)
+			data.slots = nextSlot.count
+			notify('Pets', 'You can now have ' .. data.slots .. ' pets following you!')
+			NeverYieldPets.refresh()
+		end)
+	end
+	-- food
+	NeverYieldPets.label(body, {Position = UDim2.new(0, 0, 0, 162), Size = UDim2.new(1, 0, 0, 20), TextXAlignment = Enum.TextXAlignment.Left, Text = "FOOD"})
+	for i, food in ipairs(NeverYieldPets.foods) do
+		NeverYieldPets.button(body, food.icon .. " " .. food.name .. "\n\u{1F4B0} " .. food.price .. "   (have " .. (data.food[food.id] or 0) .. ")",
+			UDim2.new(0, (i - 1) * 130, 0, 184), UDim2.new(0, 124, 0, 46), Color3.fromRGB(90, 60, 40), function()
+				if data.coins < food.price then
+					notify('Pets', 'Not enough coins.')
+					return
+				end
+				NeverYieldPets.addCoins(-food.price)
+				data.food[food.id] = (data.food[food.id] or 0) + 1
+				NeverYieldPets.refresh()
+			end)
+	end
+	-- skins
+	NeverYieldPets.label(body, {Position = UDim2.new(0, 0, 0, 238), Size = UDim2.new(1, 0, 0, 20), TextXAlignment = Enum.TextXAlignment.Left,
+		Text = "SKINS (unlocked skins can be put on any pet in its detail page)"})
+	local col = 0
+	for _, skin in ipairs(NeverYieldPets.skins) do
+		if skin.id ~= "classic" then
+			local owned = data.skins[skin.id]
+			local rarity = NeverYieldPets.rarities[NeverYieldPets.rarityIndex[skin.rarity]]
+			local b = NeverYieldPets.button(body, skin.name .. "\n" .. (owned and "Owned" or ("\u{1F4B0} " .. skin.price)),
+				UDim2.new(0, (col % 5) * 130, 0, 260 + math.floor(col / 5) * 50), UDim2.new(0, 124, 0, 44), owned and Color3.fromRGB(50, 45, 80) or Color3.fromRGB(70, 55, 130), function()
+					if data.skins[skin.id] then return end
+					if data.coins < skin.price then
+						notify('Pets', 'Not enough coins.')
+						return
+					end
+					NeverYieldPets.addCoins(-skin.price)
+					data.skins[skin.id] = true
+					notify('Pets', skin.name .. ' skin unlocked!')
+					NeverYieldPets.refresh()
+				end)
+			b.TextColor3 = rarity.color
+			col = col + 1
+		end
+	end
+end
+
+NeverYieldPets.pages.breed = function(body, ui)
+	local data = NeverYieldPets.data
+	local eligible = {}
+	for _, pet in ipairs(NeverYieldPets.sortedPets()) do
+		if NeverYieldPets.canBreed(pet) then table.insert(eligible, pet) end
+	end
+	NeverYieldPets.label(body, {Size = UDim2.new(1, 0, 0, 36), TextWrapped = true, TextColor3 = Color3.fromRGB(210, 200, 255),
+		Text = "Pick two pets (level 5+). The baby gets a parent's species and skin, with a chance of a surprise species, a mutated skin or a shiny. Costs \u{1F4B0} " .. NeverYieldPets.breedCost .. ", parents rest 5 minutes, the egg hatches in 2 minutes."})
+	if #eligible < 2 then
+		NeverYieldPets.label(body, {Position = UDim2.new(0, 0, 0, 140), Size = UDim2.new(1, 0, 0, 40), TextSize = 18,
+			Text = "You need two rested pets at level 5 or higher (" .. #eligible .. " ready)."})
+		return
+	end
+	ui.breedA = math.clamp(ui.breedA or 1, 1, #eligible)
+	ui.breedB = math.clamp(ui.breedB or 2, 1, #eligible)
+	if ui.breedA == ui.breedB then ui.breedB = (ui.breedA % #eligible) + 1 end
+	for side, key in ipairs({"breedA", "breedB"}) do
+		local pet = eligible[ui[key]]
+		local x = side == 1 and 30 or 400
+		local stage = Instance.new("Frame")
+		stage.Position = UDim2.new(0, x, 0, 46)
+		stage.Size = UDim2.new(0, 220, 0, 200)
+		stage.BackgroundColor3 = Color3.fromRGB(38, 32, 70)
+		stage.BorderSizePixel = 0
+		stage.ZIndex = 21
+		NeverYieldPortal.corner(stage, UDim.new(0, 14))
+		stage.Parent = body
+		NeverYieldPets.preview(stage, pet, UDim2.new(0, 10, 0, 6), UDim2.new(1, -20, 0, 150), true)
+		local rarity = NeverYieldPets.rarityOf(pet)
+		NeverYieldPets.label(stage, {Position = UDim2.new(0, 0, 0, 156), Size = UDim2.new(1, 0, 0, 20), TextSize = 15, Text = pet.name .. "  Lv " .. pet.level})
+		NeverYieldPets.label(stage, {Position = UDim2.new(0, 0, 0, 176), Size = UDim2.new(1, 0, 0, 18), TextSize = 12, TextColor3 = rarity.color,
+			Text = rarity.name .. " " .. NeverYieldPets.speciesById[pet.species].name .. " (" .. (NeverYieldPets.skinById[pet.skin] or NeverYieldPets.skins[1]).name .. ")"})
+		NeverYieldPets.button(body, "<", UDim2.new(0, x + 40, 0, 252), UDim2.new(0, 60, 0, 28), nil, function()
+			ui[key] = ((ui[key] - 2) % #eligible) + 1
+			NeverYieldPets.refresh()
+		end)
+		NeverYieldPets.button(body, ">", UDim2.new(0, x + 120, 0, 252), UDim2.new(0, 60, 0, 28), nil, function()
+			ui[key] = (ui[key] % #eligible) + 1
+			NeverYieldPets.refresh()
+		end)
+	end
+	NeverYieldPets.label(body, {Position = UDim2.new(0, 260, 0, 120), Size = UDim2.new(0, 130, 0, 50), TextSize = 40, Text = "\u{1F496}"})
+	NeverYieldPets.button(body, "Breed!\n\u{1F4B0} " .. NeverYieldPets.breedCost, UDim2.new(0, 255, 0, 290), UDim2.new(0, 140, 0, 46), Color3.fromRGB(255, 120, 180), function()
+		if NeverYieldPets.breed(eligible[ui.breedA], eligible[ui.breedB]) then
+			ui.tab = "eggs"
+			NeverYieldPets.refresh()
+		end
+	end)
+end
+
+NeverYieldPets.pages.index = function(body, ui)
+	local data = NeverYieldPets.data
+	local found, skins = 0, 0
+	for _ in pairs(data.discovered) do found = found + 1 end
+	for _ in pairs(data.skins) do skins = skins + 1 end
+	NeverYieldPets.label(body, {Size = UDim2.new(1, 0, 0, 20), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(210, 200, 255),
+		Text = "Species found: " .. found .. "/" .. #NeverYieldPets.species .. "   |   Skins: " .. skins .. "/" .. #NeverYieldPets.skins ..
+		"   |   Hatched " .. data.stats.hatched .. ", bred " .. data.stats.bred .. ", fed " .. data.stats.fed .. ", coins earned " .. data.stats.coinsEarned})
+	for i, species in ipairs(NeverYieldPets.species) do
+		local col, row = (i - 1) % 5, math.floor((i - 1) / 5)
+		local rarity = NeverYieldPets.rarities[NeverYieldPets.rarityIndex[species.rarity]]
+		local card = Instance.new("Frame")
+		card.Position = UDim2.new(0, col * 130, 0, 28 + row * 160)
+		card.Size = UDim2.new(0, 122, 0, 152)
+		card.BackgroundColor3 = Color3.fromRGB(38, 32, 70)
+		card.BorderSizePixel = 0
+		card.ZIndex = 21
+		NeverYieldPortal.corner(card, UDim.new(0, 12))
+		local stroke = Instance.new("UIStroke")
+		stroke.Color = rarity.color
+		stroke.Thickness = 1.5
+		stroke.Parent = card
+		card.Parent = body
+		if data.discovered[species.id] then
+			NeverYieldPets.preview(card, {species = species.id, skin = "classic", level = 1, traits = {}}, UDim2.new(0, 6, 0, 6), UDim2.new(1, -12, 0, 100), true)
+			NeverYieldPets.label(card, {Position = UDim2.new(0, 0, 0, 110), Size = UDim2.new(1, 0, 0, 20), TextSize = 15, Text = species.name})
+		else
+			NeverYieldPets.label(card, {Position = UDim2.new(0, 0, 0, 30), Size = UDim2.new(1, 0, 0, 60), TextSize = 46, Font = Enum.Font.FredokaOne,
+				Text = "?", TextColor3 = Color3.fromRGB(90, 85, 130)})
+			NeverYieldPets.label(card, {Position = UDim2.new(0, 0, 0, 110), Size = UDim2.new(1, 0, 0, 20), TextSize = 15, Text = "???"})
+		end
+		NeverYieldPets.label(card, {Position = UDim2.new(0, 0, 0, 130), Size = UDim2.new(1, 0, 0, 16), TextSize = 12, TextColor3 = rarity.color, Text = rarity.name})
+	end
+end
+
+-- egg hatching popup: wobble, crack, flash, reveal
+NeverYieldPets.hatchPopup = function(egg, pet, newSpecies)
+	local screen = WackyState.overlay()
+	local card = Instance.new("Frame")
+	card.AnchorPoint = Vector2.new(0.5, 0.5)
+	card.Position = UDim2.new(0.5, 0, 0.5, 0)
+	card.Size = UDim2.new(0, 360, 0, 380)
+	card.BackgroundColor3 = Color3.fromRGB(22, 18, 44)
+	card.BorderSizePixel = 0
+	card.ZIndex = 70
+	NeverYieldPortal.corner(card, UDim.new(0, 20))
+	NeverYieldPortal.stroke(card, 3, 0)
+	local scale = Instance.new("UIScale")
+	scale.Scale = 0.3
+	scale.Parent = card
+	card.Parent = screen
+	TweenService:Create(scale, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+	WackyState.sound(WackyState.diamondWhoosh or NeverYieldPets.coinSound, nil, 0.5)
+	local def = egg.bred and {color = {255, 230, 240}, spots = {255, 140, 200}} or NeverYieldPets.eggById[egg.kind] or NeverYieldPets.eggs[1]
+	local vp, eggPart = NeverYieldPets.eggPreview(card, def, UDim2.new(0, 60, 0, 30), UDim2.new(0, 240, 0, 220))
+	vp.ZIndex = 71
+	local status = NeverYieldPets.label(card, {Position = UDim2.new(0, 0, 0, 262), Size = UDim2.new(1, 0, 0, 40), Font = Enum.Font.FredokaOne, TextSize = 28, Text = "Hatching...", ZIndex = 72})
+	task.spawn(function()
+		local start = tick()
+		local bases = {}
+		for _, p in ipairs(vp:GetChildren()) do
+			if p:IsA("BasePart") then bases[p] = p.CFrame end
+		end
+		while tick() - start < 2.4 and card.Parent do
+			local e = tick() - start
+			local wobble = math.sin(e * (10 + e * 12)) * math.min(0.5, e * 0.25)
+			for p, base in pairs(bases) do
+				p.CFrame = CFrame.Angles(0, 0, wobble) * base
+			end
+			RunService.RenderStepped:Wait()
+		end
+		if not card.Parent then return end
+		WackyState.sound(WackyState.diamondBeep or NeverYieldPets.coinSound, nil, 0.5, false, 0.7)
+		local flash = Instance.new("Frame")
+		flash.Size = UDim2.new(1, 0, 1, 0)
+		flash.BackgroundColor3 = Color3.new(1, 1, 1)
+		flash.BorderSizePixel = 0
+		flash.ZIndex = 75
+		NeverYieldPortal.corner(flash, UDim.new(0, 20))
+		flash.Parent = card
+		TweenService:Create(flash, TweenInfo.new(0.8), {BackgroundTransparency = 1}):Play()
+		Services.Debris:AddItem(flash, 0.9)
+		vp:Destroy()
+		NeverYieldPets.ui.spinners = NeverYieldPets.ui.spinners or {}
+		local petVp, petModel = NeverYieldPets.preview(card, pet, UDim2.new(0, 60, 0, 20), UDim2.new(0, 240, 0, 220), false)
+		petVp.ZIndex = 71
+		task.spawn(function()
+			while petVp.Parent do
+				if petModel then petModel:PivotTo(CFrame.Angles(0, math.rad(200) + tick() * 0.9, 0)) end
+				RunService.RenderStepped:Wait()
+			end
+		end)
+		local rarity = NeverYieldPets.rarityOf(pet)
+		local species = NeverYieldPets.speciesById[pet.species]
+		local skin = NeverYieldPets.skinById[pet.skin] or NeverYieldPets.skins[1]
+		status.Text = (pet.shiny and "SHINY " or "") .. rarity.name:upper() .. "!"
+		status.TextColor3 = rarity.color
+		NeverYieldPets.label(card, {Position = UDim2.new(0, 0, 0, 236), Size = UDim2.new(1, 0, 0, 26), TextSize = 18, ZIndex = 72,
+			Text = skin.name .. " " .. species.name .. (newSpecies and "  -  NEW SPECIES!" or "")})
+		WackyState.sound(WackyState.diamondSting or NeverYieldPets.coinSound, nil, 0.5)
+		NeverYieldPets.button(card, "Awesome!", UDim2.new(0.5, -80, 0, 316), UDim2.new(0, 160, 0, 44), Color3.fromRGB(255, 140, 90), function()
+			TweenService:Create(scale, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Scale = 0}):Play()
+			Services.Debris:AddItem(card, 0.3)
+		end).ZIndex = 73
+	end)
+end
+
+-- ---------- start / stop ----------
+NeverYieldPets.stop = function()
+	if NeverYieldPets.stopped then return end
+	pcall(NeverYieldPets.save)
+	NeverYieldPets.stopped = true
+	pcall(NeverYieldPets.close)
+	for id in pairs(NeverYieldPets.spawned) do
+		NeverYieldPets.despawn(id)
+	end
+end
+
+NeverYieldPets.start = function()
+	local fresh = NeverYieldPets.load()
+	local data = NeverYieldPets.data
+	NeverYieldPets.decay()
+	if fresh then
+		table.insert(data.eggs, {kind = "basic", ready = os.time()})
+		task.delay(6, function()
+			notify('Pet Hub', 'Welcome! Your first egg is ready. Type pets (or use Settings) to open the Pet Hub and hatch it.', 10)
+		end)
+	end
+	local today = os.date("%Y-%m-%d")
+	if data.lastDaily ~= today then
+		local yesterday = os.date("%Y-%m-%d", os.time() - 86400)
+		data.streak = data.lastDaily == yesterday and math.min(data.streak + 1, 10) or 1
+		data.lastDaily = today
+		local reward = 100 + (data.streak - 1) * 20
+		NeverYieldPets.addCoins(reward)
+		if not fresh then
+			task.delay(8, function()
+				notify('Pet Hub', 'Daily reward: +' .. reward .. ' coins (day ' .. data.streak .. ' streak)!', 8)
+			end)
+		end
+	end
+	WackyState.connect("petsFollow", RunService.Heartbeat:Connect(function(dt)
+		if NeverYieldPets.stopped then return end
+		local ok, err = pcall(NeverYieldPets.step, dt)
+		if not ok and not NeverYieldPets.warned then
+			NeverYieldPets.warned = true
+			warn("[NeverYield pets] " .. tostring(err))
+		end
+	end))
+	WackyState.connect("petsTeleport", Players.LocalPlayer.OnTeleport:Connect(function(state)
+		if state == Enum.TeleportState.Started then pcall(NeverYieldPets.save) end
+	end))
+	local owner = NeverYieldPets
+	task.spawn(function()
+		while not owner.stopped and NeverYieldPets == owner do
+			task.wait(10)
+			pcall(NeverYieldPets.decay)
+			if NeverYieldPets.dirty and os.clock() - NeverYieldPets.lastSave > 30 then
+				pcall(NeverYieldPets.save)
+			end
+		end
+	end)
+	pcall(NeverYieldPets.save)
+end
+
+addcmd('pets',{'pethub','pet'},function(args, speaker)
+	local tab = args[1] and args[1]:lower()
+	local valid = false
+	for _, info in ipairs(NeverYieldPets.tabs) do
+		if info[1] == tab then valid = true end
+	end
+	local ok, err = pcall(NeverYieldPets.open, valid and tab or nil)
+	if not ok then
+		pcall(NeverYieldPets.close)
+		notify('Pet Hub', 'Could not open: ' .. tostring(err))
+	end
+end)
+
+addcmd('unpet',{'nopet','unequippets'},function(args, speaker)
+	local data = NeverYieldPets.data
+	if not data then return end
+	for _, id in ipairs(data.equipped) do
+		NeverYieldPets.despawn(id)
+	end
+	data.equipped = {}
+	NeverYieldPets.dirty = true
+	if NeverYieldPets.refresh then pcall(NeverYieldPets.refresh) end
+end)
+
+addcmd('feedpets',{'feedall'},function(args, speaker)
+	local data = NeverYieldPets.data
+	local fed = 0
+	for _, id in ipairs(data.equipped) do
+		local pet = data.pets[id]
+		if pet and pet.hunger < 90 then
+			for _, food in ipairs(NeverYieldPets.foods) do
+				if (data.food[food.id] or 0) > 0 then
+					if NeverYieldPets.feed(pet, food.id) then fed = fed + 1 end
+					break
+				end
+			end
+		end
+	end
+	notify('Pets', fed > 0 and ('Fed ' .. fed .. ' pet(s).') or 'Nobody needed food (or you are out of food).')
+end)
+
+addcmd('petcoins',{'pcoins'},function(args, speaker)
+	local data = NeverYieldPets.data
+	notify('Pet Hub', 'You have ' .. NeverYieldStats.num(data.coins) .. ' coins. Pets find coins, you earn coins walking with them, daily rewards and Diamond Rush pay out too.')
+end)
+
+pcall(NeverYieldPets.start)
+-- ================== END NEVERYIELD PETS ==================
 
 addcmd('removecmd',{'deletecmd'},function(args, speaker)
 	removecmd(args[1])
