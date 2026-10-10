@@ -17939,7 +17939,7 @@ addcmd('end',{'theend','blackholeleave'},function(args, speaker)
 
 	local phase = "swallow"
 	local start = tick()
-	local swallowTime = 18
+	local swallowTime = 35
 	local captured = 0
 	local active = {}
 	local shake = 0
@@ -17999,7 +17999,7 @@ addcmd('end',{'theend','blackholeleave'},function(args, speaker)
 
 		-- grow the hole
 		if phase == "swallow" then
-			radius = 2 + (math.min(t, swallowTime) / swallowTime) ^ 2 * 85 + math.max(0, t - swallowTime) * 4
+			radius = 4 + (math.min(t, swallowTime) / swallowTime) ^ 1.5 * 85 + math.max(0, t - swallowTime) * 4
 		elseif phase == "player" then
 			radius = math.min(radius + dt * 12, 120)
 		end
@@ -18027,7 +18027,7 @@ addcmd('end',{'theend','blackholeleave'},function(args, speaker)
 
 		-- swallow the map, nearest first, faster and faster
 		if phase == "swallow" then
-			local target = math.floor(#queue * math.clamp(t / swallowTime, 0, 1) ^ 1.6)
+			local target = math.floor(#queue * math.clamp(t / swallowTime, 0, 1) ^ 2.2)
 			local budget = 250
 			while captured < target and budget > 0 do
 				captured = captured + 1
@@ -18073,13 +18073,18 @@ addcmd('end',{'theend','blackholeleave'},function(args, speaker)
 				cloneFrom = clone and clone:GetPivot()
 				WackyState.sound(WackyState.endSounds.suck, nil, 1)
 			else
-				local pull = math.min(4 + t * 3 + radius * 0.8, 300) * math.clamp(180 / (d + 30), 0.35, 3)
-				local lift = workspace.Gravity * math.clamp((t - 4) / swallowTime, 0, 1.1)
-				if root.Position.Y < center.Y - 120 then
-					lift = workspace.Gravity * 1.6
+				local speed = 14 + t * 5
+				local grip = math.clamp((t - 1.5) * 0.4, 0, 6)
+				if d < radius * 3 then
+					grip = grip + 3
 				end
-				root.AssemblyLinearVelocity = root.AssemblyLinearVelocity + (toHole.Unit * pull + Vector3.new(0, lift, 0)) * dt
-				if hum and pull > 40 and math.random() < dt * 2 then
+				if t > 30 then
+					grip = 30
+				end
+				local desired = toHole.Unit * speed
+				local v = root.AssemblyLinearVelocity
+				root.AssemblyLinearVelocity = v:Lerp(desired, math.clamp(grip * dt, 0, 1))
+				if hum and t > 5 and math.random() < dt * (t - 5) * 0.5 then
 					pcall(function() hum:ChangeState(Enum.HumanoidStateType.Freefall) end)
 				end
 			end
