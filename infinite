@@ -1,3 +1,6 @@
+-- NeverYield v6.4.2 - edited by kas
+-- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
+
 if IY_LOADED and not _G.IY_DEBUG then
 	if getgenv and getgenv().IY_CUSTOM_LOADED then
 		-- error("Infinite Yield is already running!", 0)
@@ -374,7 +377,7 @@ Scale.Name = randomString()
 Holder.Name = randomString()
 Holder.Parent = ScaledHolder
 Holder.Active = true
-Holder.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+Holder.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 Holder.BorderSizePixel = 0
 Holder.Position = UDim2.new(1, -250, 1, -220)
 Holder.Size = UDim2.new(0, 250, 0, 220)
@@ -384,12 +387,13 @@ table.insert(shade2,Holder)
 Title.Name = "Title"
 Title.Parent = Holder
 Title.Active = true
-Title.BackgroundColor3 = Color3.fromRGB(36,36,37)
+Title.BackgroundColor3 = Color3.fromRGB(16, 10, 34)
 Title.BorderSizePixel = 0
 Title.Size = UDim2.new(0, 250, 0, 20)
 Title.Font = Enum.Font.SourceSans
 Title.TextSize = 18
-Title.Text = "Infinite Yield FE v" .. currentVersion
+Title.RichText = true
+Title.Text = "NeverYield v" .. currentVersion .. ' <font size="13" color="#C9A6FF">edited by kas</font>'
 
 do
 	local emoji = ({
@@ -429,7 +433,7 @@ table.insert(text1,Title)
 Dark.Name = "Dark"
 Dark.Parent = Holder
 Dark.Active = true
-Dark.BackgroundColor3 = Color3.fromRGB(36, 36, 37)
+Dark.BackgroundColor3 = Color3.fromRGB(16, 10, 34)
 Dark.BorderSizePixel = 0
 Dark.Position = UDim2.new(0, 0, 0, 45)
 Dark.Size = UDim2.new(0, 250, 0, 175)
@@ -456,7 +460,7 @@ CMDsF.BackgroundTransparency = 1
 CMDsF.BorderSizePixel = 0
 CMDsF.Position = UDim2.new(0, 5, 0, 45)
 CMDsF.Size = UDim2.new(0, 245, 0, 175)
-CMDsF.ScrollBarImageColor3 = Color3.fromRGB(78,78,79)
+CMDsF.ScrollBarImageColor3 = Color3.fromRGB(86, 50, 160)
 CMDsF.BottomImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
 CMDsF.CanvasSize = UDim2.new(0, 0, 0, 0)
 CMDsF.MidImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
@@ -488,7 +492,7 @@ ReferenceButton.ZIndex = 10
 Settings.Name = "Settings"
 Settings.Parent = Holder
 Settings.Active = true
-Settings.BackgroundColor3 = Color3.fromRGB(36, 36, 37)
+Settings.BackgroundColor3 = Color3.fromRGB(16, 10, 34)
 Settings.BorderSizePixel = 0
 Settings.Position = UDim2.new(0, 0, 0, 220)
 Settings.Size = UDim2.new(0, 250, 0, 175)
@@ -501,7 +505,7 @@ SettingsHolder.Parent = Settings
 SettingsHolder.BackgroundTransparency = 1
 SettingsHolder.BorderSizePixel = 0
 SettingsHolder.Size = UDim2.new(1,0,1,0)
-SettingsHolder.ScrollBarImageColor3 = Color3.fromRGB(78,78,79)
+SettingsHolder.ScrollBarImageColor3 = Color3.fromRGB(86, 50, 160)
 SettingsHolder.BottomImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
 SettingsHolder.CanvasSize = UDim2.new(0, 0, 0, 235)
 SettingsHolder.MidImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
@@ -513,7 +517,7 @@ table.insert(scroll,SettingsHolder)
 
 Prefix.Name = "Prefix"
 Prefix.Parent = SettingsHolder
-Prefix.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+Prefix.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 Prefix.BorderSizePixel = 0
 Prefix.BackgroundTransparency = 1
 Prefix.Position = UDim2.new(0, 5, 0, 5)
@@ -529,7 +533,7 @@ table.insert(text1,Prefix)
 
 PrefixBox.Name = "PrefixBox"
 PrefixBox.Parent = Prefix
-PrefixBox.BackgroundColor3 = Color3.fromRGB(78, 78, 79)
+PrefixBox.BackgroundColor3 = Color3.fromRGB(86, 50, 160)
 PrefixBox.BorderSizePixel = 0
 PrefixBox.Position = UDim2.new(1, -20, 0, 0)
 PrefixBox.Size = UDim2.new(0, 20, 0, 20)
@@ -543,7 +547,7 @@ table.insert(text2,PrefixBox)
 
 function makeSettingsButton(name,iconID,off)
 	local button = Instance.new("TextButton")
-	button.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+	button.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 	button.BorderSizePixel = 0
 	button.Position = UDim2.new(0,0,0,0)
 	button.Size = UDim2.new(1,0,0,25)
@@ -599,7 +603,7 @@ Aliases.Parent = SettingsHolder
 
 StayOpen.Name = "StayOpen"
 StayOpen.Parent = SettingsHolder
-StayOpen.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+StayOpen.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 StayOpen.BorderSizePixel = 0
 StayOpen.BackgroundTransparency = 1
 StayOpen.Position = UDim2.new(0, 5, 0, 30)
@@ -615,7 +619,7 @@ table.insert(text1,StayOpen)
 
 Button.Name = "Button"
 Button.Parent = StayOpen
-Button.BackgroundColor3 = Color3.fromRGB(78, 78, 79)
+Button.BackgroundColor3 = Color3.fromRGB(86, 50, 160)
 Button.BorderSizePixel = 0
 Button.Position = UDim2.new(1, -20, 0, 0)
 Button.Size = UDim2.new(0, 20, 0, 20)
@@ -669,7 +673,7 @@ table.insert(text1,Example)
 
 Notification.Name = randomString()
 Notification.Parent = ScaledHolder
-Notification.BackgroundColor3 = Color3.fromRGB(36, 36, 37)
+Notification.BackgroundColor3 = Color3.fromRGB(16, 10, 34)
 Notification.BorderSizePixel = 0
 Notification.Position = UDim2.new(1, -500, 1, 20)
 Notification.Size = UDim2.new(0, 250, 0, 100)
@@ -678,7 +682,7 @@ table.insert(shade1,Notification)
 
 Title_2.Name = "Title"
 Title_2.Parent = Notification
-Title_2.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+Title_2.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 Title_2.BorderSizePixel = 0
 Title_2.Size = UDim2.new(0, 250, 0, 20)
 Title_2.Font = Enum.Font.SourceSans
@@ -737,7 +741,7 @@ PinImage.Image = getcustomasset("infiniteyield/assets/pin.png")
 Tooltip.Name = randomString()
 Tooltip.Parent = ScaledHolder
 Tooltip.Active = true
-Tooltip.BackgroundColor3 = Color3.fromRGB(36, 36, 37)
+Tooltip.BackgroundColor3 = Color3.fromRGB(16, 10, 34)
 Tooltip.BackgroundTransparency = 0.1
 Tooltip.BorderSizePixel = 0
 Tooltip.Size = UDim2.new(0, 200, 0, 96)
@@ -747,7 +751,7 @@ table.insert(shade1,Tooltip)
 
 Title_3.Name = "Title"
 Title_3.Parent = Tooltip
-Title_3.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+Title_3.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 Title_3.BackgroundTransparency = 0.1
 Title_3.BorderSizePixel = 0
 Title_3.Size = UDim2.new(0, 200, 0, 20)
@@ -778,7 +782,7 @@ table.insert(text1,Description)
 IntroBackground.Name = "IntroBackground"
 IntroBackground.Parent = Holder
 IntroBackground.Active = true
-IntroBackground.BackgroundColor3 = Color3.fromRGB(36, 36, 37)
+IntroBackground.BackgroundColor3 = Color3.fromRGB(16, 10, 34)
 IntroBackground.BorderSizePixel = 0
 IntroBackground.Position = UDim2.new(0, 0, 0, 45)
 IntroBackground.Size = UDim2.new(0, 250, 0, 175)
@@ -792,6 +796,7 @@ Logo.Position = UDim2.new(0, 125, 0, 127)
 Logo.Size = UDim2.new(0, 10, 0, 10)
 Logo.Image = getcustomasset("infiniteyield/assets/logo.png")
 Logo.ImageTransparency = 0
+Logo.ImageColor3 = Color3.fromRGB(200, 165, 255)
 Logo.ZIndex = 10
 
 Credits.Name = "Credits"
@@ -802,14 +807,53 @@ Credits.Position = UDim2.new(0, 0, 0.9, 30)
 Credits.Size = UDim2.new(0, 250, 0, 20)
 Credits.Font = Enum.Font.SourceSansLight
 Credits.FontSize = Enum.FontSize.Size14
-Credits.Text = "Edge // Zwolf // Moon // Toon // Peyton // ATP"
-Credits.TextColor3 = Color3.new(1, 1, 1)
+Credits.Text = "NeverYield // edited by kas"
+Credits.TextColor3 = Color3.fromRGB(201, 166, 255)
 Credits.ZIndex = 10
+
+-- NeverYield: space look
+NeverYieldGradients = {}
+for _, frame in ipairs({Holder, Title, IntroBackground}) do
+	local gradient = Instance.new("UIGradient")
+	gradient.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 200, 255)),
+		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(195, 170, 255)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(150, 190, 255)),
+	})
+	gradient.Rotation = 45
+	gradient.Parent = frame
+	table.insert(NeverYieldGradients, gradient)
+end
+for i = 1, 45 do
+	local star = Instance.new("Frame")
+	local size = math.random(1, 3)
+	star.Name = "Star"
+	star.BorderSizePixel = 0
+	star.BackgroundColor3 = (i % 4 == 0) and Color3.fromRGB(210, 170, 255) or Color3.new(1, 1, 1)
+	star.BackgroundTransparency = math.random() * 0.5
+	star.Size = UDim2.new(0, size, 0, size)
+	star.Position = UDim2.new(math.random(), 0, math.random(), 0)
+	star.ZIndex = 10
+	star.Parent = IntroBackground
+	TweenService:Create(star, TweenInfo.new(0.6 + math.random() * 1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {BackgroundTransparency = 1}):Play()
+end
+task.spawn(function()
+	while task.wait(0.05) do
+		local alive = false
+		for _, gradient in ipairs(NeverYieldGradients) do
+			if gradient.Parent then
+				alive = true
+				gradient.Rotation = (gradient.Rotation + 1) % 360
+			end
+		end
+		if not alive then break end
+	end
+end)
 
 KeybindsFrame.Name = "KeybindsFrame"
 KeybindsFrame.Parent = Settings
 KeybindsFrame.Active = true
-KeybindsFrame.BackgroundColor3 = Color3.fromRGB(36, 36, 37)
+KeybindsFrame.BackgroundColor3 = Color3.fromRGB(16, 10, 34)
 KeybindsFrame.BorderSizePixel = 0
 KeybindsFrame.Position = UDim2.new(0, 0, 0, 175)
 KeybindsFrame.Size = UDim2.new(0, 250, 0, 175)
@@ -818,7 +862,7 @@ table.insert(shade1,KeybindsFrame)
 
 Close.Name = "Close"
 Close.Parent = KeybindsFrame
-Close.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+Close.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 Close.BorderSizePixel = 0
 Close.Position = UDim2.new(0, 205, 0, 150)
 Close.Size = UDim2.new(0, 40, 0, 20)
@@ -832,7 +876,7 @@ table.insert(text1,Close)
 
 Add.Name = "Add"
 Add.Parent = KeybindsFrame
-Add.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+Add.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 Add.BorderSizePixel = 0
 Add.Position = UDim2.new(0, 5, 0, 150)
 Add.Size = UDim2.new(0, 40, 0, 20)
@@ -846,7 +890,7 @@ table.insert(text1,Add)
 
 Delete.Name = "Delete"
 Delete.Parent = KeybindsFrame
-Delete.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+Delete.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 Delete.BorderSizePixel = 0
 Delete.Position = UDim2.new(0, 50, 0, 150)
 Delete.Size = UDim2.new(0, 40, 0, 20)
@@ -864,7 +908,7 @@ Holder_2.BackgroundTransparency = 1
 Holder_2.BorderSizePixel = 0
 Holder_2.Position = UDim2.new(0, 0, 0, 0)
 Holder_2.Size = UDim2.new(0, 250, 0, 145)
-Holder_2.ScrollBarImageColor3 = Color3.fromRGB(78,78,79)
+Holder_2.ScrollBarImageColor3 = Color3.fromRGB(86, 50, 160)
 Holder_2.BottomImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
 Holder_2.CanvasSize = UDim2.new(0, 0, 0, 0)
 Holder_2.MidImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
@@ -875,7 +919,7 @@ Holder_2.ZIndex = 10
 
 Example_2.Name = "Example"
 Example_2.Parent = KeybindsFrame
-Example_2.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+Example_2.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 Example_2.BorderSizePixel = 0
 Example_2.Size = UDim2.new(0, 10, 0, 20)
 Example_2.Visible = false
@@ -884,7 +928,7 @@ table.insert(shade2,Example_2)
 
 Text_3.Name = "Text"
 Text_3.Parent = Example_2
-Text_3.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+Text_3.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 Text_3.BorderSizePixel = 0
 Text_3.Position = UDim2.new(0, 10, 0, 0)
 Text_3.Size = UDim2.new(0, 240, 0, 20)
@@ -899,7 +943,7 @@ table.insert(text1,Text_3)
 
 Delete_2.Name = "Delete"
 Delete_2.Parent = Text_3
-Delete_2.BackgroundColor3 = Color3.fromRGB(78, 78, 79)
+Delete_2.BackgroundColor3 = Color3.fromRGB(86, 50, 160)
 Delete_2.BorderSizePixel = 0
 Delete_2.Position = UDim2.new(0, 200, 0, 0)
 Delete_2.Size = UDim2.new(0, 40, 0, 20)
@@ -922,7 +966,7 @@ KeybindEditor.ZIndex = 10
 background_2.Name = "background"
 background_2.Parent = KeybindEditor
 background_2.Active = true
-background_2.BackgroundColor3 = Color3.fromRGB(36, 36, 37)
+background_2.BackgroundColor3 = Color3.fromRGB(16, 10, 34)
 background_2.BorderSizePixel = 0
 background_2.Position = UDim2.new(0, 0, 0, 20)
 background_2.Size = UDim2.new(0, 360, 0, 185)
@@ -932,7 +976,7 @@ table.insert(shade1,background_2)
 Dark_3.Name = "Dark"
 Dark_3.Parent = background_2
 Dark_3.Active = true
-Dark_3.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+Dark_3.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 Dark_3.BorderSizePixel = 0
 Dark_3.Position = UDim2.new(0, 135, 0, 0)
 Dark_3.Size = UDim2.new(0, 2, 0, 185)
@@ -956,7 +1000,7 @@ table.insert(text1,Directions)
 
 BindTo.Name = "BindTo"
 BindTo.Parent = background_2
-BindTo.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+BindTo.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 BindTo.BorderSizePixel = 0
 BindTo.Position = UDim2.new(0, 10, 0, 95)
 BindTo.Size = UDim2.new(0, 115, 0, 50)
@@ -983,7 +1027,7 @@ table.insert(text1,TriggerLabel)
 
 BindTriggerSelect.Name = "BindTo"
 BindTriggerSelect.Parent = background_2
-BindTriggerSelect.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+BindTriggerSelect.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 BindTriggerSelect.BorderSizePixel = 0
 BindTriggerSelect.Position = UDim2.new(0, 60, 0, 155)
 BindTriggerSelect.Size = UDim2.new(0, 65, 0, 20)
@@ -997,7 +1041,7 @@ table.insert(text1,BindTriggerSelect)
 
 Add_2.Name = "Add"
 Add_2.Parent = background_2
-Add_2.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+Add_2.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 Add_2.BorderSizePixel = 0
 Add_2.Position = UDim2.new(0, 310, 0, 35)
 Add_2.Size = UDim2.new(0, 40, 0, 20)
@@ -1025,7 +1069,7 @@ table.insert(scroll,Toggles)
 
 ClickTP.Name = "Click TP (Hold Key & Click)"
 ClickTP.Parent = Toggles
-ClickTP.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+ClickTP.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 ClickTP.BorderSizePixel = 0
 ClickTP.Size = UDim2.new(0, 200, 0, 20)
 ClickTP.ZIndex = 10
@@ -1039,7 +1083,7 @@ table.insert(text1,ClickTP)
 
 Select.Name = "Select"
 Select.Parent = ClickTP
-Select.BackgroundColor3 = Color3.fromRGB(78, 78, 79)
+Select.BackgroundColor3 = Color3.fromRGB(86, 50, 160)
 Select.BorderSizePixel = 0
 Select.Position = UDim2.new(0, 160, 0, 0)
 Select.Size = UDim2.new(0, 40, 0, 20)
@@ -1053,7 +1097,7 @@ table.insert(text2,Select)
 
 ClickDelete.Name = "Click Delete (Hold Key & Click)"
 ClickDelete.Parent = Toggles
-ClickDelete.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+ClickDelete.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 ClickDelete.BorderSizePixel = 0
 ClickDelete.Position = UDim2.new(0, 0, 0, 25)
 ClickDelete.Size = UDim2.new(0, 200, 0, 20)
@@ -1068,7 +1112,7 @@ table.insert(text1,ClickDelete)
 
 Select_2.Name = "Select"
 Select_2.Parent = ClickDelete
-Select_2.BackgroundColor3 = Color3.fromRGB(78, 78, 79)
+Select_2.BackgroundColor3 = Color3.fromRGB(86, 50, 160)
 Select_2.BorderSizePixel = 0
 Select_2.Position = UDim2.new(0, 160, 0, 0)
 Select_2.Size = UDim2.new(0, 40, 0, 20)
@@ -1082,7 +1126,7 @@ table.insert(text2,Select_2)
 
 Cmdbar_2.Name = "Cmdbar_2"
 Cmdbar_2.Parent = background_2
-Cmdbar_2.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+Cmdbar_2.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 Cmdbar_2.BorderSizePixel = 0
 Cmdbar_2.Position = UDim2.new(0, 150, 0, 35)
 Cmdbar_2.Size = UDim2.new(0, 150, 0, 20)
@@ -1096,7 +1140,7 @@ Cmdbar_2.TextXAlignment = Enum.TextXAlignment.Left
 
 Cmdbar_3.Name = "Cmdbar_3"
 Cmdbar_3.Parent = background_2
-Cmdbar_3.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+Cmdbar_3.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 Cmdbar_3.BorderSizePixel = 0
 Cmdbar_3.Position = UDim2.new(0, 150, 0, 60)
 Cmdbar_3.Size = UDim2.new(0, 150, 0, 20)
@@ -1110,7 +1154,7 @@ Cmdbar_3.TextXAlignment = Enum.TextXAlignment.Left
 
 CreateToggle.Name = "CreateToggle"
 CreateToggle.Parent = background_2
-CreateToggle.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+CreateToggle.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 CreateToggle.BackgroundTransparency = 1
 CreateToggle.BorderSizePixel = 0
 CreateToggle.Position = UDim2.new(0, 152, 0, 10)
@@ -1125,7 +1169,7 @@ table.insert(text1,CreateToggle)
 
 Button_2.Name = "Button"
 Button_2.Parent = CreateToggle
-Button_2.BackgroundColor3 = Color3.fromRGB(78, 78, 79)
+Button_2.BackgroundColor3 = Color3.fromRGB(86, 50, 160)
 Button_2.BorderSizePixel = 0
 Button_2.Position = UDim2.new(1, -20, 0, 0)
 Button_2.Size = UDim2.new(0, 20, 0, 20)
@@ -1147,7 +1191,7 @@ On_2.TextSize = 14.000
 
 shadow_2.Name = "shadow"
 shadow_2.Parent = KeybindEditor
-shadow_2.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+shadow_2.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 shadow_2.BorderSizePixel = 0
 shadow_2.Size = UDim2.new(0, 360, 0, 20)
 shadow_2.ZIndex = 10
@@ -1184,7 +1228,7 @@ ExitImage_2.Image = getcustomasset("infiniteyield/assets/close.png")
 PositionsFrame.Name = "PositionsFrame"
 PositionsFrame.Parent = Settings
 PositionsFrame.Active = true
-PositionsFrame.BackgroundColor3 = Color3.fromRGB(36, 36, 37)
+PositionsFrame.BackgroundColor3 = Color3.fromRGB(16, 10, 34)
 PositionsFrame.BorderSizePixel = 0
 PositionsFrame.Size = UDim2.new(0, 250, 0, 175)
 PositionsFrame.Position = UDim2.new(0, 0, 0, 175)
@@ -1193,7 +1237,7 @@ table.insert(shade1,PositionsFrame)
 
 Close_3.Name = "Close"
 Close_3.Parent = PositionsFrame
-Close_3.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+Close_3.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 Close_3.BorderSizePixel = 0
 Close_3.Position = UDim2.new(0, 205, 0, 150)
 Close_3.Size = UDim2.new(0, 40, 0, 20)
@@ -1207,7 +1251,7 @@ table.insert(text1,Close_3)
 
 Delete_5.Name = "Delete"
 Delete_5.Parent = PositionsFrame
-Delete_5.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+Delete_5.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 Delete_5.BorderSizePixel = 0
 Delete_5.Position = UDim2.new(0, 50, 0, 150)
 Delete_5.Size = UDim2.new(0, 40, 0, 20)
@@ -1221,7 +1265,7 @@ table.insert(text1,Delete_5)
 
 Part.Name = "PartGoto"
 Part.Parent = PositionsFrame
-Part.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+Part.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 Part.BorderSizePixel = 0
 Part.Position = UDim2.new(0, 5, 0, 150)
 Part.Size = UDim2.new(0, 40, 0, 20)
@@ -1240,7 +1284,7 @@ Holder_4.BorderSizePixel = 0
 Holder_4.Position = UDim2.new(0, 0, 0, 0)
 Holder_4.Selectable = false
 Holder_4.Size = UDim2.new(0, 250, 0, 145)
-Holder_4.ScrollBarImageColor3 = Color3.fromRGB(78,78,79)
+Holder_4.ScrollBarImageColor3 = Color3.fromRGB(86, 50, 160)
 Holder_4.BottomImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
 Holder_4.CanvasSize = UDim2.new(0, 0, 0, 0)
 Holder_4.MidImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
@@ -1251,7 +1295,7 @@ Holder_4.ZIndex = 10
 
 Example_4.Name = "Example"
 Example_4.Parent = PositionsFrame
-Example_4.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+Example_4.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 Example_4.BorderSizePixel = 0
 Example_4.Size = UDim2.new(0, 10, 0, 20)
 Example_4.Visible = false
@@ -1261,7 +1305,7 @@ table.insert(shade2,Example_4)
 
 Text_5.Name = "Text"
 Text_5.Parent = Example_4
-Text_5.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+Text_5.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 Text_5.BorderSizePixel = 0
 Text_5.Position = UDim2.new(0, 10, 0, 0)
 Text_5.Size = UDim2.new(0, 240, 0, 20)
@@ -1276,7 +1320,7 @@ table.insert(text1,Text_5)
 
 Delete_6.Name = "Delete"
 Delete_6.Parent = Text_5
-Delete_6.BackgroundColor3 = Color3.fromRGB(78, 78, 79)
+Delete_6.BackgroundColor3 = Color3.fromRGB(86, 50, 160)
 Delete_6.BorderSizePixel = 0
 Delete_6.Position = UDim2.new(0, 200, 0, 0)
 Delete_6.Size = UDim2.new(0, 40, 0, 20)
@@ -1290,7 +1334,7 @@ table.insert(text2,Delete_6)
 
 TP.Name = "TP"
 TP.Parent = Text_5
-TP.BackgroundColor3 = Color3.fromRGB(78, 78, 79)
+TP.BackgroundColor3 = Color3.fromRGB(86, 50, 160)
 TP.BorderSizePixel = 0
 TP.Position = UDim2.new(0, 155, 0, 0)
 TP.Size = UDim2.new(0, 40, 0, 20)
@@ -1305,7 +1349,7 @@ table.insert(text2,TP)
 AliasesFrame.Name = "AliasesFrame"
 AliasesFrame.Parent = Settings
 AliasesFrame.Active = true
-AliasesFrame.BackgroundColor3 = Color3.fromRGB(36, 36, 37)
+AliasesFrame.BackgroundColor3 = Color3.fromRGB(16, 10, 34)
 AliasesFrame.BorderSizePixel = 0
 AliasesFrame.Position = UDim2.new(0, 0, 0, 175)
 AliasesFrame.Size = UDim2.new(0, 250, 0, 175)
@@ -1314,7 +1358,7 @@ table.insert(shade1,AliasesFrame)
 
 Close_2.Name = "Close"
 Close_2.Parent = AliasesFrame
-Close_2.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+Close_2.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 Close_2.BorderSizePixel = 0
 Close_2.Position = UDim2.new(0, 205, 0, 150)
 Close_2.Size = UDim2.new(0, 40, 0, 20)
@@ -1328,7 +1372,7 @@ table.insert(text1,Close_2)
 
 Delete_3.Name = "Delete"
 Delete_3.Parent = AliasesFrame
-Delete_3.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+Delete_3.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 Delete_3.BorderSizePixel = 0
 Delete_3.Position = UDim2.new(0, 5, 0, 150)
 Delete_3.Size = UDim2.new(0, 40, 0, 20)
@@ -1346,7 +1390,7 @@ Holder_3.BackgroundTransparency = 1
 Holder_3.BorderSizePixel = 0
 Holder_3.Position = UDim2.new(0, 0, 0, 0)
 Holder_3.Size = UDim2.new(0, 250, 0, 145)
-Holder_3.ScrollBarImageColor3 = Color3.fromRGB(78,78,79)
+Holder_3.ScrollBarImageColor3 = Color3.fromRGB(86, 50, 160)
 Holder_3.BottomImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
 Holder_3.CanvasSize = UDim2.new(0, 0, 0, 0)
 Holder_3.MidImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
@@ -1357,7 +1401,7 @@ Holder_3.ZIndex = 10
 
 Example_3.Name = "Example"
 Example_3.Parent = AliasesFrame
-Example_3.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+Example_3.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 Example_3.BorderSizePixel = 0
 Example_3.Size = UDim2.new(0, 10, 0, 20)
 Example_3.Visible = false
@@ -1366,7 +1410,7 @@ table.insert(shade2,Example_3)
 
 Text_4.Name = "Text"
 Text_4.Parent = Example_3
-Text_4.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+Text_4.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 Text_4.BorderSizePixel = 0
 Text_4.Position = UDim2.new(0, 10, 0, 0)
 Text_4.Size = UDim2.new(0, 240, 0, 20)
@@ -1381,7 +1425,7 @@ table.insert(text1,Text_4)
 
 Delete_4.Name = "Delete"
 Delete_4.Parent = Text_4
-Delete_4.BackgroundColor3 = Color3.fromRGB(78, 78, 79)
+Delete_4.BackgroundColor3 = Color3.fromRGB(86, 50, 160)
 Delete_4.BorderSizePixel = 0
 Delete_4.Position = UDim2.new(0, 200, 0, 0)
 Delete_4.Size = UDim2.new(0, 40, 0, 20)
@@ -1396,7 +1440,7 @@ table.insert(text2,Delete_4)
 PluginsFrame.Name = "PluginsFrame"
 PluginsFrame.Parent = Settings
 PluginsFrame.Active = true
-PluginsFrame.BackgroundColor3 = Color3.fromRGB(36, 36, 37)
+PluginsFrame.BackgroundColor3 = Color3.fromRGB(16, 10, 34)
 PluginsFrame.BorderSizePixel = 0
 PluginsFrame.Position = UDim2.new(0, 0, 0, 175)
 PluginsFrame.Size = UDim2.new(0, 250, 0, 175)
@@ -1405,7 +1449,7 @@ table.insert(shade1,PluginsFrame)
 
 Close_4.Name = "Close"
 Close_4.Parent = PluginsFrame
-Close_4.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+Close_4.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 Close_4.BorderSizePixel = 0
 Close_4.Position = UDim2.new(0, 205, 0, 150)
 Close_4.Size = UDim2.new(0, 40, 0, 20)
@@ -1419,7 +1463,7 @@ table.insert(text1,Close_4)
 
 Add_3.Name = "Add"
 Add_3.Parent = PluginsFrame
-Add_3.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+Add_3.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 Add_3.BorderSizePixel = 0
 Add_3.Position = UDim2.new(0, 5, 0, 150)
 Add_3.Size = UDim2.new(0, 40, 0, 20)
@@ -1438,7 +1482,7 @@ Holder_5.BorderSizePixel = 0
 Holder_5.Position = UDim2.new(0, 0, 0, 0)
 Holder_5.Selectable = false
 Holder_5.Size = UDim2.new(0, 250, 0, 145)
-Holder_5.ScrollBarImageColor3 = Color3.fromRGB(78,78,79)
+Holder_5.ScrollBarImageColor3 = Color3.fromRGB(86, 50, 160)
 Holder_5.BottomImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
 Holder_5.CanvasSize = UDim2.new(0, 0, 0, 0)
 Holder_5.MidImage = "rbxasset://textures/ui/Scroll/scroll-middle.png"
@@ -1449,7 +1493,7 @@ Holder_5.ZIndex = 10
 
 Example_5.Name = "Example"
 Example_5.Parent = PluginsFrame
-Example_5.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+Example_5.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 Example_5.BorderSizePixel = 0
 Example_5.Size = UDim2.new(0, 10, 0, 20)
 Example_5.Visible = false
@@ -1458,7 +1502,7 @@ table.insert(shade2,Example_5)
 
 Text_6.Name = "Text"
 Text_6.Parent = Example_5
-Text_6.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+Text_6.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 Text_6.BorderSizePixel = 0
 Text_6.Position = UDim2.new(0, 10, 0, 0)
 Text_6.Size = UDim2.new(0, 240, 0, 20)
@@ -1473,7 +1517,7 @@ table.insert(text1,Text_6)
 
 Delete_7.Name = "Delete"
 Delete_7.Parent = Text_6
-Delete_7.BackgroundColor3 = Color3.fromRGB(78, 78, 79)
+Delete_7.BackgroundColor3 = Color3.fromRGB(86, 50, 160)
 Delete_7.BorderSizePixel = 0
 Delete_7.Position = UDim2.new(0, 200, 0, 0)
 Delete_7.Size = UDim2.new(0, 40, 0, 20)
@@ -1497,7 +1541,7 @@ PluginEditor.ZIndex = 10
 background_3.Name = "background"
 background_3.Parent = PluginEditor
 background_3.Active = true
-background_3.BackgroundColor3 = Color3.fromRGB(36, 36, 37)
+background_3.BackgroundColor3 = Color3.fromRGB(16, 10, 34)
 background_3.BorderSizePixel = 0
 background_3.Position = UDim2.new(0, 0, 0, 20)
 background_3.Size = UDim2.new(0, 360, 0, 160)
@@ -1507,7 +1551,7 @@ table.insert(shade1,background_3)
 Dark_2.Name = "Dark"
 Dark_2.Parent = background_3
 Dark_2.Active = true
-Dark_2.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+Dark_2.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 Dark_2.BorderSizePixel = 0
 Dark_2.Position = UDim2.new(0, 222, 0, 0)
 Dark_2.Size = UDim2.new(0, 2, 0, 160)
@@ -1524,7 +1568,7 @@ Img.ZIndex = 10
 
 AddPlugin.Name = "AddPlugin"
 AddPlugin.Parent = background_3
-AddPlugin.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+AddPlugin.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 AddPlugin.BorderSizePixel = 0
 AddPlugin.Position = UDim2.new(0, 235, 0, 100)
 AddPlugin.Size = UDim2.new(0, 115, 0, 50)
@@ -1538,7 +1582,7 @@ table.insert(text1,AddPlugin)
 
 FileName.Name = "FileName"
 FileName.Parent = background_3
-FileName.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+FileName.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 FileName.BorderSizePixel = 0
 FileName.Position = UDim2.new(0.028, 0, 0.625, 0)
 FileName.Size = UDim2.new(0, 200, 0, 50)
@@ -1582,7 +1626,7 @@ table.insert(text1,Directions_2)
 
 shadow_3.Name = "shadow"
 shadow_3.Parent = PluginEditor
-shadow_3.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+shadow_3.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 shadow_3.BorderSizePixel = 0
 shadow_3.Size = UDim2.new(0, 360, 0, 20)
 shadow_3.ZIndex = 10
@@ -1672,7 +1716,7 @@ ToPartFrame.ZIndex = 10
 background_4.Name = "background"
 background_4.Parent = ToPartFrame
 background_4.Active = true
-background_4.BackgroundColor3 = Color3.fromRGB(36, 36, 37)
+background_4.BackgroundColor3 = Color3.fromRGB(16, 10, 34)
 background_4.BorderSizePixel = 0
 background_4.Position = UDim2.new(0, 0, 0, 20)
 background_4.Size = UDim2.new(0, 360, 0, 117)
@@ -1681,7 +1725,7 @@ table.insert(shade1,background_4)
 
 ChoosePart.Name = "ChoosePart"
 ChoosePart.Parent = background_4
-ChoosePart.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+ChoosePart.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 ChoosePart.BorderSizePixel = 0
 ChoosePart.Position = UDim2.new(0, 100, 0, 55)
 ChoosePart.Size = UDim2.new(0, 75, 0, 30)
@@ -1695,7 +1739,7 @@ table.insert(text1,ChoosePart)
 
 CopyPath.Name = "CopyPath"
 CopyPath.Parent = background_4
-CopyPath.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+CopyPath.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 CopyPath.BorderSizePixel = 0
 CopyPath.Position = UDim2.new(0, 185, 0, 55)
 CopyPath.Size = UDim2.new(0, 75, 0, 30)
@@ -1740,7 +1784,7 @@ table.insert(text1,Path)
 
 shadow_4.Name = "shadow"
 shadow_4.Parent = ToPartFrame
-shadow_4.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+shadow_4.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 shadow_4.BorderSizePixel = 0
 shadow_4.Size = UDim2.new(0, 360, 0, 20)
 shadow_4.ZIndex = 10
@@ -2953,12 +2997,12 @@ reference = (function()
 	end)
 end)()
 
-currentShade1 = Color3.fromRGB(36, 36, 37)
-currentShade2 = Color3.fromRGB(46, 46, 47)
-currentShade3 = Color3.fromRGB(78, 78, 79)
-currentText1 = Color3.new(1, 1, 1)
+currentShade1 = Color3.fromRGB(16, 10, 34)
+currentShade2 = Color3.fromRGB(32, 18, 64)
+currentShade3 = Color3.fromRGB(86, 50, 160)
+currentText1 = Color3.fromRGB(236, 224, 255)
 currentText2 = Color3.new(0, 0, 0)
-currentScroll = Color3.fromRGB(78,78,79)
+currentScroll = Color3.fromRGB(140, 90, 235)
 
 defaultGuiScale = IsOnMobile and 0.9 or 1
 defaultsettings = {
@@ -3019,7 +3063,7 @@ function createPopup(title, text)
 	background.Name = "background"
 	background.Parent = Popup
 	background.Active = true
-	background.BackgroundColor3 = Color3.fromRGB(36, 36, 37)
+	background.BackgroundColor3 = Color3.fromRGB(16, 10, 34)
 	background.BorderSizePixel = 0
 	background.Position = UDim2.new(0, 0, 0, 20)
 	background.Size = UDim2.new(0, 360, 0, 205)
@@ -3042,7 +3086,7 @@ function createPopup(title, text)
 
 	shadow.Name = "shadow"
 	shadow.Parent = Popup
-	shadow.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+	shadow.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 	shadow.BorderSizePixel = 0
 	shadow.Size = UDim2.new(0, 360, 0, 20)
 	shadow.ZIndex = 10
@@ -3111,6 +3155,14 @@ function saves()
 					if vtype(json.currentText1, "table") then currentText1 = Color3.new(json.currentText1[1],json.currentText1[2],json.currentText1[3]) end
 					if vtype(json.currentText2, "table") then currentText2 = Color3.new(json.currentText2[1],json.currentText2[2],json.currentText2[3]) end
 					if vtype(json.currentScroll, "table") then currentScroll = Color3.new(json.currentScroll[1],json.currentScroll[2],json.currentScroll[3]) end
+					-- NeverYield: saves still using the stock grey theme get the space purple theme
+					if math.abs(currentShade1.R - 36/255) < 0.01 and math.abs(currentShade1.G - 36/255) < 0.01 and math.abs(currentShade1.B - 37/255) < 0.01 then
+						currentShade1 = Color3.fromRGB(16, 10, 34)
+						currentShade2 = Color3.fromRGB(32, 18, 64)
+						currentShade3 = Color3.fromRGB(86, 50, 160)
+						currentText1 = Color3.fromRGB(236, 224, 255)
+						currentScroll = Color3.fromRGB(140, 90, 235)
+					end
 					if vtype(json.eventBinds, "string") then loadedEventData = json.eventBinds end
 				end)
 				if not success then
@@ -3149,7 +3201,7 @@ function saves()
 		if jsonAttempts >= 10 then
 			nosaves = true
 			useFactorySettings()
-			createPopup("File Error", "Sorry, we have attempted to parse your save file, but it is unreadable!\n\nInfinite Yield is now using factory settings until your exploit's file system works.\n\nYour save file has not been deleted.")
+			createPopup("File Error", "Sorry, we have attempted to parse your save file, but it is unreadable!\n\nNeverYield is now using factory settings until your exploit's file system works.\n\nYour save file has not been deleted.")
 		else
 			nosaves = true
 			useFactorySettings()
@@ -3893,12 +3945,12 @@ ColorsButton.MouseButton1Click:Connect(function()
 			updatesaves()
 		end
 		Npicker.Default = function(self)
-			updateColors(Color3.fromRGB(36, 36, 37),shade1)
-			updateColors(Color3.fromRGB(46, 46, 47),shade2)
-			updateColors(Color3.fromRGB(78, 78, 79),shade3)
+			updateColors(Color3.fromRGB(16, 10, 34),shade1)
+			updateColors(Color3.fromRGB(32, 18, 64),shade2)
+			updateColors(Color3.fromRGB(86, 50, 160),shade3)
 			updateColors(Color3.new(1, 1, 1),text1)
 			updateColors(Color3.new(0, 0, 0),text2)
-			updateColors(Color3.fromRGB(78,78,79),scroll)
+			updateColors(Color3.fromRGB(86, 50, 160),scroll)
 			wait()
 			updatesaves()
 		end
@@ -4047,7 +4099,7 @@ SaveChatlogs.MouseButton1Down:Connect(function()
 		if #scroll_2:GetChildren() > 0 then
 			notify("Loading",'Hold on a sec')
 			local placeName = CleanFileName(MarketplaceService:GetProductInfo(PlaceId).Name)
-			local writelogs = '-- Infinite Yield Chat logs for "'..placeName..'"\n'
+			local writelogs = '-- NeverYield Chat logs for "'..placeName..'"\n'
 			for _, child in pairs(scroll_2:GetChildren()) do
 				writelogs = writelogs..'\n'..child.Text
 			end
@@ -4954,7 +5006,7 @@ CMDs[#CMDs + 1] = {NAME = 'orbitcam / cinematic [speed] [distance]', DESC = 'Cam
 CMDs[#CMDs + 1] = {NAME = 'unorbitcam / uncinematic', DESC = 'Returns your camera to normal'}
 CMDs[#CMDs + 1] = {NAME = 'filter [name/random]', DESC = 'Screen filter: noir, sepia, vaporwave, nightvision, deepfried, underwater, thermal, dream'}
 CMDs[#CMDs + 1] = {NAME = 'unfilter', DESC = 'Removes the screen filter'}
-CMDs[#CMDs + 1] = {NAME = 'weather [type/random]', DESC = 'Local weather: snow, rain, embers, fireflies, rainbow'}
+CMDs[#CMDs + 1] = {NAME = 'weather [type/random]', DESC = 'Local weather: snow, rain, embers, fireflies, rainbow, stars, galaxy'}
 CMDs[#CMDs + 1] = {NAME = 'unweather / clearskies', DESC = 'Clears the weather'}
 CMDs[#CMDs + 1] = {NAME = 'confetti [amount]', DESC = 'Explodes confetti around you'}
 CMDs[#CMDs + 1] = {NAME = 'dancefloor / discofloor [size]', DESC = 'Spawns a flashing disco dance floor under you'}
@@ -5012,6 +5064,10 @@ CMDs[#CMDs + 1] = {NAME = 'zoomies / sanic [seconds] [speed]', DESC = 'Temporary
 CMDs[#CMDs + 1] = {NAME = 'joke', DESC = 'Tells a terrible joke'}
 CMDs[#CMDs + 1] = {NAME = 'wouldyourather / wyr', DESC = 'Asks a would-you-rather question'}
 CMDs[#CMDs + 1] = {NAME = 'stopwatch / timer', DESC = 'Starts / stops a stopwatch'}
+CMDs[#CMDs + 1] = {NAME = 'neveryield / about', DESC = 'Shows NeverYield info'}
+CMDs[#CMDs + 1] = {NAME = 'theme [space/nebula/galaxy/void/cosmic/classic]', DESC = 'Switches the GUI color theme (saved)'}
+CMDs[#CMDs + 1] = {NAME = 'spacemode / space', DESC = 'Purple space lighting, floating stars and low gravity'}
+CMDs[#CMDs + 1] = {NAME = 'unspacemode / unspace', DESC = 'Comes back down to Earth'}
 -- wait()
 
 for i = 1, #CMDs do
@@ -6688,7 +6744,7 @@ end)
 addcmd('keepiy', {}, function(args, speaker)
 	if queueteleport then
 		KeepInfYield = true
-		notify('KeepIY','Infinite Yield will now run after you teleport')
+		notify('KeepIY','NeverYield will now run after you teleport')
 		updatesaves()
 	else
 		notify('Incompatible Exploit','Your exploit does not support this command (missing queue_on_teleport)')
@@ -6698,7 +6754,7 @@ end)
 addcmd('unkeepiy', {}, function(args, speaker)
 	if queueteleport then
 		KeepInfYield = false
-		notify('KeepIY','Infinite Yield will no longer run after you teleport')
+		notify('KeepIY','NeverYield will no longer run after you teleport')
 		updatesaves()
 	else
 		notify('Incompatible Exploit','Your exploit does not support this command (missing queue_on_teleport)')
@@ -14416,6 +14472,81 @@ for _, cmd in ipairs({'unskin', 'unaura', 'unhalo', 'unpet', 'untimelapse', 'uns
 end
 -- ================ END WACKY COMMANDS 2 ================
 
+-- ==================== NEVERYIELD COMMANDS ====================
+NeverYieldThemes = {
+	space = {Color3.fromRGB(16, 10, 34), Color3.fromRGB(32, 18, 64), Color3.fromRGB(86, 50, 160), Color3.fromRGB(236, 224, 255), Color3.new(0, 0, 0), Color3.fromRGB(140, 90, 235)},
+	nebula = {Color3.fromRGB(30, 8, 36), Color3.fromRGB(58, 16, 70), Color3.fromRGB(170, 60, 170), Color3.fromRGB(255, 220, 250), Color3.new(0, 0, 0), Color3.fromRGB(230, 100, 220)},
+	galaxy = {Color3.fromRGB(10, 12, 40), Color3.fromRGB(22, 26, 78), Color3.fromRGB(70, 80, 190), Color3.fromRGB(220, 230, 255), Color3.new(0, 0, 0), Color3.fromRGB(110, 140, 255)},
+	void = {Color3.fromRGB(6, 4, 12), Color3.fromRGB(14, 10, 24), Color3.fromRGB(60, 36, 110), Color3.fromRGB(200, 180, 255), Color3.new(0, 0, 0), Color3.fromRGB(110, 70, 200)},
+	cosmic = {Color3.fromRGB(8, 22, 38), Color3.fromRGB(14, 40, 66), Color3.fromRGB(40, 130, 170), Color3.fromRGB(210, 250, 255), Color3.new(0, 0, 0), Color3.fromRGB(80, 210, 230)},
+	classic = {Color3.fromRGB(36, 36, 37), Color3.fromRGB(46, 46, 47), Color3.fromRGB(78, 78, 79), Color3.new(1, 1, 1), Color3.new(0, 0, 0), Color3.fromRGB(78, 78, 79)},
+}
+
+addcmd('theme',{'nytheme'},function(args, speaker)
+	local names = {}
+	for k in pairs(NeverYieldThemes) do
+		table.insert(names, k)
+	end
+	table.sort(names)
+	local choice = args[1] and args[1]:lower() or "space"
+	local t = NeverYieldThemes[choice]
+	if not t then
+		notify('Theme', 'Unknown theme. Try: ' .. table.concat(names, ', '))
+		return
+	end
+	updateColors(t[1], shade1)
+	updateColors(t[2], shade2)
+	updateColors(t[3], shade3)
+	updateColors(t[4], text1)
+	updateColors(t[5], text2)
+	updateColors(t[6], scroll)
+	updatesaves()
+	notify('Theme', 'Switched to the ' .. choice .. ' theme.')
+end)
+
+WackyState.weather.stars = {Color = Color3.new(1, 1, 1), Rate = 150, Speed = NumberRange.new(0.5, 2), Size = 0.2, Lifetime = 10, Light = 1, Spread = 180}
+WackyState.weather.galaxy = {Color = Color3.fromRGB(190, 140, 255), Rate = 180, Speed = NumberRange.new(1, 4), Size = 0.3, Lifetime = 10, Light = 1, Spread = 180}
+
+addcmd('spacemode',{'space'},function(args, speaker)
+	WackyState.saved.spacemode = WackyState.saved.spacemode or {Lighting.ClockTime, Lighting.Brightness}
+	Lighting.ClockTime = 0
+	WackyState.clear("spacemode")
+	local cc = WackyState.track("spacemode", Instance.new("ColorCorrectionEffect"))
+	cc.Name = randomString()
+	cc.TintColor = Color3.fromRGB(205, 175, 255)
+	cc.Saturation = 0.3
+	cc.Contrast = 0.15
+	cc.Parent = Lighting
+	local bloom = WackyState.track("spacemode", Instance.new("BloomEffect"))
+	bloom.Name = randomString()
+	bloom.Intensity = 1.2
+	bloom.Size = 30
+	bloom.Threshold = 0.7
+	bloom.Parent = Lighting
+	execCmd('weather galaxy', speaker)
+	execCmd('moongravity 20', speaker)
+	notify('Space Mode', 'Houston, we have a vibe. Use unspacemode to come back to Earth.')
+end)
+
+addcmd('unspacemode',{'unspace'},function(args, speaker)
+	WackyState.clear("spacemode")
+	execCmd('unweather', speaker)
+	execCmd('normalgravity', speaker)
+	local s = WackyState.saved.spacemode
+	if s then
+		Lighting.ClockTime, Lighting.Brightness = s[1], s[2]
+		WackyState.saved.spacemode = nil
+	end
+end)
+
+addcmd('neveryield',{'about','ny'},function(args, speaker)
+	notify('NeverYield v' .. currentVersion, 'Edited by kas. ' .. #cmds .. ' commands loaded. Type wacky for the fun stuff.', 8)
+end)
+
+table.insert(WackyState.chaosList, 'spacemode')
+table.insert(WackyState.undoList, 'unspacemode')
+-- ================== END NEVERYIELD COMMANDS ==================
+
 addcmd('removecmd',{'deletecmd'},function(args, speaker)
 	removecmd(args[1])
 end)
@@ -14430,7 +14561,7 @@ if IsOnMobile then
 	local UICorner = Instance.new("UICorner")
 	QuickCapture.Name = randomString()
 	QuickCapture.Parent = PARENT
-	QuickCapture.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
+	QuickCapture.BackgroundColor3 = Color3.fromRGB(32, 18, 64)
 	QuickCapture.BackgroundTransparency = 0.14
 	QuickCapture.Position = UDim2.new(0.489, 0, 0, 0)
 	QuickCapture.Size = UDim2.new(0, 32, 0, 33)
