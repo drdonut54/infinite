@@ -5,7 +5,7 @@ Versions before 1.11.3 were reconstructed from the Desktop `.bakN` backups (one 
 
 | Version | Date | Commands | Change |
 |---|---|---|---|
-| 1.25.0 | 10-10 | 634 | The door opens into a 4-room house (living room, bedroom, game room, kitchen) each fully customizable; working light switches with click sound; 7 new placeable lights; 17 detailed furniture items; 3 new lighting moods; wall-snap fix |
+| 1.25.0 | 10-10 | 634 | The door opens into a 4-room house (living room, bedroom, game room, kitchen) each fully customizable; working light switches with click sound; 7 new placeable lights; 15 detailed furniture items; 3 new lighting moods; wall-snap fix |
 | 1.24.7 | 10-10 | 634 | kas's own avatar sits on a garden bench behind the Agartha cottage, chilling with a Space Sandwich rebuilt from the Roblox catalog mesh |
 | 1.24.6 | 10-10 | 634 | Eggs crack with sound while they shake before hatching (faster, louder cracks + crack lines on the shell), then an egg-break sound |
 | 1.24.5 | 10-10 | 634 | Agartha fireplace back no longer clips through the cottage wall; portal command renamed to agartha (portal still works as an alias), agarthadebug likewise |
