@@ -1,4 +1,4 @@
--- NeverYield v1.19.0 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.20.0 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.19.0" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.20.0" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -1014,7 +1014,7 @@ NeverYieldPortal.conn = RunService.RenderStepped:Connect(function()
 			ring.frame.Size = UDim2.new(0, w + ring.pad * 2, 0, h + ring.pad * 2)
 		end
 		ring.gradient.Rotation = (t * 90 * ring.dir) % 360
-		ring.stroke.Transparency = math.clamp(ring.base + math.sin(t * 2.5 + ring.pad) * 0.15 + NeverYieldPortal.fade, 0, 1)
+		ring.stroke.Transparency = NeverYieldPortal.hideRings and 1 or math.clamp(ring.base + math.sin(t * 2.5 + ring.pad) * 0.15 + NeverYieldPortal.fade, 0, 1)
 	end
 	for i, spark in ipairs(NeverYieldPortal.sparks) do
 		local px, py = NeverYieldPortal.perimeter(t * 0.12 + i / #NeverYieldPortal.sparks, w, h, 4)
@@ -5369,6 +5369,7 @@ CMDs[#CMDs + 1] = {NAME = 'themes / themestudio', DESC = 'Opens the animated The
 CMDs[#CMDs + 1] = {NAME = 'theme [name]', DESC = 'Cosmic: auto, space, nebula, galaxy, void, cosmic, classic. Vibes: ocean, sunset, matrix, sakura, candy, lava, arctic, forest, midnight, vaporwave, royal, toxic. Holidays: christmas, halloween, newyear, lunarnewyear, valentines, stpatricks, easter, fourthofjuly, thanksgiving, hanukkah, diwali. Memes: doge, stonks, sus, nyan, thisisfine, cheems, noob, vibecat, moai, trollge, skull, funnyaward'}
 CMDs[#CMDs + 1] = {NAME = 'autotheme / holidaytheme', DESC = 'Automatically wear the holiday theme for today'}
 CMDs[#CMDs + 1] = {NAME = 'themedebug', DESC = 'Shows what the Theme Studio drew (for fixing display problems)'}
+CMDs[#CMDs + 1] = {NAME = 'frame [name]', DESC = 'What surrounds the panel (also Theme Studio > Frame): neon, classic, chase, hud, electric, orbit, chain, glow, rgb, none'}
 CMDs[#CMDs + 1] = {NAME = 'outline [name]', DESC = 'Animated panel outline (also Theme Studio > Outlines): auto, portal, lightning, fire, aura, smoke, frost, hearts, bubbles, leaves, petals, matrix, glitch, rainbow, sparkle, none'}
 CMDs[#CMDs + 1] = {NAME = 'spacemode / space', DESC = 'Purple space lighting, floating stars and low gravity'}
 CMDs[#CMDs + 1] = {NAME = 'unspacemode / unspace', DESC = 'Comes back down to Earth'}
@@ -16495,6 +16496,9 @@ NeverYieldTheme.apply = function(id, save)
 	if NeverYieldOutline then
 		pcall(NeverYieldOutline.resolve)
 	end
+	if NeverYieldFrame then
+		pcall(NeverYieldFrame.build)
+	end
 	return true, theme
 end
 
@@ -16674,10 +16678,10 @@ NeverYieldTheme.openStudio = function(page)
 	local tabs = {}
 	local currentTab = "cosmic"
 	local showTab
-	for k, info in ipairs({{"cosmic", "Cosmic"}, {"vibes", "Vibes"}, {"holidays", "Holidays"}, {"memes", "Memes"}, {"custom", "Custom"}, {"outlines", "Outlines"}}) do
+	for k, info in ipairs({{"cosmic", "Cosmic"}, {"vibes", "Vibes"}, {"holidays", "Holidays"}, {"memes", "Memes"}, {"custom", "Custom"}, {"outlines", "Outlines"}, {"frame", "Frame"}}) do
 		local tab = Instance.new("TextButton")
-		tab.Position = UDim2.new(0.5, -270 + (k - 1) * 91, 0, 70)
-		tab.Size = UDim2.new(0, 86, 0, 28)
+		tab.Position = UDim2.new(0.5, -273 + (k - 1) * 78, 0, 70)
+		tab.Size = UDim2.new(0, 74, 0, 28)
 		tab.AutoButtonColor = false
 		tab.BorderSizePixel = 0
 		tab.Font = Enum.Font.GothamBold
@@ -16745,6 +16749,14 @@ NeverYieldTheme.openStudio = function(page)
 	outlinePage.Visible = false
 	outlinePage.ZIndex = 21
 	outlinePage.Parent = studio
+
+	local framePage = Instance.new("Frame")
+	framePage.BackgroundTransparency = 1
+	framePage.Position = grid.Position
+	framePage.Size = grid.Size
+	framePage.Visible = false
+	framePage.ZIndex = 21
+	framePage.Parent = studio
 
 	local reset = Instance.new("TextButton")
 	reset.Position = UDim2.new(0, 4, 0, 104)
@@ -16888,7 +16900,7 @@ NeverYieldTheme.openStudio = function(page)
 			updateColors(color, slots[selectedSlot].tbl)
 			NeverYieldTheme.selected = "custom"
 			NeverYieldTheme.active = nil
-			pcall(NeverYieldTheme.applyCustomRim); pcall(function() NeverYieldOutline.resolve() end)
+			pcall(NeverYieldTheme.applyCustomRim); pcall(function() NeverYieldOutline.resolve() end); pcall(function() NeverYieldFrame.build() end)
 			pcall(function() writefile("NeverYield_theme.txt", "custom", true) end)
 			pcall(updatesaves)
 			if NeverYieldTheme.refreshStudio then
@@ -17104,7 +17116,15 @@ NeverYieldTheme.openStudio = function(page)
 	TweenService:Create(studio, TweenInfo.new(0.45, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Rotation = 0}):Play()
 	showTab = function(id)
 		outlinePage.Visible = false
-		if id == "custom" then
+		framePage.Visible = false
+		if id == "frame" then
+			showPage(false)
+			currentTab = "frame"
+			grid.Visible = false
+			framePage.Visible = true
+			NeverYieldFrame.populate(framePage, footer)
+			footer.Text = "<b>Frame</b>  -  what surrounds the panel. Classic Lines is the original look."
+		elseif id == "custom" then
 			showPage(true)
 		elseif id == "outlines" then
 			showPage(false)
@@ -17129,7 +17149,7 @@ NeverYieldTheme.openStudio = function(page)
 	elseif sel ~= "auto" and NeverYieldTheme.byId[sel] then
 		startTab = NeverYieldTheme.groupOf(NeverYieldTheme.byId[sel])
 	end
-	showTab(page == "outlines" and "outlines" or startTab)
+	showTab((page == "outlines" or page == "frame") and page or startTab)
 	for i, entry in ipairs(cardIntro) do
 		task.delay(0.1 + i * 0.03, function()
 			if entry.card.Parent then
@@ -17192,7 +17212,7 @@ task.spawn(function()
 	end)
 	if saved == "custom" then
 		NeverYieldTheme.selected = "custom"
-		pcall(NeverYieldTheme.applyCustomRim); pcall(function() NeverYieldOutline.resolve() end)
+		pcall(NeverYieldTheme.applyCustomRim); pcall(function() NeverYieldOutline.resolve() end); pcall(function() NeverYieldFrame.build() end)
 	elseif not NeverYieldTheme.apply(saved, false) then
 		NeverYieldTheme.apply("auto", false)
 	end
@@ -17740,6 +17760,376 @@ task.spawn(function()
 	end))
 end)
 -- ================== END NEVERYIELD OUTLINES ==================
+
+-- ==================== NEVERYIELD FRAMES ====================
+-- The area right around the panel (where the two portal lines are): pick a frame style in
+-- Theme Studio > Frame. "classic" keeps the original lines. Colours follow the theme.
+NeverYieldFrame = {file = "NeverYield_frame.txt", style = "neon", parts = {}}
+
+NeverYieldFrame.list = {
+	{id = "neon", name = "Neon Pulse", icon = "\u{1F4AB}", desc = "Layered glowing border with two comets racing around it."},
+	{id = "classic", name = "Classic Lines", icon = "\u{2B55}", desc = "The original NeverYield portal lines."},
+	{id = "chase", name = "Marquee", icon = "\u{1F3AA}", desc = "Light dashes chasing each other around the edge."},
+	{id = "hud", name = "HUD", icon = "\u{1F3AF}", desc = "Sci-fi corner brackets with a scanning line."},
+	{id = "electric", name = "Electric", icon = "\u{26A1}", desc = "A jittering, flickering live wire."},
+	{id = "orbit", name = "Orbit", icon = "\u{1FA90}", desc = "Glowing orbs circling on three tracks."},
+	{id = "chain", name = "Chain", icon = "\u{1F517}", desc = "Chain links slowly crawling around the panel."},
+	{id = "glow", name = "Halo Glow", icon = "\u{1F506}", desc = "A soft, breathing halo of light."},
+	{id = "rgb", name = "RGB", icon = "\u{1F308}", desc = "Gaming RGB border, always cycling."},
+	{id = "none", name = "None", icon = "\u{2B1C}", desc = "Nothing around the panel."},
+}
+NeverYieldFrame.byId = {}
+for _, f in ipairs(NeverYieldFrame.list) do
+	NeverYieldFrame.byId[f.id] = f
+end
+
+NeverYieldFrame.sequence = function()
+	local theme = NeverYieldTheme.active
+	if theme then
+		return theme.candy and NeverYieldTheme.candy() or NeverYieldTheme.sequence(theme)
+	end
+	local c = NeverYieldOutline.colors()
+	return ColorSequence.new({ColorSequenceKeypoint.new(0, c[1]), ColorSequenceKeypoint.new(0.5, c[2] or c[1]), ColorSequenceKeypoint.new(1, c[1])})
+end
+
+NeverYieldFrame.clear = function()
+	for _, p in ipairs(NeverYieldFrame.parts) do
+		pcall(function() p.obj:Destroy() end)
+	end
+	NeverYieldFrame.parts = {}
+end
+
+-- a rounded outline a little bigger than the panel
+NeverYieldFrame.stroke = function(gap, thickness, transparency, radius, gradient)
+	local f = Instance.new("Frame")
+	f.Name = randomString()
+	f.BackgroundTransparency = 1
+	f.BorderSizePixel = 0
+	f.ZIndex = 9
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(0, radius or (12 + gap))
+	c.Parent = f
+	local s = Instance.new("UIStroke")
+	s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	s.Thickness = thickness
+	s.Transparency = transparency
+	s.Color = Color3.new(1, 1, 1)
+	s.Parent = f
+	local g
+	if gradient ~= false then
+		g = Instance.new("UIGradient")
+		g.Color = NeverYieldFrame.sequence()
+		g.Parent = s
+	end
+	f.Parent = NeverYieldOutline.ensure()
+	local item = {obj = f, kind = "stroke", gap = gap, stroke = s, gradient = g, base = transparency, thick = thickness}
+	table.insert(NeverYieldFrame.parts, item)
+	return item
+end
+
+NeverYieldFrame.dot = function(size, color, round)
+	local f = Instance.new("Frame")
+	f.Name = randomString()
+	f.AnchorPoint = Vector2.new(0.5, 0.5)
+	f.BorderSizePixel = 0
+	f.BackgroundColor3 = color or Color3.new(1, 1, 1)
+	f.Size = UDim2.new(0, size, 0, size)
+	f.ZIndex = 10
+	if round ~= false then
+		local c = Instance.new("UICorner")
+		c.CornerRadius = UDim.new(0.5, 0)
+		c.Parent = f
+	end
+	f.Parent = NeverYieldOutline.ensure()
+	local item = {obj = f, kind = "dot", size = size}
+	table.insert(NeverYieldFrame.parts, item)
+	return item
+end
+
+-- build the pieces for a style (called when the style or theme changes)
+NeverYieldFrame.build = function()
+	NeverYieldFrame.clear()
+	local style = NeverYieldFrame.style
+	NeverYieldPortal.hideRings = style ~= "classic"
+	local colors = NeverYieldOutline.colors()
+	local F = NeverYieldFrame
+	if style == "neon" then
+		F.stroke(7, 14, 0.88)
+		F.stroke(7, 7, 0.62)
+		F.stroke(7, 2.5, 0)
+		F.comets = {}
+		for k = 1, 2 do
+			local trail = {}
+			for i = 1, 14 do
+				local d = F.dot(9 - i * 0.5, i == 1 and Color3.new(1, 1, 1) or colors[(k + i) % #colors + 1])
+				d.obj.BackgroundTransparency = (i - 1) / 14
+				table.insert(trail, d)
+			end
+			table.insert(F.comets, trail)
+		end
+	elseif style == "chase" then
+		F.stroke(9, 1, 0.75)
+		F.dashes = {}
+		for i = 1, 48 do
+			local d = F.dot(4, colors[i % #colors + 1], true)
+			table.insert(F.dashes, d)
+		end
+	elseif style == "hud" then
+		F.brackets = {}
+		for corner = 1, 4 do
+			local h = F.dot(4, colors[1], false)
+			local v = F.dot(4, colors[1], false)
+			local tick = F.dot(5, Color3.new(1, 1, 1), false)
+			table.insert(F.brackets, {h = h, v = v, tick = tick})
+		end
+		F.scan = F.dot(2, colors[2] or colors[1], false)
+		F.scan2 = F.dot(2, colors[2] or colors[1], false)
+		F.stroke(10, 1, 0.82)
+	elseif style == "electric" then
+		F.wires = {F.stroke(5, 2, 0.1), F.stroke(9, 1.5, 0.35), F.stroke(5, 6, 0.8)}
+	elseif style == "orbit" then
+		F.orbs = {}
+		for track = 1, 3 do
+			F.stroke(6 + track * 8, 1, 0.82)
+			for k = 1, track + 1 do
+				local o = F.dot(7 - track, colors[(track + k) % #colors + 1])
+				local glow = Instance.new("UIStroke")
+				glow.Color = o.obj.BackgroundColor3
+				glow.Thickness = 3
+				glow.Transparency = 0.5
+				glow.Parent = o.obj
+				table.insert(F.orbs, {item = o, track = track, phase = k / (track + 1), speed = (track % 2 == 0 and -1 or 1) * (0.06 + track * 0.025)})
+			end
+		end
+	elseif style == "chain" then
+		F.links = {}
+		for i = 1, 34 do
+			local f = Instance.new("Frame")
+			f.Name = randomString()
+			f.AnchorPoint = Vector2.new(0.5, 0.5)
+			f.BackgroundTransparency = 1
+			f.ZIndex = 10
+			local c = Instance.new("UICorner")
+			c.CornerRadius = UDim.new(0.5, 0)
+			c.Parent = f
+			local s = Instance.new("UIStroke")
+			s.Thickness = 2.2
+			s.Color = Color3.fromRGB(215, 215, 225):Lerp(colors[1], 0.35)
+			s.Parent = f
+			f.Parent = NeverYieldOutline.ensure()
+			local item = {obj = f, kind = "link"}
+			table.insert(F.parts, item)
+			table.insert(F.links, item)
+		end
+	elseif style == "glow" then
+		F.halo = {}
+		for i = 1, 6 do
+			table.insert(F.halo, F.stroke(1 + i * 2.5, 2 + i * 1.5, 0.55 + i * 0.07))
+		end
+	elseif style == "rgb" then
+		local outer = F.stroke(6, 5, 0, nil, true)
+		local keys = {}
+		for i = 0, 6 do
+			table.insert(keys, ColorSequenceKeypoint.new(i / 6, Color3.fromHSV(i / 6, 1, 1)))
+		end
+		outer.gradient.Color = ColorSequence.new(keys)
+		F.rgb = outer
+		F.stroke(2, 1.2, 0.5, nil, false)
+	end
+end
+
+-- place a dot on the border, gap pixels outside the panel; returns the edge it is on
+NeverYieldFrame.place = function(item, t, w, h, gap)
+	local pad = NeverYieldOutline.pad
+	local x, y, nx, ny, edge = NeverYieldOutline.edge(t, w + gap * 2, h + gap * 2)
+	item.obj.Position = UDim2.new(0, pad - gap + x, 0, pad - gap + y)
+	return edge
+end
+
+NeverYieldFrame.step = function(dt)
+	local F = NeverYieldFrame
+	if #F.parts == 0 then return end
+	local pad = NeverYieldOutline.pad
+	local w, h = Holder.Size.X.Offset, Holder.Size.Y.Offset
+	local now = tick()
+	for _, p in ipairs(F.parts) do
+		if p.kind == "stroke" then
+			p.obj.Position = UDim2.new(0, pad - p.gap, 0, pad - p.gap)
+			p.obj.Size = UDim2.new(0, w + p.gap * 2, 0, h + p.gap * 2)
+			if p.gradient then p.gradient.Rotation = (now * 90) % 360 end
+		end
+	end
+	local style = F.style
+	if style == "neon" then
+		for k, trail in ipairs(F.comets) do
+			for i, d in ipairs(trail) do
+				F.place(d, now * 0.16 + (k - 1) * 0.5 - i * 0.0045, w, h, 7)
+			end
+		end
+		F.parts[3].stroke.Transparency = 0.1 + math.sin(now * 3) * 0.1
+	elseif style == "chase" then
+		for i, d in ipairs(F.dashes) do
+			local edge = F.place(d, now * 0.05 + i / #F.dashes, w, h, 9)
+			local horizontal = edge == "top" or edge == "bottom"
+			d.obj.Size = horizontal and UDim2.new(0, 11, 0, 3) or UDim2.new(0, 3, 0, 11)
+			d.obj.BackgroundTransparency = 0.2 + 0.6 * (0.5 + 0.5 * math.sin(now * 8 - i * 0.6))
+		end
+	elseif style == "hud" then
+		local breathe = 10 + math.sin(now * 2.5) * 3
+		local len = 26
+		local corners = {{0, 0, 1, 1}, {w, 0, -1, 1}, {0, h, 1, -1}, {w, h, -1, -1}}
+		for i, b in ipairs(F.brackets) do
+			local c = corners[i]
+			local cx, cy = pad + c[1] - c[3] * breathe, pad + c[2] - c[4] * breathe
+			b.h.obj.Size = UDim2.new(0, len, 0, 3)
+			b.h.obj.Position = UDim2.new(0, cx + c[3] * len / 2, 0, cy)
+			b.v.obj.Size = UDim2.new(0, 3, 0, len)
+			b.v.obj.Position = UDim2.new(0, cx, 0, cy + c[4] * len / 2)
+			b.tick.obj.Position = UDim2.new(0, cx + c[3] * 7, 0, cy + c[4] * 7)
+			b.tick.obj.BackgroundTransparency = (math.floor(now * 3 + i) % 2 == 0) and 0 or 0.8
+		end
+		local sy = ((now * 0.35) % 1) * (h + 20) - 10
+		for k, s in ipairs({F.scan, F.scan2}) do
+			local x = k == 1 and (pad - 14) or (pad + w + 14)
+			s.obj.Size = UDim2.new(0, 10, 0, 2)
+			s.obj.Position = UDim2.new(0, x, 0, pad + sy)
+		end
+	elseif style == "electric" then
+		for i, wire in ipairs(F.wires) do
+			local jx, jy = (math.random() - 0.5) * 3, (math.random() - 0.5) * 3
+			wire.obj.Position = UDim2.new(0, pad - wire.gap + jx, 0, pad - wire.gap + jy)
+			wire.stroke.Transparency = math.clamp(wire.base + (math.random() < 0.12 and 0.6 or 0), 0, 1)
+		end
+	elseif style == "orbit" then
+		for _, o in ipairs(F.orbs) do
+			F.place(o.item, now * o.speed + o.phase, w, h, 6 + o.track * 8)
+		end
+	elseif style == "chain" then
+		for i, link in ipairs(F.links) do
+			local edge = F.place(link, now * 0.012 + i / #F.links, w, h, 10)
+			local horizontal = edge == "top" or edge == "bottom"
+			local flat = i % 2 == 0
+			if horizontal then
+				link.obj.Size = flat and UDim2.new(0, 16, 0, 8) or UDim2.new(0, 16, 0, 3)
+			else
+				link.obj.Size = flat and UDim2.new(0, 8, 0, 16) or UDim2.new(0, 3, 0, 16)
+			end
+		end
+	elseif style == "glow" then
+		local b = 0.5 + 0.5 * math.sin(now * 1.6)
+		for i, ring in ipairs(F.halo) do
+			ring.stroke.Transparency = math.clamp(ring.base - b * 0.12, 0, 1)
+		end
+	elseif style == "rgb" then
+		F.rgb.gradient.Rotation = (now * 240) % 360
+	end
+end
+
+NeverYieldFrame.set = function(id, save)
+	if not NeverYieldFrame.byId[id] then return false end
+	NeverYieldFrame.style = id
+	pcall(NeverYieldFrame.build)
+	if save then
+		pcall(function() writefile(NeverYieldFrame.file, id, true) end)
+	end
+	return true
+end
+
+-- Theme Studio "Frame" page
+NeverYieldFrame.populate = function(page, footer)
+	for _, c in ipairs(page:GetChildren()) do c:Destroy() end
+	for i, o in ipairs(NeverYieldFrame.list) do
+		local col, row = (i - 1) % 6, math.floor((i - 1) / 6)
+		local card = Instance.new("TextButton")
+		card.Name = randomString()
+		card.Text = ""
+		card.AutoButtonColor = true
+		card.Position = UDim2.new(0, 4 + col * 90, 0, 2 + row * 82)
+		card.Size = UDim2.new(0, 84, 0, 74)
+		card.BackgroundColor3 = currentShade2
+		card.BorderSizePixel = 0
+		card.ZIndex = 21
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(0, 12)
+		corner.Parent = card
+		local selected = NeverYieldFrame.style == o.id
+		local stroke = Instance.new("UIStroke")
+		stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		stroke.Color = selected and Color3.fromRGB(120, 255, 160) or currentShade3
+		stroke.Thickness = selected and 3 or 1.5
+		stroke.Parent = card
+		card.Parent = page
+		local icon = Instance.new("TextLabel")
+		icon.BackgroundTransparency = 1
+		icon.Position = UDim2.new(0, 0, 0, 6)
+		icon.Size = UDim2.new(1, 0, 0, 36)
+		icon.TextScaled = true
+		icon.Text = o.icon
+		icon.ZIndex = 22
+		icon.Parent = card
+		local name = Instance.new("TextLabel")
+		name.BackgroundTransparency = 1
+		name.Position = UDim2.new(0, 2, 0, 48)
+		name.Size = UDim2.new(1, -4, 0, 18)
+		name.Font = Enum.Font.GothamBold
+		name.TextSize = 11
+		name.Text = o.name
+		name.TextTruncate = Enum.TextTruncate.AtEnd
+		name.TextColor3 = currentText1
+		name.ZIndex = 22
+		name.Parent = card
+		card.MouseEnter:Connect(function()
+			footer.Text = "Frame: <b>" .. o.icon .. " " .. o.name .. "</b>  -  " .. o.desc
+		end)
+		card.MouseButton1Click:Connect(function()
+			NeverYieldFrame.set(o.id, true)
+			NeverYieldFrame.populate(page, footer)
+			footer.Text = "<b>" .. o.icon .. " " .. o.name .. "</b> frame on. Saved."
+		end)
+	end
+end
+
+addcmd('frame',{'frames','panelframe'},function(args, speaker)
+	local choice = args[1] and args[1]:lower()
+	if choice then
+		for _, o in ipairs(NeverYieldFrame.list) do
+			if o.id == choice or o.name:lower():gsub("%s", "") == choice then
+				NeverYieldFrame.set(o.id, true)
+				notify('Frame', o.icon .. ' ' .. o.name .. ' frame on.')
+				return
+			end
+		end
+		local ids = {}
+		for _, o in ipairs(NeverYieldFrame.list) do table.insert(ids, o.id) end
+		notify('Frame', 'Unknown frame. Try: ' .. table.concat(ids, ', '), 10)
+		return
+	end
+	pcall(NeverYieldTheme.openStudio, "frame")
+end)
+
+task.spawn(function()
+	task.wait(0.15)
+	pcall(function()
+		if isfile and isfile(NeverYieldFrame.file) then
+			local saved = (readfile(NeverYieldFrame.file) or ""):gsub("%s", "")
+			if NeverYieldFrame.byId[saved] then NeverYieldFrame.style = saved end
+		end
+	end)
+	pcall(NeverYieldFrame.build)
+	WackyState.connect("frames", RunService.RenderStepped:Connect(function(dt)
+		if Holder.Parent == nil then
+			WackyState.disconnect("frames")
+			return
+		end
+		local ok, err = pcall(NeverYieldFrame.step, dt)
+		if not ok and not NeverYieldFrame.warned then
+			NeverYieldFrame.warned = true
+			warn("[NeverYield frames] " .. tostring(err))
+		end
+	end))
+end)
+-- ================== END NEVERYIELD FRAMES ==================
+
 
 
 -- ==================== WEATHER 2.0 ====================
@@ -20657,13 +21047,67 @@ NeverYieldAgartha.build = function(O)
 	local woodDark = Color3.fromRGB(110, 70, 45)
 	local roof = Color3.fromRGB(165, 70, 55)
 	P(folder, Vector3.new(34, 1.6, 28), at(0, 0.8, hz), Color3.fromRGB(150, 145, 140), M.Cobblestone)
-	-- walls (front wall has a door gap)
-	P(folder, Vector3.new(1, 12, 26), at(-15.5, 7.6, hz), wall, M.WoodPlanks)
-	P(folder, Vector3.new(1, 12, 26), at(15.5, 7.6, hz), wall, M.WoodPlanks)
-	P(folder, Vector3.new(32, 12, 1), at(0, 7.6, hz + 12.5), wall, M.WoodPlanks)
-	P(folder, Vector3.new(12, 12, 1), at(-10, 7.6, hz - 12.5), wall, M.WoodPlanks)
-	P(folder, Vector3.new(12, 12, 1), at(10, 7.6, hz - 12.5), wall, M.WoodPlanks)
-	P(folder, Vector3.new(8, 3.5, 1), at(0, 11.85, hz - 12.5), wall, M.WoodPlanks)
+	-- walls with real openings: each wall run is split around its windows and door
+	local function wallRun(axis, fixed, a0, a1, openings)
+		local cursor = a0
+		local function block(s0, s1, y0, y1)
+			if s1 - s0 < 0.05 or y1 - y0 < 0.05 then return end
+			local mid, len = (s0 + s1) / 2, s1 - s0
+			if axis == "x" then
+				P(folder, Vector3.new(len, y1 - y0, 1), at(mid, (y0 + y1) / 2, fixed), wall, M.WoodPlanks)
+			else
+				P(folder, Vector3.new(1, y1 - y0, len), at(fixed, (y0 + y1) / 2, mid), wall, M.WoodPlanks)
+			end
+		end
+		for _, o in ipairs(openings) do
+			local s0, s1 = o[1] - o[2] / 2, o[1] + o[2] / 2
+			block(cursor, s0, 1.6, 13.6)
+			block(s0, s1, 1.6, o[3])
+			block(s0, s1, o[4], 13.6)
+			cursor = s1
+		end
+		block(cursor, a1, 1.6, 13.6)
+	end
+	-- a glass window: pane, frame, cross mullions, sills inside and out, curtains inside
+	local glass = Color3.fromRGB(205, 232, 255)
+	local function window(axis, fixed, c, w, y0, y1, inward, curtains)
+		local cy, hgt = (y0 + y1) / 2, y1 - y0
+		local function at2(along, y, out)
+			if axis == "x" then return at(along, y, fixed + out) end
+			return at(fixed + out, y, along)
+		end
+		local function size(along, y, depth)
+			if axis == "x" then return Vector3.new(along, y, depth) end
+			return Vector3.new(depth, y, along)
+		end
+		P(folder, size(w, hgt, 0.15), at2(c, cy, 0), glass, M.Glass, nil, {Transparency = 0.6, Reflectance = 0.15})
+		for _, side in ipairs({-1, 1}) do
+			P(folder, size(0.4, hgt + 0.4, 1.2), at2(c + side * (w / 2 - 0.1), cy, 0), woodDark, M.Wood)
+			P(folder, size(w + 0.4, 0.4, 1.2), at2(c, cy + side * (hgt / 2 - 0.1), 0), woodDark, M.Wood)
+		end
+		P(folder, size(0.22, hgt, 0.35), at2(c, cy, 0), woodDark, M.Wood)
+		P(folder, size(w, 0.22, 0.35), at2(c, cy, 0), woodDark, M.Wood)
+		P(folder, size(w + 1, 0.35, 1.2), at2(c, y0 - 0.2, -inward * 0.6), woodDark, M.WoodPlanks)
+		P(folder, size(w + 0.6, 0.3, 0.9), at2(c, y0 - 0.15, inward * 0.6), Color3.fromRGB(235, 225, 200), M.WoodPlanks)
+		if curtains then
+			P(folder, size(w + 1.6, 0.25, 0.25), at2(c, y1 + 0.5, inward * 0.75), Color3.fromRGB(180, 140, 80), M.Wood)
+			for _, side in ipairs({-1, 1}) do
+				P(folder, size(1.3, hgt + 1.4, 0.35), at2(c + side * (w / 2 + 0.3), cy - 0.2, inward * 0.8), curtains, M.Fabric, "Ellipsoid")
+			end
+		end
+	end
+	local inFront, inBack, inLeft, inRight = 1, -1, 1, -1
+	wallRun("x", hz - 12.5, -16, 16, {{-9.5, 5, 6, 10}, {0, 7.6, 1.6, 11.4}, {9.5, 5, 6, 10}})
+	wallRun("x", hz + 12.5, -16, 16, {{-9, 5, 8.6, 11.8}, {9.5, 4, 6, 10}})
+	wallRun("z", -15.5, hz - 12, hz + 12, {{hz - 4, 4, 6, 10}, {hz + 5, 4, 6, 10}})
+	wallRun("z", 15.5, hz - 12, hz + 12, {{hz - 5, 4, 6, 10}})
+	window("x", hz - 12.5, -9.5, 5, 6, 10, inFront, Color3.fromRGB(240, 160, 170))
+	window("x", hz - 12.5, 9.5, 5, 6, 10, inFront, Color3.fromRGB(240, 160, 170))
+	window("x", hz + 12.5, -9, 5, 8.6, 11.8, inBack, nil)
+	window("x", hz + 12.5, 9.5, 4, 6, 10, inBack, Color3.fromRGB(160, 190, 240))
+	window("z", -15.5, hz - 4, 4, 6, 10, inLeft, Color3.fromRGB(160, 190, 240))
+	window("z", -15.5, hz + 5, 4, 6, 10, inLeft, Color3.fromRGB(160, 190, 240))
+	window("z", 15.5, hz - 5, 4, 6, 10, inRight, Color3.fromRGB(160, 190, 240))
 	-- corner beams
 	for _, x in ipairs({-15.5, 15.5}) do
 		for _, z in ipairs({hz - 12.5, hz + 12.5}) do
@@ -20671,32 +21115,204 @@ NeverYieldAgartha.build = function(O)
 		end
 	end
 	P(folder, Vector3.new(33, 1, 1.4), at(0, 13.4, hz - 12.5), woodDark, M.Wood)
-	-- door with a knob and a warm lamp above it
-	P(folder, Vector3.new(7.6, 9.8, 0.6), at(0, 6.5, hz - 12.6), Color3.fromRGB(130, 80, 50), M.Wood)
-	P(folder, Vector3.new(0.6, 0.6, 0.6), at(2.8, 6.4, hz - 13.0), Color3.fromRGB(230, 190, 70), M.Foil, "Ball")
-	local lamp = P(folder, Vector3.new(1, 1.3, 1), at(0, 12.2, hz - 13.6), Color3.fromRGB(255, 210, 120), M.Neon, "Ellipsoid")
+	-- the door stands open (swung inwards on its hinge), with panels and a brass knob
+	local hinge = at(-3.8, 6.5, hz - 12.5) * CFrame.Angles(0, math.rad(-80), 0)
+	local doorColor = Color3.fromRGB(130, 80, 50)
+	P(folder, Vector3.new(7.6, 9.8, 0.5), hinge * CFrame.new(3.8, 0, 0), doorColor, M.Wood)
+	for _, py in ipairs({2.3, -2.2}) do
+		P(folder, Vector3.new(5.4, 3.6, 0.15), hinge * CFrame.new(3.8, py, -0.3), doorColor:Lerp(Color3.new(0, 0, 0), 0.15), M.Wood)
+		P(folder, Vector3.new(5.4, 3.6, 0.15), hinge * CFrame.new(3.8, py, 0.3), doorColor:Lerp(Color3.new(0, 0, 0), 0.15), M.Wood)
+	end
+	P(folder, Vector3.new(0.55, 0.55, 0.55), hinge * CFrame.new(6.9, 0, -0.45), Color3.fromRGB(230, 190, 70), M.Foil, "Ball")
+	P(folder, Vector3.new(8.6, 0.6, 1.2), at(0, 11.7, hz - 12.5), woodDark, M.Wood)
+	local lamp = P(folder, Vector3.new(1, 1.3, 1), at(0, 12.6, hz - 13.6), Color3.fromRGB(255, 210, 120), M.Neon, "Ellipsoid")
 	local lampLight = Instance.new("PointLight")
 	lampLight.Color = Color3.fromRGB(255, 190, 110)
 	lampLight.Range = 16
 	lampLight.Brightness = 1.4
 	lampLight.Parent = lamp
-	-- glowing windows with frames and flower boxes
+	-- flower boxes under the front windows
 	for _, x in ipairs({-9.5, 9.5}) do
-		P(folder, Vector3.new(5.2, 4.2, 0.3), at(x, 8, hz - 13.05), Color3.fromRGB(255, 225, 150), M.Neon, nil, {Transparency = 0.15})
-		P(folder, Vector3.new(5.8, 0.4, 0.5), at(x, 10.2, hz - 13.1), woodDark, M.Wood)
-		P(folder, Vector3.new(5.8, 0.4, 0.5), at(x, 5.8, hz - 13.1), woodDark, M.Wood)
-		P(folder, Vector3.new(0.35, 4.6, 0.5), at(x, 8, hz - 13.15), woodDark, M.Wood)
-		P(folder, Vector3.new(5.8, 0.35, 0.5), at(x, 8, hz - 13.15), woodDark, M.Wood)
-		P(folder, Vector3.new(6, 1.2, 1.4), at(x, 5.2, hz - 13.6), woodDark, M.WoodPlanks)
+		P(folder, Vector3.new(6, 1.2, 1.4), at(x, 5.0, hz - 13.9), woodDark, M.WoodPlanks)
 		for i = 0, 6 do
-			P(folder, Vector3.new(0.8, 0.8, 0.8), at(x - 2.5 + i * 0.83, 6.1, hz - 13.6), ({Color3.fromRGB(255, 90, 120), Color3.fromRGB(255, 200, 60), Color3.fromRGB(180, 110, 255)})[i % 3 + 1], M.SmoothPlastic, "Ball")
+			P(folder, Vector3.new(0.8, 0.8, 0.8), at(x - 2.5 + i * 0.83, 5.9, hz - 13.9), ({Color3.fromRGB(255, 90, 120), Color3.fromRGB(255, 200, 60), Color3.fromRGB(180, 110, 255)})[i % 3 + 1], M.SmoothPlastic, "Ball")
 		end
 	end
-	for _, z in ipairs({hz - 4, hz + 4}) do
-		for _, x in ipairs({-16.05, 16.05}) do
-			P(folder, Vector3.new(0.3, 4, 4), at(x, 8, z), Color3.fromRGB(255, 225, 150), M.Neon, nil, {Transparency = 0.15})
+
+	-- ======== inside ========
+	local plank = Color3.fromRGB(176, 128, 84)
+	P(folder, Vector3.new(30, 0.25, 24), at(0, 1.72, hz), plank, M.WoodPlanks)
+	P(folder, Vector3.new(31, 0.5, 25), at(0, 13.85, hz), Color3.fromRGB(200, 160, 115), M.WoodPlanks)
+	for _, z in ipairs({hz - 7, hz, hz + 7}) do
+		P(folder, Vector3.new(30, 0.9, 0.9), at(0, 13.2, z), woodDark, M.Wood)
+	end
+	-- rug
+	P(folder, Vector3.new(14, 0.08, 9), at(1, 1.86, hz - 1), Color3.fromRGB(150, 50, 60), M.Fabric, "Ellipsoid")
+	P(folder, Vector3.new(11, 0.09, 6.6), at(1, 1.88, hz - 1), Color3.fromRGB(220, 170, 90), M.Fabric, "Ellipsoid")
+	P(folder, Vector3.new(8, 0.1, 4.4), at(1, 1.9, hz - 1), Color3.fromRGB(70, 90, 150), M.Fabric, "Ellipsoid")
+	-- bed in the back-left corner: frame, headboard with posts, mattress, quilt, pillows, a teddy
+	local bx, bz = -9, hz + 6.5
+	local frame = Color3.fromRGB(120, 78, 48)
+	P(folder, Vector3.new(7.2, 1.1, 10.2), at(bx, 2.6, bz), frame, M.Wood)
+	for _, lx in ipairs({-3.3, 3.3}) do
+		for _, lz in ipairs({-4.8, 4.8}) do
+			P(folder, Vector3.new(0.7, 1.6, 0.7), at(bx + lx, 2.3, bz + lz), frame, M.Wood)
 		end
 	end
+	P(folder, Vector3.new(7.6, 4.8, 0.6), at(bx, 5.0, bz + 5.3), frame, M.Wood)
+	P(folder, Vector3.new(6.2, 3.2, 0.2), at(bx, 5.2, bz + 4.95), frame:Lerp(Color3.new(1, 1, 1), 0.12), M.Wood)
+	for _, lx in ipairs({-3.6, 3.6}) do
+		P(folder, Vector3.new(0.8, 6, 0.8), at(bx + lx, 5.0, bz + 5.3), frame, M.Wood)
+		P(folder, Vector3.new(0.9, 0.9, 0.9), at(bx + lx, 8.2, bz + 5.3), frame, M.Wood, "Ball")
+	end
+	P(folder, Vector3.new(7.6, 2.6, 0.5), at(bx, 3.8, bz - 5.2), frame, M.Wood)
+	P(folder, Vector3.new(6.7, 1.1, 9.6), at(bx, 3.7, bz), Color3.fromRGB(245, 243, 238), M.Fabric)
+	P(folder, Vector3.new(7.0, 0.55, 6.6), at(bx, 4.35, bz - 1.4), Color3.fromRGB(110, 160, 220), M.Fabric)
+	P(folder, Vector3.new(7.05, 0.6, 1.2), at(bx, 4.4, bz + 1.9), Color3.fromRGB(245, 243, 238), M.Fabric)
+	for i = 0, 3 do
+		P(folder, Vector3.new(7.1, 0.06, 0.5), at(bx, 4.65, bz - 4.2 + i * 1.6), Color3.fromRGB(255, 220, 120), M.Fabric)
+	end
+	for _, px in ipairs({-1.7, 1.7}) do
+		P(folder, Vector3.new(2.7, 0.95, 1.7), at(bx + px, 4.75, bz + 3.6), Color3.fromRGB(252, 250, 247), M.Fabric, "Ellipsoid")
+	end
+	local bear = Color3.fromRGB(170, 115, 70)
+	P(folder, Vector3.new(1.1, 1.2, 0.9), at(bx + 2.2, 5.0, bz + 2.2), bear, M.Fabric, "Ellipsoid")
+	P(folder, Vector3.new(0.85, 0.85, 0.85), at(bx + 2.2, 5.9, bz + 2.1), bear, M.Fabric, "Ball")
+	for _, ex in ipairs({-0.35, 0.35}) do
+		P(folder, Vector3.new(0.35, 0.35, 0.35), at(bx + 2.2 + ex, 6.3, bz + 2.15), bear, M.Fabric, "Ball")
+	end
+	P(folder, Vector3.new(0.3, 0.2, 0.2), at(bx + 2.2, 5.85, bz + 1.7), Color3.fromRGB(60, 40, 30), M.SmoothPlastic, "Ellipsoid")
+	-- nightstand with drawers and a lamp
+	local nx, nz = -3.6, hz + 10.4
+	P(folder, Vector3.new(2.8, 2.8, 2.4), at(nx, 3.1, nz), frame, M.Wood)
+	for _, dy in ipairs({0.6, -0.6}) do
+		P(folder, Vector3.new(2.3, 1, 0.12), at(nx, 3.1 + dy, nz - 1.22), frame:Lerp(Color3.new(1, 1, 1), 0.1), M.Wood)
+		P(folder, Vector3.new(0.25, 0.25, 0.25), at(nx, 3.1 + dy, nz - 1.33), Color3.fromRGB(230, 190, 70), M.Foil, "Ball")
+	end
+	P(folder, Vector3.new(0.25, 0.8, 0.8), at(nx, 4.62, nz), Color3.fromRGB(230, 190, 70), M.Foil, "Cylinder", {CFrame = at(nx, 4.62, nz) * up})
+	P(folder, Vector3.new(0.18, 1.3, 0.18), at(nx, 5.3, nz), Color3.fromRGB(230, 190, 70), M.Foil)
+	local shade = P(folder, Vector3.new(1.6, 1.2, 1.6), at(nx, 6.2, nz), Color3.fromRGB(255, 235, 195), M.Fabric, "Ellipsoid")
+	local bedLight = Instance.new("PointLight")
+	bedLight.Color = Color3.fromRGB(255, 205, 140)
+	bedLight.Range = 12
+	bedLight.Brightness = 1.2
+	bedLight.Parent = shade
+	-- dining table with a vase of flowers and four slatted chairs
+	local tx, tz = 7, hz - 4
+	local tableWood = Color3.fromRGB(150, 98, 60)
+	P(folder, Vector3.new(6.4, 0.4, 4.4), at(tx, 4.7, tz), tableWood, M.Wood)
+	P(folder, Vector3.new(6.8, 0.06, 4.8), at(tx, 4.93, tz), Color3.fromRGB(250, 245, 240), M.Fabric)
+	for _, lx in ipairs({-2.8, 2.8}) do
+		for _, lz in ipairs({-1.8, 1.8}) do
+			P(folder, Vector3.new(0.4, 3, 0.4), at(tx + lx, 3.1, tz + lz), tableWood, M.Wood)
+		end
+	end
+	P(folder, Vector3.new(0.9, 1.3, 0.9), at(tx, 5.6, tz), Color3.fromRGB(120, 170, 220), M.Glass, "Ellipsoid", {Transparency = 0.2})
+	for i = 1, 5 do
+		local a = i / 5 * math.pi * 2
+		P(folder, Vector3.new(0.1, 1.2, 0.1), at(tx + math.cos(a) * 0.15, 6.6, tz + math.sin(a) * 0.15), Color3.fromRGB(70, 150, 60), M.SmoothPlastic)
+		P(folder, Vector3.new(0.5, 0.45, 0.5), at(tx + math.cos(a) * 0.35, 7.25, tz + math.sin(a) * 0.35), ({Color3.fromRGB(255, 90, 120), Color3.fromRGB(255, 210, 60), Color3.fromRGB(255, 255, 255)})[i % 3 + 1], M.SmoothPlastic, "Ellipsoid")
+	end
+	local function chair(cx, cz, yaw)
+		local base = at(cx, 0, cz) * CFrame.Angles(0, yaw, 0)
+		local wood = Color3.fromRGB(135, 88, 55)
+		P(folder, Vector3.new(2.2, 0.3, 2.2), base * CFrame.new(0, 3.5, 0), wood, M.Wood)
+		P(folder, Vector3.new(1.9, 0.25, 1.9), base * CFrame.new(0, 3.75, 0), Color3.fromRGB(200, 80, 90), M.Fabric)
+		for _, lx in ipairs({-0.9, 0.9}) do
+			for _, lz in ipairs({-0.9, 0.9}) do
+				P(folder, Vector3.new(0.25, 1.75, 0.25), base * CFrame.new(lx, 2.5, lz), wood, M.Wood)
+			end
+			P(folder, Vector3.new(0.28, 3.4, 0.28), base * CFrame.new(lx, 5.3, 0.95), wood, M.Wood)
+		end
+		for i = 0, 2 do
+			P(folder, Vector3.new(1.6, 0.35, 0.18), base * CFrame.new(0, 4.6 + i * 1.0, 0.95), wood, M.Wood)
+		end
+	end
+	chair(tx - 4.1, tz, math.rad(90))
+	chair(tx + 4.1, tz, math.rad(-90))
+	chair(tx - 1.4, tz - 3.3, 0)
+	chair(tx + 1.4, tz + 3.3, math.pi)
+	-- bookshelf full of books on the right wall
+	local sx, sz = 14.2, hz + 6
+	P(folder, Vector3.new(1.6, 9.6, 6.4), at(sx, 6.5, sz), frame, M.Wood)
+	local bookColors = {Color3.fromRGB(170, 50, 50), Color3.fromRGB(50, 90, 160), Color3.fromRGB(60, 130, 70), Color3.fromRGB(200, 160, 60), Color3.fromRGB(110, 60, 140), Color3.fromRGB(230, 230, 220)}
+	for shelf = 0, 3 do
+		local sy = 2.4 + shelf * 2.3
+		P(folder, Vector3.new(1.7, 0.25, 6.2), at(sx - 0.1, sy, sz), frame:Lerp(Color3.new(1, 1, 1), 0.1), M.Wood)
+		local z = sz - 2.8
+		while z < sz + 2.7 do
+			local bw, bh = rng:NextNumber(0.3, 0.55), rng:NextNumber(1.3, 1.9)
+			P(folder, Vector3.new(1.1, bh, bw), at(sx - 0.45, sy + 0.12 + bh / 2, z + bw / 2), bookColors[rng:NextInteger(1, #bookColors)], M.SmoothPlastic)
+			z = z + bw + 0.04
+		end
+	end
+	-- brick fireplace on the back wall with a mantel, logs and a real fire
+	local fx, fz = 4.5, hz + 11.4
+	P(folder, Vector3.new(7, 7.5, 1.6), at(fx, 5.4, fz), Color3.fromRGB(150, 85, 70), M.Brick)
+	P(folder, Vector3.new(4, 3.4, 1.0), at(fx, 3.4, fz - 0.4), Color3.fromRGB(25, 20, 20), M.Slate)
+	P(folder, Vector3.new(8, 0.5, 2.2), at(fx, 9.3, fz - 0.3), woodDark, M.Wood)
+	for _, lx in ipairs({-0.9, 0.9}) do
+		P(folder, Vector3.new(2.6, 0.5, 0.5), at(fx + lx * 0.4, 2.1, fz - 0.6) * CFrame.Angles(0, lx * 0.4, 0), Color3.fromRGB(90, 60, 40), M.Wood, "Cylinder")
+	end
+	local hearth = P(folder, Vector3.new(2.5, 0.4, 0.6), at(fx, 2.4, fz - 0.6), Color3.fromRGB(255, 140, 50), M.Neon, nil, {Transparency = 0.4})
+	local fire = Instance.new("ParticleEmitter")
+	fire.Texture = "rbxasset://textures/particles/fire_main.dds"
+	fire.Rate = 26
+	fire.Speed = NumberRange.new(1, 2.5)
+	fire.SpreadAngle = Vector2.new(15, 15)
+	fire.Lifetime = NumberRange.new(0.4, 0.8)
+	fire.Size = NumberSequence.new(1.1, 0.2)
+	fire.LightEmission = 1
+	fire.EmissionDirection = Enum.NormalId.Top
+	fire.Color = ColorSequence.new(Color3.fromRGB(255, 220, 110), Color3.fromRGB(255, 90, 30))
+	fire.Parent = hearth
+	local fireLight = Instance.new("PointLight")
+	fireLight.Color = Color3.fromRGB(255, 150, 70)
+	fireLight.Range = 18
+	fireLight.Brightness = 1.6
+	fireLight.Parent = hearth
+	for _, cx in ipairs({-2.8, 2.8}) do
+		P(folder, Vector3.new(0.9, 0.35, 0.35), at(fx + cx, 10, fz - 0.3), Color3.fromRGB(250, 245, 235), M.SmoothPlastic, "Cylinder", {CFrame = at(fx + cx, 10, fz - 0.3) * up})
+		P(folder, Vector3.new(0.25, 0.35, 0.25), at(fx + cx, 10.6, fz - 0.3), Color3.fromRGB(255, 200, 90), M.Neon, "Ellipsoid")
+	end
+	P(folder, Vector3.new(3.4, 2.4, 0.2), at(fx, 11.6, fz + 0.3), Color3.fromRGB(200, 160, 60), M.Foil)
+	P(folder, Vector3.new(3.0, 2.0, 0.22), at(fx, 11.6, fz + 0.25), Color3.fromRGB(120, 180, 230), M.SmoothPlastic)
+	P(folder, Vector3.new(3.0, 0.8, 0.24), at(fx, 11.0, fz + 0.24), Color3.fromRGB(90, 170, 80), M.SmoothPlastic)
+	-- armchair by the fire
+	local ax, az = 9.5, hz + 6.5
+	local cushion = Color3.fromRGB(90, 120, 170)
+	P(folder, Vector3.new(3.4, 1.4, 3.2), at(ax, 2.9, az), cushion, M.Fabric)
+	P(folder, Vector3.new(3.4, 3.6, 0.9), at(ax, 4.6, az + 1.4), cushion, M.Fabric)
+	for _, side in ipairs({-1, 1}) do
+		P(folder, Vector3.new(0.8, 1.8, 3.2), at(ax + side * 1.7, 3.6, az), cushion:Lerp(Color3.new(0, 0, 0), 0.1), M.Fabric, "Ellipsoid")
+	end
+	P(folder, Vector3.new(2.6, 0.5, 2.4), at(ax, 3.8, az - 0.2), cushion:Lerp(Color3.new(1, 1, 1), 0.15), M.Fabric)
+	-- potted plants and paintings
+	for _, pp in ipairs({{-14, hz - 11}, {14, hz - 11}, {-14, hz + 0.5}}) do
+		P(folder, Vector3.new(1.6, 1.6, 1.6), at(pp[1], 2.6, pp[2]), Color3.fromRGB(190, 100, 60), M.Slate, "Cylinder", {CFrame = at(pp[1], 2.6, pp[2]) * up})
+		for i = 1, 4 do
+			local a = i / 4 * math.pi * 2
+			P(folder, Vector3.new(0.9, 2.2, 0.5), at(pp[1] + math.cos(a) * 0.35, 4.2, pp[2] + math.sin(a) * 0.35) * CFrame.Angles(math.sin(a) * 0.4, 0, math.cos(a) * 0.4), Color3.fromRGB(70, 150, 70), M.SmoothPlastic, "Ellipsoid")
+		end
+	end
+	local function painting(cf, colors)
+		P(folder, Vector3.new(4.4, 3.2, 0.25), cf, Color3.fromRGB(200, 160, 60), M.Foil)
+		for i, c in ipairs(colors) do
+			P(folder, Vector3.new(3.8, 2.6 / #colors, 0.27), cf * CFrame.new(0, 1.3 - (i - 0.5) * 2.6 / #colors, 0), c, M.SmoothPlastic)
+		end
+	end
+	painting(at(-14.9, 8.5, hz + 5) * CFrame.Angles(0, math.rad(90), 0) * CFrame.new(0, 0, 0), {Color3.fromRGB(255, 190, 150), Color3.fromRGB(240, 140, 120), Color3.fromRGB(90, 120, 170)})
+	painting(at(14.9, 8.5, hz - 9.5) * CFrame.Angles(0, math.rad(-90), 0), {Color3.fromRGB(140, 200, 250), Color3.fromRGB(250, 250, 255), Color3.fromRGB(90, 160, 80)})
+	-- hanging lamp in the middle of the room
+	P(folder, Vector3.new(0.12, 2.5, 0.12), at(1, 12.4, hz - 1), Color3.fromRGB(60, 50, 45), M.Metal)
+	P(folder, Vector3.new(2.6, 1.0, 2.6), at(1, 10.9, hz - 1), Color3.fromRGB(230, 190, 120), M.Fabric, "Ellipsoid")
+	local bulb = P(folder, Vector3.new(0.8, 0.8, 0.8), at(1, 10.4, hz - 1), Color3.fromRGB(255, 230, 170), M.Neon, "Ball")
+	local roomLight = Instance.new("PointLight")
+	roomLight.Color = Color3.fromRGB(255, 210, 150)
+	roomLight.Range = 24
+	roomLight.Brightness = 1.3
+	roomLight.Parent = bulb
+
 	-- roof: two slopes, gable wedges, ridge beam, chimney with smoke
 	local pitch = math.rad(38)
 	P(folder, Vector3.new(36, 1, 18.6), at(0, 18.6, hz - 7.2) * CFrame.Angles(-pitch, 0, 0), roof, M.Slate)
@@ -20931,25 +21547,18 @@ NeverYieldAgartha.makeGate = function(cf, worldModel, skyTop, skyBottom, face)
 	gui.PixelsPerStud = 40
 	gui.LightInfluence = 0
 	gui.Parent = pane
-	local canvas = Instance.new("CanvasGroup")
-	canvas.Size = UDim2.new(1, 0, 1, 0)
-	canvas.BackgroundColor3 = skyTop
-	canvas.BorderSizePixel = 0
-	canvas.Parent = gui
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0.5, 0)
-	corner.Parent = canvas
-	local sky = Instance.new("UIGradient")
-	sky.Rotation = 90
-	sky.Color = ColorSequence.new(skyTop, skyBottom)
-	sky.Parent = canvas
+	-- the view (ViewportFrames do not render inside CanvasGroups, so it sits right on the SurfaceGui)
 	local vp = Instance.new("ViewportFrame")
 	vp.Size = UDim2.new(1, 0, 1, 0)
-	vp.BackgroundTransparency = 1
-	vp.Ambient = Color3.fromRGB(200, 190, 180)
+	vp.BackgroundColor3 = skyTop:Lerp(skyBottom, 0.35)
+	vp.BackgroundTransparency = 0
+	vp.Ambient = Color3.fromRGB(205, 195, 185)
 	vp.LightColor = Color3.fromRGB(255, 240, 220)
 	vp.LightDirection = Vector3.new(-0.5, -1, 0.4)
-	vp.Parent = canvas
+	vp.Parent = gui
+	local vpCorner = Instance.new("UICorner")
+	vpCorner.CornerRadius = UDim.new(0.5, 0)
+	vpCorner.Parent = vp
 	local cam = Instance.new("Camera")
 	cam.Parent = vp
 	vp.CurrentCamera = cam
@@ -20957,11 +21566,27 @@ NeverYieldAgartha.makeGate = function(cf, worldModel, skyTop, skyBottom, face)
 	if worldModel then
 		worldModel.Parent = vp
 	end
+	-- glass: a soft sheen sliding across, a rim of light around the edge
+	local sheen = Instance.new("Frame")
+	sheen.Size = UDim2.new(1, 0, 1, 0)
+	sheen.BackgroundColor3 = Color3.new(1, 1, 1)
+	sheen.BorderSizePixel = 0
+	sheen.ZIndex = 2
+	sheen.Parent = gui
+	local sheenCorner = Instance.new("UICorner")
+	sheenCorner.CornerRadius = UDim.new(0.5, 0)
+	sheenCorner.Parent = sheen
+	local shine = Instance.new("UIGradient")
+	shine.Rotation = 35
+	shine.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.42, 1), NumberSequenceKeypoint.new(0.5, 0.82),
+		NumberSequenceKeypoint.new(0.58, 1), NumberSequenceKeypoint.new(1, 1)})
+	shine.Parent = sheen
+	gate.shine = shine
 	local edge = Instance.new("UIStroke")
 	edge.Color = Color3.fromRGB(255, 170, 60)
 	edge.Thickness = 6
 	edge.Transparency = 0.2
-	edge.Parent = canvas
+	edge.Parent = sheen
 	-- crackling sparks
 	local s = WackyState.sound(NeverYieldAgartha.sparks, ring, 0.5, true, 1.1)
 	s.RollOffMaxDistance = 80
@@ -21133,8 +21758,14 @@ addcmd('portal',{'agartha','gateway'},function(args, speaker)
 		local cam = workspace.CurrentCamera
 		for _, pair in ipairs({{s.homeGate, s.awayGate}, {s.awayGate, s.homeGate}}) do
 			local gate, other = pair[1], pair[2]
-			gate.cam.FieldOfView = cam.FieldOfView
-			gate.cam.CFrame = other.cf:ToWorldSpace(gate.cf:ToObjectSpace(cam.CFrame))
+			-- stand where you are, but on the other side, and look through the far doorway;
+			-- the zoom matches how big the window looks from here, so the view lines up
+			local rel = gate.cf:PointToObjectSpace(cam.CFrame.Position)
+			local virtualPos = other.cf:PointToWorldSpace(rel)
+			local dist = math.max(0.5, rel.Magnitude)
+			gate.cam.CFrame = CFrame.lookAt(virtualPos, other.cf.Position, other.cf.UpVector)
+			gate.cam.FieldOfView = math.clamp(math.deg(2 * math.atan(gate.radius * 0.95 / dist)), 5, 110)
+			gate.shine.Offset = Vector2.new(math.sin(t * 0.7) * 0.6, 0)
 		end
 		-- walking through
 		local r = getRoot(speaker.Character)
