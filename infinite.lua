@@ -25,9 +25,16 @@ if IY_LOADED and not _G.IY_DEBUG then
 	end
 	pcall(function()
 		local localPlayer = game:GetService("Players").LocalPlayer
+		-- only switch off listeners made by executor scripts (stock IY), not the game's own chat scripts
+		local isExecutor = isexecutorclosure or checkclosure or isourclosure or is_synapse_function
 		for _, signal in ipairs({localPlayer.OnTeleport, localPlayer.Chatted}) do
 			for _, conn in ipairs(getconnections(signal)) do
-				pcall(function() conn:Disable() end)
+				pcall(function()
+					local fn = conn.Function
+					if not isExecutor or not fn or isExecutor(fn) then
+						conn:Disable()
+					end
+				end)
 			end
 		end
 	end)
@@ -5263,7 +5270,7 @@ CMDs[#CMDs + 1] = {NAME = 'barrelroll / doabarrelroll [count]', DESC = 'Do a bar
 CMDs[#CMDs + 1] = {NAME = 'rocket / launch / yeetme [power]', DESC = 'Launches you into the sky with fire'}
 CMDs[#CMDs + 1] = {NAME = 'jetpack [thrust]', DESC = 'Hold jump to fly upwards with flames'}
 CMDs[#CMDs + 1] = {NAME = 'unjetpack', DESC = 'Takes off the jetpack'}
-CMDs[#CMDs + 1] = {NAME = 'helicopter / heli [speed]', DESC = 'Spin and slowly rise like a helicopter'}
+CMDs[#CMDs + 1] = {NAME = 'helicopter / heli [speed]', DESC = 'Spin and hover like a helicopter, hold jump to climb'}
 CMDs[#CMDs + 1] = {NAME = 'unhelicopter / land', DESC = 'Lands the helicopter'}
 CMDs[#CMDs + 1] = {NAME = 'trail / rainbowtrail [lifetime]', DESC = 'Gives you a rainbow trail'}
 CMDs[#CMDs + 1] = {NAME = 'untrail', DESC = 'Removes the trail'}
@@ -5360,7 +5367,7 @@ CMDs[#CMDs + 1] = {NAME = 'dash [power]', DESC = 'Quick dash in the direction yo
 CMDs[#CMDs + 1] = {NAME = 'blink [studs]', DESC = 'Teleport a few studs forward'}
 CMDs[#CMDs + 1] = {NAME = 'multijump / doublejump [count]', DESC = 'Extra jumps in mid-air'}
 CMDs[#CMDs + 1] = {NAME = 'unmultijump', DESC = 'Back to one jump'}
-CMDs[#CMDs + 1] = {NAME = 'shiftsprint / sprint [speed]', DESC = 'Hold Left Shift to sprint'}
+CMDs[#CMDs + 1] = {NAME = 'shiftsprint / sprint [speed] [key]', DESC = 'Hold Left Shift (or your key, e.g. sprint 32 Q) to sprint'}
 CMDs[#CMDs + 1] = {NAME = 'unshiftsprint / unsprint', DESC = 'Turns off shift sprint'}
 CMDs[#CMDs + 1] = {NAME = 'spinjump', DESC = 'Spin every time you jump'}
 CMDs[#CMDs + 1] = {NAME = 'unspinjump', DESC = 'Stop spin jumping'}
@@ -5382,6 +5389,14 @@ CMDs[#CMDs + 1] = {NAME = 'hud / statsdisplay', DESC = 'Shows FPS, speed and pos
 CMDs[#CMDs + 1] = {NAME = 'unhud', DESC = 'Hides the stats display'}
 CMDs[#CMDs + 1] = {NAME = 'calc / math [expression]', DESC = 'Calculator, e.g. calc (5+3)*2'}
 CMDs[#CMDs + 1] = {NAME = 'randomplayer / pickplayer', DESC = 'Picks a random player in the server'}
+CMDs[#CMDs + 1] = {NAME = '--- STATS TRACKER ---', DESC = ''}
+CMDs[#CMDs + 1] = {NAME = 'stats / mystats [tab]', DESC = 'Your lifetime stats across every game: kills, deaths, K/D, streaks, playtime, games, chat, people, commands. Tabs: overview, combat, games, chat, people, commands'}
+CMDs[#CMDs + 1] = {NAME = 'killcount / kd', DESC = 'Quick kills and deaths for this server and all time'}
+CMDs[#CMDs + 1] = {NAME = 'mychats / chatsearch [text]', DESC = 'Opens your saved chat history (add text to search it)'}
+CMDs[#CMDs + 1] = {NAME = 'chatlogging [on/off]', DESC = 'Also save other players\' messages (on by default)'}
+CMDs[#CMDs + 1] = {NAME = 'statsexport / copystats', DESC = 'Copies a stats summary to your clipboard'}
+CMDs[#CMDs + 1] = {NAME = 'statssave', DESC = 'Saves your stats now (they also save every minute and before teleports)'}
+CMDs[#CMDs + 1] = {NAME = 'statsreset confirm', DESC = 'Starts your stats over (a backup file is kept)'}
 -- wait()
 
 for i = 1, #CMDs do
@@ -13652,12 +13667,116 @@ WackyState.rainbowSequence = function()
 	return ColorSequence.new(keys)
 end
 
+-- Shared lighting snapshot: every effect that changes Lighting claims the properties it touches.
+-- The game's own value is saved once and put back when the last effect using it turns off,
+-- so turning effects off in any order always ends with the original lighting.
+WackyState.light = {orig = {}, users = {}, restoring = {}}
+
+WackyState.lightStopRestore = function()
+	local L = WackyState.light
+	if L.tween then
+		pcall(function() L.tween:Cancel() end)
+		L.tween = nil
+	end
+	for prop, value in pairs(L.restoring) do
+		pcall(function() Lighting[prop] = value end)
+	end
+	L.restoring = {}
+end
+
+WackyState.lightClaim = function(owner, props)
+	local L = WackyState.light
+	WackyState.lightStopRestore()
+	for _, prop in ipairs(props) do
+		local users = L.users[prop]
+		if not users then
+			users = {}
+			L.users[prop] = users
+			if L.orig[prop] == nil then
+				L.orig[prop] = Lighting[prop]
+			end
+		end
+		users[owner] = true
+	end
+end
+
+WackyState.lightRelease = function(owner, fadeTime)
+	local L = WackyState.light
+	local free = {}
+	for prop, users in pairs(L.users) do
+		if users[owner] then
+			users[owner] = nil
+			if next(users) == nil then
+				free[prop] = L.orig[prop]
+			end
+		end
+	end
+	local any = false
+	for prop in pairs(free) do
+		L.users[prop] = nil
+		L.orig[prop] = nil
+		any = true
+	end
+	if not any then return end
+	if fadeTime and fadeTime > 0 then
+		WackyState.lightStopRestore()
+		L.restoring = free
+		local tween = TweenService:Create(Lighting, TweenInfo.new(fadeTime, Enum.EasingStyle.Sine), free)
+		L.tween = tween
+		tween.Completed:Connect(function()
+			if L.tween == tween then
+				L.tween = nil
+				L.restoring = {}
+			end
+		end)
+		tween:Play()
+	else
+		for prop, value in pairs(free) do
+			pcall(function() Lighting[prop] = value end)
+		end
+	end
+end
+
+WackyState.lightReleaseAll = function()
+	local owners = {}
+	for _, users in pairs(WackyState.light.users) do
+		for owner in pairs(users) do
+			owners[owner] = true
+		end
+	end
+	for owner in pairs(owners) do
+		WackyState.lightRelease(owner)
+	end
+	WackyState.lightStopRestore()
+end
+
+-- Effects attached to your character come back after you respawn
+WackyState.respawnFx = {}
+
+WackyState.remember = function(name, args)
+	WackyState.respawnFx[name] = args or {}
+	if WackyState.conns.respawnFx then return end
+	WackyState.connect("respawnFx", Players.LocalPlayer.CharacterAdded:Connect(function(char)
+		local root = char:WaitForChild("HumanoidRootPart", 10)
+		if not root then return end
+		task.wait(0.3)
+		for fxName, fxArgs in pairs(WackyState.respawnFx) do
+			local cmd = findCmd(fxName)
+			if cmd and Players.LocalPlayer.Character == char then
+				pcall(cmd.FUNC, fxArgs, Players.LocalPlayer)
+			end
+		end
+	end))
+end
+
+WackyState.forget = function(name)
+	WackyState.respawnFx[name] = nil
+end
+
 -- Disco lighting
 addcmd('disco',{'discomode'},function(args, speaker)
 	local speed = WackyState.num(args[1], 0.5)
-	if not WackyState.saved.disco then
-		WackyState.saved.disco = {Lighting.Ambient, Lighting.OutdoorAmbient, Lighting.FogColor, Lighting.ColorShift_Top}
-	end
+	WackyState.lightClaim("disco", {"Ambient", "OutdoorAmbient", "FogColor", "ColorShift_Top"})
 	WackyState.clear("disco")
 	local cc = WackyState.track("disco", Instance.new("ColorCorrectionEffect"))
 	cc.Name = randomString()
@@ -13678,11 +13797,7 @@ end)
 addcmd('undisco',{'nodisco'},function(args, speaker)
 	WackyState.disconnect("disco")
 	WackyState.clear("disco")
-	local s = WackyState.saved.disco
-	if s then
-		Lighting.Ambient, Lighting.OutdoorAmbient, Lighting.FogColor, Lighting.ColorShift_Top = s[1], s[2], s[3], s[4]
-		WackyState.saved.disco = nil
-	end
+	WackyState.lightRelease("disco")
 end)
 
 -- Rainbow character
@@ -13889,15 +14004,6 @@ end)
 addcmd('unfilter',{'noscreenfilter','unscreenfilter'},function(args, speaker)
 	WackyState.clear("filter")
 end)
-
--- Weather
-WackyState.weather = {
-	snow = {Color = Color3.new(1, 1, 1), Rate = 250, Speed = NumberRange.new(8, 14), Size = 0.35, Lifetime = 8, Light = 0.2, Spread = 25},
-	rain = {Color = Color3.fromRGB(150, 180, 255), Rate = 600, Speed = NumberRange.new(60, 80), Size = 0.12, Lifetime = 2, Light = 0.1, Spread = 3},
-	embers = {Color = Color3.fromRGB(255, 120, 30), Rate = 120, Speed = NumberRange.new(4, 10), Size = 0.25, Lifetime = 8, Light = 1, Spread = 60},
-	fireflies = {Color = Color3.fromRGB(220, 255, 90), Rate = 40, Speed = NumberRange.new(1, 3), Size = 0.3, Lifetime = 10, Light = 1, Spread = 180},
-	rainbow = {Rainbow = true, Rate = 200, Speed = NumberRange.new(6, 12), Size = 0.4, Lifetime = 8, Light = 1, Spread = 30},
-}
 
 -- weather / unweather live in WEATHER 2.0 further down
 
@@ -14141,13 +14247,25 @@ addcmd('helicopter',{'heli'},function(args, speaker)
 	local lift = WackyState.track("helicopter", Instance.new("BodyVelocity"))
 	lift.Name = randomString()
 	lift.MaxForce = Vector3.new(0, math.huge, 0)
-	lift.Velocity = Vector3.new(0, 4, 0)
+	lift.Velocity = Vector3.new(0, 0, 0)
 	lift.Parent = root
-	notify('Helicopter', 'Whup whup whup! Use unhelicopter to land.')
+	-- hover in place, hold jump to climb
+	WackyState.connect("helicopter", RunService.Heartbeat:Connect(function()
+		if not lift.Parent then
+			WackyState.disconnect("helicopter")
+			return
+		end
+		local hum = speaker.Character and speaker.Character:FindFirstChildOfClass("Humanoid")
+		lift.Velocity = Vector3.new(0, (hum and hum.Jump) and 14 or 0, 0)
+	end))
+	WackyState.remember("helicopter", args)
+	notify('Helicopter', 'Whup whup whup! Hold jump to climb. Use unhelicopter to land.')
 end)
 
 addcmd('unhelicopter',{'unheli','land'},function(args, speaker)
+	WackyState.disconnect("helicopter")
 	WackyState.clear("helicopter")
+	WackyState.forget("helicopter")
 end)
 
 -- Visual effects on your character
@@ -14174,10 +14292,12 @@ addcmd('trail',{'rainbowtrail'},function(args, speaker)
 	trail.WidthScale = NumberSequence.new(1, 0)
 	trail.Color = WackyState.rainbowSequence()
 	trail.Parent = root
+	WackyState.remember("trail", args)
 end)
 
 addcmd('untrail',{'notrail','unrainbowtrail'},function(args, speaker)
 	WackyState.clear("trail")
+	WackyState.forget("trail")
 end)
 
 addcmd('partyfx',{'glowup'},function(args, speaker)
@@ -14207,11 +14327,13 @@ addcmd('partyfx',{'glowup'},function(args, speaker)
 			fire.SecondaryColor = WackyState.rainbow(0.5, 0.3)
 		end)
 	end))
+	WackyState.remember("partyfx", args)
 end)
 
 addcmd('unpartyfx',{'unglowup','nopartyfx'},function(args, speaker)
 	WackyState.disconnect("partyfx")
 	WackyState.clear("partyfx")
+	WackyState.forget("partyfx")
 end)
 
 addcmd('beyblade',{'letitrip'},function(args, speaker)
@@ -14375,10 +14497,12 @@ addcmd('skin',{'material'},function(args, speaker)
 			end
 		end)
 	end
+	WackyState.remember("skin", {choice, args[2]})
 	notify('Skin', 'You are now made of ' .. choice .. '. Use unskin to change back.')
 end)
 
 addcmd('unskin',{'unmaterial'},function(args, speaker)
+	WackyState.forget("skin")
 	for part, data in pairs(WackyState.saved.skin or {}) do
 		if part.Parent then
 			part.Color, part.Material, part.Transparency = data[1], data[2], data[3]
@@ -14405,10 +14529,12 @@ addcmd('aura',{},function(args, speaker)
 	emitter.LightEmission = 1
 	emitter.Color = color and ColorSequence.new(color) or WackyState.rainbowSequence()
 	emitter.Parent = root
+	WackyState.remember("aura", args)
 end)
 
 addcmd('unaura',{'noaura'},function(args, speaker)
 	WackyState.clear("aura")
+	WackyState.forget("aura")
 end)
 
 -- Halo
@@ -14608,7 +14734,7 @@ end)
 -- Lighting moods
 addcmd('timelapse',{},function(args, speaker)
 	local speed = WackyState.num(args[1], 2)
-	WackyState.saved.clock = WackyState.saved.clock or Lighting.ClockTime
+	WackyState.lightClaim("timelapse", {"ClockTime"})
 	WackyState.connect("timelapse", RunService.Heartbeat:Connect(function(dt)
 		Lighting.ClockTime = (Lighting.ClockTime + dt * speed) % 24
 	end))
@@ -14616,14 +14742,11 @@ end)
 
 addcmd('untimelapse',{'notimelapse'},function(args, speaker)
 	WackyState.disconnect("timelapse")
-	if WackyState.saved.clock then
-		Lighting.ClockTime = WackyState.saved.clock
-		WackyState.saved.clock = nil
-	end
+	WackyState.lightRelease("timelapse")
 end)
 
 addcmd('sunset',{'goldenhour'},function(args, speaker)
-	WackyState.saved.sunsetClock = WackyState.saved.sunsetClock or Lighting.ClockTime
+	WackyState.lightClaim("sunset", {"ClockTime"})
 	Lighting.ClockTime = 17.8
 	WackyState.clear("sunset")
 	local cc = WackyState.track("sunset", Instance.new("ColorCorrectionEffect"))
@@ -14635,10 +14758,7 @@ end)
 
 addcmd('unsunset',{'nosunset'},function(args, speaker)
 	WackyState.clear("sunset")
-	if WackyState.saved.sunsetClock then
-		Lighting.ClockTime = WackyState.saved.sunsetClock
-		WackyState.saved.sunsetClock = nil
-	end
+	WackyState.lightRelease("sunset")
 end)
 
 addcmd('flashlight',{'torch'},function(args, speaker)
@@ -14653,14 +14773,16 @@ addcmd('flashlight',{'torch'},function(args, speaker)
 	light.Brightness = 5
 	light.Shadows = true
 	light.Parent = root
+	WackyState.remember("flashlight", args)
 end)
 
 addcmd('unflashlight',{'untorch','noflashlight'},function(args, speaker)
 	WackyState.clear("flashlight")
+	WackyState.forget("flashlight")
 end)
 
 addcmd('horror',{'spookymode'},function(args, speaker)
-	WackyState.saved.horror = WackyState.saved.horror or {Lighting.ClockTime, Lighting.Brightness}
+	WackyState.lightClaim("horror", {"ClockTime", "Brightness"})
 	Lighting.ClockTime = 0
 	Lighting.Brightness = 0
 	WackyState.clear("horror")
@@ -14678,11 +14800,7 @@ end)
 addcmd('unhorror',{'unspookymode'},function(args, speaker)
 	WackyState.clear("horror")
 	execCmd('unflashlight', speaker)
-	local s = WackyState.saved.horror
-	if s then
-		Lighting.ClockTime, Lighting.Brightness = s[1], s[2]
-		WackyState.saved.horror = nil
-	end
+	WackyState.lightRelease("horror")
 end)
 
 addcmd('matrix',{'thereisnospoon'},function(args, speaker)
@@ -14778,15 +14896,6 @@ end
 -- ================ END WACKY COMMANDS 2 ================
 
 -- ==================== NEVERYIELD COMMANDS ====================
-NeverYieldThemes = {
-	space = {Color3.fromRGB(16, 10, 34), Color3.fromRGB(32, 18, 64), Color3.fromRGB(86, 50, 160), Color3.fromRGB(236, 224, 255), Color3.new(0, 0, 0), Color3.fromRGB(140, 90, 235)},
-	nebula = {Color3.fromRGB(30, 8, 36), Color3.fromRGB(58, 16, 70), Color3.fromRGB(170, 60, 170), Color3.fromRGB(255, 220, 250), Color3.new(0, 0, 0), Color3.fromRGB(230, 100, 220)},
-	galaxy = {Color3.fromRGB(10, 12, 40), Color3.fromRGB(22, 26, 78), Color3.fromRGB(70, 80, 190), Color3.fromRGB(220, 230, 255), Color3.new(0, 0, 0), Color3.fromRGB(110, 140, 255)},
-	void = {Color3.fromRGB(6, 4, 12), Color3.fromRGB(14, 10, 24), Color3.fromRGB(60, 36, 110), Color3.fromRGB(200, 180, 255), Color3.new(0, 0, 0), Color3.fromRGB(110, 70, 200)},
-	cosmic = {Color3.fromRGB(8, 22, 38), Color3.fromRGB(14, 40, 66), Color3.fromRGB(40, 130, 170), Color3.fromRGB(210, 250, 255), Color3.new(0, 0, 0), Color3.fromRGB(80, 210, 230)},
-	classic = {Color3.fromRGB(36, 36, 37), Color3.fromRGB(46, 46, 47), Color3.fromRGB(78, 78, 79), Color3.new(1, 1, 1), Color3.new(0, 0, 0), Color3.fromRGB(78, 78, 79)},
-}
-
 addcmd('theme',{'nytheme'},function(args, speaker)
 	local choice = args[1] and args[1]:lower() or "auto"
 	if choice == "custom" then
@@ -14803,11 +14912,8 @@ addcmd('theme',{'nytheme'},function(args, speaker)
 	notify('Theme', theme.icon .. ' ' .. theme.name .. ' theme applied.')
 end)
 
-WackyState.weather.stars = {Color = Color3.new(1, 1, 1), Rate = 150, Speed = NumberRange.new(0.5, 2), Size = 0.2, Lifetime = 10, Light = 1, Spread = 180}
-WackyState.weather.galaxy = {Color = Color3.fromRGB(190, 140, 255), Rate = 180, Speed = NumberRange.new(1, 4), Size = 0.3, Lifetime = 10, Light = 1, Spread = 180}
-
 addcmd('spacemode',{'space'},function(args, speaker)
-	WackyState.saved.spacemode = WackyState.saved.spacemode or {Lighting.ClockTime, Lighting.Brightness}
+	WackyState.lightClaim("spacemode", {"ClockTime"})
 	Lighting.ClockTime = 0
 	WackyState.clear("spacemode")
 	local cc = WackyState.track("spacemode", Instance.new("ColorCorrectionEffect"))
@@ -14831,11 +14937,7 @@ addcmd('unspacemode',{'unspace'},function(args, speaker)
 	WackyState.clear("spacemode")
 	execCmd('unweather', speaker)
 	execCmd('normalgravity', speaker)
-	local s = WackyState.saved.spacemode
-	if s then
-		Lighting.ClockTime, Lighting.Brightness = s[1], s[2]
-		WackyState.saved.spacemode = nil
-	end
+	WackyState.lightRelease("spacemode")
 end)
 
 addcmd('neveryield',{'about','ny'},function(args, speaker)
@@ -15347,6 +15449,12 @@ addcmd('ascend',{'heaven'},function(args, speaker)
 	lift.Velocity = Vector3.new(0, WackyState.num(args[1], 6), 0)
 	lift.Parent = root
 	WackyState.connect("ascend", RunService.Heartbeat:Connect(function()
+		if not lift.Parent then
+			-- you respawned: the beam goes away too
+			WackyState.disconnect("ascend")
+			WackyState.clear("ascend")
+			return
+		end
 		local r = getRoot(speaker.Character)
 		if r then
 			beam.CFrame = CFrame.new(r.Position.X, r.Position.Y + 150, r.Position.Z) * CFrame.Angles(0, 0, math.pi / 2)
@@ -15437,10 +15545,22 @@ addcmd('unmultijump',{'undoublejump'},function(args, speaker)
 	WackyState.disconnect("multijumpLand")
 end)
 
+WackyState.keyArg = function(arg, default)
+	if not arg then return default end
+	local wanted = arg:lower()
+	for _, item in ipairs(Enum.KeyCode:GetEnumItems()) do
+		if item.Name:lower() == wanted then
+			return item
+		end
+	end
+	return default
+end
+
 addcmd('shiftsprint',{'sprint'},function(args, speaker)
 	local sprintSpeed = WackyState.num(args[1], 32)
+	local sprintKey = WackyState.keyArg(args[2], Enum.KeyCode.LeftShift)
 	WackyState.connect("sprintDown", UserInputService.InputBegan:Connect(function(input, processed)
-		if processed or input.KeyCode ~= Enum.KeyCode.LeftShift then return end
+		if processed or input.KeyCode ~= sprintKey then return end
 		local hum = WackyState.humRoot(speaker)
 		if hum and not WackyState.sprintOld then
 			WackyState.sprintOld = hum.WalkSpeed
@@ -15448,14 +15568,14 @@ addcmd('shiftsprint',{'sprint'},function(args, speaker)
 		end
 	end))
 	WackyState.connect("sprintUp", UserInputService.InputEnded:Connect(function(input)
-		if input.KeyCode ~= Enum.KeyCode.LeftShift then return end
+		if input.KeyCode ~= sprintKey then return end
 		local hum = WackyState.humRoot(speaker)
 		if hum and WackyState.sprintOld then
 			hum.WalkSpeed = WackyState.sprintOld
 		end
 		WackyState.sprintOld = nil
 	end))
-	notify('Sprint', 'Hold Left Shift to sprint at speed ' .. sprintSpeed .. '.')
+	notify('Sprint', 'Hold ' .. sprintKey.Name .. ' to sprint at speed ' .. sprintSpeed .. '. (Shift Lock also uses Left Shift: try sprint 32 Q)')
 end)
 
 addcmd('unshiftsprint',{'unsprint'},function(args, speaker)
@@ -15615,7 +15735,7 @@ addcmd('screentext',{'bigtext'},function(args, speaker)
 	end)
 end)
 
-WackyState.emojis = {"🎉", "✨", "🔥", "💜", "🚀", "🌌", "😂", "🍕", "⭐", "🦆", "👾", "🍩"}
+WackyState.emojis = {"\u{1F389}", "\u{2728}", "\u{1F525}", "\u{1F49C}", "\u{1F680}", "\u{1F30C}", "\u{1F602}", "\u{1F355}", "\u{2B50}", "\u{1F986}", "\u{1F47E}", "\u{1F369}"}
 
 addcmd('emojirain',{'emojis'},function(args, speaker)
 	local chosen = args[1]
@@ -15798,171 +15918,171 @@ NeverYieldTheme.rgb = function(c)
 end
 
 NeverYieldTheme.list = {
-	{id = "auto", name = "Auto Holiday", icon = "📅", desc = "Wears whichever holiday theme matches today's date (Deep Space otherwise)."},
-	{id = "space", name = "Deep Space", icon = "🌌", mode = "twinkle", rate = 3,
+	{id = "auto", name = "Auto Holiday", icon = "\u{1F4C5}", desc = "Wears whichever holiday theme matches today's date (Deep Space otherwise)."},
+	{id = "space", name = "Deep Space", icon = "\u{1F30C}", mode = "twinkle", rate = 3,
 		desc = "The original NeverYield look. Twinkling stars and a purple portal rim.",
 		colors = {{16, 10, 34}, {32, 18, 64}, {86, 50, 160}, {236, 224, 255}, {0, 0, 0}, {140, 90, 235}},
-		rim = {{170, 90, 255}, {255, 120, 230}, {110, 200, 255}}, particles = {"✨", "⭐", "💫"}},
-	{id = "nebula", name = "Nebula", icon = "🌠", mode = "twinkle", rate = 4,
+		rim = {{170, 90, 255}, {255, 120, 230}, {110, 200, 255}}, particles = {"\u{2728}", "\u{2B50}", "\u{1F4AB}"}},
+	{id = "nebula", name = "Nebula", icon = "\u{1F320}", mode = "twinkle", rate = 4,
 		desc = "Hot pink star clouds swirling around the rim.",
 		colors = {{30, 8, 36}, {58, 16, 70}, {170, 60, 170}, {255, 220, 250}, {0, 0, 0}, {230, 100, 220}},
-		rim = {{255, 80, 200}, {160, 60, 255}, {255, 160, 120}}, particles = {"✨", "💫", "🌟"}},
-	{id = "galaxy", name = "Galaxy", icon = "🪐", mode = "drift", rate = 1,
+		rim = {{255, 80, 200}, {160, 60, 255}, {255, 160, 120}}, particles = {"\u{2728}", "\u{1F4AB}", "\u{1F31F}"}},
+	{id = "galaxy", name = "Galaxy", icon = "\u{1FA90}", mode = "drift", rate = 1,
 		desc = "Deep blue galaxy with planets drifting past.",
 		colors = {{10, 12, 40}, {22, 26, 78}, {70, 80, 190}, {220, 230, 255}, {0, 0, 0}, {110, 140, 255}},
-		rim = {{90, 120, 255}, {200, 120, 255}, {120, 230, 255}}, particles = {"🪐", "⭐", "🌑", "☄️"}},
-	{id = "void", name = "The Void", icon = "🕳️", mode = "rise", rate = 2,
+		rim = {{90, 120, 255}, {200, 120, 255}, {120, 230, 255}}, particles = {"\u{1FA90}", "\u{2B50}", "\u{1F311}", "\u{2604}\u{FE0F}"}},
+	{id = "void", name = "The Void", icon = "\u{1F573}\u{FE0F}", mode = "rise", rate = 2,
 		desc = "Almost pitch black. Something is rising out of the dark.",
 		colors = {{6, 4, 12}, {14, 10, 24}, {60, 36, 110}, {200, 180, 255}, {0, 0, 0}, {110, 70, 200}},
-		rim = {{60, 20, 120}, {140, 60, 255}, {20, 0, 40}}, particles = {"🌑", "🖤", "💜"}},
-	{id = "cosmic", name = "Cosmic Ocean", icon = "☄️", mode = "fall", rate = 2,
+		rim = {{60, 20, 120}, {140, 60, 255}, {20, 0, 40}}, particles = {"\u{1F311}", "\u{1F5A4}", "\u{1F49C}"}},
+	{id = "cosmic", name = "Cosmic Ocean", icon = "\u{2604}\u{FE0F}", mode = "fall", rate = 2,
 		desc = "Teal starlight with comets streaking down.",
 		colors = {{8, 22, 38}, {14, 40, 66}, {40, 130, 170}, {210, 250, 255}, {0, 0, 0}, {80, 210, 230}},
-		rim = {{60, 220, 255}, {40, 120, 255}, {160, 255, 240}}, particles = {"☄️", "⭐", "✨"}},
-	{id = "christmas", name = "Christmas", icon = "🎄", mode = "fall", rate = 4, candy = true,
+		rim = {{60, 220, 255}, {40, 120, 255}, {160, 255, 240}}, particles = {"\u{2604}\u{FE0F}", "\u{2B50}", "\u{2728}"}},
+	{id = "christmas", name = "Christmas", icon = "\u{1F384}", mode = "fall", rate = 4, candy = true,
 		desc = "Snow falling over a candy cane portal rim.",
 		colors = {{14, 40, 24}, {24, 64, 38}, {190, 40, 50}, {255, 245, 235}, {0, 0, 0}, {220, 60, 60}},
-		rim = {{230, 40, 50}, {255, 255, 255}, {40, 170, 70}}, particles = {"❄️", "✨", "🎁", "⛄"}},
-	{id = "halloween", name = "Halloween", icon = "🎃", mode = "drift", rate = 2, fx = "flicker",
+		rim = {{230, 40, 50}, {255, 255, 255}, {40, 170, 70}}, particles = {"\u{2744}\u{FE0F}", "\u{2728}", "\u{1F381}", "\u{26C4}"}},
+	{id = "halloween", name = "Halloween", icon = "\u{1F383}", mode = "drift", rate = 2, fx = "flicker",
 		desc = "Bats and ghosts drifting past a flickering, haunted rim.",
 		colors = {{18, 8, 22}, {36, 14, 40}, {230, 110, 20}, {255, 220, 180}, {0, 0, 0}, {255, 140, 30}},
-		rim = {{255, 120, 0}, {120, 30, 160}, {40, 255, 80}}, particles = {"🦇", "🎃", "👻", "🕸️", "🦇"}},
-	{id = "newyear", name = "New Year", icon = "🎆", mode = "burst", rate = 1,
+		rim = {{255, 120, 0}, {120, 30, 160}, {40, 255, 80}}, particles = {"\u{1F987}", "\u{1F383}", "\u{1F47B}", "\u{1F578}\u{FE0F}", "\u{1F987}"}},
+	{id = "newyear", name = "New Year", icon = "\u{1F386}", mode = "burst", rate = 1,
 		desc = "Black and gold with confetti popping everywhere.",
 		colors = {{10, 10, 14}, {26, 24, 34}, {212, 175, 55}, {255, 248, 225}, {0, 0, 0}, {240, 200, 80}},
-		rim = {{255, 215, 90}, {255, 255, 255}, {200, 160, 40}}, particles = {"🎉", "✨", "🎊", "🥂"}},
-	{id = "lunarnewyear", name = "Lunar New Year", icon = "🧧", mode = "rise", rate = 2, fx = "glow",
+		rim = {{255, 215, 90}, {255, 255, 255}, {200, 160, 40}}, particles = {"\u{1F389}", "\u{2728}", "\u{1F38A}", "\u{1F942}"}},
+	{id = "lunarnewyear", name = "Lunar New Year", icon = "\u{1F9E7}", mode = "rise", rate = 2, fx = "glow",
 		desc = "Red and gold with lanterns floating up.",
 		colors = {{60, 6, 10}, {110, 14, 20}, {230, 180, 40}, {255, 235, 190}, {0, 0, 0}, {250, 200, 60}},
-		rim = {{255, 40, 40}, {255, 210, 60}, {255, 120, 0}}, particles = {"🏮", "🧧", "🐉", "✨"}},
-	{id = "valentines", name = "Valentine's", icon = "💘", mode = "rise", rate = 3, fx = "heartbeat",
+		rim = {{255, 40, 40}, {255, 210, 60}, {255, 120, 0}}, particles = {"\u{1F3EE}", "\u{1F9E7}", "\u{1F409}", "\u{2728}"}},
+	{id = "valentines", name = "Valentine's", icon = "\u{1F498}", mode = "rise", rate = 3, fx = "heartbeat",
 		desc = "Hearts floating up while the rim beats like a heart.",
 		colors = {{52, 10, 30}, {90, 20, 52}, {240, 90, 150}, {255, 225, 238}, {0, 0, 0}, {255, 120, 170}},
-		rim = {{255, 80, 140}, {255, 170, 200}, {200, 40, 90}}, particles = {"💖", "💕", "💘", "🌹"}},
-	{id = "stpatricks", name = "St. Patrick's", icon = "☘️", mode = "fall", rate = 3,
+		rim = {{255, 80, 140}, {255, 170, 200}, {200, 40, 90}}, particles = {"\u{1F496}", "\u{1F495}", "\u{1F498}", "\u{1F339}"}},
+	{id = "stpatricks", name = "St. Patrick's", icon = "\u{2618}\u{FE0F}", mode = "fall", rate = 3,
 		desc = "Lucky clovers, gold coins and a rainbow-gold rim.",
 		colors = {{8, 36, 16}, {16, 62, 28}, {60, 180, 80}, {225, 255, 225}, {0, 0, 0}, {80, 220, 100}},
-		rim = {{40, 200, 80}, {255, 215, 60}, {140, 255, 140}}, particles = {"☘️", "🍀", "🪙", "🌈"}},
-	{id = "easter", name = "Easter", icon = "🐣", mode = "fall", rate = 3,
+		rim = {{40, 200, 80}, {255, 215, 60}, {140, 255, 140}}, particles = {"\u{2618}\u{FE0F}", "\u{1F340}", "\u{1FA99}", "\u{1F308}"}},
+	{id = "easter", name = "Easter", icon = "\u{1F423}", mode = "fall", rate = 3,
 		desc = "Soft pastels with eggs, bunnies and blossoms.",
 		colors = {{52, 40, 70}, {78, 62, 104}, {170, 140, 230}, {255, 250, 235}, {0, 0, 0}, {180, 230, 200}},
-		rim = {{255, 190, 220}, {190, 230, 255}, {255, 245, 170}, {190, 255, 200}}, particles = {"🥚", "🐰", "🌸", "🐣"}},
-	{id = "fourthofjuly", name = "Fourth of July", icon = "🎇", mode = "burst", rate = 1.2,
+		rim = {{255, 190, 220}, {190, 230, 255}, {255, 245, 170}, {190, 255, 200}}, particles = {"\u{1F95A}", "\u{1F430}", "\u{1F338}", "\u{1F423}"}},
+	{id = "fourthofjuly", name = "Fourth of July", icon = "\u{1F387}", mode = "burst", rate = 1.2,
 		desc = "Red, white and blue with fireworks bursting.",
 		colors = {{10, 16, 46}, {20, 30, 80}, {200, 30, 45}, {255, 255, 255}, {0, 0, 0}, {220, 60, 70}},
-		rim = {{230, 40, 50}, {255, 255, 255}, {40, 80, 220}}, particles = {"🎆", "🎇", "⭐", "✨"}},
-	{id = "thanksgiving", name = "Thanksgiving", icon = "🦃", mode = "fall", rate = 3,
+		rim = {{230, 40, 50}, {255, 255, 255}, {40, 80, 220}}, particles = {"\u{1F386}", "\u{1F387}", "\u{2B50}", "\u{2728}"}},
+	{id = "thanksgiving", name = "Thanksgiving", icon = "\u{1F983}", mode = "fall", rate = 3,
 		desc = "Warm autumn colors with leaves tumbling down.",
 		colors = {{40, 20, 8}, {70, 38, 16}, {210, 120, 40}, {255, 235, 205}, {0, 0, 0}, {230, 140, 50}},
-		rim = {{220, 110, 30}, {180, 40, 20}, {240, 190, 60}}, particles = {"🍂", "🍁", "🦃", "🥧"}},
-	{id = "hanukkah", name = "Hanukkah", icon = "🕎", mode = "rise", rate = 2, fx = "candle",
+		rim = {{220, 110, 30}, {180, 40, 20}, {240, 190, 60}}, particles = {"\u{1F342}", "\u{1F341}", "\u{1F983}", "\u{1F967}"}},
+	{id = "hanukkah", name = "Hanukkah", icon = "\u{1F54E}", mode = "rise", rate = 2, fx = "candle",
 		desc = "Blue and silver with a softly glowing candle-light rim.",
 		colors = {{8, 18, 50}, {16, 34, 86}, {90, 140, 230}, {235, 242, 255}, {0, 0, 0}, {170, 190, 220}},
-		rim = {{70, 120, 255}, {220, 225, 235}, {140, 180, 255}}, particles = {"✡️", "🕎", "✨"}},
-	{id = "diwali", name = "Diwali", icon = "🪔", mode = "rise", rate = 3, fx = "candle",
+		rim = {{70, 120, 255}, {220, 225, 235}, {140, 180, 255}}, particles = {"\u{2721}\u{FE0F}", "\u{1F54E}", "\u{2728}"}},
+	{id = "diwali", name = "Diwali", icon = "\u{1FA94}", mode = "rise", rate = 3, fx = "candle",
 		desc = "Festival of lights: glowing lamps and sparkles.",
 		colors = {{40, 10, 40}, {72, 20, 64}, {240, 150, 30}, {255, 240, 210}, {0, 0, 0}, {255, 170, 50}},
-		rim = {{255, 160, 0}, {220, 40, 160}, {255, 220, 90}}, particles = {"🪔", "✨", "🎇"}},
-	{id = "ocean", group = "vibes", name = "Ocean", icon = "🌊", mode = "rise", rate = 2,
+		rim = {{255, 160, 0}, {220, 40, 160}, {255, 220, 90}}, particles = {"\u{1FA94}", "\u{2728}", "\u{1F387}"}},
+	{id = "ocean", group = "vibes", name = "Ocean", icon = "\u{1F30A}", mode = "rise", rate = 2,
 		desc = "Deep blue water with bubbles and fish drifting up.",
 		colors = {{6, 24, 40}, {10, 44, 70}, {30, 140, 190}, {215, 245, 255}, {0, 0, 0}, {60, 190, 230}},
-		rim = {{40, 200, 255}, {20, 90, 200}, {120, 255, 230}}, particles = {"🐟", "💧", "🐚", "🌊"}},
-	{id = "sunset", group = "vibes", name = "Sunset", icon = "🌅", mode = "drift", rate = 1,
+		rim = {{40, 200, 255}, {20, 90, 200}, {120, 255, 230}}, particles = {"\u{1F41F}", "\u{1F4A7}", "\u{1F41A}", "\u{1F30A}"}},
+	{id = "sunset", group = "vibes", name = "Sunset", icon = "\u{1F305}", mode = "drift", rate = 1,
 		desc = "Warm pink and orange evening sky.",
 		colors = {{40, 14, 30}, {80, 28, 48}, {250, 120, 70}, {255, 232, 214}, {0, 0, 0}, {255, 150, 90}},
-		rim = {{255, 120, 60}, {255, 60, 120}, {255, 200, 90}}, particles = {"🌅", "✨", "🕊️"}},
-	{id = "matrix", group = "vibes", name = "Matrix", icon = "💻", mode = "fall", rate = 6, fx = "glow",
+		rim = {{255, 120, 60}, {255, 60, 120}, {255, 200, 90}}, particles = {"\u{1F305}", "\u{2728}", "\u{1F54A}\u{FE0F}"}},
+	{id = "matrix", group = "vibes", name = "Matrix", icon = "\u{1F4BB}", mode = "fall", rate = 6, fx = "glow",
 		desc = "Green code raining down. There is no spoon.",
 		colors = {{2, 10, 4}, {6, 22, 10}, {30, 200, 70}, {150, 255, 170}, {0, 0, 0}, {40, 220, 90}},
 		rim = {{30, 255, 90}, {0, 120, 40}, {150, 255, 170}}, texts = {"0", "1", "01", "10", "1"}, textFont = "Code"},
-	{id = "sakura", group = "vibes", name = "Sakura", icon = "🌸", mode = "fall", rate = 3,
+	{id = "sakura", group = "vibes", name = "Sakura", icon = "\u{1F338}", mode = "fall", rate = 3,
 		desc = "Soft pink cherry blossoms falling.",
 		colors = {{50, 26, 40}, {86, 44, 66}, {240, 150, 190}, {255, 236, 244}, {0, 0, 0}, {255, 170, 210}},
-		rim = {{255, 170, 210}, {255, 230, 240}, {200, 90, 150}}, particles = {"🌸", "🌸", "💮"}},
-	{id = "candy", group = "vibes", name = "Candy", icon = "🍭", mode = "fall", rate = 3,
+		rim = {{255, 170, 210}, {255, 230, 240}, {200, 90, 150}}, particles = {"\u{1F338}", "\u{1F338}", "\u{1F4AE}"}},
+	{id = "candy", group = "vibes", name = "Candy", icon = "\u{1F36D}", mode = "fall", rate = 3,
 		desc = "Bubblegum colors and falling sweets.",
 		colors = {{60, 20, 60}, {100, 36, 96}, {255, 120, 200}, {255, 240, 250}, {0, 0, 0}, {120, 220, 255}},
-		rim = {{255, 120, 200}, {120, 220, 255}, {255, 240, 120}}, particles = {"🍬", "🍭", "🍩", "🧁"}},
-	{id = "lava", group = "vibes", name = "Lava", icon = "🌋", mode = "rise", rate = 3, fx = "candle",
+		rim = {{255, 120, 200}, {120, 220, 255}, {255, 240, 120}}, particles = {"\u{1F36C}", "\u{1F36D}", "\u{1F369}", "\u{1F9C1}"}},
+	{id = "lava", group = "vibes", name = "Lava", icon = "\u{1F30B}", mode = "rise", rate = 3, fx = "candle",
 		desc = "Molten orange with embers rising.",
 		colors = {{30, 6, 4}, {60, 14, 8}, {255, 90, 20}, {255, 225, 200}, {0, 0, 0}, {255, 120, 30}},
-		rim = {{255, 60, 0}, {255, 170, 0}, {120, 0, 0}}, particles = {"🔥", "🌋", "✨"}},
-	{id = "arctic", group = "vibes", name = "Arctic", icon = "🧊", mode = "fall", rate = 3,
+		rim = {{255, 60, 0}, {255, 170, 0}, {120, 0, 0}}, particles = {"\u{1F525}", "\u{1F30B}", "\u{2728}"}},
+	{id = "arctic", group = "vibes", name = "Arctic", icon = "\u{1F9CA}", mode = "fall", rate = 3,
 		desc = "Icy blues, snow and penguins.",
 		colors = {{14, 30, 44}, {24, 52, 74}, {140, 210, 240}, {235, 250, 255}, {0, 0, 0}, {170, 225, 250}},
-		rim = {{170, 230, 255}, {255, 255, 255}, {90, 170, 230}}, particles = {"🧊", "❄️", "🐧"}},
-	{id = "forest", group = "vibes", name = "Forest", icon = "🌲", mode = "drift", rate = 2,
+		rim = {{170, 230, 255}, {255, 255, 255}, {90, 170, 230}}, particles = {"\u{1F9CA}", "\u{2744}\u{FE0F}", "\u{1F427}"}},
+	{id = "forest", group = "vibes", name = "Forest", icon = "\u{1F332}", mode = "drift", rate = 2,
 		desc = "Mossy greens with leaves and butterflies.",
 		colors = {{10, 26, 14}, {20, 46, 24}, {90, 170, 80}, {225, 245, 220}, {0, 0, 0}, {120, 200, 100}},
-		rim = {{60, 170, 70}, {150, 110, 60}, {180, 230, 120}}, particles = {"🍃", "🌲", "🍄", "🦋"}},
-	{id = "midnight", group = "vibes", name = "Midnight", icon = "🌙", mode = "twinkle", rate = 3,
+		rim = {{60, 170, 70}, {150, 110, 60}, {180, 230, 120}}, particles = {"\u{1F343}", "\u{1F332}", "\u{1F344}", "\u{1F98B}"}},
+	{id = "midnight", group = "vibes", name = "Midnight", icon = "\u{1F319}", mode = "twinkle", rate = 3,
 		desc = "Deep night blue with a sleepy moon.",
 		colors = {{6, 8, 20}, {12, 16, 36}, {70, 90, 170}, {210, 220, 255}, {0, 0, 0}, {100, 120, 220}},
-		rim = {{60, 80, 200}, {200, 210, 255}, {30, 30, 90}}, particles = {"🌙", "⭐", "✨"}},
-	{id = "vaporwave", group = "vibes", name = "Vaporwave", icon = "🌴", mode = "drift", rate = 2,
+		rim = {{60, 80, 200}, {200, 210, 255}, {30, 30, 90}}, particles = {"\u{1F319}", "\u{2B50}", "\u{2728}"}},
+	{id = "vaporwave", group = "vibes", name = "Vaporwave", icon = "\u{1F334}", mode = "drift", rate = 2,
 		desc = "Neon pink and cyan, straight out of 1995.",
 		colors = {{30, 10, 50}, {56, 20, 90}, {255, 90, 200}, {255, 230, 255}, {0, 0, 0}, {90, 230, 255}},
-		rim = {{255, 90, 200}, {90, 230, 255}, {180, 120, 255}}, particles = {"🌴", "💿", "📼", "🐬"}},
-	{id = "royal", group = "vibes", name = "Royal Gold", icon = "👑", mode = "twinkle", rate = 3, fx = "glow",
+		rim = {{255, 90, 200}, {90, 230, 255}, {180, 120, 255}}, particles = {"\u{1F334}", "\u{1F4BF}", "\u{1F4FC}", "\u{1F42C}"}},
+	{id = "royal", group = "vibes", name = "Royal Gold", icon = "\u{1F451}", mode = "twinkle", rate = 3, fx = "glow",
 		desc = "Black and gold with sparkling crowns and gems.",
 		colors = {{28, 20, 6}, {50, 38, 12}, {230, 190, 70}, {255, 246, 215}, {0, 0, 0}, {240, 200, 90}},
-		rim = {{255, 215, 90}, {255, 255, 220}, {180, 130, 30}}, particles = {"👑", "💎", "✨"}},
-	{id = "toxic", group = "vibes", name = "Toxic", icon = "☢️", mode = "rise", rate = 3, fx = "flicker",
+		rim = {{255, 215, 90}, {255, 255, 220}, {180, 130, 30}}, particles = {"\u{1F451}", "\u{1F48E}", "\u{2728}"}},
+	{id = "toxic", group = "vibes", name = "Toxic", icon = "\u{2622}\u{FE0F}", mode = "rise", rate = 3, fx = "flicker",
 		desc = "Radioactive green. Do not touch.",
 		colors = {{10, 20, 4}, {22, 40, 8}, {160, 255, 40}, {235, 255, 200}, {0, 0, 0}, {180, 255, 60}},
-		rim = {{160, 255, 40}, {40, 60, 10}, {220, 255, 120}}, particles = {"☢️", "🧪", "💚"}},
-	{id = "doge", group = "memes", name = "Doge", icon = "🐕", iconImage = "rbxassetid://631727248", watermark = "rbxassetid://631727248", mode = "drift", rate = 1.5,
+		rim = {{160, 255, 40}, {40, 60, 10}, {220, 255, 120}}, particles = {"\u{2622}\u{FE0F}", "\u{1F9EA}", "\u{1F49A}"}},
+	{id = "doge", group = "memes", name = "Doge", icon = "\u{1F415}", iconImage = "rbxassetid://631727248", watermark = "rbxassetid://631727248", mode = "drift", rate = 1.5,
 		desc = "much theme. very script. wow.",
 		colors = {{48, 36, 14}, {82, 62, 26}, {230, 180, 70}, {255, 245, 220}, {0, 0, 0}, {240, 190, 80}},
 		rim = {{240, 190, 80}, {255, 240, 200}, {160, 110, 40}}, images = {"rbxassetid://631727248", "rbxassetid://157767960"}, texts = {"wow", "such theme", "very script", "much yield", "amaze"}},
-	{id = "stonks", group = "memes", name = "Stonks", icon = "📈", iconImage = "rbxassetid://3362482510", watermark = "rbxassetid://3362482510", mode = "rise", rate = 2,
+	{id = "stonks", group = "memes", name = "Stonks", icon = "\u{1F4C8}", iconImage = "rbxassetid://3362482510", watermark = "rbxassetid://3362482510", mode = "rise", rate = 2,
 		desc = "Number go up. Investments only go up.",
 		colors = {{6, 14, 40}, {12, 28, 70}, {40, 200, 90}, {220, 255, 230}, {0, 0, 0}, {60, 220, 110}},
-		rim = {{40, 220, 90}, {40, 90, 220}, {220, 255, 230}}, images = {"rbxassetid://3362482510"}, particles = {"📈", "💰", "💸"}, texts = {"STONKS"}},
-	{id = "sus", group = "memes", name = "Among Us", icon = "🔴", iconImage = "rbxassetid://6344756217", watermark = "rbxassetid://6502780016", mode = "drift", rate = 1.5,
+		rim = {{40, 220, 90}, {40, 90, 220}, {220, 255, 230}}, images = {"rbxassetid://3362482510"}, particles = {"\u{1F4C8}", "\u{1F4B0}", "\u{1F4B8}"}, texts = {"STONKS"}},
+	{id = "sus", group = "memes", name = "Among Us", icon = "\u{1F534}", iconImage = "rbxassetid://6344756217", watermark = "rbxassetid://6502780016", mode = "drift", rate = 1.5,
 		desc = "Red is acting kinda sus.",
 		colors = {{10, 10, 22}, {20, 20, 40}, {200, 30, 40}, {230, 235, 255}, {0, 0, 0}, {200, 40, 50}},
 		rim = {{220, 30, 40}, {60, 210, 230}, {255, 255, 255}}, images = {"rbxassetid://6344756217", "rbxassetid://6696296215", "rbxassetid://6502780016"}, texts = {"sus", "SUS", "emergency meeting"}},
-	{id = "nyan", group = "memes", name = "Nyan Cat", icon = "🌈", iconImage = "rbxassetid://61574940", watermark = "rbxassetid://61574940", mode = "drift", rate = 1.2,
+	{id = "nyan", group = "memes", name = "Nyan Cat", icon = "\u{1F308}", iconImage = "rbxassetid://61574940", watermark = "rbxassetid://61574940", mode = "drift", rate = 1.2,
 		desc = "Nyan nyan nyan nyan nyan nyan.",
 		colors = {{8, 14, 50}, {14, 24, 80}, {255, 120, 200}, {255, 255, 255}, {0, 0, 0}, {255, 150, 220}},
-		rim = {{255, 60, 60}, {255, 160, 40}, {255, 240, 60}, {60, 220, 80}, {60, 140, 255}, {160, 80, 255}}, images = {"rbxassetid://61574940"}, particles = {"⭐", "✨"}},
-	{id = "thisisfine", group = "memes", name = "This Is Fine", icon = "🔥", iconImage = "rbxassetid://296950923", watermark = "rbxassetid://296950923", mode = "rise", rate = 3, fx = "flicker",
+		rim = {{255, 60, 60}, {255, 160, 40}, {255, 240, 60}, {60, 220, 80}, {60, 140, 255}, {160, 80, 255}}, images = {"rbxassetid://61574940"}, particles = {"\u{2B50}", "\u{2728}"}},
+	{id = "thisisfine", group = "memes", name = "This Is Fine", icon = "\u{1F525}", iconImage = "rbxassetid://296950923", watermark = "rbxassetid://296950923", mode = "rise", rate = 3, fx = "flicker",
 		desc = "Everything is on fire. This is fine.",
 		colors = {{40, 18, 6}, {74, 34, 10}, {255, 140, 40}, {255, 236, 200}, {0, 0, 0}, {255, 160, 60}},
-		rim = {{255, 120, 20}, {255, 200, 60}, {180, 40, 10}}, images = {"rbxassetid://296950923"}, particles = {"🔥", "🔥", "☕"}, texts = {"this is fine"}},
-	{id = "cheems", group = "memes", name = "Cheems", icon = "🐶", iconImage = "rbxassetid://6950508957", watermark = "rbxassetid://6950508957", mode = "fall", rate = 1.5,
+		rim = {{255, 120, 20}, {255, 200, 60}, {180, 40, 10}}, images = {"rbxassetid://296950923"}, particles = {"\u{1F525}", "\u{1F525}", "\u{2615}"}, texts = {"this is fine"}},
+	{id = "cheems", group = "memes", name = "Cheems", icon = "\u{1F436}", iconImage = "rbxassetid://6950508957", watermark = "rbxassetid://6950508957", mode = "fall", rate = 1.5,
 		desc = "Hemlo. Bonk.",
 		colors = {{44, 34, 20}, {74, 58, 34}, {220, 170, 90}, {255, 242, 220}, {0, 0, 0}, {230, 180, 100}},
 		rim = {{220, 170, 90}, {255, 235, 200}, {140, 100, 50}}, images = {"rbxassetid://6950508957"}, texts = {"bonk", "hemlo", "bork"}},
-	{id = "noob", group = "memes", name = "Noob", icon = "🙂", iconImage = "rbxassetid://458144713", watermark = "rbxassetid://458144713", mode = "drift", rate = 1.5,
+	{id = "noob", group = "memes", name = "Noob", icon = "\u{1F642}", iconImage = "rbxassetid://458144713", watermark = "rbxassetid://458144713", mode = "drift", rate = 1.5,
 		desc = "Classic Roblox. Oof.",
 		colors = {{20, 40, 80}, {30, 60, 120}, {240, 210, 40}, {255, 255, 255}, {0, 0, 0}, {110, 190, 60}},
 		rim = {{245, 205, 50}, {50, 110, 200}, {110, 190, 60}}, images = {"rbxassetid://458144713", "rbxassetid://1025787149"}, texts = {"oof", "OOF"}},
-	{id = "vibecat", group = "memes", name = "Vibe Cat", icon = "😎", iconImage = "rbxassetid://5247118810", watermark = "rbxassetid://5247118810", mode = "rise", rate = 2, fx = "heartbeat",
+	{id = "vibecat", group = "memes", name = "Vibe Cat", icon = "\u{1F60E}", iconImage = "rbxassetid://5247118810", watermark = "rbxassetid://5247118810", mode = "rise", rate = 2, fx = "heartbeat",
 		desc = "Just vibing. Grumpy Cat does not approve.",
 		colors = {{50, 28, 44}, {80, 44, 72}, {255, 160, 210}, {255, 240, 248}, {0, 0, 0}, {255, 180, 220}},
-		rim = {{255, 160, 210}, {200, 160, 255}, {255, 240, 250}}, images = {"rbxassetid://5247118810", "rbxassetid://420237037"}, particles = {"🎵", "🎶", "😎"}},
-	{id = "moai", group = "memes", name = "Moai", icon = "🗿", iconImage = "rbxassetid://9496106352", watermark = "rbxassetid://9496106352", mode = "rise", rate = 1.2,
-		desc = "🗿",
+		rim = {{255, 160, 210}, {200, 160, 255}, {255, 240, 250}}, images = {"rbxassetid://5247118810", "rbxassetid://420237037"}, particles = {"\u{1F3B5}", "\u{1F3B6}", "\u{1F60E}"}},
+	{id = "moai", group = "memes", name = "Moai", icon = "\u{1F5FF}", iconImage = "rbxassetid://9496106352", watermark = "rbxassetid://9496106352", mode = "rise", rate = 1.2,
+		desc = "\u{1F5FF}",
 		colors = {{30, 30, 32}, {52, 52, 56}, {150, 150, 140}, {235, 235, 225}, {0, 0, 0}, {170, 170, 160}},
-		rim = {{160, 160, 150}, {90, 90, 90}, {220, 220, 210}}, images = {"rbxassetid://9496106352"}, particles = {"🗿", "🗿"}},
-	{id = "trollge", group = "memes", name = "Trollge", icon = "😈", iconImage = "rbxassetid://6930020327", watermark = "rbxassetid://6930020327", mode = "twinkle", rate = 2, fx = "flicker",
+		rim = {{160, 160, 150}, {90, 90, 90}, {220, 220, 210}}, images = {"rbxassetid://9496106352"}, particles = {"\u{1F5FF}", "\u{1F5FF}"}},
+	{id = "trollge", group = "memes", name = "Trollge", icon = "\u{1F608}", iconImage = "rbxassetid://6930020327", watermark = "rbxassetid://6930020327", mode = "twinkle", rate = 2, fx = "flicker",
 		desc = "Problem?",
 		colors = {{4, 4, 4}, {14, 14, 14}, {200, 200, 200}, {255, 255, 255}, {0, 0, 0}, {180, 180, 180}},
 		rim = {{255, 255, 255}, {40, 40, 40}, {160, 0, 0}}, images = {"rbxassetid://6930020327"}, texts = {"problem?"}},
-	{id = "skull", group = "memes", name = "Skull", icon = "💀", iconImage = "rbxassetid://6991349708", watermark = "rbxassetid://6991349708", mode = "fall", rate = 2,
-		desc = "I'm dead. 💀",
+	{id = "skull", group = "memes", name = "Skull", icon = "\u{1F480}", iconImage = "rbxassetid://6991349708", watermark = "rbxassetid://6991349708", mode = "fall", rate = 2,
+		desc = "I'm dead. \u{1F480}",
 		colors = {{12, 10, 10}, {28, 24, 22}, {220, 210, 190}, {245, 240, 230}, {0, 0, 0}, {200, 190, 170}},
-		rim = {{235, 225, 205}, {90, 80, 70}, {255, 255, 255}}, images = {"rbxassetid://6991349708"}, particles = {"💀", "☠️"}},
-	{id = "funnyaward", group = "memes", name = "Funny Award", icon = "🏆", iconImage = "rbxassetid://4748311898", watermark = "rbxassetid://4748311898", mode = "burst", rate = 0.8,
+		rim = {{235, 225, 205}, {90, 80, 70}, {255, 255, 255}}, images = {"rbxassetid://6991349708"}, particles = {"\u{1F480}", "\u{2620}\u{FE0F}"}},
+	{id = "funnyaward", group = "memes", name = "Funny Award", icon = "\u{1F3C6}", iconImage = "rbxassetid://4748311898", watermark = "rbxassetid://4748311898", mode = "burst", rate = 0.8,
 		desc = "And the funny award goes to... not you.",
 		colors = {{60, 8, 8}, {100, 16, 16}, {240, 190, 40}, {255, 245, 220}, {0, 0, 0}, {250, 200, 60}},
-		rim = {{230, 30, 30}, {255, 210, 60}, {255, 255, 255}}, images = {"rbxassetid://4748311898"}, particles = {"🏆"}, texts = {"not you"}},
-	{id = "classic", name = "Classic", icon = "⬛", desc = "The original grey Infinite Yield colors, no effects.",
+		rim = {{230, 30, 30}, {255, 210, 60}, {255, 255, 255}}, images = {"rbxassetid://4748311898"}, particles = {"\u{1F3C6}"}, texts = {"not you"}},
+	{id = "classic", name = "Classic", icon = "\u{2B1B}", desc = "The original grey Infinite Yield colors, no effects.",
 		colors = {{36, 36, 37}, {46, 46, 47}, {78, 78, 79}, {255, 255, 255}, {0, 0, 0}, {78, 78, 79}},
 		rim = {{120, 120, 125}, {200, 200, 205}, {120, 120, 125}}},
-	{id = "custom", name = "Custom Colors", icon = "🎨", desc = "Your own colors, made in the Custom Colors tab."},
+	{id = "custom", name = "Custom Colors", icon = "\u{1F3A8}", desc = "Your own colors, made in the Custom Colors tab."},
 }
 
 NeverYieldTheme.cosmicIds = {auto = true, space = true, nebula = true, galaxy = true, void = true, cosmic = true, classic = true}
@@ -16239,6 +16359,32 @@ NeverYieldTheme.apply = function(id, save)
 	return true, theme
 end
 
+-- Custom colors: build the portal rim from your own accent, scrollbar and text colors
+NeverYieldTheme.applyCustomRim = function()
+	local function rgb(c)
+		return {math.floor(c.R * 255 + 0.5), math.floor(c.G * 255 + 0.5), math.floor(c.B * 255 + 0.5)}
+	end
+	local theme = {rim = {rgb(currentShade3), rgb(currentScroll or currentShade3), rgb(currentText1:Lerp(currentShade3, 0.5))}}
+	local seq = NeverYieldTheme.sequence(theme)
+	NeverYieldPortal.swirl = function() return seq end
+	NeverYieldPortal.rimGradient.Color = seq
+	NeverYieldPortal.rim.Transparency = 0
+	NeverYieldPortal.rim.Thickness = 2.5
+	for _, ring in ipairs(NeverYieldPortal.rings) do
+		ring.gradient.Color = seq
+	end
+	for i, spark in ipairs(NeverYieldPortal.sparks) do
+		spark.BackgroundColor3 = NeverYieldTheme.rgb(theme.rim[(i % #theme.rim) + 1])
+	end
+	local tinted = NeverYieldTheme.sequence(theme, 0.55)
+	for _, gradient in ipairs(NeverYieldGradients) do
+		gradient.Color = tinted
+	end
+	for _, child in ipairs(NeverYieldTheme.layer():GetChildren()) do
+		child:Destroy()
+	end
+end
+
 -- Theme Studio screen
 NeverYieldTheme.closeStudio = function()
 	local studio = NeverYieldTheme.studio
@@ -16353,7 +16499,7 @@ NeverYieldTheme.openStudio = function(page)
 	subtitle.Size = UDim2.new(1, 0, 0, 18)
 	subtitle.Font = Enum.Font.Gotham
 	subtitle.TextSize = 13
-	subtitle.Text = "NeverYield  •  edited by kas  •  pick your vibe"
+	subtitle.Text = "NeverYield  \u{2022}  edited by kas  \u{2022}  pick your vibe"
 	subtitle.TextTransparency = 0.25
 	subtitle.ZIndex = 21
 	subtitle.Parent = studio
@@ -16429,7 +16575,7 @@ NeverYieldTheme.openStudio = function(page)
 
 	local function describe(theme, prefix)
 		if NeverYieldTheme.onCustomPage then return end
-		footer.Text = prefix .. ' <b>' .. theme.icon .. ' ' .. theme.name .. '</b>  —  ' .. theme.desc
+		footer.Text = prefix .. ' <b>' .. theme.icon .. ' ' .. theme.name .. '</b>  \u{2014}  ' .. theme.desc
 	end
 
 	local back = Instance.new("TextButton")
@@ -16478,7 +16624,7 @@ NeverYieldTheme.openStudio = function(page)
 			reset.Text = "Reset to Default"
 			resetStroke.Thickness = 1.5
 			NeverYieldTheme.apply("space", true)
-			footer.Text = "<b>Reset!</b>  —  back to the default Deep Space colors."
+			footer.Text = "<b>Reset!</b>  \u{2014}  back to the default Deep Space colors."
 		else
 			confirmUntil = tick() + 3
 			reset.Text = "Click again to confirm"
@@ -16595,6 +16741,7 @@ NeverYieldTheme.openStudio = function(page)
 			updateColors(color, slots[selectedSlot].tbl)
 			NeverYieldTheme.selected = "custom"
 			NeverYieldTheme.active = nil
+			pcall(NeverYieldTheme.applyCustomRim)
 			pcall(function() writefile("NeverYield_theme.txt", "custom", true) end)
 			pcall(updatesaves)
 			if NeverYieldTheme.refreshStudio then
@@ -16609,7 +16756,7 @@ NeverYieldTheme.openStudio = function(page)
 		customPage.Visible = custom
 		back.Visible = false
 		if custom then
-			footer.Text = "<b>🎨 Custom Colors</b>  —  pick a part of the GUI, then click a color. Saves automatically. Reset to Default undoes it all."
+			footer.Text = "<b>\u{1F3A8} Custom Colors</b>  \u{2014}  pick a part of the GUI, then click a color. Saves automatically. Reset to Default undoes it all."
 			refreshCustom()
 		else
 			describe(currentTheme(), "Now wearing:")
@@ -16890,6 +17037,7 @@ task.spawn(function()
 	end)
 	if saved == "custom" then
 		NeverYieldTheme.selected = "custom"
+		pcall(NeverYieldTheme.applyCustomRim)
 	elseif not NeverYieldTheme.apply(saved, false) then
 		NeverYieldTheme.apply("auto", false)
 	end
@@ -16900,7 +17048,14 @@ end)
 -- Sound IDs are ProSoundEffects library audio (public domain on Roblox), checked against the public asset API.
 WackyState.assets = {
 	skies = {},
-	particles = {snowflake = "rbxassetid://1190797289", flake = "rbxassetid://1190797289", soft = "rbxassetid://242109931"},
+	-- rbxasset:// textures ship with the Roblox client; leaf (899737088) and heart (249529864) are checked image assets
+	particles = {
+		snowflake = "rbxassetid://1190797289", flake = "rbxassetid://1190797289", soft = "rbxassetid://242109931",
+		petal = "rbxassetid://242109931", leaf = "rbxassetid://899737088", heart = "rbxassetid://249529864",
+		rain = "rbxasset://textures/particles/SquareParticle.png", dust = "rbxasset://textures/particles/smoke_main.dds",
+		ember = "rbxasset://textures/particles/fire_sparks_main.dds", firefly = "rbxasset://textures/particles/forcefield_glow_main.dds",
+		star = "rbxasset://textures/particles/sparkles_main.dds",
+	},
 	sounds = {
 		rain = 9112853287, stormloop = 9120016022,
 		thunder1 = 9120021541, thunder2 = 9120019110, thunder3 = 9120020225,
@@ -17045,15 +17200,15 @@ WackyState.weather = {
 		emitters = {{tex = "star", area = "around", color = {190, 140, 255}, rate = 180, speed = {1, 4}, size = {0.2, 0.4}, life = 10, spread = 180, light = 1}}},
 	bloodmoon = {sky = "bloodmoon", clock = 0, tint = {255, 165, 165}, brightness = -0.05, sound = {"fire", 0.3},
 		atmosphere = {density = 0.4, haze = 2, color = {130, 25, 25}, decay = {70, 0, 0}},
-		emitters = {{tex = "dust", area = "below", color = {255, 60, 30}, rate = 60, speed = {3, 8}, size = {0.2, 0.4}, life = 8, spread = 40, light = 1}}},
+		emitters = {{tex = "ember", area = "below", color = {255, 60, 30}, rate = 60, speed = {3, 8}, size = {0.2, 0.4}, life = 8, spread = 40, light = 1}}},
 	sakura = {sky = "pink", clock = 14, tint = {255, 238, 246}, sound = {"birds", 0.4},
-		emitters = {{tex = "petal", area = "above", color = {255, 190, 220}, rate = 120, speed = {3, 6}, size = {0.35, 0.6}, life = 10, spread = 40, spin = true, accel = {3, 0, 1}}}},
+		emitters = {{tex = "petal", area = "above", color = {255, 185, 215}, rate = 120, speed = {3, 6}, size = {0.3, 0.45}, life = 10, spread = 40, spin = true, squash = 0.7, accel = {3, 0, 1}}}},
 	autumn = {sky = "sunset", clock = 16.8, tint = {255, 225, 195}, sound = {"birds", 0.35},
-		emitters = {{tex = "leaf", area = "above", gradient = {{230, 120, 30}, {200, 50, 20}, {240, 190, 60}}, rate = 80, speed = {3, 6}, size = {0.4, 0.7}, life = 10, spread = 45, spin = true, accel = {4, 0, 2}}}},
+		emitters = {{tex = "leaf", area = "above", gradient = {{255, 255, 255}, {255, 190, 160}, {255, 235, 170}}, rate = 80, speed = {3, 6}, size = {0.4, 0.7}, life = 10, spread = 45, spin = true, accel = {4, 0, 2}}}},
 	hearts = {sky = "pink", clock = 15, tint = {255, 220, 235}, sound = {"birds", 0.3},
-		emitters = {{tex = "heart", area = "below", color = {255, 90, 150}, rate = 50, speed = {3, 6}, size = {0.4, 0.7}, life = 8, spread = 30, light = 0.5}}},
+		emitters = {{tex = "heart", area = "below", color = {255, 205, 225}, rate = 50, speed = {3, 6}, size = {0.4, 0.7}, life = 8, spread = 30, light = 0.5}}},
 	embers = {sky = "bloodmoon", clock = 20, sound = {"fire", 0.45},
-		emitters = {{tex = "dust", area = "below", color = {255, 120, 30}, rate = 120, speed = {4, 10}, size = {0.2, 0.35}, life = 8, spread = 60, light = 1}}},
+		emitters = {{tex = "ember", area = "below", color = {255, 120, 30}, rate = 120, speed = {4, 10}, size = {0.2, 0.35}, life = 8, spread = 60, light = 1}}},
 	fireflies = {sky = "starry", clock = 21, sound = {"night", 0.5},
 		emitters = {{tex = "firefly", area = "around", color = {220, 255, 90}, rate = 40, speed = {1, 3}, size = {0.25, 0.4}, life = 10, spread = 180, light = 1}}},
 	rainbow = {sky = "day", clock = 12, sound = {"birds", 0.4},
@@ -17093,6 +17248,9 @@ WackyState.makeEmitter = function(spec)
 	if spec.spin then
 		emitter.Rotation = NumberRange.new(0, 360)
 		emitter.RotSpeed = NumberRange.new(-120, 120)
+	end
+	if spec.squash then
+		pcall(function() emitter.Squash = NumberSequence.new(spec.squash) end)
 	end
 	if spec.streak then
 		emitter.Orientation = Enum.ParticleOrientation.VelocityParallel
@@ -17311,12 +17469,22 @@ WackyState.snowRestoreAll = function(cover)
 end
 
 WackyState.stopSnowCover = function(instant)
+	-- an earlier snow still melting? finish it right now, so new snow never saves half-melted colors
+	if WackyState.snowMelting then
+		pcall(WackyState.snowMelting.finish)
+	end
 	WackyState.disconnect("snowcover")
 	WackyState.disconnect("snowmapadded")
 	local cover = WackyState.snowCover
 	WackyState.snowCover = nil
 	if not cover then return end
+	local done = false
 	local function finish()
+		if done then return end
+		done = true
+		if WackyState.snowMelting and WackyState.snowMelting.cover == cover then
+			WackyState.snowMelting = nil
+		end
 		WackyState.snowRestoreAll(cover)
 		for _, obj in ipairs(cover.cleanup) do
 			pcall(function() obj:Destroy() end)
@@ -17326,11 +17494,10 @@ WackyState.stopSnowCover = function(instant)
 		finish()
 		return
 	end
+	WackyState.snowMelting = {cover = cover, finish = finish}
 	local fade = TweenInfo.new(4, Enum.EasingStyle.Sine)
-	for _, c in pairs(cover.cells) do
-		if c then
-			TweenService:Create(c.part, fade, {Transparency = 1, Size = Vector3.new(c.part.Size.X, 0.02, c.part.Size.Z)}):Play()
-		end
+	for _, footprint in ipairs(cover.prints) do
+		pcall(function() TweenService:Create(footprint, fade, {Transparency = 1}):Play() end)
 	end
 	for _, obj in ipairs(cover.fadeables) do
 		pcall(function()
@@ -17347,7 +17514,7 @@ WackyState.stopSnowCover = function(instant)
 	task.spawn(function()
 		local startLevel, started = cover.level, tick()
 		local index = 1
-		while tick() - started < 4 do
+		while not done and tick() - started < 4 do
 			local level = startLevel * (1 - (tick() - started) / 4)
 			local n = #cover.mapParts
 			local budgetEnd = os.clock() + 0.002
@@ -17679,7 +17846,6 @@ WackyState.startSnowCover = function(speaker, fullTime)
 					footprint.CFrame = CFrame.lookAt(at, at + dir)
 					footprint.Parent = folder
 					table.insert(cover.prints, footprint)
-					table.insert(cover.fadeables, footprint)
 					if #cover.prints > 160 then
 						pcall(function() table.remove(cover.prints, 1):Destroy() end)
 					end
@@ -17706,10 +17872,8 @@ addcmd('weather',{},function(args, speaker)
 		return
 	end
 	WackyState.stopWeather(true)
-	if not WackyState.saved.weatherClock then
-		WackyState.saved.weatherClock = Lighting.ClockTime
-	end
 	if preset.clock then
+		WackyState.lightClaim("weather", {"ClockTime"})
 		Lighting.ClockTime = preset.clock
 	end
 	if preset.sky then
@@ -17759,14 +17923,15 @@ addcmd('weather',{},function(args, speaker)
 	end
 	if preset.dark then
 		local d = preset.dark
-		local base = {Brightness = Lighting.Brightness, Ambient = Lighting.Ambient, OutdoorAmbient = Lighting.OutdoorAmbient, ExposureCompensation = Lighting.ExposureCompensation}
-		WackyState.saved.weatherLight = base
-		TweenService:Create(Lighting, TweenInfo.new(6, Enum.EasingStyle.Sine), {
-			Brightness = base.Brightness * d.brightness,
+		WackyState.lightClaim("weather", {"Brightness", "Ambient", "OutdoorAmbient", "ExposureCompensation"})
+		local orig = WackyState.light.orig
+		WackyState.weatherDarkTween = TweenService:Create(Lighting, TweenInfo.new(6, Enum.EasingStyle.Sine), {
+			Brightness = orig.Brightness * d.brightness,
 			Ambient = WackyState.c3(d.ambient),
 			OutdoorAmbient = WackyState.c3(d.outdoor),
-			ExposureCompensation = base.ExposureCompensation + d.exposure,
-		}):Play()
+			ExposureCompensation = orig.ExposureCompensation + d.exposure,
+		})
+		WackyState.weatherDarkTween:Play()
 	end
 	if preset.sound then
 		local loop = WackyState.sound(WackyState.assets.sounds[preset.sound[1]], nil, 0, true)
@@ -17845,30 +18010,19 @@ WackyState.stopWeather = function(switching)
 		end
 	end
 	WackyState.weatherSounds = {}
-	local light = WackyState.saved.weatherLight
-	if light then
-		WackyState.saved.weatherLight = nil
-		if switching then
-			for prop, value in pairs(light) do
-				Lighting[prop] = value
-			end
-		else
-			TweenService:Create(Lighting, TweenInfo.new(3, Enum.EasingStyle.Sine), light):Play()
-		end
+	-- stop a darkening that is still fading in, then give the lighting back (instantly when switching)
+	if WackyState.weatherDarkTween then
+		pcall(function() WackyState.weatherDarkTween:Cancel() end)
+		WackyState.weatherDarkTween = nil
 	end
-	WackyState.stopSnowCover(false)
+	WackyState.lightRelease("weather", (not switching) and 3 or nil)
+	WackyState.stopSnowCover(switching)
 	WackyState.disconnect("weather")
 	WackyState.clear("weather")
 	WackyState.unbindCam("weathershake")
-	if not WackyState.skyCommand then
-		WackyState.envRestore("Sky")
-	end
+	WackyState.envRestore("Sky")
 	WackyState.envRestore("Atmosphere")
 	WackyState.envRestore("Clouds")
-	if WackyState.saved.weatherClock then
-		Lighting.ClockTime = WackyState.saved.weatherClock
-		WackyState.saved.weatherClock = nil
-	end
 end
 
 addcmd('unweather',{'noweather','clearskies'},function(args, speaker)
@@ -17907,6 +18061,8 @@ addcmd('fuckoff',{'unloadny','unloadscript'},function(args, speaker)
 	pcall(WackyState.stopWeather, true)
 	pcall(WackyState.stopSnowCover, true)
 	pcall(NeverYieldTheme.closeStudio)
+	pcall(WackyState.lightReleaseAll)
+	pcall(function() NeverYieldStats.stop() end)
 	for key in pairs(WackyState.conns) do
 		pcall(WackyState.disconnect, key)
 	end
@@ -18407,11 +18563,982 @@ addcmd('end',{'theend','blackholeleave'},function(args, speaker)
 				if rj then
 					pcall(rj.FUNC, {}, speaker)
 				end
+				-- still here? teleporting is blocked in this server, so give the screen back
+				task.wait(15)
+				sub.Text = "couldn't leave this server. the map stays gone until you rejoin."
+				task.wait(3)
+				for _, obj in ipairs({black, title, sub, white, cc, bloom, blur, rumble, drone}) do
+					pcall(function() obj:Destroy() end)
+				end
+				pcall(function() camera.FieldOfView = baseFov end)
+				pcall(function()
+					if PARENT and PARENT:IsA("ScreenGui") then
+						PARENT.Enabled = true
+					end
+				end)
+				WackyState.ending = false
+				WackyState.endOthersHidden = false
+				WackyState.endTerrainGone = false
+				notify('END', 'Teleport failed, so you are still in this server. Use rejoin (or leave) to get the map back.', 10)
 			end)
 		end
 	end))
 end)
 -- ================== END THE END ==================
+
+-- ==================== NEVERYIELD STATS ====================
+-- Lifetime stats saved in the executor workspace (NeverYield_stats.json), so they carry across every game.
+-- Kills come from the game's leaderboard (Kills, KOs, Eliminations...) and from Roblox "creator" damage
+-- tags; whichever counted more in a server is used, so one kill is never counted twice.
+NeverYieldStats = {file = "NeverYield_stats.json", dirty = false, lastSave = 0, page = 1, chatMode = "mine", watched = setmetatable({}, {__mode = "k"})}
+NeverYieldStats.tagNames = {"creator", "Creator", "killer", "Killer", "KillerTag", "LastHit", "lastHit", "LastHitBy", "LastDamager", "LastAttacker", "Attacker", "DamagedBy"}
+NeverYieldStats.tabs = {{"overview", "Overview"}, {"combat", "Combat"}, {"games", "Games"}, {"chat", "Chat"}, {"people", "People"}, {"commands", "Commands"}}
+NeverYieldStats.streakNames = {[3] = "Killing spree", [5] = "Rampage", [10] = "Unstoppable", [15] = "Godlike", [20] = "Legendary", [30] = "NEVERYIELD"}
+
+NeverYieldStats.blank = function()
+	return {
+		version = 1, created = os.time(),
+		totals = {playtime = 0, sessions = 0, distance = 0, jumps = 0, deaths = 0, kills = 0, npcKills = 0, messages = 0,
+			words = 0, commands = 0, bestStreak = 0, longestLife = 0, playersMet = 0, deathsByPlayers = 0},
+		games = {}, commands = {}, players = {},
+		chat = {mine = {}, all = {}},
+		settings = {logOthers = true},
+	}
+end
+
+NeverYieldStats.load = function()
+	local data
+	pcall(function()
+		if isfile and isfile(NeverYieldStats.file) then
+			local raw = readfile(NeverYieldStats.file)
+			local ok, decoded = pcall(function() return HttpService:JSONDecode(raw) end)
+			if ok and type(decoded) == "table" then
+				data = decoded
+			elseif type(raw) == "string" and raw ~= "" then
+				-- keep a copy of a damaged file instead of silently losing it
+				writefile("NeverYield_stats_broken.json", raw, true)
+			end
+		end
+	end)
+	local blank = NeverYieldStats.blank()
+	data = data or blank
+	for key, value in pairs(blank) do
+		if type(data[key]) ~= type(value) then
+			data[key] = value
+		end
+	end
+	for key, value in pairs(blank.totals) do
+		if type(data.totals[key]) ~= "number" then
+			data.totals[key] = value
+		end
+	end
+	if type(data.chat.mine) ~= "table" then data.chat.mine = {} end
+	if type(data.chat.all) ~= "table" then data.chat.all = {} end
+	if data.settings.logOthers == nil then data.settings.logOthers = true end
+	NeverYieldStats.data = data
+end
+
+NeverYieldStats.trimList = function(list, max)
+	local n = #list
+	local extra = n - max
+	if extra > 0 then
+		table.move(list, extra + 1, n, 1)
+		for i = n - extra + 1, n do
+			list[i] = nil
+		end
+	end
+end
+
+NeverYieldStats.trim = function()
+	local data = NeverYieldStats.data
+	NeverYieldStats.trimList(data.chat.mine, 5000)
+	NeverYieldStats.trimList(data.chat.all, 3000)
+	local ids = {}
+	for id in pairs(data.players) do
+		table.insert(ids, id)
+	end
+	if #ids > 3000 then
+		table.sort(ids, function(a, b) return (data.players[a].time or 0) > (data.players[b].time or 0) end)
+		for i = 2501, #ids do
+			data.players[ids[i]] = nil
+		end
+	end
+end
+
+NeverYieldStats.save = function()
+	if not NeverYieldStats.data then return false end
+	pcall(NeverYieldStats.tick)
+	pcall(NeverYieldStats.trim)
+	local ok, encoded = pcall(function() return HttpService:JSONEncode(NeverYieldStats.data) end)
+	if ok and encoded then
+		writefile(NeverYieldStats.file, encoded, true)
+		NeverYieldStats.dirty = false
+		NeverYieldStats.lastSave = os.clock()
+		return true
+	end
+	return false
+end
+
+NeverYieldStats.game = function()
+	local data = NeverYieldStats.data
+	local key = tostring(game.PlaceId)
+	local entry = data.games[key]
+	if type(entry) ~= "table" then
+		entry = {name = "Place " .. key, playtime = 0, visits = 0, kills = 0, deaths = 0, npcKills = 0, messages = 0, first = os.time(), last = os.time()}
+		data.games[key] = entry
+	end
+	return entry
+end
+
+NeverYieldStats.player = function(plr)
+	local data = NeverYieldStats.data
+	local key = tostring(plr.UserId)
+	local p = data.players[key]
+	if type(p) ~= "table" then
+		p = {name = plr.Name, display = plr.DisplayName, time = 0, games = 0, first = os.time(), last = os.time(), iKilled = 0, killedMe = 0, messages = 0}
+		data.players[key] = p
+		data.totals.playersMet = data.totals.playersMet + 1
+	end
+	p.name, p.display = plr.Name, plr.DisplayName
+	return p
+end
+
+-- playtime, time spent with each player, servers shared
+NeverYieldStats.tick = function()
+	local s = NeverYieldStats.session
+	local now = os.clock()
+	local dt = now - (s.lastTick or now)
+	s.lastTick = now
+	if dt <= 0 or dt > 120 then return end
+	local data = NeverYieldStats.data
+	data.totals.playtime = data.totals.playtime + dt
+	s.playtime = s.playtime + dt
+	local g = NeverYieldStats.game()
+	g.playtime = g.playtime + dt
+	g.last = os.time()
+	local lp = Players.LocalPlayer
+	for _, plr in ipairs(Players:GetPlayers()) do
+		if plr ~= lp then
+			local p = NeverYieldStats.player(plr)
+			p.time = (p.time or 0) + dt
+			p.last = os.time()
+			if not s.seen[plr.UserId] then
+				s.seen[plr.UserId] = true
+				p.games = (p.games or 0) + 1
+			end
+		end
+	end
+	NeverYieldStats.dirty = true
+end
+
+-- Combat
+NeverYieldStats.resolve = function(value)
+	if typeof(value) == "Instance" then
+		if value:IsA("Player") then return value end
+		if value:IsA("Model") then return Players:GetPlayerFromCharacter(value) end
+	elseif type(value) == "string" then
+		local plr = Players:FindFirstChild(value)
+		if plr and plr:IsA("Player") then return plr end
+		local id = tonumber(value)
+		if id then return Players:GetPlayerByUserId(id) end
+	elseif type(value) == "number" then
+		return Players:GetPlayerByUserId(value)
+	end
+	return nil
+end
+
+-- who gets the credit when this humanoid dies (the usual Roblox "creator" tag and similar ones)
+NeverYieldStats.tagOwner = function(model, hum)
+	for _, holder in ipairs({hum, model}) do
+		if holder then
+			for _, name in ipairs(NeverYieldStats.tagNames) do
+				local tag = holder:FindFirstChild(name)
+				if tag and tag:IsA("ValueBase") then
+					local ok, plr = pcall(function() return NeverYieldStats.resolve(tag.Value) end)
+					if ok and plr then return plr end
+				end
+				local ok, plr = pcall(function() return NeverYieldStats.resolve(holder:GetAttribute(name)) end)
+				if ok and plr then return plr end
+			end
+		end
+	end
+	return nil
+end
+
+NeverYieldStats.boardBest = function(kind)
+	local best = 0
+	for _, entry in pairs(NeverYieldStats.session.board[kind]) do
+		if entry.gained > best then
+			best = entry.gained
+		end
+	end
+	return best
+end
+
+-- turn this server's tag + leaderboard counts into lifetime kills/deaths without double counting
+NeverYieldStats.settle = function()
+	local s, data = NeverYieldStats.session, NeverYieldStats.data
+	local g = NeverYieldStats.game()
+	local kills = math.max(s.tagKills, NeverYieldStats.boardBest("kills"))
+	local newKills = kills - s.countedKills
+	if newKills > 0 then
+		s.countedKills = kills
+		data.totals.kills = data.totals.kills + newKills
+		g.kills = (g.kills or 0) + newKills
+		local before = s.streak
+		s.streak = s.streak + newKills
+		if s.streak > data.totals.bestStreak then
+			data.totals.bestStreak = s.streak
+		end
+		for count, name in pairs(NeverYieldStats.streakNames) do
+			if before < count and s.streak >= count then
+				notify('Killstreak', name .. '! ' .. s.streak .. ' kills in a row.')
+			end
+		end
+		NeverYieldStats.dirty = true
+	end
+	local deaths = math.max(s.myDeaths, NeverYieldStats.boardBest("deaths"))
+	local newDeaths = deaths - s.countedDeaths
+	if newDeaths > 0 then
+		s.countedDeaths = deaths
+		data.totals.deaths = data.totals.deaths + newDeaths
+		g.deaths = (g.deaths or 0) + newDeaths
+		s.streak = 0
+		NeverYieldStats.dirty = true
+	end
+end
+
+NeverYieldStats.addTagKill = function(victim)
+	local s = NeverYieldStats.session
+	s.tagKills = s.tagKills + 1
+	local p = NeverYieldStats.player(victim)
+	p.iKilled = (p.iKilled or 0) + 1
+	NeverYieldStats.settle()
+end
+
+NeverYieldStats.addNpcKill = function()
+	local data, s = NeverYieldStats.data, NeverYieldStats.session
+	data.totals.npcKills = data.totals.npcKills + 1
+	local g = NeverYieldStats.game()
+	g.npcKills = (g.npcKills or 0) + 1
+	s.npcKills = s.npcKills + 1
+	NeverYieldStats.dirty = true
+end
+
+NeverYieldStats.addMyDeath = function(killer)
+	local data, s = NeverYieldStats.data, NeverYieldStats.session
+	s.myDeaths = s.myDeaths + 1
+	local life = os.clock() - (s.spawnTime or os.clock())
+	if life > data.totals.longestLife then
+		data.totals.longestLife = life
+	end
+	if killer and killer ~= Players.LocalPlayer then
+		local p = NeverYieldStats.player(killer)
+		p.killedMe = (p.killedMe or 0) + 1
+		data.totals.deathsByPlayers = data.totals.deathsByPlayers + 1
+		s.lastKiller = killer.DisplayName .. " (@" .. killer.Name .. ")"
+	end
+	NeverYieldStats.settle()
+end
+
+NeverYieldStats.watchHumanoid = function(hum)
+	if NeverYieldStats.watched[hum] then return end
+	NeverYieldStats.watched[hum] = true
+	local owner = NeverYieldStats
+	hum.Died:Connect(function()
+		if owner.stopped or NeverYieldStats ~= owner then return end
+		local model = hum.Parent
+		local lp = Players.LocalPlayer
+		local plr = model and Players:GetPlayerFromCharacter(model)
+		if plr == lp then return end
+		if NeverYieldStats.tagOwner(model, hum) ~= lp then return end
+		if plr then
+			NeverYieldStats.addTagKill(plr)
+		else
+			NeverYieldStats.addNpcKill()
+		end
+	end)
+end
+
+NeverYieldStats.watchMe = function(char)
+	local s = NeverYieldStats.session
+	s.spawnTime = os.clock()
+	local hum = char:FindFirstChildOfClass("Humanoid") or char:WaitForChild("Humanoid", 10)
+	if not hum then return end
+	local owner = NeverYieldStats
+	hum.Died:Connect(function()
+		if owner.stopped or NeverYieldStats ~= owner then return end
+		NeverYieldStats.addMyDeath(NeverYieldStats.tagOwner(char, hum))
+	end)
+	hum.StateChanged:Connect(function(_, new)
+		if owner.stopped or NeverYieldStats ~= owner or new ~= Enum.HumanoidStateType.Jumping then return end
+		local data = NeverYieldStats.data
+		data.totals.jumps = data.totals.jumps + 1
+		s.jumps = s.jumps + 1
+		NeverYieldStats.dirty = true
+	end)
+end
+
+NeverYieldStats.statKind = function(name)
+	local n = name:lower():gsub("[%s_%-%.]", "")
+	if n:find("skill") or n:find("streak") or n:find("assist") then return nil end
+	if n == "ko" or n == "kos" or n:find("kill") or n:find("knockout") or n:find("elim") or n:find("frag") or n:find("takedown") then
+		return "kills"
+	end
+	if n == "wo" or n == "wos" or n:find("death") or n:find("wipeout") or n:find("died") then
+		return "deaths"
+	end
+	return nil
+end
+
+-- the game's own leaderboard (leaderstats). Only small jumps count, so saved totals loading in
+-- (e.g. Kills going 0 -> 523 when your data loads) are not counted as kills.
+NeverYieldStats.watchBoard = function()
+	local lp = Players.LocalPlayer
+	local s = NeverYieldStats.session
+	local function hook(stat)
+		if not (stat:IsA("IntValue") or stat:IsA("NumberValue")) then return end
+		local kind = NeverYieldStats.statKind(stat.Name)
+		if not kind or s.board[kind][stat] then return end
+		local entry = {last = stat.Value, gained = 0, hooked = os.clock()}
+		s.board[kind][stat] = entry
+		local owner = NeverYieldStats
+		stat.Changed:Connect(function(value)
+			if owner.stopped or NeverYieldStats ~= owner or type(value) ~= "number" then return end
+			local gain = value - entry.last
+			entry.last = value
+			if gain > 0 and gain <= 3 and os.clock() - entry.hooked > 10 then
+				entry.gained = entry.gained + gain
+				NeverYieldStats.settle()
+			end
+		end)
+	end
+	local function hookFolder(folder)
+		for _, stat in ipairs(folder:GetChildren()) do
+			hook(stat)
+		end
+		WackyState.connect("statsBoardAdded", folder.ChildAdded:Connect(hook))
+	end
+	local folder = lp:FindFirstChild("leaderstats")
+	if folder then
+		hookFolder(folder)
+	end
+	WackyState.connect("statsBoard", lp.ChildAdded:Connect(function(child)
+		if child.Name == "leaderstats" then
+			hookFolder(child)
+		end
+	end))
+end
+
+-- Chat
+NeverYieldStats.logChat = function(plr, text)
+	if NeverYieldStats.stopped or type(text) ~= "string" or text == "" then return end
+	local data, s = NeverYieldStats.data, NeverYieldStats.session
+	text = text:gsub("&lt;", "<"):gsub("&gt;", ">"):gsub("&quot;", '"'):gsub("&apos;", "'"):gsub("&amp;", "&")
+	text = text:sub(1, 300)
+	local now = os.time()
+	if plr == Players.LocalPlayer then
+		local _, words = text:gsub("%S+", "")
+		data.totals.messages = data.totals.messages + 1
+		data.totals.words = data.totals.words + words
+		local g = NeverYieldStats.game()
+		g.messages = (g.messages or 0) + 1
+		s.messages = s.messages + 1
+		table.insert(data.chat.mine, {t = now, p = game.PlaceId, m = text})
+		if #data.chat.mine > 5200 then NeverYieldStats.trimList(data.chat.mine, 5000) end
+	else
+		if plr then
+			local p = NeverYieldStats.player(plr)
+			p.messages = (p.messages or 0) + 1
+		end
+		if data.settings.logOthers then
+			table.insert(data.chat.all, {t = now, p = game.PlaceId, u = plr and plr.Name or "?", d = plr and plr.DisplayName or "?", m = text})
+			if #data.chat.all > 3200 then NeverYieldStats.trimList(data.chat.all, 3000) end
+		end
+	end
+	NeverYieldStats.dirty = true
+end
+
+NeverYieldStats.hookChat = function()
+	local TextChatService = game:GetService("TextChatService")
+	local newChat = false
+	pcall(function() newChat = TextChatService.ChatVersion == Enum.ChatVersion.TextChatService end)
+	if newChat then
+		local seen, seenCount = {}, 0
+		WackyState.connect("statsChat", TextChatService.MessageReceived:Connect(function(message)
+			local source = message.TextSource
+			if not source then return end
+			local id = message.MessageId
+			if id and id ~= "" then
+				if seen[id] then return end
+				seen[id] = true
+				seenCount = seenCount + 1
+				if seenCount > 1000 then
+					seen, seenCount = {}, 0
+				end
+			end
+			NeverYieldStats.logChat(Players:GetPlayerByUserId(source.UserId), message.Text)
+		end))
+	else
+		local function hookPlayer(plr)
+			WackyState.connect("statsChat" .. plr.UserId, plr.Chatted:Connect(function(text)
+				NeverYieldStats.logChat(plr, text)
+			end))
+		end
+		for _, plr in ipairs(Players:GetPlayers()) do
+			hookPlayer(plr)
+		end
+		WackyState.connect("statsChatJoin", Players.PlayerAdded:Connect(hookPlayer))
+	end
+end
+
+-- Commands you type (chat or command bar) are counted; commands started by other commands are not
+NeverYieldStats.countCommands = function(cmdStr)
+	local data = NeverYieldStats.data
+	if not data or type(cmdStr) ~= "string" then return end
+	for part in cmdStr:gmatch("[^\\]+") do
+		part = part:gsub("^%s*inf%^", ""):gsub("^%s*[%d%.]+%^", ""):gsub("^%s*[%d%.]+%^", "")
+		local name = part:match("^%s*!?(%S+)")
+		local cmd = name and findCmd(name)
+		if cmd and cmd.NAME then
+			local key = tostring(cmd.NAME):lower()
+			data.commands[key] = (data.commands[key] or 0) + 1
+			data.totals.commands = data.totals.commands + 1
+			NeverYieldStats.session.commands = NeverYieldStats.session.commands + 1
+			NeverYieldStats.dirty = true
+		end
+	end
+end
+
+-- Formatting
+NeverYieldStats.time = function(sec)
+	sec = math.floor(sec or 0)
+	local d, h, m = math.floor(sec / 86400), math.floor(sec % 86400 / 3600), math.floor(sec % 3600 / 60)
+	if d > 0 then return string.format("%dd %dh %dm", d, h, m) end
+	if h > 0 then return string.format("%dh %dm", h, m) end
+	if m > 0 then return string.format("%dm %ds", m, sec % 60) end
+	return sec .. "s"
+end
+
+NeverYieldStats.num = function(n)
+	local text = tostring(math.floor(n or 0))
+	local formatted = text:reverse():gsub("(%d%d%d)", "%1,"):reverse()
+	return (formatted:gsub("^,", ""))
+end
+
+NeverYieldStats.kd = function(kills, deaths)
+	if deaths > 0 then
+		return string.format("%.2f", kills / deaths)
+	end
+	return tostring(math.floor(kills))
+end
+
+NeverYieldStats.dist = function(studs)
+	local meters = math.floor((studs or 0) * 0.28)
+	if meters >= 1000 then
+		return string.format("%.2f km", meters / 1000)
+	end
+	return meters .. " m"
+end
+
+NeverYieldStats.when = function(t)
+	return os.date("%m/%d %H:%M", t or 0)
+end
+
+-- Rows for each tab of the Stats panel: {left text, right text}; no right text = full-width line
+NeverYieldStats.lines = function(tab)
+	local data, s = NeverYieldStats.data, NeverYieldStats.session
+	local t, out = data.totals, {}
+	local fmt = NeverYieldStats
+	local function add(key, value)
+		table.insert(out, {key, value})
+	end
+	if tab == "overview" then
+		local games = 0
+		for _ in pairs(data.games) do games = games + 1 end
+		add("Tracking since", os.date("%b %d, %Y", data.created))
+		add("Total playtime", fmt.time(t.playtime))
+		add("This session", fmt.time(s.playtime) .. " in " .. tostring(NeverYieldStats.game().name))
+		add("Servers joined", fmt.num(t.sessions))
+		add("Different games", fmt.num(games))
+		add("Kills / Deaths", fmt.num(t.kills) .. " / " .. fmt.num(t.deaths) .. "  (K/D " .. fmt.kd(t.kills, t.deaths) .. ")")
+		add("NPC kills", fmt.num(t.npcKills))
+		add("Best killstreak", fmt.num(t.bestStreak))
+		add("Messages sent", fmt.num(t.messages) .. " (" .. fmt.num(t.words) .. " words)")
+		add("Commands used", fmt.num(t.commands))
+		add("Distance travelled", fmt.dist(t.distance))
+		add("Jumps", fmt.num(t.jumps))
+		add("Players met", fmt.num(t.playersMet))
+	elseif tab == "combat" then
+		local mostKilled, nemesis
+		for _, p in pairs(data.players) do
+			if type(p) == "table" then
+				if (p.iKilled or 0) > 0 and (not mostKilled or p.iKilled > mostKilled.iKilled) then mostKilled = p end
+				if (p.killedMe or 0) > 0 and (not nemesis or p.killedMe > nemesis.killedMe) then nemesis = p end
+			end
+		end
+		add("This server", s.countedKills .. " kills / " .. s.countedDeaths .. " deaths  (streak " .. s.streak .. ")")
+		add("All-time kills", fmt.num(t.kills))
+		add("All-time deaths", fmt.num(t.deaths))
+		add("K/D ratio", fmt.kd(t.kills, t.deaths))
+		add("NPC kills", fmt.num(t.npcKills))
+		add("Best killstreak", fmt.num(t.bestStreak))
+		add("Longest life", fmt.time(t.longestLife))
+		add("Current life", fmt.time(os.clock() - (s.spawnTime or os.clock())))
+		add("Killed by players", fmt.num(t.deathsByPlayers))
+		add("Last killed by", s.lastKiller or "-")
+		add("Most killed", mostKilled and ((mostKilled.display or mostKilled.name or "?") .. " (" .. mostKilled.iKilled .. "x)") or "-")
+		add("Nemesis", nemesis and ((nemesis.display or nemesis.name or "?") .. " (" .. nemesis.killedMe .. "x)") or "-")
+		add("Kills counted from", next(s.board.kills) and "leaderboard + damage tags" or "damage tags")
+	elseif tab == "games" then
+		local list = {}
+		for _, g in pairs(data.games) do
+			if type(g) == "table" then table.insert(list, g) end
+		end
+		table.sort(list, function(a, b) return (a.playtime or 0) > (b.playtime or 0) end)
+		for i, g in ipairs(list) do
+			add(i .. ". " .. tostring(g.name or "?"), fmt.time(g.playtime) .. " | " .. (g.visits or 0) .. " visits | " .. (g.kills or 0) .. "K " .. (g.deaths or 0) .. "D")
+		end
+	elseif tab == "chat" then
+		local list = NeverYieldStats.chatMode == "all" and data.chat.all or data.chat.mine
+		local filter = NeverYieldStats.filter and NeverYieldStats.filter:lower()
+		for i = #list, 1, -1 do
+			local m = list[i]
+			if type(m) == "table" and type(m.m) == "string" then
+				local who = m.u and ((m.d or m.u) .. ": ") or ""
+				if not filter or m.m:lower():find(filter, 1, true) or who:lower():find(filter, 1, true) then
+					add(fmt.when(m.t) .. "  " .. who .. m.m, nil)
+				end
+			end
+		end
+		if #out == 0 then
+			add(filter and ('No messages match "' .. filter .. '".') or "No messages saved yet.", nil)
+		end
+	elseif tab == "people" then
+		local list = {}
+		for _, p in pairs(data.players) do
+			if type(p) == "table" then table.insert(list, p) end
+		end
+		table.sort(list, function(a, b) return (a.time or 0) > (b.time or 0) end)
+		for i, p in ipairs(list) do
+			add(i .. ". " .. tostring(p.display or p.name or "?") .. " (@" .. tostring(p.name or "?") .. ")",
+				fmt.time(p.time) .. " | " .. (p.games or 0) .. " servers | K " .. (p.iKilled or 0) .. " / D " .. (p.killedMe or 0))
+		end
+		if #out == 0 then add("Nobody yet.", nil) end
+	elseif tab == "commands" then
+		local list = {}
+		for name, count in pairs(data.commands) do
+			if type(count) == "number" then table.insert(list, {name, count}) end
+		end
+		table.sort(list, function(a, b) return a[2] > b[2] end)
+		for i, c in ipairs(list) do
+			add(i .. ". " .. tostring(c[1]), fmt.num(c[2]) .. " times")
+		end
+		if #out == 0 then add("No commands used yet (commands you type are counted).", nil) end
+	end
+	return out
+end
+
+-- Stats panel (own ScreenGui, plain Frames like the Theme Studio)
+NeverYieldStats.close = function()
+	WackyState.disconnect("statsPanel")
+	for _, conn in ipairs(NeverYieldStats.dragConns or {}) do
+		pcall(function() conn:Disconnect() end)
+	end
+	NeverYieldStats.dragConns = {}
+	if NeverYieldStats.screen then
+		pcall(function() NeverYieldStats.screen:Destroy() end)
+	end
+	NeverYieldStats.screen, NeverYieldStats.panel, NeverYieldStats.render = nil, nil, nil
+end
+
+NeverYieldStats.show = function(tab)
+	NeverYieldStats.tab = tab or NeverYieldStats.tab or "overview"
+	if NeverYieldStats.render then
+		pcall(NeverYieldStats.render)
+	end
+end
+
+NeverYieldStats.open = function(tab, filter)
+	if NeverYieldStats.panel and NeverYieldStats.panel.Parent then
+		if tab or filter then
+			NeverYieldStats.filter = filter
+			NeverYieldStats.show(tab)
+		else
+			NeverYieldStats.close()
+		end
+		return
+	end
+	NeverYieldStats.close()
+	NeverYieldStats.filter = filter
+	pcall(NeverYieldStats.tick)
+
+	local screen = Instance.new("ScreenGui")
+	screen.Name = randomString()
+	screen.ResetOnSpawn = false
+	screen.IgnoreGuiInset = true
+	screen.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	screen.DisplayOrder = 2147483646
+	if not pcall(function() screen.Parent = gethui and gethui() or COREGUI end) then
+		screen.Parent = Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")
+	end
+	NeverYieldStats.screen = screen
+
+	local panel = Instance.new("Frame")
+	panel.Name = randomString()
+	panel.AnchorPoint = Vector2.new(0.5, 0.5)
+	panel.Position = UDim2.new(0.5, 0, 0.5, 0)
+	panel.Size = UDim2.new(0, 580, 0, 420)
+	panel.BackgroundColor3 = currentShade1
+	panel.BorderSizePixel = 0
+	panel.Active = true
+	panel.ZIndex = 20
+	NeverYieldPortal.corner(panel, UDim.new(0, 16))
+	local _, strokeGradient = NeverYieldPortal.stroke(panel, 2.5, 0)
+	local scale = Instance.new("UIScale")
+	scale.Scale = 0.85
+	scale.Parent = panel
+	panel.Parent = screen
+	NeverYieldStats.panel = panel
+
+	local function label(props)
+		local l = Instance.new("TextLabel")
+		l.BackgroundTransparency = 1
+		l.BorderSizePixel = 0
+		l.Font = Enum.Font.Gotham
+		l.TextSize = 13
+		l.TextColor3 = currentText1
+		l.ZIndex = 21
+		for k, v in pairs(props) do
+			l[k] = v
+		end
+		l.Parent = panel
+		return l
+	end
+	local function button(text, pos, size)
+		local b = Instance.new("TextButton")
+		b.Position = pos
+		b.Size = size
+		b.AutoButtonColor = false
+		b.BorderSizePixel = 0
+		b.Font = Enum.Font.GothamBold
+		b.TextSize = 13
+		b.Text = text
+		b.TextColor3 = currentText1
+		b.BackgroundColor3 = currentShade2
+		b.ZIndex = 22
+		NeverYieldPortal.corner(b, UDim.new(0, 12))
+		b.Parent = panel
+		return b
+	end
+
+	local title = label({Position = UDim2.new(0, 0, 0, 10), Size = UDim2.new(1, 0, 0, 34), Font = Enum.Font.FredokaOne, TextSize = 30, Text = "NEVERYIELD STATS", TextColor3 = Color3.new(1, 1, 1), Active = true})
+	local titleGradient = Instance.new("UIGradient")
+	titleGradient.Color = NeverYieldPortal.swirl()
+	titleGradient.Parent = title
+	local subtitle = label({Position = UDim2.new(0, 0, 0, 44), Size = UDim2.new(1, 0, 0, 18), TextTransparency = 0.25})
+	local close = button("X", UDim2.new(1, -38, 0, 10), UDim2.new(0, 28, 0, 28))
+	close.MouseButton1Click:Connect(NeverYieldStats.close)
+
+	local tabButtons = {}
+	for i, info in ipairs(NeverYieldStats.tabs) do
+		local b = button(info[2], UDim2.new(0, 14 + (i - 1) * 93, 0, 70), UDim2.new(0, 87, 0, 26))
+		tabButtons[info[1]] = b
+		b.MouseButton1Click:Connect(function()
+			NeverYieldStats.filter = nil
+			NeverYieldStats.page = 1
+			NeverYieldStats.show(info[1])
+		end)
+	end
+
+	local rows = {}
+	for i = 1, 13 do
+		local y = 104 + (i - 1) * 20
+		local key = label({Position = UDim2.new(0, 22, 0, y), Size = UDim2.new(0.55, -22, 0, 20), TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd})
+		local value = label({Position = UDim2.new(0.55, 0, 0, y), Size = UDim2.new(0.45, -22, 0, 20), TextXAlignment = Enum.TextXAlignment.Right, TextTruncate = Enum.TextTruncate.AtEnd, Font = Enum.Font.GothamBold})
+		rows[i] = {key = key, value = value}
+	end
+
+	local prev = button("<", UDim2.new(0, 14, 1, -40), UDim2.new(0, 30, 0, 26))
+	local pageLabel = label({Position = UDim2.new(0, 46, 1, -40), Size = UDim2.new(0, 72, 0, 26), Text = "1 / 1"})
+	local nextPage = button(">", UDim2.new(0, 120, 1, -40), UDim2.new(0, 30, 0, 26))
+	local modeButton = button("Mine", UDim2.new(1, -244, 1, -40), UDim2.new(0, 110, 0, 26))
+	local saveButton = button("Save now", UDim2.new(1, -124, 1, -40), UDim2.new(0, 110, 0, 26))
+
+	NeverYieldStats.render = function()
+		local tab = NeverYieldStats.tab or "overview"
+		local lines = NeverYieldStats.lines(tab)
+		local pages = math.max(1, math.ceil(#lines / #rows))
+		NeverYieldStats.page = math.clamp(NeverYieldStats.page or 1, 1, pages)
+		local first = (NeverYieldStats.page - 1) * #rows
+		local valueColor = currentShade3:Lerp(Color3.new(1, 1, 1), 0.55)
+		for i, row in ipairs(rows) do
+			local line = lines[first + i]
+			row.key.Text = line and line[1] or ""
+			row.value.Text = line and line[2] or ""
+			row.key.Size = (line and line[2] == nil) and UDim2.new(1, -44, 0, 20) or UDim2.new(0.55, -22, 0, 20)
+			row.key.TextColor3 = currentText1
+			row.value.TextColor3 = valueColor
+		end
+		pageLabel.Text = NeverYieldStats.page .. " / " .. pages
+		prev.Visible, nextPage.Visible, pageLabel.Visible = pages > 1, pages > 1, pages > 1
+		modeButton.Visible = tab == "chat"
+		modeButton.Text = NeverYieldStats.chatMode == "all" and "Everyone" or "Mine"
+		for id, b in pairs(tabButtons) do
+			local active = id == tab
+			b.BackgroundColor3 = active and currentShade3 or currentShade2
+			b.BackgroundTransparency = active and 0 or 0.3
+		end
+		if tab == "chat" and NeverYieldStats.filter then
+			subtitle.Text = 'search: "' .. NeverYieldStats.filter .. '"'
+		else
+			subtitle.Text = "every game, every server  |  saved on your PC"
+		end
+	end
+
+	prev.MouseButton1Click:Connect(function()
+		NeverYieldStats.page = (NeverYieldStats.page or 1) - 1
+		NeverYieldStats.show()
+	end)
+	nextPage.MouseButton1Click:Connect(function()
+		NeverYieldStats.page = (NeverYieldStats.page or 1) + 1
+		NeverYieldStats.show()
+	end)
+	modeButton.MouseButton1Click:Connect(function()
+		NeverYieldStats.chatMode = NeverYieldStats.chatMode == "all" and "mine" or "all"
+		NeverYieldStats.page = 1
+		NeverYieldStats.show()
+	end)
+	saveButton.MouseButton1Click:Connect(function()
+		saveButton.Text = NeverYieldStats.save() and "Saved!" or "Save failed"
+		task.delay(1.5, function()
+			if saveButton.Parent then saveButton.Text = "Save now" end
+		end)
+	end)
+
+	local dragging, dragStart, startPos = false, nil, nil
+	NeverYieldStats.dragConns = {
+		title.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				dragging, dragStart, startPos = true, input.Position, panel.Position
+			end
+		end),
+		UserInputService.InputEnded:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				dragging = false
+			end
+		end),
+		UserInputService.InputChanged:Connect(function(input)
+			if not dragging or not panel.Parent then return end
+			if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
+			local delta = input.Position - dragStart
+			panel.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+		end),
+	}
+
+	WackyState.connect("statsPanel", RunService.RenderStepped:Connect(function()
+		if not panel.Parent then
+			NeverYieldStats.close()
+			return
+		end
+		local t = tick()
+		strokeGradient.Rotation = (t * 120) % 360
+		titleGradient.Rotation = (t * 60) % 360
+	end))
+
+	TweenService:Create(scale, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+	NeverYieldStats.show(tab or NeverYieldStats.tab or "overview")
+end
+
+NeverYieldStats.stop = function()
+	if NeverYieldStats.stopped then return end
+	pcall(NeverYieldStats.save)
+	NeverYieldStats.stopped = true
+	pcall(NeverYieldStats.close)
+end
+
+NeverYieldStats.start = function()
+	NeverYieldStats.session = {tagKills = 0, myDeaths = 0, countedKills = 0, countedDeaths = 0, streak = 0, npcKills = 0,
+		messages = 0, jumps = 0, distance = 0, playtime = 0, commands = 0, board = {kills = {}, deaths = {}}, seen = {},
+		spawnTime = os.clock(), lastTick = os.clock()}
+	NeverYieldStats.load()
+	local data, s = NeverYieldStats.data, NeverYieldStats.session
+	data.totals.sessions = data.totals.sessions + 1
+	local g = NeverYieldStats.game()
+	g.visits = (g.visits or 0) + 1
+	task.spawn(function()
+		pcall(function()
+			local info = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId)
+			if info and info.Name then
+				NeverYieldStats.game().name = info.Name
+			end
+		end)
+	end)
+
+	if not NeverYieldStats.execWrapped then
+		NeverYieldStats.execWrapped = true
+		local originalExecCmd = execCmd
+		execCmd = function(cmdStr, speaker, store, ...)
+			if store and speaker == Players.LocalPlayer and not NeverYieldStats.stopped then
+				pcall(NeverYieldStats.countCommands, cmdStr)
+			end
+			return originalExecCmd(cmdStr, speaker, store, ...)
+		end
+	end
+
+	local lp = Players.LocalPlayer
+	if lp.Character then
+		task.spawn(NeverYieldStats.watchMe, lp.Character)
+	end
+	WackyState.connect("statsSpawn", lp.CharacterAdded:Connect(function(char)
+		NeverYieldStats.watchMe(char)
+	end))
+	WackyState.connect("statsHumanoids", workspace.DescendantAdded:Connect(function(inst)
+		if inst:IsA("Humanoid") then
+			NeverYieldStats.watchHumanoid(inst)
+		end
+	end))
+	task.spawn(function()
+		for i, inst in ipairs(workspace:GetDescendants()) do
+			if inst:IsA("Humanoid") then
+				NeverYieldStats.watchHumanoid(inst)
+			end
+			if i % 3000 == 0 then
+				task.wait()
+			end
+		end
+	end)
+	pcall(NeverYieldStats.watchBoard)
+	pcall(NeverYieldStats.hookChat)
+
+	local lastPos
+	WackyState.connect("statsMove", RunService.Heartbeat:Connect(function()
+		if NeverYieldStats.stopped then return end
+		local root = getRoot(lp.Character)
+		if not root then
+			lastPos = nil
+			return
+		end
+		local pos = root.Position
+		if lastPos then
+			local step = ((pos - lastPos) * Vector3.new(1, 0, 1)).Magnitude
+			-- ignore teleports (more than 8 studs in one frame)
+			if step > 0.05 and step < 8 then
+				data.totals.distance = data.totals.distance + step
+				s.distance = s.distance + step
+			end
+		end
+		lastPos = pos
+	end))
+
+	WackyState.connect("statsTeleport", lp.OnTeleport:Connect(function(state)
+		if state == Enum.TeleportState.Started then
+			pcall(NeverYieldStats.save)
+		end
+	end))
+
+	local owner = NeverYieldStats
+	task.spawn(function()
+		while not owner.stopped and NeverYieldStats == owner do
+			task.wait(5)
+			if owner.stopped or NeverYieldStats ~= owner then break end
+			pcall(NeverYieldStats.tick)
+			if NeverYieldStats.dirty and os.clock() - NeverYieldStats.lastSave > 60 then
+				pcall(NeverYieldStats.save)
+			end
+			if NeverYieldStats.render then
+				pcall(NeverYieldStats.render)
+			end
+		end
+	end)
+	pcall(NeverYieldStats.save)
+end
+
+addcmd('stats',{'mystats','nystats'},function(args, speaker)
+	local tab = args[1] and args[1]:lower()
+	local valid = false
+	for _, info in ipairs(NeverYieldStats.tabs) do
+		if info[1] == tab then valid = true end
+	end
+	NeverYieldStats.page = 1
+	local ok, err = pcall(NeverYieldStats.open, valid and tab or nil)
+	if not ok then
+		pcall(NeverYieldStats.close)
+		notify('Stats', 'Could not open: ' .. tostring(err))
+	end
+end)
+
+addcmd('killcount',{'kd'},function(args, speaker)
+	local t, s = NeverYieldStats.data.totals, NeverYieldStats.session
+	notify('Kills', 'This server: ' .. s.countedKills .. ' kills, ' .. s.countedDeaths .. ' deaths (streak ' .. s.streak .. '). All time: '
+		.. NeverYieldStats.num(t.kills) .. ' kills, ' .. NeverYieldStats.num(t.deaths) .. ' deaths, K/D ' .. NeverYieldStats.kd(t.kills, t.deaths)
+		.. ', best streak ' .. t.bestStreak .. '.', 10)
+end)
+
+addcmd('mychats',{'chatsearch'},function(args, speaker)
+	local filter = getstring(1, args)
+	NeverYieldStats.page = 1
+	local ok, err = pcall(NeverYieldStats.open, "chat", filter ~= "" and filter or nil)
+	if not ok then
+		pcall(NeverYieldStats.close)
+		notify('Stats', 'Could not open: ' .. tostring(err))
+	end
+end)
+
+addcmd('chatlogging',{'logchat'},function(args, speaker)
+	local settings = NeverYieldStats.data.settings
+	local choice = args[1] and args[1]:lower()
+	if choice == "on" then
+		settings.logOthers = true
+	elseif choice == "off" then
+		settings.logOthers = false
+	else
+		settings.logOthers = not settings.logOthers
+	end
+	NeverYieldStats.dirty = true
+	notify('Chat Logging', settings.logOthers and 'Saving everyone\'s messages too (yours are always saved).' or 'Only saving your own messages now.')
+end)
+
+addcmd('statsexport',{'copystats'},function(args, speaker)
+	pcall(NeverYieldStats.tick)
+	local lines = {"NeverYield stats (" .. os.date("%Y-%m-%d") .. ")"}
+	for _, tab in ipairs({"overview", "combat"}) do
+		for _, line in ipairs(NeverYieldStats.lines(tab)) do
+			table.insert(lines, line[1] .. ": " .. (line[2] or ""))
+		end
+	end
+	table.insert(lines, "Top games:")
+	for i, line in ipairs(NeverYieldStats.lines("games")) do
+		if i > 5 then break end
+		table.insert(lines, "  " .. line[1] .. " - " .. (line[2] or ""))
+	end
+	toClipboard(table.concat(lines, "\n"))
+end)
+
+addcmd('statssave',{},function(args, speaker)
+	notify('Stats', NeverYieldStats.save() and 'Saved to NeverYield_stats.json in your executor workspace.' or 'Could not save (your executor needs writefile).')
+end)
+
+addcmd('statsreset',{},function(args, speaker)
+	if not args[1] or args[1]:lower() ~= "confirm" then
+		notify('Stats', 'This wipes all your stats. Type statsreset confirm to do it (a backup file is kept).', 8)
+		return
+	end
+	pcall(function()
+		writefile("NeverYield_stats_backup_" .. os.date("%Y%m%d_%H%M%S") .. ".json", HttpService:JSONEncode(NeverYieldStats.data), true)
+	end)
+	NeverYieldStats.data = NeverYieldStats.blank()
+	NeverYieldStats.data.totals.sessions = 1
+	NeverYieldStats.game().visits = 1
+	NeverYieldStats.save()
+	if NeverYieldStats.render then
+		pcall(NeverYieldStats.render)
+	end
+	notify('Stats', 'Stats reset. The old ones were backed up in your workspace folder.')
+end)
+
+pcall(NeverYieldStats.start)
+-- ================== END NEVERYIELD STATS ==================
 
 addcmd('removecmd',{'deletecmd'},function(args, speaker)
 	removecmd(args[1])
