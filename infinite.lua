@@ -1,4 +1,4 @@
--- NeverYield v1.24.4 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.24.5 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.24.4" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.24.5" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -5323,14 +5323,14 @@ CMDs[#CMDs + 1] = {NAME = 'weathervolume [0-3]', DESC = 'Changes how loud the we
 CMDs[#CMDs + 1] = {NAME = 'skipweather / nexttrack', DESC = 'Weather sounds change by themselves every few minutes (plus owls, wolves, thunder, chimes...); this skips to another track now'}
 CMDs[#CMDs + 1] = {NAME = 'fuckoff / unloadny', DESC = 'Completely unloads NeverYield: turns everything off, resets your speed, jump, gravity and camera to the game values, and removes the GUI'}
 CMDs[#CMDs + 1] = {NAME = 'END / theend', DESC = 'A black hole (only you see it) swallows the map and you, then takes you to a new server'}
-CMDs[#CMDs + 1] = {NAME = 'portal / agartha', DESC = 'Opens a sparking see-through gateway to Agartha, a peaceful floating island with a cottage and yard. It closes 5 s after you walk through; type portal again in Agartha to come back'}
+CMDs[#CMDs + 1] = {NAME = 'agartha / portal', DESC = 'Opens a sparking see-through gateway to Agartha, a peaceful floating island with a cottage and yard. It closes 5 s after you walk through; type portal again in Agartha to come back'}
 CMDs[#CMDs + 1] = {NAME = 'door / room', DESC = 'A door to YOUR room: open it to see inside, walk in, press Edit to place furniture, trophies and unlocks anywhere and pick floors, walls and lighting. It saves'}
 CMDs[#CMDs + 1] = {NAME = 'undoor', DESC = 'Removes the door to your room (brings you back if you are inside)'}
 CMDs[#CMDs + 1] = {NAME = 'doordebug', DESC = 'Shows why the view through your room door is or is not showing'}
 CMDs[#CMDs + 1] = {NAME = 'roomreset', DESC = 'Puts your room back to the default layout (the old one is kept as a backup file)'}
 CMDs[#CMDs + 1] = {NAME = 'achievements / trophies [tab]', DESC = '(Also in Settings) Your achievements and their trophies. Tabs: basics, neveryield, minigames, pets, explorer, social, milestones, settings'}
 CMDs[#CMDs + 1] = {NAME = 'unportal', DESC = 'Closes the Agartha portal (brings you back if you are inside)'}
-CMDs[#CMDs + 1] = {NAME = 'portaldebug', DESC = 'Shows what the portal windows see (for fixing display problems)'}
+CMDs[#CMDs + 1] = {NAME = 'agarthadebug', DESC = 'Shows what the portal windows see (for fixing display problems)'}
 CMDs[#CMDs + 1] = {NAME = 'clown / circus', DESC = 'Survive endless waves of clowns (5 s break between rounds). They get tougher every round, flying clowns from round 10. Kills pay clown cash for the Clown Shop (B): gun and speed upgrades'}
 CMDs[#CMDs + 1] = {NAME = 'unclown', DESC = 'Sends the clowns away (before they catch you)'}
 CMDs[#CMDs + 1] = {NAME = 'moon / moonfall', DESC = 'An angry-faced moon falls on the map while a masked imp giggles at you; countdown, quakes, impact, then shop to a new server (only you see it)'}
@@ -21451,21 +21451,21 @@ NeverYieldAgartha.build = function(O)
 	local brick, soot = Color3.fromRGB(150, 85, 70), Color3.fromRGB(45, 32, 28)
 	for _, side in ipairs({-1, 1}) do
 		P(folder, Vector3.new(1.5, 7.5, 1.6), at(fx + side * 2.75, 5.4, fz), brick, M.Brick)
-		P(folder, Vector3.new(0.2, 3.35, 1.4), at(fx + side * 1.9, 3.33, fz + 0.05), soot, M.Brick)
+		P(folder, Vector3.new(0.2, 3.35, 1.25), at(fx + side * 1.9, 3.33, fz - 0.1), soot, M.Brick)
 	end
 	P(folder, Vector3.new(4, 4.15, 1.6), at(fx, 7.08, fz), brick, M.Brick)
-	P(folder, Vector3.new(4, 3.35, 0.2), at(fx, 3.33, fz + 0.7), soot, M.Brick)
+	P(folder, Vector3.new(4, 3.35, 0.2), at(fx, 3.33, fz + 0.55), soot, M.Brick)
 	P(folder, Vector3.new(4, 0.2, 1.6), at(fx, 1.75, fz), Color3.fromRGB(30, 26, 24), M.Slate)
 	P(folder, Vector3.new(4.4, 0.3, 0.3), at(fx, 5.1, fz - 0.85), Color3.fromRGB(120, 115, 110), M.Slate)
 	P(folder, Vector3.new(6.4, 0.3, 1.5), at(fx, 1.8, fz - 1.5), Color3.fromRGB(110, 105, 100), M.Slate)
 	P(folder, Vector3.new(8, 0.5, 2.2), at(fx, 9.3, fz - 0.3), woodDark, M.Wood)
 	-- logs on a bed of glowing embers
-	for _, log in ipairs({{-0.6, 2.05, 0.35, 0.25}, {0.6, 2.05, 0.35, -0.25}, {0, 2.42, 0.05, 0}}) do
+	for _, log in ipairs({{-0.6, 2.05, 0.1, 0.12}, {0.6, 2.05, 0.1, -0.12}, {0, 2.42, -0.15, 0}}) do
 		P(folder, Vector3.new(2.4, 0.42, 0.42), at(fx + log[1], log[2], fz + log[3]) * CFrame.Angles(0, log[4], 0), Color3.fromRGB(85, 55, 35), M.Wood, "Cylinder")
 		P(folder, Vector3.new(0.05, 0.36, 0.36), at(fx + log[1], log[2], fz + log[3]) * CFrame.Angles(0, log[4], 0) * CFrame.new(1.19, 0, 0), Color3.fromRGB(255, 110, 40), M.Neon, "Cylinder")
 	end
 	for i = 1, 9 do
-		P(folder, Vector3.new(0.3, 0.18, 0.3), at(fx - 1.4 + i * 0.28, 1.9, fz + rng:NextNumber(-0.3, 0.5)), Color3.fromRGB(255, rng:NextInteger(70, 140), 30), M.Neon, "Ellipsoid")
+		P(folder, Vector3.new(0.3, 0.18, 0.3), at(fx - 1.4 + i * 0.28, 1.9, fz + rng:NextNumber(-0.35, 0.25)), Color3.fromRGB(255, rng:NextInteger(70, 140), 30), M.Neon, "Ellipsoid")
 	end
 	-- iron grate in front
 	for i = -3, 3 do
@@ -21473,7 +21473,7 @@ NeverYieldAgartha.build = function(O)
 	end
 	P(folder, Vector3.new(3.0, 0.1, 0.1), at(fx, 2.55, fz - 0.62), Color3.fromRGB(35, 35, 40), M.Metal)
 	-- the fire itself: a real Fire effect, flame and spark particles, warm light and a crackle
-	local hearth = P(folder, Vector3.new(1.6, 0.4, 0.6), at(fx, 2.45, fz + 0.15), Color3.new(0, 0, 0), M.SmoothPlastic, nil, {Transparency = 1, CanCollide = false})
+	local hearth = P(folder, Vector3.new(1.6, 0.4, 0.6), at(fx, 2.45, fz), Color3.new(0, 0, 0), M.SmoothPlastic, nil, {Transparency = 1, CanCollide = false})
 	local flames = Instance.new("Fire")
 	flames.Size = 3.2
 	flames.Heat = 6
@@ -22158,7 +22158,7 @@ NeverYieldAgartha.travel = function(fromGate, toGate, root)
 	Services.Debris:AddItem(flash, 0.7)
 end
 
-addcmd('portal',{'agartha','gateway'},function(args, speaker)
+addcmd('agartha',{'portal','gateway'},function(args, speaker)
 	local A = NeverYieldAgartha
 	if A.state then
 		local st = A.state
@@ -22264,10 +22264,10 @@ addcmd('portal',{'agartha','gateway'},function(args, speaker)
 			lastSide[key] = side
 		end
 	end))
-	notify('Portal', 'A gateway to Agartha is open. Walk through it! It closes 5 seconds after you go through; type portal again to come back.', 8)
+	notify('Portal', 'A gateway to Agartha is open. Walk through it! It closes 5 seconds after you go through; type agartha again to come back.', 8)
 end)
 
-addcmd('portaldebug',{'agarthadebug'},function(args, speaker)
+addcmd('agarthadebug',{'portaldebug'},function(args, speaker)
 	local s = NeverYieldAgartha.state
 	if not s then
 		notify('Portal', 'No portal is open.')
@@ -28915,8 +28915,8 @@ cmdDef("theend", "Event Horizon", "Witness THE END", "neveryield", "silver", "bl
 cmdDef("moon", "Dawn of the Final Day", "Bring down the moon", "neveryield", "gold", "moon", "moon", 1)
 cmdDef("horror", "Don't Look Away", "Survive (or not) horror", "neveryield", "silver", "skull", "horror", 1)
 cmdDef("horror10", "Fearless", "Play horror 10 times", "neveryield", "gold", "skull", "horror", 10)
-cmdDef("portal", "Agartha Awaits", "Open a portal to Agartha", "neveryield", "silver", "portal", "portal", 1)
-cmdDef("portal10", "Interdimensional", "Open 10 portals", "neveryield", "gold", "portal", "portal", 10)
+def("portal", "Agartha Awaits", "Open a portal to Agartha (agartha)", "neveryield", "silver", "portal", 1, function() return A.cmd("agartha") + A.cmd("portal") end)
+def("portal10", "Interdimensional", "Open 10 portals to Agartha", "neveryield", "gold", "portal", 10, function() return A.cmd("agartha") + A.cmd("portal") end)
 cmdDef("door", "Home Sweet Home", "Open the door to your room", "neveryield", "bronze", "house", "door", 1)
 def("decorator", "Interior Designer", "Place 10 things in your room", "neveryield", "gold", "house", 10, function() return A.data.flags.roomItems or 0 end, {255, 170, 120})
 cmdDef("midas", "Golden Touch", "Use midas", "neveryield", "gold", "crown", "midas", 1)
@@ -29191,7 +29191,7 @@ A.secret("speeddemon", "Speed Demon", "Run with a walk speed of 250 or more", "s
 end, {255, 60, 60})
 A.secret("answer", "The Answer", "Own exactly 42 pets", "gold", "question", 1, function() return A.size(A.pets()) == 42 and 1 or 0 end, {90, 200, 255})
 A.secret("ragequit", "Rage Quit", "Unload NeverYield with fuckoff 10 times", "silver", "flame", 10, function() return A.cmd("fuckoff") end, {255, 60, 60})
-A.secret("debugger", "Debugger", "Run the debug commands 5 times", "bronze", "bug", 5, function() return A.cmds({"doordebug", "portaldebug", "themedebug", "limbdebug"}) end)
+A.secret("debugger", "Debugger", "Run the debug commands 5 times", "bronze", "bug", 5, function() return A.cmds({"doordebug", "portaldebug", "agarthadebug", "themedebug", "limbdebug"}) end)
 A.secret("lightswitch", "Who Turned Off the Lights?", "Flip a light switch 50 times", "bronze", "bulb", 50, function() return A.data.flags.switchFlips or 0 end, {255, 230, 140})
 A.secret("fullhouse", "Moving In", "Decorate all four rooms of your house", "gold", "house", 4, function() return A.data.flags.roomsDecorated or 0 end, {120, 255, 170})
 
