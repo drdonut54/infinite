@@ -1,4 +1,4 @@
--- NeverYield v1.27.2 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.28.0 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.27.2" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.28.0" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -5487,6 +5487,10 @@ CMDs[#CMDs + 1] = {NAME = 'chatlogging [on/off]', DESC = 'Also save other player
 CMDs[#CMDs + 1] = {NAME = 'statsexport / copystats', DESC = 'Copies a stats summary to your clipboard'}
 CMDs[#CMDs + 1] = {NAME = 'statssave', DESC = 'Saves your stats now (they also save every minute and before teleports)'}
 CMDs[#CMDs + 1] = {NAME = 'statsreset confirm', DESC = 'Starts your stats over (a backup file is kept)'}
+CMDs[#CMDs + 1] = {NAME = '--- THE NULL-BYTE REQUIEM (RPG) ---', DESC = 'A turn-based RPG that travels between real Roblox games through toll gates. In progress: the map test is ready'}
+CMDs[#CMDs + 1] = {NAME = 'rpgmaps', DESC = 'Lists the RPG worlds and the real game each one is in'}
+CMDs[#CMDs + 1] = {NAME = 'rpgmap [1-7 / here]', DESC = 'Map test: teleports you to that chapter\'s real game, NeverYield comes back and stages a test scene (Seris, a Hollowed, a toll gate to the next world). here = test the game you are in'}
+CMDs[#CMDs + 1] = {NAME = 'unrpg', DESC = 'Stops the RPG and clears everything it put in the world'}
 -- wait()
 
 for i = 1, #CMDs do
@@ -32608,6 +32612,897 @@ end)
 pcall(NeverYieldAch.start)
 end
 -- ================== END NEVERYIELD ACHIEVEMENTS ==================
+
+-- ==================== NULL-BYTE REQUIEM ====================
+-- The turn-based RPG (rpg command). Story: Desktop\The_Null-Byte_Requiem.txt
+do
+-- [10_core.lua]
+-- The Null-Byte Requiem: a turn-based RPG that travels between real Roblox games through toll gates.
+-- Everything is client-side: the party, the Hollowed and the gates exist only on your screen. Your own
+-- avatar plays Vane. The save lives in the executor workspace (NeverYield_rpg.json) and the toll really
+-- takes things out of it: journal lines corrupt, arm-writing goes gray, skills get renamed or removed.
+NeverYieldRPG = {file = "NeverYield_rpg.json", chapters = {}, members = {}, items = {}, enemies = {}, token = 0}
+local Q = NeverYieldRPG
+
+-- every chapter's real game (picked with kas; placeIds checked against the Roblox asset API)
+Q.places = {
+	academy = {id = 18600625012, name = "Genovia High"},
+	kingdom = {id = 115427048845142, name = "Medieval Life"},
+	hearth = {id = 4637668954, name = "Rensselaer County"},
+	nest = {id = 18753889337, name = "Main Street RP"},
+	hotel = {id = 6516141723, name = "DOORS"},
+	waystation = {id = 5326950832, name = "Realistic Forest Demo"},
+}
+
+-- music (APM / DistroKid official, checked)
+Q.music = {
+	title = {139347973925011},
+	sad = {1838577168, 1838260553, 139347973925011, 87279187741090, 123816023992616, 128518235802809, 9048627306},
+	camp = {87279187741090, 119760360784584, 125299502320621, 115582700793572, 81967684783948, 89034211968541},
+	battle = {103139167777950, 113559134342233, 137856050318156, 71615305537408, 1837825570},
+	boss = {116873506692821, 137578574800255, 1837826831},
+	lacrimosa = {1844309470},
+	hymn = {1844309360},
+	lumen = {137203505283202},
+	kingdom = {1836704405},
+	seeker = {126823401851369},
+	tag = {1837166873, 1838880936},
+}
+-- sound effects (ProSoundEffects, every id checked)
+Q.sfx = {
+	slash = {9126229255, 9126229927, 9126228975, 9113305631}, hit = {9113569832, 9113565276, 9114459390},
+	heal = {9117327720, 9117320784}, magic = {9125919607, 9116386594}, static = {9113115842, 9119974504},
+	hum = 9125446564, flash = 9114588980, weep = {9113996909, 9113996681, 9113997213}, whisper = 9126214610,
+	kids = 9112811168, siren = 9119165140, plates = 9117656338, dog = 9113951726, rush = 9117390695,
+	select = 9118728158, gate = 9119468100, door = 9120839552, levelup = 1837762472, victory = 1836473422,
+}
+
+-- ---------- save ----------
+Q.blank = function()
+	return {
+		version = 1, chapter = 1, scene = 1, started = false, finished = 0,
+		levels = {}, joined = {vane = true}, active = {"vane"},
+		items = {patch = 3, ether = 1},
+		journal = {}, arms = {vane = {}, seris = {}, pip = {}}, ledger = {}, flags = {},
+		renamed = {}, removed = {}, tolls = {}, lastWords = 0, image = 2,
+		stats = {battles = 0, wins = 0, retries = 0, hollowed = 0, steps = 0},
+	}
+end
+
+Q.load = function()
+	local data
+	pcall(function()
+		if isfile and isfile(Q.file) then
+			local ok, decoded = pcall(function() return HttpService:JSONDecode(readfile(Q.file)) end)
+			if ok and type(decoded) == "table" then data = decoded end
+		end
+	end)
+	local blank = Q.blank()
+	data = data or blank
+	for k, v in pairs(blank) do
+		if data[k] == nil then data[k] = v end
+	end
+	for k, v in pairs(blank.arms) do
+		if type(data.arms[k]) ~= "table" then data.arms[k] = v end
+	end
+	Q.data = data
+	return data
+end
+
+Q.save = function()
+	if not Q.data then return end
+	local ok, encoded = pcall(function() return HttpService:JSONEncode(Q.data) end)
+	if ok and encoded then pcall(writefile, Q.file, encoded) end
+end
+
+Q.flag = function(name, value)
+	if value == nil then return Q.data.flags[name] end
+	Q.data.flags[name] = value
+end
+
+-- ---------- the journal, the arms and the ledger ----------
+-- journal entries: {id, chapter, title, lines = {{t = text, x = true when the toll took it}}}
+Q.journalAdd = function(id, title, lines)
+	for _, e in ipairs(Q.data.journal) do
+		if e.id == id then return e end
+	end
+	local entry = {id = id, chapter = Q.data.chapter, title = title, lines = {}}
+	for _, line in ipairs(lines or {}) do table.insert(entry.lines, {t = line}) end
+	table.insert(Q.data.journal, entry)
+	return entry
+end
+
+-- a line the toll took: letters turn to static, the same way every time it is shown
+Q.corrupt = function(text)
+	local glyphs = {"#", "%", "&", "@", "$", "*", "/", "\\", "?", "!", "_", "~"}
+	local seed = #text
+	return (text:gsub("[%w']", function(ch)
+		seed = (seed * 31 + ch:byte()) % 9973
+		return glyphs[seed % #glyphs + 1]
+	end))
+end
+
+Q.armWrite = function(who, text)
+	local arm = Q.data.arms[who]
+	if not arm then
+		arm = {}
+		Q.data.arms[who] = arm
+	end
+	for _, line in ipairs(arm) do
+		if line.t == text then return end
+	end
+	table.insert(arm, {t = text})
+	if Q.toast then Q.toast("\u{270D}\u{FE0F} " .. (Q.members[who] and Q.members[who].name or who) .. "'s arm: " .. text) end
+end
+
+Q.armGray = function(who, find)
+	for _, line in ipairs(Q.data.arms[who] or {}) do
+		if line.t:lower():find(find:lower(), 1, true) then line.g = true end
+	end
+end
+
+Q.ledgerAdd = function(id, title, teller)
+	for _, e in ipairs(Q.data.ledger) do
+		if e.id == id then return end
+	end
+	table.insert(Q.data.ledger, {id = id, title = title, teller = teller, chapter = Q.data.chapter})
+	if Q.toast then Q.toast("\u{1F4D6} The memory is added to the Ledger: \"" .. title .. "\"") end
+end
+
+Q.hasLedger = function(id)
+	for _, e in ipairs(Q.data.ledger) do
+		if e.id == id then return true end
+	end
+end
+
+-- The toll. t = {who, memory = "their laughter", journal = {id = sceneId, words = {"laugh"}} or {id, all = true},
+-- gray = {who, find}, skill = {member, id, rename = "New Name" or remove = true}}. Saved at once: no undo by reloading.
+Q.applyToll = function(t)
+	local data = Q.data
+	if t.journal then
+		for _, e in ipairs(data.journal) do
+			if e.id == t.journal.id then
+				for _, line in ipairs(e.lines) do
+					local hit = t.journal.all
+					for _, w in ipairs(t.journal.words or {}) do
+						if line.t:lower():find(w:lower(), 1, true) then hit = true end
+					end
+					if hit then line.x = true end
+				end
+			end
+		end
+	end
+	for _, g in ipairs(t.gray or {}) do Q.armGray(g[1], g[2]) end
+	if t.skill then
+		if t.skill.remove then
+			data.removed[t.skill.id] = true
+		else
+			data.renamed[t.skill.id] = t.skill.rename
+		end
+	end
+	table.insert(data.tolls, {chapter = data.chapter, who = t.who, memory = t.memory})
+	Q.save()
+end
+
+-- ---------- party ----------
+-- stats at level L = base + growth * (L - 1); skills unlock by level and (some) by a story flag
+Q.member = function(id)
+	local def = Q.members[id]
+	local lv = Q.data.levels[id] or {level = 1, xp = 0}
+	Q.data.levels[id] = lv
+	local L = lv.level
+	local s = {id = id, name = def.name, level = L, xp = lv.xp, def = def}
+	for _, stat in ipairs({"hp", "mp", "atk", "def", "mag", "spd"}) do
+		s[stat] = math.floor(def.base[stat] + def.growth[stat] * (L - 1))
+	end
+	s.skills = {}
+	for _, sk in ipairs(def.skills) do
+		if L >= (sk.level or 1) and (not sk.flag or Q.flag(sk.flag)) and not Q.data.removed[sk.id] then
+			table.insert(s.skills, sk)
+		end
+	end
+	return s
+end
+
+Q.skillName = function(sk)
+	return Q.data.renamed[sk.id] or sk.name
+end
+
+Q.xpNeeded = function(level)
+	return 30 + level * level * 14
+end
+
+-- returns the list of level-up messages
+Q.giveXp = function(id, amount)
+	local lv = Q.data.levels[id] or {level = 1, xp = 0}
+	Q.data.levels[id] = lv
+	lv.xp = lv.xp + amount
+	local msgs = {}
+	while lv.xp >= Q.xpNeeded(lv.level) and lv.level < 60 do
+		lv.xp = lv.xp - Q.xpNeeded(lv.level)
+		lv.level = lv.level + 1
+		local name = Q.members[id].name
+		table.insert(msgs, name .. " reached level " .. lv.level .. "!")
+		for _, sk in ipairs(Q.members[id].skills) do
+			if sk.level == lv.level and (not sk.flag or Q.flag(sk.flag)) then
+				table.insert(msgs, name .. " learned " .. Q.skillName(sk) .. "!")
+			end
+		end
+	end
+	return msgs
+end
+
+Q.join = function(id)
+	Q.data.joined[id] = true
+	local present = false
+	for _, a in ipairs(Q.data.active) do
+		if a == id then present = true end
+	end
+	if not present and #Q.data.active < 3 then table.insert(Q.data.active, id) end
+	-- new members start near the party's level
+	local top = 1
+	for other in pairs(Q.data.joined) do
+		top = math.max(top, (Q.data.levels[other] or {level = 1}).level)
+	end
+	local lv = Q.data.levels[id] or {level = 1, xp = 0}
+	lv.level = math.max(lv.level, top - 1)
+	Q.data.levels[id] = lv
+end
+
+Q.leave = function(id)
+	Q.data.joined[id] = nil
+	for i, a in ipairs(Q.data.active) do
+		if a == id then table.remove(Q.data.active, i) break end
+	end
+end
+
+-- ---------- music ----------
+Q.playMusic = function(kind, volume)
+	if Q.musicKind == kind then return end
+	Q.musicKind = kind
+	local ids = kind and Q.music[kind]
+	if not ids then
+		if Q.musicSound then WackyState.fadeMusic(Q.musicSound, 0, 1.5) end
+		return
+	end
+	if not Q.musicSound or not Q.musicSound.Parent then
+		Q.musicSound = WackyState.playlist(ids, 0)
+	else
+		WackyState.playlistSet(Q.musicSound, ids)
+	end
+	WackyState.fadeMusic(Q.musicSound, volume or 0.35, 1.5)
+end
+
+Q.sound = function(id, volume, pitch)
+	if type(id) == "table" then id = WackyState.pick(id) end
+	pcall(WackyState.sound, id, nil, volume or 0.5, false, pitch or 1)
+end
+
+-- ---------- travel between real games ----------
+Q.placeOf = function(n)
+	local ch = Q.chapters[n]
+	return ch and Q.places[ch.place]
+end
+
+Q.here = function(n)
+	local p = Q.placeOf(n)
+	return p and p.id == game.PlaceId
+end
+
+-- pay the toll is done by the gate; this saves where to resume and jumps to the real game
+Q.travel = function(n, scene)
+	local data = Q.data
+	data.chapter, data.scene = n, scene or 1
+	local place = Q.placeOf(n)
+	if not place or place.id == game.PlaceId then
+		data.travel = nil
+		Q.save()
+		task.spawn(Q.run, n, scene or 1)
+		return
+	end
+	data.travel = {place = place.id, at = os.time()}
+	Q.save()
+	Q.stop(true)
+	-- NeverYield comes back in the next game (the Volt autoexec also loads it; a second copy exits on its own)
+	if queueteleport and not KeepInfYield then
+		pcall(queueteleport, "pcall(function() loadstring(game:HttpGet('" .. CustomSourceURL .. "'))() end)")
+	end
+	notify('The Null-Byte Requiem', 'Crossing to ' .. place.name .. '...', 6)
+	local ok, err = pcall(function() TeleportService:Teleport(place.id, Players.LocalPlayer) end)
+	if not ok then
+		notify('The Null-Byte Requiem', 'The gate failed: ' .. tostring(err) .. '. Type rpg to try again.', 10)
+	end
+end
+
+-- on load: resume if we just came through a gate
+Q.boot = function()
+	Q.load()
+	local tr = Q.data.travel
+	if not tr then return end
+	if tr.place == game.PlaceId then
+		Q.data.travel = nil
+		Q.save()
+		local char = Players.LocalPlayer.Character or Players.LocalPlayer.CharacterAdded:Wait()
+		char:WaitForChild("HumanoidRootPart", 20)
+		task.wait(4)
+		Q.run(Q.data.chapter, Q.data.scene)
+	elseif os.time() - (tr.at or 0) < 300 then
+		notify('The Null-Byte Requiem', 'You were headed to ' .. ((Q.placeOf(Q.data.chapter) or {}).name or "another game") .. ', but you are not there. Type rpg to cross again.', 10)
+	end
+end
+
+Q.connect = function(name, conn)
+	WackyState.connect("rpg_" .. name, conn)
+end
+
+Q.alive = function(token)
+	return Q.token == token
+end
+
+-- [20_stage.lua]
+-- ---------- the stage: everything the RPG puts into the real game (only you see it) ----------
+Q.stage = function()
+	if Q.folder and Q.folder.Parent then return Q.folder end
+	local m = Instance.new("Model")
+	m.Name = randomString()
+	m.Parent = workspace
+	Q.folder = m
+	return m
+end
+
+Q.root = function()
+	return getRoot(Players.LocalPlayer.Character)
+end
+
+-- the floor under a point (ignores you, the stage and anything see-through)
+Q.groundY = function(pos, fallback)
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	local skip = {Players.LocalPlayer.Character, Q.folder}
+	for _ = 1, 6 do
+		params.FilterDescendantsInstances = skip
+		local hit = workspace:Raycast(pos + Vector3.new(0, 12, 0), Vector3.new(0, -80, 0), params)
+		if not hit then break end
+		if hit.Instance.Transparency < 0.9 and hit.Instance.CanCollide then return hit.Position.Y end
+		table.insert(skip, hit.Instance)
+	end
+	return fallback or pos.Y - 3
+end
+
+-- where a scene is staged: your feet, facing where the camera looks
+Q.makeAnchor = function()
+	local root = Q.root()
+	if not root then return CFrame.new() end
+	local look = workspace.CurrentCamera.CFrame.LookVector * Vector3.new(1, 0, 1)
+	if look.Magnitude < 0.1 then look = root.CFrame.LookVector * Vector3.new(1, 0, 1) end
+	local p = root.Position
+	local y = Q.groundY(p, p.Y - 3)
+	Q.anchor = CFrame.lookAt(Vector3.new(p.X, y, p.Z), Vector3.new(p.X, y, p.Z) + look.Unit)
+	return Q.anchor
+end
+
+-- a spot in the scene: x to the right, z forward (away from the camera), on the ground
+Q.spot = function(x, z, faceX, faceZ)
+	local a = Q.anchor or Q.makeAnchor()
+	local p = a:PointToWorldSpace(Vector3.new(x, 0, -z))
+	p = Vector3.new(p.X, Q.groundY(p, a.Y), p.Z)
+	if faceX then
+		local f = a:PointToWorldSpace(Vector3.new(faceX, 0, -faceZ))
+		f = Vector3.new(f.X, p.Y, f.Z)
+		if (f - p).Magnitude > 0.1 then return CFrame.lookAt(p, f) end
+	end
+	return CFrame.new(p) * (a - a.Position)
+end
+
+-- ---------- characters ----------
+-- A copy of your rig, stripped and restyled. look = {skin = Color3, shirt = Color3, pants = Color3, hair = Color3,
+-- hollowed = true (gray, blank face, flickers), scale = 0.6, props = function(rig, part) ... end, name = "Seris"}
+Q.junkClasses = {"BaseScript", "ModuleScript", "Tool", "Accessory", "Clothing", "ShirtGraphic", "ForceField", "Sound",
+	"BodyMover", "AlignPosition", "AlignOrientation", "LinearVelocity", "AngularVelocity", "VectorForce", "Highlight", "Trail", "Beam", "BillboardGui"}
+
+Q.rig = function(look)
+	local char = Players.LocalPlayer.Character
+	if not char then return nil end
+	local was = char.Archivable
+	char.Archivable = true
+	local rig = char:Clone()
+	char.Archivable = was
+	if not rig then return nil end
+	for _, d in ipairs(rig:GetDescendants()) do
+		local junk = d:IsA("BasePart") and d:GetAttribute("NYFx")
+		for _, class in ipairs(Q.junkClasses) do
+			if d:IsA(class) then junk = true break end
+		end
+		if d:IsA("Decal") and d.Name == "face" and look.hollowed then junk = true end
+		if junk then pcall(function() d:Destroy() end) end
+	end
+	local hum = rig:FindFirstChildOfClass("Humanoid")
+	local root = rig:FindFirstChild("HumanoidRootPart")
+	if not hum or not root then rig:Destroy() return nil end
+	hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+	hum.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
+	pcall(function() hum.BreakJointsOnDeath = false hum.RequiresNeck = false end)
+	pcall(function() hum:ChangeState(Enum.HumanoidStateType.Physics) end)
+	local skin = look.hollowed and Color3.fromRGB(150, 150, 155) or (look.skin or Color3.fromRGB(234, 184, 146))
+	local shirt = look.hollowed and Color3.fromRGB(120, 120, 126) or (look.shirt or Color3.fromRGB(70, 70, 90))
+	local pants = look.hollowed and Color3.fromRGB(100, 100, 106) or (look.pants or Color3.fromRGB(40, 40, 50))
+	for _, p in ipairs(rig:GetDescendants()) do
+		if p:IsA("BasePart") then
+			p.CanCollide, p.CanTouch, p.CanQuery = false, false, false
+			p.Anchored = false
+			local n = p.Name
+			if n:find("Torso") or n:find("Arm") and look.sleeves then
+				p.Color = shirt
+			elseif n:find("Leg") or n:find("Foot") or n == "LowerTorso" then
+				p.Color = pants
+			elseif n:find("Arm") or n:find("Hand") or n == "Head" then
+				p.Color = skin
+			end
+			if n == "UpperTorso" or n == "Torso" then p.Color = shirt end
+			if look.material then p.Material = look.material end
+		elseif p:IsA("BodyColors") then
+			p:Destroy()
+		end
+	end
+	root.Anchored = true
+	root.Transparency = 1
+	local head = rig:FindFirstChild("Head")
+	if head and look.hair then
+		local hair = NeverYieldAgartha.part(rig, Vector3.new(head.Size.X * 1.08, head.Size.Y * 0.45, head.Size.Z * 1.08), head.CFrame * CFrame.new(0, head.Size.Y * 0.38, 0.05), look.hair, Enum.Material.SmoothPlastic)
+		hair.Anchored, hair.CanCollide = false, false
+		local w = Instance.new("WeldConstraint")
+		w.Part0, w.Part1 = head, hair
+		w.Parent = hair
+		if look.longHair then
+			local back = NeverYieldAgartha.part(rig, Vector3.new(head.Size.X * 0.95, head.Size.Y * 1.3, head.Size.Z * 0.3), head.CFrame * CFrame.new(0, -head.Size.Y * 0.2, head.Size.Z * 0.5), look.hair, Enum.Material.SmoothPlastic)
+			back.Anchored, back.CanCollide = false, false
+			local w2 = Instance.new("WeldConstraint")
+			w2.Part0, w2.Part1 = head, back
+			w2.Parent = back
+		end
+	end
+	if look.props then pcall(look.props, rig, head) end
+	if look.scale and look.scale ~= 1 then pcall(function() rig:ScaleTo(look.scale) end) end
+	rig.Name = randomString()
+	rig.Parent = Q.stage()
+	Q.animate(rig, "idle")
+	if look.hollowed then Q.flicker(rig) end
+	if look.name then Q.nameTag(rig, look.name, look.tagColor) end
+	return rig
+end
+
+-- Roblox's default animations (owned by Roblox, so they play on any rig)
+Q.anims = {
+	R15 = {idle = 507766388, walk = 507777826, run = 507767714, sit = 2506281703, wave = 507770239, point = 507770453, cheer = 507770677, laugh = 507770818, slash = 522635514},
+	R6 = {idle = 180435571, walk = 180426354, run = 180426354, sit = 178130996, wave = 128777973, point = 128853357, cheer = 129423030, laugh = 129423131, slash = 129967390},
+}
+
+Q.animate = function(rig, name, looped)
+	local hum = rig and rig:FindFirstChildOfClass("Humanoid")
+	if not hum then return end
+	local kind = hum.RigType == Enum.HumanoidRigType.R15 and "R15" or "R6"
+	local id = Q.anims[kind][name]
+	if not id then return end
+	local animator = hum:FindFirstChildOfClass("Animator") or Instance.new("Animator", hum)
+	rig:SetAttribute("NYAnim", name)
+	local tracks = Q.tracks or setmetatable({}, {__mode = "k"})
+	Q.tracks = tracks
+	tracks[rig] = tracks[rig] or {}
+	local keep = name == "idle" or name == "walk" or name == "run" or name == "sit"
+	if keep then
+		for other, track in pairs(tracks[rig]) do
+			if other ~= name and (other == "idle" or other == "walk" or other == "run" or other == "sit") then pcall(function() track:Stop(0.2) end) end
+		end
+	end
+	local track = tracks[rig][name]
+	if not track then
+		local a = Instance.new("Animation")
+		a.AnimationId = "rbxassetid://" .. id
+		local ok, t = pcall(function() return animator:LoadAnimation(a) end)
+		if not ok then return end
+		track = t
+		tracks[rig][name] = track
+	end
+	track.Looped = keep or looped or false
+	if not track.IsPlaying then track:Play(0.2) end
+	return track
+end
+
+-- walk a rig to a CFrame (its root is anchored, so it glides with the walk animation; nothing can knock it over)
+Q.walk = function(rig, cf, speed)
+	local root = rig and rig:FindFirstChild("HumanoidRootPart")
+	if not root then return end
+	local hip = root.Position.Y - Q.groundY(root.Position, root.Position.Y - 3)
+	local target = cf + Vector3.new(0, hip, 0)
+	local dist = (target.Position - root.Position).Magnitude
+	if dist < 0.2 then root.CFrame = target return end
+	local face = CFrame.lookAt(root.Position, Vector3.new(target.X, root.Position.Y, target.Z))
+	root.CFrame = face
+	Q.animate(rig, "walk")
+	local tween = TweenService:Create(root, TweenInfo.new(dist / (speed or 10), Enum.EasingStyle.Linear), {CFrame = target})
+	tween:Play()
+	tween.Completed:Wait()
+	Q.animate(rig, "idle")
+end
+
+Q.put = function(rig, cf)
+	local root = rig and rig:FindFirstChild("HumanoidRootPart")
+	if not root then return end
+	local hum = rig:FindFirstChildOfClass("Humanoid")
+	local hip = (hum and hum.HipHeight or 2) + root.Size.Y / 2
+	if hum and hum.RigType == Enum.HumanoidRigType.R6 then hip = 3 end
+	root.CFrame = cf + Vector3.new(0, hip, 0)
+end
+
+-- Hollowed flicker: the body fades in and out, slowly
+Q.flicker = function(rig)
+	task.spawn(function()
+		local seed = math.random() * 10
+		while rig.Parent do
+			local t = tick() + seed
+			local a = math.clamp(0.15 + math.sin(t * 2.3) * 0.12 + (math.random() < 0.04 and 0.5 or 0), 0, 0.9)
+			for _, p in ipairs(rig:GetDescendants()) do
+				if p:IsA("BasePart") and p.Name ~= "HumanoidRootPart" then p.Transparency = a end
+			end
+			task.wait(0.08)
+		end
+	end)
+end
+
+Q.nameTag = function(rig, text, color)
+	local head = rig:FindFirstChild("Head")
+	if not head then return end
+	local bb = Instance.new("BillboardGui")
+	bb.Name = "NYTag"
+	bb.Size = UDim2.new(0, 160, 0, 22)
+	bb.StudsOffset = Vector3.new(0, 2.4, 0)
+	bb.AlwaysOnTop = true
+	bb.MaxDistance = 80
+	bb.Parent = head
+	NeverYieldPets.label(bb, {Size = UDim2.new(1, 0, 1, 0), Text = text, TextSize = 14, Font = Enum.Font.GothamBold,
+		TextColor3 = color or Color3.fromRGB(150, 235, 255), TextStrokeTransparency = 0.4, ZIndex = 1})
+	return bb
+end
+
+-- speech bubble over a rig's head (Hollowed lines start with "> ")
+Q.bubble = function(rig, text, seconds, color)
+	local head = rig and rig:FindFirstChild("Head")
+	if not head then return end
+	local old = head:FindFirstChild("NYBubble")
+	if old then old:Destroy() end
+	local bb = Instance.new("BillboardGui")
+	bb.Name = "NYBubble"
+	bb.Size = UDim2.new(0, 260, 0, 70)
+	bb.StudsOffset = Vector3.new(0, 4.2, 0)
+	bb.AlwaysOnTop = true
+	bb.MaxDistance = 120
+	bb.Parent = head
+	local frame = Instance.new("Frame")
+	frame.Size = UDim2.new(1, 0, 1, 0)
+	frame.BackgroundColor3 = Color3.fromRGB(14, 12, 24)
+	frame.BackgroundTransparency = 0.15
+	frame.BorderSizePixel = 0
+	frame.Parent = bb
+	NeverYieldPortal.corner(frame, UDim.new(0, 10))
+	local hollow = text:sub(1, 2) == "> "
+	NeverYieldPets.label(frame, {Position = UDim2.new(0, 8, 0, 4), Size = UDim2.new(1, -16, 1, -8), Text = text, TextWrapped = true, TextSize = 14,
+		Font = hollow and Enum.Font.Code or Enum.Font.GothamMedium, TextColor3 = color or (hollow and Color3.fromRGB(190, 190, 200) or Color3.new(1, 1, 1)), ZIndex = 1})
+	if seconds then
+		task.delay(seconds, function() pcall(function() bb:Destroy() end) end)
+	end
+	return bb
+end
+
+-- ---------- the toll gate ----------
+-- a jagged tear in the air, cold blue, humming. Walking into it shows the toll prompt.
+Q.gate = function(cf, onEnter, color)
+	color = color or Color3.fromRGB(90, 190, 255)
+	local P = NeverYieldAgartha.part
+	local model = Instance.new("Model")
+	model.Name = randomString()
+	model.Parent = Q.stage()
+	local base = cf * CFrame.new(0, 4.5, 0)
+	local rng = Random.new(math.floor(cf.X * 7 + cf.Z * 13) % 100000)
+	local core = P(model, Vector3.new(2.6, 8, 0.15), base, Color3.fromRGB(10, 14, 30), Enum.Material.Neon, nil, {CanCollide = false, Transparency = 0.1})
+	for i = 1, 14 do
+		local a = (i / 14) * math.pi * 2
+		local r = 1.4 + rng:NextNumber(0, 0.6)
+		local y = math.sin(a) * 4.2
+		local x = math.cos(a) * r
+		local shard = P(model, Vector3.new(rng:NextNumber(0.2, 0.5), rng:NextNumber(0.8, 1.8), 0.2), base * CFrame.new(x, y, 0) * CFrame.Angles(0, 0, a + rng:NextNumber(-0.6, 0.6)), color, Enum.Material.Neon, nil, {CanCollide = false})
+		shard:SetAttribute("NYGateShard", true)
+	end
+	local light = Instance.new("PointLight")
+	light.Color, light.Range, light.Brightness = color, 16, 2
+	light.Parent = core
+	local e = Instance.new("ParticleEmitter")
+	e.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	e.Rate, e.Lifetime, e.Speed = 18, NumberRange.new(0.8, 1.6), NumberRange.new(0.5, 2)
+	e.Size = NumberSequence.new(0.35, 0)
+	e.LightEmission, e.Color = 1, ColorSequence.new(color)
+	e.SpreadAngle = Vector2.new(180, 180)
+	e.Parent = core
+	local hum = WackyState.sound(Q.sfx.hum, core, 0.4, true)
+	local gate = {model = model, core = core, cf = cf, hum = hum}
+	local busy = false
+	local conn
+	conn = RunService.Heartbeat:Connect(function()
+		if not model.Parent then conn:Disconnect() return end
+		local t = tick()
+		core.Transparency = 0.05 + math.sin(t * 3) * 0.05
+		light.Brightness = 1.6 + math.sin(t * 5) * 0.6
+		local root = Q.root()
+		if root and not busy and (root.Position - base.Position).Magnitude < 4.5 then
+			busy = true
+			task.spawn(function()
+				pcall(onEnter, gate)
+				task.wait(2)
+				busy = false
+			end)
+		end
+	end)
+	return gate
+end
+
+-- ---------- screen UI ----------
+Q.screen = function()
+	if Q.gui and Q.gui.Parent then return Q.gui end
+	local screen = Instance.new("ScreenGui")
+	screen.Name = randomString()
+	screen.ResetOnSpawn = false
+	screen.IgnoreGuiInset = true
+	screen.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	screen.DisplayOrder = 2147483600
+	if not pcall(function() screen.Parent = gethui and gethui() or COREGUI end) then
+		screen.Parent = Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")
+	end
+	Q.gui = screen
+	return screen
+end
+
+-- small message in the top middle
+Q.toast = function(text, seconds)
+	local screen = Q.screen()
+	local l = NeverYieldPets.label(screen, {AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 70), Size = UDim2.new(0, 520, 0, 30),
+		BackgroundTransparency = 0.25, BackgroundColor3 = Color3.fromRGB(10, 14, 28), Text = text, TextSize = 15, TextWrapped = true,
+		Font = Enum.Font.Code, TextColor3 = Color3.fromRGB(150, 235, 255), ZIndex = 40})
+	NeverYieldPortal.corner(l, UDim.new(0, 8))
+	task.delay(seconds or 4, function()
+		TweenService:Create(l, TweenInfo.new(0.6), {TextTransparency = 1, BackgroundTransparency = 1}):Play()
+		task.wait(0.7)
+		l:Destroy()
+	end)
+end
+
+-- full-screen flash or fade (color, hold seconds)
+Q.flash = function(color, hold, fadeIn)
+	local screen = Q.screen()
+	local f = Instance.new("Frame")
+	f.Size = UDim2.new(1, 0, 1, 0)
+	f.BackgroundColor3 = color or Color3.new(1, 1, 1)
+	f.BackgroundTransparency = fadeIn and 1 or 0
+	f.BorderSizePixel = 0
+	f.ZIndex = 90
+	f.Parent = screen
+	if fadeIn then
+		TweenService:Create(f, TweenInfo.new(fadeIn), {BackgroundTransparency = 0}):Play()
+		task.wait(fadeIn)
+	end
+	task.wait(hold or 0)
+	TweenService:Create(f, TweenInfo.new(1.2), {BackgroundTransparency = 1}):Play()
+	task.delay(1.3, function() f:Destroy() end)
+end
+
+-- the toll prompt: terminal lines typed out, and only ever one button. Returns when Y is pressed (or nil if cancelled).
+Q.tollPrompt = function(lines, canLeave)
+	local screen = Q.screen()
+	local box = Instance.new("Frame")
+	box.AnchorPoint = Vector2.new(0.5, 0.5)
+	box.Position = UDim2.new(0.5, 0, 0.5, 0)
+	box.Size = UDim2.new(0, 560, 0, 70 + #lines * 26)
+	box.BackgroundColor3 = Color3.fromRGB(4, 8, 16)
+	box.BorderSizePixel = 0
+	box.ZIndex = 80
+	box.Parent = screen
+	NeverYieldPortal.corner(box, UDim.new(0, 6))
+	local stroke = Instance.new("UIStroke")
+	stroke.Color, stroke.Thickness = Color3.fromRGB(90, 190, 255), 1.5
+	stroke.Parent = box
+	Q.sound(Q.sfx.static, 0.3)
+	local labels = {}
+	for i, line in ipairs(lines) do
+		labels[i] = NeverYieldPets.label(box, {Position = UDim2.new(0, 22, 0, 14 + (i - 1) * 26), Size = UDim2.new(1, -44, 0, 24), Text = "",
+			TextXAlignment = Enum.TextXAlignment.Left, Font = Enum.Font.Code, TextSize = 17, TextColor3 = line:find("WARNING") and Color3.fromRGB(255, 90, 90) or Color3.fromRGB(150, 235, 255), ZIndex = 81})
+	end
+	for i, line in ipairs(lines) do
+		for n = 1, #line do
+			labels[i].Text = line:sub(1, n)
+			if n % 2 == 0 then task.wait(0.012) end
+		end
+		task.wait(0.15)
+	end
+	local answer
+	local yes = NeverYieldPets.button(box, "[ Y ]", UDim2.new(0.5, -50, 1, -46), UDim2.new(0, 100, 0, 34), Color3.fromRGB(20, 60, 100), function() answer = true end)
+	yes.Font, yes.TextSize, yes.ZIndex = Enum.Font.Code, 20, 82
+	local keyConn = UserInputService.InputBegan:Connect(function(input, processed)
+		if not processed and input.KeyCode == Enum.KeyCode.Y then answer = true end
+	end)
+	local start = Q.root() and Q.root().Position
+	while answer == nil do
+		task.wait(0.05)
+		-- walking away from the gate closes the prompt
+		local r = Q.root()
+		if canLeave and start and r and (r.Position - start).Magnitude > 12 then answer = false end
+	end
+	keyConn:Disconnect()
+	box:Destroy()
+	if answer then Q.sound(Q.sfx.select, 0.6) end
+	return answer
+end
+
+Q.clearStage = function()
+	if Q.folder then pcall(function() Q.folder:Destroy() end) Q.folder = nil end
+end
+
+-- stop everything the RPG is doing (keep = keep the screen for a teleport message)
+Q.stop = function(keep)
+	Q.token = Q.token + 1
+	Q.clearStage()
+	for key in pairs(WackyState.conns) do
+		if type(key) == "string" and key:sub(1, 4) == "rpg_" then WackyState.disconnect(key) end
+	end
+	pcall(function() workspace.CurrentCamera.CameraType = Enum.CameraType.Custom end)
+	if not keep and Q.gui then pcall(function() Q.gui:Destroy() end) Q.gui = nil end
+	if not keep then Q.playMusic(nil) end
+end
+
+-- [30_chapters.lua]
+-- ---------- chapters (the story scenes are added to these by the disc files) ----------
+Q.chapters = {
+	{n = 1, disc = 1, place = "academy", title = "The Collapse of the Academy", world = "The Academy"},
+	{n = 2, disc = 1, place = "kingdom", title = "The Verdant Kingdom", world = "The Verdant Kingdom"},
+	{n = 3, disc = 1, place = "hearth", title = "Hearthhaven", world = "Hearthhaven"},
+	{n = 4, disc = 1, place = "nest", title = "Nestwood", world = "Nestwood"},
+	{n = 5, disc = 1, place = "hotel", title = "The Hotel of a Hundred Doors", world = "The Hotel"},
+	{n = 6, disc = 1, place = "waystation", title = "The Waystation", world = "The Waystation"},
+	{n = 7, disc = 1, place = "waystation", title = "The Shattering", world = "The Waystation"},
+}
+
+-- ---------- map test: travel to a chapter's real game and stage a small scene there ----------
+-- Checks the parts that can only be tested in-game: the teleport, NeverYield coming back, the RPG resuming,
+-- rigs, speech bubbles and a working gate on that map.
+Q.mapTravel = function(n)
+	local ch = Q.chapters[n]
+	local place = ch and Q.places[ch.place]
+	if not place then return end
+	Q.load()
+	if place.id == game.PlaceId then
+		Q.mapTest(n)
+		return
+	end
+	Q.data.travel = {place = place.id, at = os.time(), test = n}
+	Q.save()
+	Q.stop(true)
+	if queueteleport and not KeepInfYield then
+		pcall(queueteleport, "pcall(function() loadstring(game:HttpGet('" .. CustomSourceURL .. "'))() end)")
+	end
+	notify('Requiem map test', 'Crossing to Chapter ' .. n .. ': ' .. place.name .. '...', 6)
+	local ok, err = pcall(function() TeleportService:Teleport(place.id, Players.LocalPlayer) end)
+	if not ok then notify('Requiem map test', 'Teleport failed: ' .. tostring(err), 10) end
+end
+
+Q.mapTest = function(n)
+	Q.stop()
+	local token = Q.token
+	local ch = Q.chapters[n]
+	local place = Q.places[ch.place]
+	Q.makeAnchor()
+	Q.playMusic(n == 5 and "seeker" or "sad")
+	Q.toast("MAP TEST  -  Chapter " .. n .. ": " .. ch.title .. "  (" .. place.name .. ")", 8)
+	local seris = Q.rig({name = "Seris", skin = Color3.fromRGB(198, 140, 105), shirt = Color3.fromRGB(40, 60, 110), pants = Color3.fromRGB(30, 30, 45),
+		hair = Color3.fromRGB(35, 25, 25), longHair = true})
+	if seris then
+		Q.put(seris, Q.spot(5, 2, 0, 6))
+		Q.bubble(seris, "This is " .. ch.world .. ". Wherever it is, it's still running.", 8)
+	end
+	local hollow = Q.rig({name = "Hollowed", hollowed = true, tagColor = Color3.fromRGB(170, 170, 180)})
+	if hollow then
+		Q.put(hollow, Q.spot(0, 16, 0, 0))
+		task.spawn(function()
+			local lines = {"> i'm sorry", "> i'm sorry i was going to remember you", "> please can i have one. just one. i'll give it back"}
+			local i = 0
+			while Q.alive(token) and hollow.Parent do
+				i = i % #lines + 1
+				Q.bubble(hollow, lines[i], 3.5)
+				if i == 1 then Q.sound(Q.sfx.weep, 0.25) end
+				task.wait(4)
+			end
+		end)
+		task.spawn(function()
+			task.wait(3)
+			if Q.alive(token) and hollow.Parent then Q.walk(hollow, Q.spot(-6, 12, 0, 0), 4) end
+		end)
+	end
+	local nextN = n % #Q.chapters + 1
+	if Q.chapters[nextN].place == ch.place then nextN = nextN % #Q.chapters + 1 end
+	local nextPlace = Q.places[Q.chapters[nextN].place]
+	Q.gate(Q.spot(-10, 8, 0, 8), function()
+		local yes = Q.tollPrompt({
+			"> UNAUTHORIZED TRANSFER DETECTED.",
+			"> DESTINATION: CHAPTER " .. nextN .. " (" .. nextPlace.name:upper() .. ").",
+			"> TOLL REQUIRED: 1 (ONE) CORE MEMORY.  (map test: nothing is taken)",
+			"> ACCEPT?",
+		}, true)
+		if yes and Q.alive(token) then
+			Q.sound(Q.sfx.flash, 0.6)
+			Q.flash(Color3.new(1, 1, 1), 1.5)
+			Q.mapTravel(nextN)
+		end
+	end)
+end
+
+-- [90_command.lua]
+-- ---------- commands ----------
+Q.run = function(n, scene)
+	-- the story runner arrives with the disc files; until then the RPG opens the map test for that chapter
+	Q.mapTest(n)
+end
+
+addcmd('rpgmaps',{'requiemmaps'},function(args, speaker)
+	local lines = {}
+	for _, ch in ipairs(Q.chapters) do
+		local p = Q.places[ch.place]
+		table.insert(lines, ch.n .. ". " .. ch.world .. " - " .. p.name .. (p.id == game.PlaceId and " (you are here)" or ""))
+	end
+	notify('The Null-Byte Requiem: maps', table.concat(lines, "\n") .. "\nrpgmap <number> to go there", 20)
+end)
+
+addcmd('rpgmap',{'requiemmap'},function(args, speaker)
+	local n = tonumber(args[1])
+	if args[1] == "here" then
+		for _, ch in ipairs(Q.chapters) do
+			if Q.places[ch.place].id == game.PlaceId then n = ch.n break end
+		end
+		n = n or 1
+		Q.load()
+		Q.mapTest(n)
+		return
+	end
+	if not n or not Q.chapters[n] then
+		notify('Requiem', 'rpgmap 1-' .. #Q.chapters .. ' (or rpgmap here). rpgmaps lists them.')
+		return
+	end
+	Q.mapTravel(n)
+end)
+
+addcmd('unrpg',{'stoprpg'},function(args, speaker)
+	Q.stop()
+end)
+
+table.insert(WackyState.undoList, 'unrpg')
+
+-- coming back through a gate: resume (or run the map test) once NeverYield has loaded here
+task.spawn(function()
+	local ok, err = pcall(function()
+		Q.load()
+		local tr = Q.data.travel
+		if tr and tr.test then
+			if tr.place == game.PlaceId then
+				Q.data.travel = nil
+				Q.save()
+				local char = Players.LocalPlayer.Character or Players.LocalPlayer.CharacterAdded:Wait()
+				char:WaitForChild("HumanoidRootPart", 20)
+				task.wait(5)
+				Q.mapTest(tr.test)
+			end
+			return
+		end
+		Q.boot()
+	end)
+	if not ok then warn("[NeverYield RPG] " .. tostring(err)) end
+end)
+end
+-- ================== END NULL-BYTE REQUIEM ==================
 
 addcmd('removecmd',{'deletecmd'},function(args, speaker)
 	removecmd(args[1])
