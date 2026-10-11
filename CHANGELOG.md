@@ -5,6 +5,7 @@ Versions before 1.11.3 were reconstructed from the Desktop `.bakN` backups (one 
 
 | Version | Date | Commands | Change |
 |---|---|---|---|
+| 1.30.19 | 10-11 | 643 | Requiem: hair stays on the head in battles; DING on every menu cursor move |
 | 1.30.18 | 10-11 | 643 | Requiem: music fixed (v1.30.17 name clash muted the RPG's own sounds) |
 | 1.30.17 | 10-11 | 643 | Requiem: smart positioner walks to open ground before scenes/fights; game tags + Stop Navigating stay hidden; camera avoids CanQuery-off leaves; rpgdebug guis |
 | 1.30.16 | 10-11 | 643 | Requiem auras from Sol's RNG + Place1 (sword, attacks, limit, gate portal, Hollowed, map); smart camera; living cutscenes + kneel; LaunchExperience gate hop |

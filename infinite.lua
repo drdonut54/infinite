@@ -1,4 +1,4 @@
--- NeverYield v1.30.18 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.30.19 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.30.18" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.30.19" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -32667,7 +32667,7 @@ Q.sfx = {
 	heal = {9117327720, 9117320784}, magic = {9125919607, 9116386594}, static = {9113115842, 9119974504},
 	hum = 9125446564, flash = 9114588980, weep = {9113996909, 9113996681, 9113997213}, whisper = 9126214610,
 	kids = 9112811168, siren = 9119165140, plates = 9117656338, dog = 9113951726, rush = 9117390695,
-	select = 9118728158, gate = 9119468100, door = 9120839552, levelup = 1837762472, victory = 1836473422,
+	select = 9118728158, ding = 78096406204798, gate = 9119468100, door = 9120839552, levelup = 1837762472, victory = 1836473422,
 }
 
 -- the victory fanfare (kas picks one by ear in-game: rpgfanfare <n>; saved). APMOfficial, lengths measured in Studio.
@@ -32905,6 +32905,14 @@ Q.sound = function(id, volume, pitch)
 	if type(id) == "table" then id = WackyState.pick(id) end
 	local ok, s = pcall(WackyState.sound, id, nil, volume or 0.5, false, pitch or 1)
 	if ok and s then s:SetAttribute("NYOwn", true) end
+	return ok and s or nil
+end
+
+-- the menu cursor's DING (kas: every time the highlight moves, in battles and the P menu). A new one cuts the last
+-- one off, so scrolling fast doesn't stack up a wall of ringing.
+Q.ding = function()
+	if Q.lastDing then pcall(function() Q.lastDing:Destroy() end) end
+	Q.lastDing = Q.sound(Q.sfx.ding, 0.35, 1)
 end
 
 -- ---------- travel between real games ----------
@@ -33159,6 +33167,15 @@ Q.flattenAccessories = function(rig)
 			-- layered clothing (WrapLayer) too: kas's checker belt was skipped and flew off on its own physics.
 			-- No matching attachment: weld it to the torso where it is now.
 			local torso = rig:FindFirstChild("UpperTorso") or rig:FindFirstChild("Torso")
+			-- hair, hats and face things ride on the HEAD where they sit now: long hair hangs from NeckAttachment,
+			-- which is on the torso, so the battle idles turned kas's head inside hair that stayed put (kas: "his
+			-- head got all weird in battles")
+			local head = rig:FindFirstChild("Head")
+			local okT, kind = pcall(function() return acc.AccessoryType end)
+			local onHead = head and h and ((okT and (kind == Enum.AccessoryType.Hair or kind == Enum.AccessoryType.Hat or kind == Enum.AccessoryType.Face
+				or kind == Enum.AccessoryType.Eyebrow or kind == Enum.AccessoryType.Eyelash)) or acc.Name:lower():find("hair")
+				or (a1 and (a1.Name == "HairAttachment" or a1.Name == "HatAttachment" or a1.Name:find("^Face"))))
+			if onHead then a0 = nil torso = head end
 			if h and h:IsA("BasePart") and (a0 or torso) then
 				for _, j in ipairs(h:GetChildren()) do
 					if j:IsA("JointInstance") or j:IsA("Constraint") then j:Destroy() end
@@ -34692,7 +34709,7 @@ Q.choose = function(token, options, title, opts)
 		b.TextStrokeTransparency = 0.5
 		b.ZIndex = z + 2
 		b.Parent = box
-		b.MouseEnter:Connect(function() cursor = i draw() end)
+		b.MouseEnter:Connect(function() if cursor ~= i then cursor = i Q.ding() draw() end end)
 		b.MouseButton1Click:Connect(function() if not Q.dragged(box) then picked = i end end)
 		rows[i] = b
 	end
@@ -34702,8 +34719,8 @@ Q.choose = function(token, options, title, opts)
 	end)
 	local conn = UserInputService.InputBegan:Connect(function(input)
 		local k = input.KeyCode
-		if k == Enum.KeyCode.Up or k == Enum.KeyCode.W then cursor = (cursor - 2) % #options + 1 draw() Q.sound(Q.sfx.select, 0.25, 1.4)
-		elseif k == Enum.KeyCode.Down or k == Enum.KeyCode.S then cursor = cursor % #options + 1 draw() Q.sound(Q.sfx.select, 0.25, 1.4)
+		if k == Enum.KeyCode.Up or k == Enum.KeyCode.W then cursor = (cursor - 2) % #options + 1 draw() Q.ding()
+		elseif k == Enum.KeyCode.Down or k == Enum.KeyCode.S then cursor = cursor % #options + 1 draw() Q.ding()
 		elseif k == Enum.KeyCode.Return or k == Enum.KeyCode.E or k == Enum.KeyCode.Z then picked = cursor end
 	end)
 	while not picked and Q.alive(token) do task.wait() end
@@ -36311,7 +36328,7 @@ Q.menuInput = function(B, rows, onPick, onBack, title, onCursor)
 			Q.text(b, {Position = UDim2.new(0, 0, 0, 0), Size = UDim2.new(1, -4, 1, 0), Text = r.sub, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 61,
 				TextColor3 = Color3.fromRGB(200, 210, 240)})
 		end
-		b.MouseEnter:Connect(function() if r.enabled ~= false then cursor = i draw() if onCursor and not r.back then onCursor(i) end end end)
+		b.MouseEnter:Connect(function() if r.enabled ~= false and cursor ~= i then cursor = i Q.ding() draw() if onCursor and not r.back then onCursor(i) end end end)
 		b.MouseButton1Click:Connect(function() if r.enabled ~= false then result = i end end)
 		labels[i] = b
 	end
@@ -36324,7 +36341,7 @@ Q.menuInput = function(B, rows, onPick, onBack, title, onCursor)
 				cursor = (cursor - 1 + step) % #rows + 1
 				if rows[cursor].enabled ~= false then break end
 			end
-			Q.sound(Q.sfx.select, 0.2, 1.5)
+			Q.ding()
 			draw()
 			if onCursor and cursor ~= backRow then onCursor(cursor) end
 		elseif k == Enum.KeyCode.Return or k == Enum.KeyCode.E or k == Enum.KeyCode.Z then
@@ -38666,7 +38683,7 @@ Q.menuList = function(parent, x, y, w, rowH, z)
 				Q.text(b, {Size = UDim2.new(1, -6, 1, 0), Text = r.right, TextSize = b.TextSize, Font = Enum.Font.GothamBold,
 					TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = b.TextColor3, ZIndex = z + 3})
 			end
-			b.MouseEnter:Connect(function() if L.active and L.cursor ~= i then L.cursor = i L.draw() Q.sound(Q.sfx.select, 0.2, 1.4) end end)
+			b.MouseEnter:Connect(function() if L.active and L.cursor ~= i then L.cursor = i L.draw() Q.ding() end end)
 			b.MouseButton1Click:Connect(function() if L.active and L.onClick then L.cursor = i L.draw() L.onClick(i) end end)
 			L.buttons[i] = b
 		end
@@ -38682,7 +38699,7 @@ Q.menuList = function(parent, x, y, w, rowH, z)
 		if #L.rows == 0 then return end
 		L.cursor = (L.cursor - 1 + d) % #L.rows + 1
 		L.draw()
-		Q.sound(Q.sfx.select, 0.25, 1.4)
+		Q.ding()
 	end
 	return L
 end
@@ -38907,8 +38924,8 @@ Q.pauseMenu = function(token)
 		list.onClick = pick
 		page.key = function(k)
 			if picking then
-				if k == "up" then tcur = (tcur - 2) % #ids + 1 showTarget() Q.sound(Q.sfx.select, 0.25, 1.4)
-				elseif k == "down" then tcur = tcur % #ids + 1 showTarget() Q.sound(Q.sfx.select, 0.25, 1.4)
+				if k == "up" then tcur = (tcur - 2) % #ids + 1 showTarget() Q.ding()
+				elseif k == "down" then tcur = tcur % #ids + 1 showTarget() Q.ding()
 				elseif k == "ok" then useOn(tcur)
 				elseif k == "back" then picking = nil msg.Text = "" showTarget() end
 			else
@@ -38993,8 +39010,8 @@ Q.pauseMenu = function(token)
 		cmds.active = false
 		cmds.draw()
 		p.key = function(k)
-			if k == "up" then cur = (cur - 2) % #ids + 1 draw() Q.sound(Q.sfx.select, 0.25, 1.4)
-			elseif k == "down" then cur = cur % #ids + 1 draw() Q.sound(Q.sfx.select, 0.25, 1.4)
+			if k == "up" then cur = (cur - 2) % #ids + 1 draw() Q.ding()
+			elseif k == "down" then cur = cur % #ids + 1 draw() Q.ding()
 			elseif k == "back" then
 				partyHand.Visible = false
 				table.remove(stack)
