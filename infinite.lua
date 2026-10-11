@@ -1,4 +1,4 @@
--- NeverYield v1.30.13 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.30.14 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.30.13" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.30.14" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -33991,11 +33991,36 @@ Q.hideSelf = function(on)
 		-- the "Vane" tag would float alone over the hidden body (the double fights without one)
 		local tag = char and char:FindFirstChild("NYVaneTag", true)
 		if tag then tag.Enabled = false end
+		-- everything that is you: the character, plus anything welded onto it from outside the model (Genovia's own
+		-- hair/outfit pieces showed through Vane's double, overlapping him, kas 2026-10-11). Re-listed twice a second.
+		local list, listed = {}, 0
 		Q.connect("hideSelf", RunService.RenderStepped:Connect(function()
 			local c = Players.LocalPlayer.Character
 			if not c then return end
-			for _, p in ipairs(c:GetDescendants()) do
-				if p:IsA("BasePart") or p:IsA("Decal") then p.LocalTransparencyModifier = 1 end
+			if tick() - listed > 0.5 then
+				listed = tick()
+				list = {}
+				local seen = {}
+				local function add(p)
+					if seen[p] or (Q.folder and p:IsDescendantOf(Q.folder)) then return end
+					seen[p] = true
+					table.insert(list, p)
+					for _, d in ipairs(p:GetDescendants()) do
+						if d:IsA("Decal") or d:IsA("BasePart") then table.insert(list, d) end
+					end
+				end
+				for _, p in ipairs(c:GetDescendants()) do
+					if p:IsA("BasePart") or p:IsA("Decal") then add(p) end
+				end
+				local root = c:FindFirstChild("HumanoidRootPart")
+				if root then
+					local ok, parts = pcall(function() return root:GetConnectedParts(true) end)
+					for _, p in ipairs(ok and parts or {}) do add(p) end
+				end
+				Q.hiddenParts = list
+			end
+			for _, p in ipairs(list) do
+				if p.Parent then p.LocalTransparencyModifier = 1 end
 			end
 		end))
 	else
@@ -34009,6 +34034,10 @@ Q.hideSelf = function(on)
 				if p:IsA("BasePart") or p:IsA("Decal") then p.LocalTransparencyModifier = 0 end
 			end
 		end
+		for _, p in ipairs(Q.hiddenParts or {}) do
+			pcall(function() if p.Parent then p.LocalTransparencyModifier = 0 end end)
+		end
+		Q.hiddenParts = nil
 		if root then root.Anchored = Q.selfWasAnchored or false end
 		if hum and Q.selfSpeed then hum.WalkSpeed = Q.selfSpeed end
 		Q.selfSpeed = nil
