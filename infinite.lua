@@ -1,4 +1,4 @@
--- NeverYield v1.30.16 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.30.17 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.30.16" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.30.17" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -34988,38 +34988,74 @@ Q.face = function(rig, target)
 end
 
 -- the game's own HUD (hotbars, buttons, "Stop Navigating"...) hides during scenes and battles
+-- is this one of ours (stage rigs, our tags, our GUI)?
+Q.isOurs = function(d)
+	return (Q.folder and d:IsDescendantOf(Q.folder)) or (Q.gui and d:IsDescendantOf(Q.gui)) or d.Name == "NYVaneTag" or d.Name == "NYTag" or d.Name == "NYBubble"
+end
+
+-- where a BillboardGui floats (its Adornee, else the part or attachment it sits in)
+Q.guiPos = function(g)
+	local a = g.Adornee or g.Parent
+	if a and a:IsA("BasePart") then return a.Position end
+	if a and a:IsA("Attachment") then return a.WorldPosition end
+	if a and a:IsA("Model") then local ok, cf = pcall(function() return a:GetPivot() end) if ok then return cf.Position end end
+	return nil
+end
+
+-- should this be hidden while a scene or a fight is on? (the game's screens, overhead tags near the stage, its
+-- guide beams and chevrons)
+Q.gameGuiNear = function(d)
+	if Q.isOurs(d) then return false end
+	if d:IsA("ScreenGui") then
+		local pg = Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")
+		return pg ~= nil and d.Parent == pg
+	end
+	if d:IsA("Beam") then return true end
+	if d:IsA("BillboardGui") then
+		local char = Players.LocalPlayer.Character
+		if char and (d:IsDescendantOf(char) or (d.Adornee and d.Adornee:IsDescendantOf(char))) then return true end
+		local p = Q.guiPos(d)
+		local c = Q.anchor and Q.anchor.Position or (Q.root() and Q.root().Position)
+		return p ~= nil and c ~= nil and (p - c).Magnitude < 60
+	end
+	return false
+end
+
+-- hide one thing and keep it hidden: games re-enable their tags and their "Stop Navigating" button (kas saw both
+-- in Medieval Life), so an Enabled watcher switches it straight back off
+Q.hideOne = function(d)
+	if Q.hiddenSet[d] then
+		if d.Enabled then d.Enabled = false end
+		return
+	end
+	if not d.Enabled then
+		-- off right now: only watched, in case the game turns it on during the scene
+		Q.hiddenSet[d] = "watch"
+	else
+		d.Enabled = false
+		Q.hiddenSet[d] = true
+		table.insert(Q.hiddenGuis, d)
+	end
+	table.insert(Q.hideConns, d:GetPropertyChangedSignal("Enabled"):Connect(function()
+		if Q.hiddenGuis and d.Enabled then
+			if Q.hiddenSet[d] == "watch" then Q.hiddenSet[d] = true table.insert(Q.hiddenGuis, d) end
+			d.Enabled = false
+		end
+	end))
+end
+
 Q.hideGameGui = function(on)
 	local pg = Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")
 	if on then
 		if Q.hiddenGuis then return end
-		Q.hiddenGuis = {}
-		if pg then
-			for _, g in ipairs(pg:GetChildren()) do
-				if g:IsA("ScreenGui") and g.Enabled and g ~= Q.gui then
-					g.Enabled = false
-					table.insert(Q.hiddenGuis, g)
-				end
-			end
+		Q.hiddenGuis, Q.hiddenSet, Q.hideConns = {}, {}, {}
+		local function check(d)
+			if (d:IsA("ScreenGui") or d:IsA("Beam") or d:IsA("BillboardGui")) and Q.gameGuiNear(d) then pcall(Q.hideOne, d) end
 		end
-		-- the game's overhead tags on you (name, rank, level badges) and its own guide beams (Medieval Life's GPS
-		-- chevrons) would show in the shots: switch them off, ours stay
-		local char = Players.LocalPlayer.Character
-		for _, root in ipairs({char, workspace}) do
-			for _, d in ipairs(root and root:GetDescendants() or {}) do
-				local ours = (Q.folder and d:IsDescendantOf(Q.folder)) or d.Name == "NYVaneTag" or d.Name == "NYTag" or d.Name == "NYBubble"
-				if not ours and ((d:IsA("BillboardGui") and root == char) or d:IsA("Beam")) and d.Enabled then
-					d.Enabled = false
-					table.insert(Q.hiddenGuis, d)
-				end
-			end
-		end
-		if pg then
-			for _, b in ipairs(pg:GetDescendants()) do
-				if b:IsA("BillboardGui") and b.Enabled and b.Adornee and char and b.Adornee:IsDescendantOf(char) then
-					b.Enabled = false
-					table.insert(Q.hiddenGuis, b)
-				end
-			end
+		for _, root in ipairs({pg, Players.LocalPlayer.Character, workspace}) do
+			for _, d in ipairs(root and root:GetDescendants() or {}) do check(d) end
+			-- and anything the game makes while the scene is on (a new tag, a new navigation chevron)
+			if root then table.insert(Q.hideConns, root.DescendantAdded:Connect(function(d) task.defer(function() if Q.hiddenGuis then check(d) end end) end)) end
 		end
 		Q.coreWas = {}
 		for _, t in ipairs({Enum.CoreGuiType.Backpack, Enum.CoreGuiType.Chat, Enum.CoreGuiType.PlayerList, Enum.CoreGuiType.Health}) do
@@ -35030,8 +35066,10 @@ Q.hideGameGui = function(on)
 			end
 		end
 	elseif Q.hiddenGuis then
+		for _, c in ipairs(Q.hideConns or {}) do c:Disconnect() end
+		Q.hideConns = nil
 		for _, g in ipairs(Q.hiddenGuis) do pcall(function() if g.Parent then g.Enabled = true end end) end
-		Q.hiddenGuis = nil
+		Q.hiddenGuis, Q.hiddenSet = nil, nil
 		for _, t in ipairs(Q.coreWas or {}) do pcall(function() StarterGui:SetCoreGuiEnabled(t, true) end) end
 		Q.coreWas = nil
 	end
@@ -35068,6 +35106,7 @@ Q.camScan = function(center)
 		end
 	end
 	Q.camSkip, Q.camScanAt = skip, center
+	Q.leafFilter(center)
 end
 
 Q.camParams = function()
@@ -35187,6 +35226,8 @@ Q.camScore = function(cam, look, opts, params)
 	-- right against (or inside) somebody
 	local near = Q.nearestBody(cam)
 	if near < 0.8 then score = score - 45 elseif near < 1.6 then score = score - (1.6 - near) * 8 end
+	-- inside a bush or a tree's leaves (CanQuery-off foliage the rays can't see: the Ch2 campfire)
+	if Q.inLeaf(cam, 0.5) then score = score - 40 end
 	if opts.want then score = score - (cam - opts.want).Magnitude * 0.3 end
 	return score
 end
@@ -35269,6 +35310,146 @@ Q.battleWide = function(B)
 	Q.camGo(cam, look, 0.6)
 end
 
+-- [43_spot.lua]
+-- ---------- the smart positioner ----------
+-- Scenes and fights used to start exactly where you stood, so a Hollowed that caught you against a planter wall
+-- gave a cramped top-down fight behind Vane's back (kas, Genovia). Now, before an unplanned scene or a fight, the
+-- floor around you is checked for somewhere roomier: open and level, with space for the formation and for the
+-- camera behind and beside it. If somewhere close is clearly better, Vane WALKS there (a few steps, the real
+-- character with Humanoid:MoveTo, so it never looks like a teleport); otherwise everything stays where you are.
+
+-- where the people in a scene stand (x right, z forward), checked for room instead of the battle line
+Q.scenePts = {{0, 5}, {-4, 5}, {4, 5}, {0, 9}, {-3, 1.5}, {3, 1.5}, {0, -6}}
+
+-- ---------- foliage the camera can't see ----------
+-- Decorative leaves are often CanQuery = false (invisible to every raycast and overlap query) or see-through, so the
+-- smart camera happily parked inside a tree at the Ch2 campfire. They can only be found by walking the whole map
+-- once (spread over frames); camScan then keeps the ones near the stage and camScore keeps the camera out of them.
+Q.leafScan = function()
+	if Q.leafAll and Q.leafPlace == game.PlaceId and tick() - Q.leafAt < 90 then return end
+	local all, n = {}, 0
+	for _, d in ipairs(workspace:GetDescendants()) do
+		n = n + 1
+		if n % 4000 == 0 then task.wait() end
+		if d:IsA("BasePart") and d.Transparency < 0.95 and (not d.CanQuery or d.Transparency > 0.6)
+			and d.Size.Magnitude < 150 and not (Q.folder and d:IsDescendantOf(Q.folder)) then
+			table.insert(all, d)
+		end
+	end
+	Q.leafAll, Q.leafPlace, Q.leafAt = all, game.PlaceId, tick()
+	Q.leafNear = nil
+end
+
+-- the leaves near a point (called by camScan, so it follows the stage)
+Q.leafFilter = function(center)
+	local near = {}
+	for _, p in ipairs(Q.leafAll or {}) do
+		if p.Parent and (p.Position - center).Magnitude < 70 + p.Size.Magnitude / 2 then table.insert(near, p) end
+	end
+	Q.leafNear = near
+end
+
+-- is this point inside (or within pad of) a leaf the raycasts can't see?
+Q.inLeaf = function(pt, pad)
+	pad = pad or 0.6
+	for _, p in ipairs(Q.leafNear or {}) do
+		if p.Parent then
+			local l = p.CFrame:PointToObjectSpace(pt)
+			local h = p.Size / 2
+			if math.abs(l.X) < h.X + pad and math.abs(l.Y) < h.Y + pad and math.abs(l.Z) < h.Z + pad then return true end
+		end
+	end
+	return false
+end
+
+-- ---------- how good a spot is ----------
+-- room for the formation (Q.fitArena's rays) + room for the camera behind and beside it
+Q.spotScore = function(cf, battle)
+	local fit, room = Q.fitArena(cf, not battle and Q.scenePts or nil)
+	local mid = fit:PointToWorldSpace(Vector3.new(0, 2.5, battle and -9 or -4))
+	local cam = 0
+	-- (behind at chest height too: over-the-shoulder shots need room behind Vane, a low planter wall included)
+	for _, c in ipairs({{0, 5, 9}, {0, 2.5, 6}, {-11, 5, -4}, {11, 5, -4}}) do
+		local p = fit:PointToWorldSpace(Vector3.new(c[1], c[2], c[3]))
+		cam = cam + Q.clearFrac(mid, p) * 1.2
+		if Q.inLeaf(p, 1) then cam = cam - 1 end
+	end
+	return room + cam, fit
+end
+
+-- can Vane walk straight from a to b (nothing at knee or chest height, ground all the way)?
+Q.walkable = function(a, b, floor)
+	for _, h in ipairs({1, 3}) do
+		local up = Vector3.new(0, h, 0)
+		local dir = b - a
+		if Q.clearFrac(a + up, b + up + dir.Unit * 1.5) < 0.999 then return false end
+	end
+	for _, k in ipairs({0.33, 0.66}) do
+		local p = a:Lerp(b, k)
+		if math.abs(Q.groundY(p, floor - 10) - floor) > 1.2 then return false end
+	end
+	return true
+end
+
+-- find the best spot near you and walk there. opts = {battle = true (room for a fight), face = Vector3 (keep
+-- facing this way, like the Hollowed that caught you), max = studs}. Sets and returns Q.anchor.
+Q.smartSpot = function(opts)
+	opts = opts or {}
+	local root = Q.root()
+	if not root then return Q.makeAnchor() end
+	Q.leafScan()
+	local p = root.Position
+	local floor = Q.groundY(p, p.Y - 3)
+	local look = opts.face or workspace.CurrentCamera.CFrame.LookVector
+	look = look * Vector3.new(1, 0, 1)
+	if look.Magnitude < 0.1 then look = root.CFrame.LookVector * Vector3.new(1, 0, 1) end
+	local here = Vector3.new(p.X, floor, p.Z)
+	local start = CFrame.lookAt(here, here + look.Unit)
+	Q.camScan(here)
+	Q.leafFilter(here)
+	-- staying put gets a head start: most of the time nothing moves
+	local bestScore, best = Q.spotScore(start, opts.battle)
+	bestScore = bestScore + 1
+	local bestPos, checked = here, 0
+	local max = opts.max or 8
+	for _, r in ipairs({3, 5.5, 8}) do
+		if r <= max then
+			for i = 0, 7 do
+				local a = math.rad(i * 45 + (r == 5.5 and 22.5 or 0))
+				local c = here + Vector3.new(math.cos(a) * r, 0, math.sin(a) * r)
+				local gy = Q.groundY(c, floor - 10)
+				c = Vector3.new(c.X, gy, c.Z)
+				if math.abs(gy - floor) < 1.2 and not Q.blockedAt(CFrame.new(c)) and Q.walkable(here, c, floor) then
+					local s, fit = Q.spotScore(start - here + c, opts.battle)
+					s = s - r * 0.12
+					if s > bestScore then bestScore, best, bestPos = s, fit, c end
+					checked = checked + 1
+					if checked % 3 == 0 then task.wait() end
+				end
+			end
+		end
+	end
+	Q.lastSmart = {moved = (bestPos - here).Magnitude, score = bestScore, from = here, to = bestPos}
+	if bestPos ~= here then
+		-- a few natural steps there (never a snap); if something stops you, the scene is staged where you ended up
+		local hum = Players.LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+		if hum and hum.WalkSpeed > 0 and not root.Anchored then
+			local done = false
+			local conn = hum.MoveToFinished:Connect(function() done = true end)
+			hum:MoveTo(bestPos)
+			local t0 = tick()
+			while not done and tick() - t0 < math.min(2.5, (bestPos - here).Magnitude / math.max(hum.WalkSpeed, 4) + 1) do task.wait() end
+			conn:Disconnect()
+			hum:MoveTo(root.Position)
+		end
+		local now = root.Position
+		local gy = Q.groundY(now, floor)
+		best = CFrame.new(Vector3.new(now.X, gy, now.Z)) * (best - best.Position)
+	end
+	Q.anchor = best
+	return best
+end
+
 -- [45_scenes.lua]
 -- ---------- the scene runner ----------
 -- Q.chapters[n].scenes = {{id, title, run = function(token) ... end}}. Progress is saved at the start of every
@@ -35315,13 +35496,25 @@ Q.sceneStart = function(spotName)
 	if spot then
 		Q.anchor = spot
 		-- stand Vane on the spot
+		-- close by: walk onto it (kas: no teleports). Far away: put Vane there
 		local root = Q.root()
-		if root then root.CFrame = spot + Vector3.new(0, 3, 0) end
+		local hum = Players.LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+		local d = root and (root.Position - spot.Position) * Vector3.new(1, 0, 1)
+		if root and hum and d.Magnitude < 12 and hum.WalkSpeed > 0 and not root.Anchored then
+			hum:MoveTo(spot.Position)
+			local t0 = tick()
+			while tick() - t0 < 2.5 and ((root.Position - spot.Position) * Vector3.new(1, 0, 1)).Magnitude > 1.5 do task.wait() end
+			hum:MoveTo(root.Position)
+		elseif root then
+			root.CFrame = spot + Vector3.new(0, 3, 0)
+		end
 		task.wait(0.2)
 	elseif not Q.anchor then
-		-- one staging point for the whole chapter, so nobody jumps around between scenes
-		Q.makeAnchor()
+		-- one staging point for the whole chapter, so nobody jumps around between scenes; picked (and walked to)
+		-- so there's room for everyone and the camera
+		Q.smartSpot()
 	end
+	Q.leafScan()
 	Q.freeze(true)
 	Q.hideGameGui(true)
 	-- Vane faces into the scene
@@ -35547,13 +35740,13 @@ Q.blockedAt = function(cf)
 	return false
 end
 
-Q.fitArena = function(a)
+Q.fitArena = function(a, pts)
 	local o = a.Position + Vector3.new(0, 2.5, 0)
 	local best, bestScore
 	for _, yaw in ipairs({0, 30, -30, 60, -60, 90, -90, 120, -120, 150, -150, 180}) do
 		local cf = a * CFrame.Angles(0, math.rad(yaw), 0)
 		local score = 0
-		for _, s in ipairs({{0, 17}, {-6, 19}, {6, 19}, {0, 24}, {-5, 1.5}, {5, 1.5}, {0, -6}}) do
+		for _, s in ipairs(pts or {{0, 17}, {-6, 19}, {6, 19}, {0, 24}, {-5, 1.5}, {5, 1.5}, {0, -6}}) do
 			local p = cf:PointToWorldSpace(Vector3.new(s[1], 2.5, -s[2]))
 			score = score + Q.clearFrac(o, p)
 			-- a spot up on a ledge or down a step counts against this direction
@@ -36346,6 +36539,7 @@ end
 Q.fight = function(token, spec)
 	local B = {token = token, party = {}, enemies = {}, queue = {}, ready = {}, hooks = spec.hooks or {}, xp = 0, drops = {}, tutorial = spec.tutorial, spec = spec}
 	Q.B = B
+	Q.leafScan()
 	local a = Q.anchor or Q.makeAnchor()
 	-- in a cramped spot (a hall, a stairwell) the enemies stand closer, so the fight fits and the camera can see it
 	local squeeze = 1
@@ -38041,9 +38235,9 @@ Q.explore = function(token, spec)
 					r.rig:Destroy()
 					-- the fight happens right here, facing where it came from
 					local keep = Q.anchor
+					-- (a few steps to open ground first if you were caught against a wall)
 					local look = (rr.Position - me.Position) * Vector3.new(1, 0, 1)
-					local gy = Q.groundY(me.Position, me.Position.Y - 3)
-					Q.anchor = CFrame.lookAt(Vector3.new(me.Position.X, gy, me.Position.Z), Vector3.new(me.Position.X, gy, me.Position.Z) + (look.Magnitude > 0.1 and look.Unit or Vector3.new(0, 0, -1)))
+					Q.smartSpot({battle = true, face = look.Magnitude > 0.1 and look.Unit or nil})
 					Q.objective(nil)
 					local enemies = {r.enemy}
 					for _, extra in ipairs(r.party or {}) do table.insert(enemies, extra) end
@@ -39490,7 +39684,7 @@ addcmd('rpgdebug',{},function(args, speaker)
 			local token = Q.token
 			if not Q.data.joined.seris then Q.join("seris") end
 			Q.anchor = nil
-			Q.makeAnchor()
+			Q.smartSpot({battle = true})
 			Q.battle(token, {enemies = {args[2] or "hollowed_student"}, music = "battle", tutorial = args[3] == "tutorial", fit = true})
 			Q.stop()
 		end)
@@ -39499,8 +39693,29 @@ addcmd('rpgdebug',{},function(args, speaker)
 		Q.stop()
 		Q.anchor = nil
 		Q.hollowLineup(tonumber(args[2]) or 10)
+	elseif args[1] == "guis" then
+		-- every game screen, overhead tag and beam near you (run it mid-scene if one of the game's shows through;
+		-- the list is copied, paste it to the dev)
+		local lines = {}
+		local root = Q.root()
+		local pg = Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")
+		for _, d in ipairs(pg and pg:GetChildren() or {}) do
+			if d:IsA("ScreenGui") then table.insert(lines, (d.Enabled and "ON  " or "off ") .. "ScreenGui " .. d:GetFullName()) end
+		end
+		for _, d in ipairs(workspace:GetDescendants()) do
+			if (d:IsA("BillboardGui") or d:IsA("SurfaceGui") or d:IsA("Beam")) and not Q.isOurs(d) then
+				local p = d:IsA("Beam") and (d.Attachment0 and d.Attachment0.WorldPosition) or Q.guiPos(d)
+				if p and root and (p - root.Position).Magnitude < 40 then
+					table.insert(lines, (d.Enabled and "ON  " or "off ") .. d.ClassName .. " " .. d:GetFullName() .. (d:IsA("BillboardGui") and d.Adornee and (" @ " .. d.Adornee:GetFullName()) or ""))
+				end
+			end
+		end
+		local text = table.concat(lines, "\n")
+		print(text)
+		pcall(setclipboard, text)
+		notify('rpgdebug guis', #lines .. " found (copied, also in F9 console)")
 	else
-		notify('rpgdebug', 'rpgdebug chapter <n> [scene] | rpgdebug battle [enemy] [tutorial] | rpgdebug lineup [count]')
+		notify('rpgdebug', 'rpgdebug chapter <n> [scene] | rpgdebug battle [enemy] [tutorial] | rpgdebug lineup [count] | rpgdebug guis')
 	end
 end)
 
