@@ -1,4 +1,4 @@
--- NeverYield v1.30.17 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.30.18 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.30.17" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.30.18" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -34989,7 +34989,7 @@ end
 
 -- the game's own HUD (hotbars, buttons, "Stop Navigating"...) hides during scenes and battles
 -- is this one of ours (stage rigs, our tags, our GUI)?
-Q.isOurs = function(d)
+Q.ourGui = function(d)
 	return (Q.folder and d:IsDescendantOf(Q.folder)) or (Q.gui and d:IsDescendantOf(Q.gui)) or d.Name == "NYVaneTag" or d.Name == "NYTag" or d.Name == "NYBubble"
 end
 
@@ -35005,7 +35005,7 @@ end
 -- should this be hidden while a scene or a fight is on? (the game's screens, overhead tags near the stage, its
 -- guide beams and chevrons)
 Q.gameGuiNear = function(d)
-	if Q.isOurs(d) then return false end
+	if Q.ourGui(d) then return false end
 	if d:IsA("ScreenGui") then
 		local pg = Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")
 		return pg ~= nil and d.Parent == pg
@@ -39703,7 +39703,7 @@ addcmd('rpgdebug',{},function(args, speaker)
 			if d:IsA("ScreenGui") then table.insert(lines, (d.Enabled and "ON  " or "off ") .. "ScreenGui " .. d:GetFullName()) end
 		end
 		for _, d in ipairs(workspace:GetDescendants()) do
-			if (d:IsA("BillboardGui") or d:IsA("SurfaceGui") or d:IsA("Beam")) and not Q.isOurs(d) then
+			if (d:IsA("BillboardGui") or d:IsA("SurfaceGui") or d:IsA("Beam")) and not Q.ourGui(d) then
 				local p = d:IsA("Beam") and (d.Attachment0 and d.Attachment0.WorldPosition) or Q.guiPos(d)
 				if p and root and (p - root.Position).Magnitude < 40 then
 					table.insert(lines, (d.Enabled and "ON  " or "off ") .. d.ClassName .. " " .. d:GetFullName() .. (d:IsA("BillboardGui") and d.Adornee and (" @ " .. d.Adornee:GetFullName()) or ""))
