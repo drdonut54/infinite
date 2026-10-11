@@ -1,4 +1,4 @@
--- NeverYield v1.29.1 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.29.2 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.29.1" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.29.2" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -32870,8 +32870,10 @@ Q.playMusic = function(kind, volume)
 		if Q.musicSound then WackyState.fadeMusic(Q.musicSound, 0, 1.5) end
 		return
 	end
+	if Q.muteGame then Q.muteGame(true) end
 	if not Q.musicSound or not Q.musicSound.Parent then
 		Q.musicSound = WackyState.playlist(ids, 0)
+		Q.musicSound:SetAttribute("NYOwn", true)
 	else
 		WackyState.playlistSet(Q.musicSound, ids)
 	end
@@ -32880,7 +32882,8 @@ end
 
 Q.sound = function(id, volume, pitch)
 	if type(id) == "table" then id = WackyState.pick(id) end
-	pcall(WackyState.sound, id, nil, volume or 0.5, false, pitch or 1)
+	local ok, s = pcall(WackyState.sound, id, nil, volume or 0.5, false, pitch or 1)
+	if ok and s then s:SetAttribute("NYOwn", true) end
 end
 
 -- ---------- travel between real games ----------
@@ -32944,6 +32947,15 @@ end
 
 -- [20_stage.lua]
 -- ---------- the stage: everything the RPG puts into the real game (only you see it) ----------
+-- weld p1 to p0 exactly where it is now (a classic Weld with the offset written in, so it can't settle wrong)
+Q.weldTo = function(p0, p1)
+	local w = Instance.new("Weld")
+	w.Part0, w.Part1 = p0, p1
+	w.C0 = p0.CFrame:ToObjectSpace(p1.CFrame)
+	w.Parent = p1
+	return w
+end
+
 Q.stage = function()
 	if Q.folder and Q.folder.Parent then return Q.folder end
 	local m = Instance.new("Model")
@@ -33053,15 +33065,11 @@ Q.rig = function(look)
 	if head and look.hair then
 		local hair = NeverYieldAgartha.part(rig, Vector3.new(head.Size.X * 1.08, head.Size.Y * 0.45, head.Size.Z * 1.08), head.CFrame * CFrame.new(0, head.Size.Y * 0.38, 0.05), look.hair, Enum.Material.SmoothPlastic)
 		hair.Anchored, hair.CanCollide = false, false
-		local w = Instance.new("WeldConstraint")
-		w.Part0, w.Part1 = head, hair
-		w.Parent = hair
+		Q.weldTo(head, hair)
 		if look.longHair then
 			local back = NeverYieldAgartha.part(rig, Vector3.new(head.Size.X * 0.95, head.Size.Y * 1.3, head.Size.Z * 0.3), head.CFrame * CFrame.new(0, -head.Size.Y * 0.2, head.Size.Z * 0.5), look.hair, Enum.Material.SmoothPlastic)
 			back.Anchored, back.CanCollide = false, false
-			local w2 = Instance.new("WeldConstraint")
-			w2.Part0, w2.Part1 = head, back
-			w2.Parent = back
+			Q.weldTo(head, back)
 		end
 	end
 	if look.props then pcall(look.props, rig, head) end
@@ -33412,6 +33420,64 @@ Q.namedSpot = function(name)
 	return CFrame.new(s.x, s.y, s.z) * CFrame.Angles(0, math.rad(s.dir or 0), 0)
 end
 
+-- The game's own music would play on top of ours: while the RPG's music is on, every long or looped sound the
+-- game plays (music, ambience) is muted, and put back exactly as it was when the RPG stops.
+Q.muted = setmetatable({}, {__mode = "k"})
+Q.isOurs = function(s)
+	if s == Q.musicSound or s:GetAttribute("NYOwn") then return true end
+	if Q.folder and s:IsDescendantOf(Q.folder) then return true end
+	local char = Players.LocalPlayer.Character
+	return char and s:IsDescendantOf(char) and s:FindFirstAncestor("NYKey") ~= nil
+end
+Q.muteOne = function(s)
+	if not s:IsA("Sound") or Q.muted[s] ~= nil or Q.isOurs(s) then return end
+	if not s.Looped and not s.IsLoaded then
+		-- not loaded yet: decide once we know how long it is
+		local c
+		c = s.Loaded:Connect(function()
+			c:Disconnect()
+			if Q.muting then pcall(Q.muteOne, s) end
+		end)
+		return
+	end
+	if not (s.Looped or s.TimeLength >= 30) then return end
+	Q.muted[s] = s.Volume
+	s.Volume = 0
+	-- games fade their music back in or swap tracks: keep it at zero while we're muting
+	local c = s:GetPropertyChangedSignal("Volume"):Connect(function()
+		if Q.muting and Q.muted[s] ~= nil and s.Volume > 0 then
+			Q.muted[s] = s.Volume
+			s.Volume = 0
+		end
+	end)
+	Q.muteConns = Q.muteConns or {}
+	table.insert(Q.muteConns, c)
+end
+Q.muteGame = function(on)
+	if on and not Q.muting then
+		Q.muting = true
+		for _, root in ipairs({workspace, SoundService, Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")}) do
+			if root then
+				for _, d in ipairs(root:GetDescendants()) do
+					if d:IsA("Sound") then pcall(Q.muteOne, d) end
+				end
+				Q.connect("mute_" .. root.ClassName, root.DescendantAdded:Connect(function(d)
+					if d:IsA("Sound") then task.defer(function() pcall(Q.muteOne, d) end) end
+				end))
+			end
+		end
+	elseif not on and Q.muting then
+		Q.muting = false
+		for _, c in ipairs(Q.muteConns or {}) do pcall(function() c:Disconnect() end) end
+		Q.muteConns = {}
+		for _, name in ipairs({"Workspace", "SoundService", "PlayerGui"}) do WackyState.disconnect("rpg_mute_" .. name) end
+		for s, vol in pairs(Q.muted) do
+			pcall(function() if s.Parent then s.Volume = vol end end)
+		end
+		Q.muted = setmetatable({}, {__mode = "k"})
+	end
+end
+
 Q.clearStage = function()
 	if Q.folder then pcall(function() Q.folder:Destroy() end) Q.folder = nil end
 end
@@ -33428,7 +33494,10 @@ Q.stop = function(keep)
 	if Q.hideSelf then pcall(Q.hideSelf, false) end
 	if Q.freeze then pcall(Q.freeze, false) end
 	if not keep and Q.gui then pcall(function() Q.gui:Destroy() end) Q.gui = nil end
-	if not keep then Q.playMusic(nil) end
+	if not keep then
+		Q.playMusic(nil)
+		Q.muteGame(false)
+	end
 end
 
 -- [25_look.lua]
@@ -33461,9 +33530,7 @@ Q.greatsword = function(parent)
 	grip.Anchored = false
 	local function weld(p)
 		p.CanCollide, p.Massless, p.CanTouch, p.CanQuery, p.Anchored = false, true, false, false, false
-		local w = Instance.new("WeldConstraint")
-		w.Part0, w.Part1 = grip, p
-		w.Parent = p
+		Q.weldTo(grip, p)
 		return p
 	end
 	local L = Q.swordMesh.size.Y
@@ -33541,13 +33608,14 @@ Q.wieldSword = function(char, where)
 	local attachTo, offset
 	if where == "hand" then
 		attachTo = char:FindFirstChild("RightHand") or char:FindFirstChild("Right Arm")
-		offset = attachTo and attachTo.Name == "Right Arm" and CFrame.new(0, -1, -0.2) * CFrame.Angles(math.rad(-90), 0, 0) or CFrame.new(0, -0.15, -0.2) * CFrame.Angles(math.rad(-90), 0, 0)
+		-- ready stance: blade up and forward at 45 degrees
+		offset = attachTo and attachTo.Name == "Right Arm" and CFrame.new(0, -1, -0.2) * CFrame.Angles(math.rad(-45), 0, 0) or CFrame.new(0, -0.15, -0.2) * CFrame.Angles(math.rad(-45), 0, 0)
 	else
 		attachTo = char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
 		offset = CFrame.new(0, 0.2, 0.65) * CFrame.Angles(0, 0, math.rad(35)) * CFrame.new(0, -1.6, 0)
 	end
 	if not attachTo then model:Destroy() return end
-	grip.CFrame = attachTo.CFrame * offset
+	model:PivotTo(attachTo.CFrame * offset)
 	local w = Instance.new("Weld")
 	w.Part0, w.Part1 = attachTo, grip
 	w.C0 = offset
@@ -33582,9 +33650,7 @@ Q.vaneLook = function(on)
 						{CanCollide = false, Massless = true, Transparency = 0.2})
 					ink.Name = "NYArmInk"
 					ink.Anchored = false
-					local w = Instance.new("WeldConstraint")
-					w.Part0, w.Part1 = arm, ink
-					w.Parent = ink
+					Q.weldTo(arm, ink)
 				end
 			end
 		end
@@ -33615,9 +33681,7 @@ Q.ink = function(rig, armName, count)
 		local ink = NeverYieldAgartha.part(rig, Vector3.new(w, 0.045, 0.04), arm.CFrame * CFrame.new(-arm.Size.X * 0.05, -arm.Size.Y * 0.42 + i * arm.Size.Y * 0.09, -arm.Size.Z / 2 - 0.01), Q.cyan, Enum.Material.Neon, nil,
 			{CanCollide = false, Massless = true, Transparency = 0.15})
 		ink.Anchored = false
-		local wc = Instance.new("WeldConstraint")
-		wc.Part0, wc.Part1 = arm, ink
-		wc.Parent = ink
+		Q.weldTo(arm, ink)
 	end
 end
 
@@ -33633,11 +33697,7 @@ Q.looks = {
 				stylus.Anchored = false
 				local tipPart = NeverYieldAgartha.part(rig, Vector3.new(0.1, 0.1, 0.1), stylus.CFrame * CFrame.new(0.45, 0, 0), Q.cyan, Enum.Material.Neon, "Ball", {CanCollide = false, Massless = true})
 				tipPart.Anchored = false
-				for _, p in ipairs({stylus, tipPart}) do
-					local w = Instance.new("WeldConstraint")
-					w.Part0, w.Part1 = hand, p
-					w.Parent = p
-				end
+				for _, p in ipairs({stylus, tipPart}) do Q.weldTo(hand, p) end
 			end
 		end},
 	hollowedStudent = {name = "#%&@?!_", hollowed = true, tagColor = Color3.fromRGB(170, 170, 180), scrambleTag = true},
@@ -34216,9 +34276,7 @@ Q.keyProp = function(on)
 		{CanCollide = false, Massless = true})
 	key.Name = "NYKey"
 	key.Anchored = false
-	local w = Instance.new("WeldConstraint")
-	w.Part0, w.Part1 = hand, key
-	w.Parent = key
+	Q.weldTo(hand, key)
 	local l = Instance.new("PointLight")
 	l.Color, l.Range, l.Brightness = Color3.fromRGB(110, 200, 255), 9, 2
 	l.Parent = key
