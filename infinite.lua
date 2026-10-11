@@ -1,4 +1,4 @@
--- NeverYield v1.30.14 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.30.15 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.30.14" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.30.15" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -33572,8 +33572,37 @@ Q.isOurs = function(s)
 	local char = Players.LocalPlayer.Character
 	return char and s:IsDescendantOf(char) and s:FindFirstAncestor("NYKey") ~= nil
 end
+-- in battles the game's short sounds go quiet too (kas heard a ticking that spammed itself in Genovia battles: the
+-- game's own short clips, e.g. its clock/UI, which the music mute leaves alone)
+Q.mutedShort = setmetatable({}, {__mode = "k"})
+Q.muteShort = function(on)
+	Q.shortOn = on
+	if on then
+		for _, root in ipairs({workspace, SoundService, Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")}) do
+			if root then
+				for _, d in ipairs(root:GetDescendants()) do
+					if d:IsA("Sound") then pcall(Q.muteOne, d) end
+				end
+			end
+		end
+	else
+		for s, group in pairs(Q.mutedShort) do
+			pcall(function()
+				if s.Parent then s.SoundGroup = group or nil end
+				Q.muted[s] = nil
+			end)
+		end
+		Q.mutedShort = setmetatable({}, {__mode = "k"})
+	end
+end
 Q.muteOne = function(s)
 	if not s:IsA("Sound") or Q.muted[s] ~= nil or Q.isOurs(s) then return end
+	if Q.shortOn and not (s.Looped or s.TimeLength >= 30) then
+		Q.mutedShort[s] = s.SoundGroup or false
+		Q.muted[s] = s.SoundGroup or false
+		s.SoundGroup = Q.silentGroup()
+		return
+	end
 	if not s.Looped and not s.IsLoaded then
 		-- not loaded yet: decide once we know how long it is
 		local c
@@ -33615,7 +33644,10 @@ Q.muteGame = function(on)
 					if d:IsA("Sound") then pcall(Q.muteOne, d) end
 				end
 				Q.connect("mute_" .. root.ClassName, root.DescendantAdded:Connect(function(d)
-					if d:IsA("Sound") then task.defer(function() pcall(Q.muteOne, d) end) end
+					if d:IsA("Sound") then
+						-- (in a battle, at once: a deferred mute let the first tick through)
+						if Q.shortOn then pcall(Q.muteOne, d) else task.defer(function() pcall(Q.muteOne, d) end) end
+					end
 				end))
 			end
 		end
@@ -35792,6 +35824,7 @@ Q.fight = function(token, spec)
 	end
 	Q.battleHud(B)
 	Q.idleStart(B)
+	Q.muteShort(true)
 	-- the swirl into battle: white flash, then the camera sweeps around the enemies
 	Q.sound(Q.sfx.flash, 0.5, 1.2)
 	task.spawn(Q.flash, Color3.new(1, 1, 1), 0.05)
@@ -35933,13 +35966,18 @@ Q.victory = function(B)
 			end
 			last = best
 		end
-		local k = 0
+		-- every rendered frame, gliding between the precomputed angles (stepping every 0.04 s looked laggy, kas)
+		local t0 = tick()
+		local pos = last
 		-- (closing the window ends the battle: stop, or this would grab the camera back after its release)
 		while Q.alive(B.token) and not B.ended do
-			last = cams[k % steps] or last
-			Q.camTo(last, c, 0)
-			k = k + 1
-			task.wait(0.04)
+			local f = (tick() - t0) * 12 -- angles per second: a full circle every 25 s
+			local i = math.floor(f)
+			local a1, a2 = cams[i % steps], cams[(i + 1) % steps]
+			local want = (a1 and a2) and a1:Lerp(a2, f - i) or a1 or a2 or pos
+			pos = pos:Lerp(want, 0.25)
+			Q.camTo(pos, c, 0)
+			RunService.RenderStepped:Wait()
 		end
 	end)
 	local lines = {"Victory!", "Gained " .. B.xp .. " EXP"}
@@ -35966,6 +36004,7 @@ end
 
 Q.endBattle = function(B)
 	B.ended = true
+	Q.muteShort(false)
 	if Q.musicKind == "victory" then Q.playMusic(nil) end
 	Q.idleStop(B)
 	if B.gui then B.gui:Destroy() end
