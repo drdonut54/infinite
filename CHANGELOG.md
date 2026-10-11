@@ -5,6 +5,7 @@ Versions before 1.11.3 were reconstructed from the Desktop `.bakN` backups (one 
 
 | Version | Date | Commands | Change |
 |---|---|---|---|
+| 1.31.0 | 10-11 | 643 | Requiem: Bytes, gear with memory sockets (Place1 swords), Remember the past, memory drops, Hollowed Echoes, Odds' shop in The Last Roll (Sol's RNG), P menu Equip/Memories/Safe World |
 | 1.30.21 | 10-11 | 643 | Requiem: battle double keeps its face and hair (no automatic rescale of head accessories) |
 | 1.30.20 | 10-11 | 643 | Requiem: revert the v1.30.19 accessory weld change (kas went bald) |
 | 1.30.19 | 10-11 | 643 | Requiem: hair stays on the head in battles; DING on every menu cursor move |

@@ -1,4 +1,4 @@
--- NeverYield v1.30.21 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.31.0 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.30.21" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.31.0" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -5496,6 +5496,10 @@ CMDs[#CMDs + 1] = {NAME = 'rpgmap [1-7 / here]', DESC = 'Map test: teleports you
 CMDs[#CMDs + 1] = {NAME = 'rpgspot [name] / rpgspot del [name]', DESC = 'Marks where you stand in this game as a named spot for RPG scenes and battles (saved in NeverYield_rpg_spots.json)'}
 CMDs[#CMDs + 1] = {NAME = 'rpgspots', DESC = 'Lists the spots marked in this game and shows a blue beam on each'}
 CMDs[#CMDs + 1] = {NAME = 'rpgfanfare [n]', DESC = 'Hear the victory fanfares and pick the one that plays after battles (saved)'}
+CMDs[#CMDs + 1] = {NAME = 'rpgdebug shop', DESC = "Dev: open Odds' shop right here (Buy / Sell / Roll)"}
+CMDs[#CMDs + 1] = {NAME = 'rpgdebug safe', DESC = "Dev: stage Odds' safe world (The Last Roll) where you stand"}
+CMDs[#CMDs + 1] = {NAME = 'rpgdebug bytes <n>', DESC = 'Dev: add Bytes'}
+CMDs[#CMDs + 1] = {NAME = 'rpgdebug memory <id> [ap]', DESC = 'Dev: add a memory (9999 AP = mastered); no id lists them'}
 CMDs[#CMDs + 1] = {NAME = 'unrpg', DESC = 'Stops the RPG and clears everything it put in the world'}
 -- wait()
 
@@ -32688,6 +32692,8 @@ Q.blank = function()
 		journal = {}, arms = {vane = {}, seris = {}, pip = {}}, ledger = {}, flags = {},
 		renamed = {}, removed = {}, tolls = {}, lastWords = 0, image = 2,
 		stats = {battles = 0, wins = 0, retries = 0, hollowed = 0, steps = 0},
+		-- gear, Bytes and memories (62_gear)
+		bytes = 0, gear = {}, equip = {}, memories = {}, memUid = 0, remembered = {}, memFound = {},
 	}
 end
 
@@ -32827,6 +32833,7 @@ Q.member = function(id)
 			table.insert(s.skills, sk)
 		end
 	end
+	if Q.applyGear then Q.applyGear(s, id) end
 	return s
 end
 
@@ -32937,7 +32944,15 @@ Q.travel = function(n, scene)
 		task.spawn(Q.run, n, scene or 1)
 		return
 	end
+	Q.hop(place)
+end
+
+-- jump to another real game and come back as the RPG there. extra = more fields for data.travel (safe = Odds'
+-- world); text = the white screen's first line (default "> TOLL PAID.")
+Q.hop = function(place, extra, text)
+	local data = Q.data
 	data.travel = {place = place.id, name = place.name, at = os.time()}
+	for k, v in pairs(extra or {}) do data.travel[k] = v end
 	Q.save()
 	Q.stop(true)
 	-- NeverYield comes back in the next game (the Volt autoexec also loads it; a second copy exits on its own)
@@ -32945,12 +32960,12 @@ Q.travel = function(n, scene)
 		pcall(queueteleport, "pcall(function() loadstring(game:HttpGet('" .. CustomSourceURL .. "'))() end)")
 	end
 	-- The white-out stays up the whole way (no game UI, no popups) until the next game loads.
-	Q.crossingScreen(place.name)
+	Q.crossingScreen(place.name, text)
 	if Q.launch(place.id) then
 		-- still here after a while: the launch did nothing. Fall back to a teleport, or straight to leaving with the
 		-- link where teleports out are off.
 		task.delay(20, function()
-			if Q.blocksTeleports() then Q.leaveFor({id = place.id, name = place.name}) return end
+			if Q.blocksTeleports() then Q.leaveFor({id = place.id, name = place.name}, text) return end
 			pcall(function() TeleportService:Teleport(place.id, Players.LocalPlayer) end)
 		end)
 		return
@@ -32958,7 +32973,7 @@ Q.travel = function(n, scene)
 	-- a game we know turns teleports out off: don't try (its failure throws two error popups over the white-out)
 	if Q.blocksTeleports() then
 		task.wait(2)
-		Q.leaveFor({id = place.id, name = place.name})
+		Q.leaveFor({id = place.id, name = place.name}, text)
 		return
 	end
 	local ok, err = pcall(function() TeleportService:Teleport(place.id, Players.LocalPlayer) end)
@@ -32977,11 +32992,11 @@ end
 
 -- this world won't open a gate: the toll is already paid and saved, so copy the next game's link and leave with a
 -- message in the story's voice (joining it resumes the story with a Begin card)
-Q.leaveFor = function(place)
+Q.leaveFor = function(place, text)
 	local link = "https://www.roblox.com/games/" .. place.id
 	pcall(function() everyClipboard(link) end)
 	pcall(function()
-		Players.LocalPlayer:Kick("> TOLL PAID.\n> THIS WORLD WILL NOT OPEN A GATE.\n> CONTINUE IN: " .. place.name:upper() .. "\n> (the link is copied: " .. link .. ")\n\nJoin it and press Begin. Your story is saved.")
+		Players.LocalPlayer:Kick((text or "> TOLL PAID.") .. "\n> THIS WORLD WILL NOT OPEN A GATE.\n> CONTINUE IN: " .. place.name:upper() .. "\n> (the link is copied: " .. link .. ")\n\nJoin it and press Begin. Your story is saved.")
 	end)
 end
 
@@ -33000,7 +33015,7 @@ end
 
 -- a white screen in the story's voice that covers everything (the game's own UI and Roblox's prompts included)
 -- while we cross; nil takes it down
-Q.crossingScreen = function(name)
+Q.crossingScreen = function(name, text)
 	local old = Q.crossGui
 	if old then pcall(function() old:Destroy() end) Q.crossGui = nil end
 	if not name then return end
@@ -33022,7 +33037,7 @@ Q.crossingScreen = function(name)
 	t.TextSize = 20
 	t.TextColor3 = Color3.fromRGB(150, 160, 175)
 	t.TextTransparency = 1
-	t.Text = "> TOLL PAID.\n> CROSSING TO: " .. name:upper()
+	t.Text = (text or "> TOLL PAID.") .. "\n> CROSSING TO: " .. name:upper()
 	t.Parent = f
 	pcall(function() g.Parent = (gethui and gethui()) or game:GetService("CoreGui") end)
 	if not g.Parent then g.Parent = Players.LocalPlayer:WaitForChild("PlayerGui") end
@@ -33038,6 +33053,11 @@ Q.boot = function()
 	if tr.place == game.PlaceId then
 		Q.data.travel = nil
 		Q.save()
+		-- Odds' world (66_safe): the hub, not the story
+		if tr.safe and Q.safeHub then
+			Q.ready("The Last Roll", Q.safeHub)
+			return
+		end
 		local ch = Q.chapters[Q.data.chapter]
 		Q.ready(ch and ("Chapter " .. ch.n .. ": " .. ch.title) or "The Null-Byte Requiem", function() Q.run(Q.data.chapter, Q.data.scene) end)
 	elseif os.time() - (tr.at or 0) < 300 then
@@ -33121,7 +33141,13 @@ end
 -- A copy of your rig, stripped and restyled. look = {skin = Color3, shirt = Color3, pants = Color3, hair = Color3,
 -- hollowed = true (gray, blank face, flickers), scale = 0.6, props = function(rig, part) ... end, name = "Seris"}
 Q.junkClasses = {"BaseScript", "ModuleScript", "Tool", "Accessory", "Clothing", "ShirtGraphic", "ForceField", "Sound",
-	"BodyMover", "AlignPosition", "AlignOrientation", "LinearVelocity", "AngularVelocity", "VectorForce", "Highlight", "Trail", "Beam", "BillboardGui"}
+	"BodyMover", "AlignPosition", "AlignOrientation", "LinearVelocity", "AngularVelocity", "VectorForce", "Highlight", "Trail", "Beam", "BillboardGui",
+	-- the game's own effects on your body (Sol's RNG puts your equipped aura inside the limbs and root)
+	"ParticleEmitter", "Fire", "Smoke", "Sparkles", "Light"}
+-- the parts a body is made of; anything else at the top of a copied character (aura "holder" parts, our sword) goes
+Q.bodyNames = {Head = true, Torso = true, HumanoidRootPart = true, ["Left Arm"] = true, ["Right Arm"] = true, ["Left Leg"] = true, ["Right Leg"] = true,
+	UpperTorso = true, LowerTorso = true, LeftUpperArm = true, LeftLowerArm = true, LeftHand = true, RightUpperArm = true, RightLowerArm = true,
+	RightHand = true, LeftUpperLeg = true, LeftLowerLeg = true, LeftFoot = true, RightUpperLeg = true, RightLowerLeg = true, RightFoot = true}
 
 -- Games with Roblox's Avatar Joint Upgrade on (Genovia High) build characters out of AnimationConstraints +
 -- BallSocketConstraints, with accessories held by RigidConstraints: physics joints. On a copy that we pose and glide
@@ -33217,6 +33243,9 @@ Q.rig = function(look)
 	if not rig then return nil end
 	for _, d in ipairs(rig:GetDescendants()) do
 		local junk = d:IsA("BasePart") and d:GetAttribute("NYFx")
+			or d.Parent == rig and (d:IsA("Model") or d:IsA("BasePart") and not Q.bodyNames[d.Name])
+			-- (game items built into a limb, like Sol's RNG's halo inside the head)
+			or d:IsA("BasePart") and d.Parent and d.Parent:IsA("BasePart")
 		for _, class in ipairs(Q.junkClasses) do
 			if d:IsA(class) then junk = true break end
 		end
@@ -33249,6 +33278,14 @@ Q.rig = function(look)
 			end
 			if n == "UpperTorso" or n == "Torso" then p.Color = shirt end
 			if look.material then p.Material = look.material end
+			-- some games repaint every body they see (Sol's RNG turned Odds white a moment after she spawned): a cast
+			-- member keeps the colours we gave it. (Hollowed are left alone: 53_hollowed tints them on purpose.)
+			if not look.hollowed and Q.bodyNames[n] then
+				local want = p.Color
+				p:GetPropertyChangedSignal("Color"):Connect(function()
+					if p.Color ~= want and not p:GetAttribute("NYRepaint") then p.Color = want end
+				end)
+			end
 		elseif p:IsA("BodyColors") then
 			p:Destroy()
 		end
@@ -33256,6 +33293,16 @@ Q.rig = function(look)
 	root.Anchored = true
 	root.Transparency = 1
 	local head = rig:FindFirstChild("Head")
+	-- a game's custom head mesh (Sol's RNG gives R6 heads one) maps a face decal wrong or not at all: cast members
+	-- get Roblox's classic head
+	local hm = head and head:FindFirstChildOfClass("SpecialMesh")
+	if hm and hm.MeshType == Enum.MeshType.FileMesh then
+		-- (a new mesh: switching the old one's MeshType left the head invisible, Studio-checked)
+		hm:Destroy()
+		local classic = Instance.new("SpecialMesh")
+		classic.MeshType, classic.Scale = Enum.MeshType.Head, Vector3.new(1.25, 1.25, 1.25)
+		classic.Parent = head
+	end
 	if head and look.hair then
 		local hair = NeverYieldAgartha.part(rig, Vector3.new(head.Size.X * 1.08, head.Size.Y * 0.45, head.Size.Z * 1.08), head.CFrame * CFrame.new(0, head.Size.Y * 0.38, 0.05), look.hair, Enum.Material.SmoothPlastic)
 		hair.Anchored, hair.CanCollide = false, false
@@ -33830,8 +33877,35 @@ Q.emitter = function(parent, tex, color, props)
 	return e
 end
 
-Q.greatsword = function(parent)
+-- the sword Vane has equipped (62_gear): mesh, texture, size, grip, colour and auras
+Q.swordSpec = function(weaponId)
+	local id = weaponId or (Q.data and Q.equipOf and Q.equipOf("vane").weapon) or "shattered"
+	local g = Q.arsenal and Q.arsenal[id]
+	local d = g and g.sword
+	if not d then
+		return {mesh = Q.swordMesh.mesh, scale = Q.swordMesh.scale, size = Q.swordMesh.size, rot = CFrame.new(), grip = 0.41, len = Q.swordLen,
+			color = Q.cyan, grow = Vector3.new(1.09, 1.012, 1.35), auras = {{"ltn5", 0.4, 0.2}, {"ltn6", 0.35, 0.1}}}
+	end
+	local n = Vector3.new(d.native[1], d.native[2], d.native[3])
+	-- the blade's length in the mesh, and the turn that stands it up along +Y (hilt down)
+	local long, rot = n.Y, CFrame.new()
+	if d.z then
+		long, rot = n.Z, CFrame.Angles(math.rad(-90), 0, 0)
+	elseif d.diag then
+		-- (the water sword lies corner to corner in its XY plane, the hilt at +X +Y)
+		long, rot = math.sqrt(n.X * n.X + n.Y * n.Y), CFrame.Angles(0, 0, math.rad(219))
+	end
+	-- (yaw turns the blade about its own length, so its flat side faces the same way as the others)
+	if d.yaw then rot = CFrame.Angles(0, math.rad(d.yaw), 0) * rot end
+	local k = d.len / long
+	return {mesh = d.mesh, tex = d.tex, scale = Vector3.new(k, k, k), size = n * k, rot = rot, grip = d.grip, len = d.len,
+		color = Color3.fromRGB(d.color[1], d.color[2], d.color[3]), grow = Vector3.new(d.grow[1], d.grow[2], d.grow[3]), auras = d.auras}
+end
+
+Q.greatsword = function(parent, weaponId)
 	local P = NeverYieldAgartha.part
+	local spec = Q.swordSpec(weaponId)
+	local glowC = spec.color
 	local model = Instance.new("Model")
 	model.Name = randomString()
 	local grip = P(model, Vector3.new(0.3, 1.2, 0.3), CFrame.new(), Color3.fromRGB(45, 30, 22), Enum.Material.Fabric, nil, {CanCollide = false, Massless = true, Transparency = 1})
@@ -33841,52 +33915,56 @@ Q.greatsword = function(parent)
 		Q.weldTo(grip, p)
 		return p
 	end
-	local L = Q.swordLen
-	local hilt = L * 0.09
-	local function meshOn(p, grow)
+	local L = spec.len
+	local hilt = L * (0.5 - spec.grip)
+	local function meshOn(p, grow, tex)
 		local m = Instance.new("SpecialMesh")
 		m.MeshType = Enum.MeshType.FileMesh
-		m.MeshId = Q.swordMesh.mesh
-		m.Scale = Q.swordMesh.scale * grow
+		m.MeshId = spec.mesh
+		if tex then m.TextureId = tex end
+		m.Scale = spec.scale * grow
 		m.Parent = p
 		return m
 	end
-	local blade = weld(P(model, Q.swordMesh.size, CFrame.new(0, L / 2 - hilt, 0), Color3.fromRGB(52, 56, 66), Enum.Material.Metal))
+	local at = CFrame.new(0, L * spec.grip, 0) * spec.rot
+	local blade = weld(P(model, spec.size, at, Color3.fromRGB(52, 56, 66), Enum.Material.Metal))
 	blade.Reflectance = 0.15
-	meshOn(blade, Vector3.new(1, 1, 1))
-	-- the glowing edge: the same mesh a little bigger, neon and see-through, so only a cyan rim shows past the steel
-	local edge = weld(P(model, Q.swordMesh.size, CFrame.new(0, L / 2 - hilt, 0), Q.cyan, Enum.Material.Neon, nil, {Transparency = 0.72}))
-	meshOn(edge, Vector3.new(1.09, 1.012, 1.35))
+	meshOn(blade, Vector3.new(1, 1, 1), spec.tex)
+	-- the glowing edge: the same mesh a little bigger, neon and see-through, so only a rim of the sword's colour
+	-- shows past the steel
+	local edge = weld(P(model, spec.size, at, glowC, Enum.Material.Neon, nil, {Transparency = 0.72}))
+	meshOn(edge, spec.grow)
 	edge.Name = "NYSwordEdge"
 	local hl = Instance.new("Highlight")
 	hl.Adornee = blade
 	hl.FillTransparency, hl.OutlineTransparency = 1, 0.35
-	hl.OutlineColor = Q.cyan
+	hl.OutlineColor = glowC
 	hl.DepthMode = Enum.HighlightDepthMode.Occluded
 	hl.Parent = blade
-	-- slow cyan embers drifting up off the blade, and lightning
-	local core = weld(P(model, Vector3.new(0.35, L * 0.75, 0.15), CFrame.new(0, L / 2 - hilt + L * 0.05, 0), Q.cyan, Enum.Material.Neon, nil, {Transparency = 1}))
+	-- slow embers drifting up off the blade, and lightning (or the sword's own aura)
+	local core = weld(P(model, Vector3.new(0.35, L * 0.75, 0.15), CFrame.new(0, L / 2 - hilt + L * 0.05, 0), glowC, Enum.Material.Neon, nil, {Transparency = 1}))
 	core.Name = "NYSwordCore"
-	Q.emitter(core, Q.fxTex.dots, Q.cyan, {Rate = 7, Lifetime = NumberRange.new(1, 1.8), Speed = NumberRange.new(0.2, 0.6), Acceleration = Vector3.new(0, 1.2, 0),
+	Q.emitter(core, Q.fxTex.dots, glowC, {Rate = 7, Lifetime = NumberRange.new(1, 1.8), Speed = NumberRange.new(0.2, 0.6), Acceleration = Vector3.new(0, 1.2, 0),
 		Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.2, 0.14), NumberSequenceKeypoint.new(1, 0)}),
 		Transparency = NumberSequence.new(0.1, 1), LightEmission = 1, SpreadAngle = Vector2.new(180, 180), Name = "NYEmbers"})
-	-- cyan lightning crawling along the steel (the "electric aura" in kas's Place1), a few arcs a second
-	Q.aura("ltn5", core, {color = Q.cyan, scale = 0.4, rate = 0.2, name = "NYAura"})
-	Q.aura("ltn6", core, {color = Q.cyan, scale = 0.35, rate = 0.1, name = "NYAura2"})
+	-- its aura crawling along the steel (kas's Place1 / Sol's RNG textures), a few bursts a second
+	for i, a in ipairs(spec.auras) do
+		Q.aura(a[1], core, {color = glowC, scale = a[2], rate = a[3], name = i == 1 and "NYAura" or "NYAura" .. i})
+	end
 	-- the swing trail (switched on while attacking)
 	local a0, a1 = Instance.new("Attachment"), Instance.new("Attachment")
 	a0.Position, a1.Position = Vector3.new(0, -L * 0.28, 0), Vector3.new(0, L * 0.42, 0)
 	a0.Parent, a1.Parent = core, core
 	local trail = Instance.new("Trail")
 	trail.Attachment0, trail.Attachment1 = a0, a1
-	trail.Color = ColorSequence.new(Color3.fromRGB(220, 252, 255), Q.cyan)
+	trail.Color = ColorSequence.new(glowC:Lerp(Color3.new(1, 1, 1), 0.7), glowC)
 	trail.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.1), NumberSequenceKeypoint.new(1, 1)})
 	trail.Lifetime, trail.LightEmission, trail.Enabled = 0.25, 1, false
 	trail.FaceCamera = true
 	trail.Name = "NYSwordTrail"
 	trail.Parent = core
 	local glow = Instance.new("PointLight")
-	glow.Color, glow.Range, glow.Brightness = Q.cyan, 7, 0.8
+	glow.Color, glow.Range, glow.Brightness = glowC, 7, 0.8
 	glow.Parent = core
 	model.PrimaryPart = grip
 	model.Parent = parent
@@ -35967,6 +36045,10 @@ Q.knockout = function(B, u)
 	u.statuses = {}
 	if u.side == "enemy" then
 		B.xp = B.xp + (u.xp or 0)
+		-- Bytes and AP (62_gear): an enemy's own numbers, or worked out from its EXP
+		B.bytes = (B.bytes or 0) + (u.data.bytes or math.floor((u.xp or 0) * 0.75))
+		B.ap = (B.ap or 0) + (u.data.ap or math.ceil((u.xp or 0) / 4))
+		B.killed = (B.killed or 0) + 1
 		for item, n in pairs(u.data.items or {}) do B.drops[item] = (B.drops[item] or 0) + n end
 		task.spawn(Q.derender, u)
 	else
@@ -36765,9 +36847,27 @@ Q.victory = function(B)
 		Q.data.items[item] = (Q.data.items[item] or 0) + n
 		table.insert(lines, "Received " .. Q.items[item].name .. (n > 1 and (" x" .. n) or ""))
 	end
+	-- Bytes, AP to the socketed memories, and maybe a memory left behind
+	if (B.bytes or 0) > 0 then
+		Q.data.bytes = (Q.data.bytes or 0) + B.bytes
+		table.insert(lines, "Received " .. B.bytes .. " Bytes")
+	end
+	local fought = {}
+	for _, u in ipairs(B.party) do table.insert(fought, u.id) end
+	if (B.ap or 0) > 0 then
+		table.insert(lines, "Gained " .. B.ap .. " AP")
+		for _, msg in ipairs(Q.giveAp(fought, B.ap)) do table.insert(lines, msg) end
+	end
+	if not B.tutorial and math.random() < Q.dropChance(B.killed, B.spec.boss) then
+		local id = Q.pickMemory(1)
+		Q.addMemory(id)
+		local def = Q.memoryDefs[id]
+		table.insert(lines, "Memory found: " .. def.name .. "  (1 in " .. def.rarity .. ")")
+		if def.rarity >= 100 then Q.sound(Q.sfx.magic, 0.6, 0.8) end
+	end
 	Q.data.stats.wins = (Q.data.stats.wins or 0) + 1
 	Q.save()
-	local f = Q.win(B.gui, UDim2.new(0.5, -230, 0.5, -30 - #lines * 13), UDim2.new(0, 460, 0, 40 + #lines * 26), 70)
+	local f = Q.win(B.gui, UDim2.new(0.5, -290, 0.5, -30 - #lines * 13), UDim2.new(0, 580, 0, 40 + #lines * 26), 70)
 	for i, line in ipairs(lines) do
 		Q.text(f, {Position = UDim2.new(0, 18, 0, 12 + (i - 1) * 26), Size = UDim2.new(1, -36, 0, 24), Text = line, TextSize = i == 1 and 22 or 17,
 			Font = i == 1 and Enum.Font.GothamBold or Enum.Font.GothamMedium, TextColor3 = i == 1 and Color3.fromRGB(255, 240, 150) or Color3.new(1, 1, 1)})
@@ -38208,6 +38308,17 @@ Q.explore = function(token, spec)
 			end
 		end
 	end
+	-- Hollowed Echoes (62_gear): they come back every time you pass through, for Bytes, EXP, AP and memories.
+	-- The named Hollowed above stay at rest once you've laid them there.
+	for i = 1, spec.echoes or 2 do
+		local along = (i - 0.5) / (spec.echoes or 2) * 0.8 + 0.1
+		local mid = target and Q.root() and Q.root().Position:Lerp(target, along) or nil
+		local home = Q.findSpot(mid and 4 or 25, mid and 14 or 55, mid)
+		if home then
+			local r = Q.roamer(home, spec.echo or "hollowed_echo", 12, nil, "echo" .. i .. "_" .. math.random(1, 9999))
+			if r then table.insert(roamers, r) end
+		end
+	end
 	local gems = {}
 	for _, pk in ipairs(spec.pickups or {}) do
 		if not (Q.data.picked and Q.data.picked[pk.id]) then
@@ -38653,20 +38764,30 @@ Q.memberBlock = function(parent, id, x, y, big, z)
 	end
 end
 
--- a vertical list of rows with the FF7 cursor. rows = {{text, right, enabled}}. returns the list object
-Q.menuList = function(parent, x, y, w, rowH, z)
-	local L = {cursor = 1, rows = {}, buttons = {}, active = true}
+-- a vertical list of rows with the FF7 cursor. rows = {{text, right, enabled}}. returns the list object.
+-- max = how many rows fit (longer lists scroll with the cursor, with a small ^ / v showing there's more)
+Q.menuList = function(parent, x, y, w, rowH, z, max)
+	local L = {cursor = 1, rows = {}, buttons = {}, active = true, top = 0}
 	local hand = Q.text(parent, {Position = UDim2.new(0, x, 0, y), Size = UDim2.new(0, 20, 0, rowH), Text = ">", Font = Enum.Font.GothamBlack,
 		TextSize = 20, TextColor3 = Color3.fromRGB(255, 235, 140), ZIndex = z + 3})
 	L.hand = hand
-	function L.set(rows)
+	local more = {}
+	if max then
+		for i, t in ipairs({"^", "v"}) do
+			more[i] = Q.text(parent, {Position = UDim2.new(0, x + w - 24, 0, i == 1 and (y - 12) or (y + max * rowH - 8)), Size = UDim2.new(0, 20, 0, 16), Text = t,
+				Font = Enum.Font.GothamBlack, TextSize = 14, TextColor3 = Color3.fromRGB(255, 235, 140), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = z + 3})
+		end
+	end
+	local function build()
 		for _, b in ipairs(L.buttons) do b:Destroy() end
-		L.rows, L.buttons = rows, {}
-		for i, r in ipairs(rows) do
+		L.buttons = {}
+		local last = max and math.min(#L.rows, L.top + max) or #L.rows
+		for i = L.top + 1, last do
+			local r = L.rows[i]
 			local b = Instance.new("TextButton")
 			b.BackgroundTransparency = 1
 			b.AutoButtonColor = false
-			b.Position, b.Size = UDim2.new(0, x + 24, 0, y + (i - 1) * rowH), UDim2.new(0, w - 24, 0, rowH)
+			b.Position, b.Size = UDim2.new(0, x + 24, 0, y + (i - L.top - 1) * rowH), UDim2.new(0, w - 24, 0, rowH)
 			b.Font = Enum.Font.GothamMedium
 			b.TextSize = math.min(20, rowH - 12)
 			b.TextXAlignment = Enum.TextXAlignment.Left
@@ -38681,14 +38802,34 @@ Q.menuList = function(parent, x, y, w, rowH, z)
 			end
 			b.MouseEnter:Connect(function() if L.active and L.cursor ~= i then L.cursor = i L.draw() Q.ding() end end)
 			b.MouseButton1Click:Connect(function() if L.active and L.onClick then L.cursor = i L.draw() L.onClick(i) end end)
-			L.buttons[i] = b
+			table.insert(L.buttons, b)
 		end
+		if max then
+			more[1].Visible = L.top > 0
+			more[2].Visible = L.top + max < #L.rows
+		end
+	end
+	-- keep the cursor on screen
+	local function scroll()
+		if not max then return end
+		local top = L.top
+		if L.cursor <= top then top = L.cursor - 1 end
+		if L.cursor > top + max then top = L.cursor - max end
+		top = math.clamp(top, 0, math.max(0, #L.rows - max))
+		if top ~= L.top then L.top = top build() end
+	end
+	function L.set(rows)
+		L.rows = rows
 		L.cursor = math.clamp(L.cursor, 1, math.max(1, #rows))
+		L.top = math.clamp(L.top, 0, math.max(0, #rows - (max or #rows)))
+		build()
+		scroll()
 		L.draw()
 	end
 	function L.draw()
+		scroll()
 		hand.Visible = L.active and #L.rows > 0
-		hand.Position = UDim2.new(0, x, 0, y + (L.cursor - 1) * rowH)
+		hand.Position = UDim2.new(0, x, 0, y + (L.cursor - L.top - 1) * rowH)
 		if L.onMove then L.onMove(L.cursor) end
 	end
 	function L.move(d)
@@ -38791,9 +38932,9 @@ Q.pauseMenu = function(token)
 
 	-- ---- the main screen ----
 	local partyWin = Q.win(board, UDim2.new(0, 0, 0, 0), UDim2.new(0, 700, 0, 600), Z + 1)
-	local cmdWin = Q.win(board, UDim2.new(0, 712, 0, 0), UDim2.new(0, 248, 0, 284), Z + 1)
-	local statWin = Q.win(board, UDim2.new(0, 712, 0, 296), UDim2.new(0, 248, 0, 150), Z + 1)
-	local locWin = Q.win(board, UDim2.new(0, 712, 0, 458), UDim2.new(0, 248, 0, 142), Z + 1)
+	local cmdWin = Q.win(board, UDim2.new(0, 712, 0, 0), UDim2.new(0, 248, 0, 336), Z + 1)
+	local statWin = Q.win(board, UDim2.new(0, 712, 0, 348), UDim2.new(0, 248, 0, 132), Z + 1)
+	local locWin = Q.win(board, UDim2.new(0, 712, 0, 492), UDim2.new(0, 248, 0, 108), Z + 1)
 	slide(partyWin, -80) slide(cmdWin, 80) slide(statWin, 80) slide(locWin, 80)
 	local mainWins = {partyWin, cmdWin, statWin, locWin}
 
@@ -38816,31 +38957,33 @@ Q.pauseMenu = function(token)
 	partyHand.Visible = false
 
 	local stat = {}
-	for i, row in ipairs({{"Time"}, {"Tolls paid"}, {"Memories"}, {"Laid to rest"}}) do
-		local y = 14 + (i - 1) * 32
+	for i, row in ipairs({{"Time"}, {"Bytes"}, {"Tolls paid"}, {"Laid to rest"}}) do
+		local y = 12 + (i - 1) * 28
 		label(statWin, 16, y, 120, row[1], blue, 15, Enum.Font.GothamBold, Z + 2)
 		stat[i] = label(statWin, 120, y, 112, "", nil, 17, Enum.Font.GothamBold, Z + 2)
 		stat[i].TextXAlignment = Enum.TextXAlignment.Right
 	end
 	table.insert(refreshers, function()
 		stat[1].Text = Q.playTime()
-		stat[2].Text = tostring(#Q.data.tolls)
-		stat[3].Text = tostring(#Q.data.ledger)
+		stat[2].Text = tostring(Q.data.bytes or 0)
+		stat[3].Text = tostring(#Q.data.tolls)
 		stat[4].Text = tostring(Q.data.stats.hollowed or 0)
 	end)
 	local ch = Q.chapters[Q.data.chapter] or Q.chapters[1]
-	label(locWin, 16, 12, 216, "CHAPTER " .. ch.n .. "  -  DISC " .. ch.disc, blue, 13, Enum.Font.GothamBold, Z + 2)
-	local t = label(locWin, 16, 34, 216, ch.title, nil, 19, Enum.Font.GothamBold, Z + 2)
-	t.TextWrapped, t.Size = true, UDim2.new(0, 216, 0, 50)
+	label(locWin, 16, 10, 216, "CHAPTER " .. ch.n .. "  -  DISC " .. ch.disc, blue, 13, Enum.Font.GothamBold, Z + 2)
+	local t = label(locWin, 16, 30, 216, ch.title, nil, 17, Enum.Font.GothamBold, Z + 2)
+	t.TextWrapped, t.Size = true, UDim2.new(0, 216, 0, 44)
 	t.TextYAlignment = Enum.TextYAlignment.Top
-	label(locWin, 16, 104, 216, ch.world, Color3.fromRGB(170, 185, 220), 14, nil, Z + 2)
+	label(locWin, 16, 80, 216, Q.inSafe and "The Last Roll" or ch.world, Color3.fromRGB(170, 185, 220), 14, nil, Z + 2)
 
-	local cmds = Q.menuList(cmdWin, 16, 14, 224, 42, Z + 2)
+	local cmds = Q.menuList(cmdWin, 16, 10, 224, 35, Z + 2)
 	local cmdRows = {
-		{text = "Items"}, {text = "Skills"}, {text = "Journal"}, {text = "Arms"}, {text = "Ledger"}, {text = "Close"},
+		{text = "Items"}, {text = "Skills"}, {text = "Equip"}, {text = "Memories"}, {text = "Journal"}, {text = "Arms"}, {text = "Ledger"},
+		-- Odds' world (66_safe): from anywhere you're exploring; in it, the row takes you back
+		{text = Q.inSafe and "Go Back" or "Safe World", enabled = Q.inSafe or (Q.exploring and Q.safeOk and Q.safeOk()) or false}, {text = "Close"},
 	}
 	-- the Keeper hands over the Ledger at the Waystation (Ch 6); before that it's a locked ??? row
-	if not (Q.data.chapter >= 6 or Q.flag("ledger")) then cmdRows[5] = {text = "???", enabled = false} end
+	if not (Q.data.chapter >= 6 or Q.flag("ledger")) then cmdRows[7] = {text = "???", enabled = false} end
 	cmds.set(cmdRows)
 
 	local function refresh()
@@ -38874,7 +39017,7 @@ Q.pauseMenu = function(token)
 		local targetHand = label(leftWin, 8, 0, 24, ">", Color3.fromRGB(255, 235, 140), 24, Enum.Font.GothamBlack, Z + 14)
 		targetHand.Visible = false
 		local msg = label(listWin, 18, 494, 552, "", Color3.fromRGB(255, 220, 90), 15, Enum.Font.GothamBold, Z + 12)
-		local list = Q.menuList(listWin, 16, 16, 556, 40, Z + 12)
+		local list = Q.menuList(listWin, 16, 16, 556, 40, Z + 12, 11)
 		local rows
 		local function reload()
 			rows = rowsFn(caster)
@@ -38995,7 +39138,7 @@ Q.pauseMenu = function(token)
 	end
 
 	-- "whose skills?": the hand moves on the party rows
-	local function chooseMember()
+	local function chooseMember(open)
 		local p = {}
 		local cur = 1
 		local function draw()
@@ -39017,7 +39160,7 @@ Q.pauseMenu = function(token)
 				partyHand.Visible = false
 				table.remove(stack)
 				Q.sound(Q.sfx.select, 0.5)
-				subScreen(Q.members[ids[cur]].name:upper() .. "  -  SKILLS", skillRows, ids[cur])
+				open(ids[cur])
 			end
 		end
 		p.pickRow = function(i) cur = i p.key("ok") end
@@ -39035,14 +39178,49 @@ Q.pauseMenu = function(token)
 		b.MouseButton1Click:Connect(function() local p = stack[#stack] if p and p.pickRow then p.pickRow(i) end end)
 	end
 
+	-- a gear page (58_gear_ui) on top of the menu
+	local function gearPage(make, arg)
+		for _, w in ipairs(mainWins) do w.Visible = false end
+		cmds.active = false
+		cmds.draw()
+		local ctx = {board = board, Z = Z, token = token}
+		ctx.onClose = function()
+			for _, w in ipairs(mainWins) do w.Visible = true end
+			table.remove(stack)
+			cmds.active = true
+			cmds.draw()
+			refresh()
+		end
+		ctx.overlay = function(fn)
+			busy = true
+			board.Visible = false
+			pcall(fn)
+			board.Visible = true
+			busy = false
+		end
+		table.insert(stack, make(ctx, arg))
+	end
+	local function skillsOf(id) subScreen(Q.members[id].name:upper() .. "  -  SKILLS", skillRows, id) end
+	local function equipOf(id) gearPage(Q.equipPage, id) end
+
 	local function command(i)
 		local name = cmdRows[i].text
-		if cmdRows[i].enabled == false then Q.sound(Q.sfx.select, 0.4, 0.6) return end
+		if cmdRows[i].enabled == false then
+			if name == "Safe World" then Q.toast("Only while exploring (not in a fight or a scene).", 3) end
+			Q.sound(Q.sfx.select, 0.4, 0.6)
+			return
+		end
 		Q.sound(Q.sfx.select, 0.5)
 		if name == "Close" then closed = true
 		elseif name == "Items" then subScreen("ITEMS", itemRows)
 		elseif name == "Skills" then
-			if #ids == 1 then subScreen(Q.members[ids[1]].name:upper() .. "  -  SKILLS", skillRows, ids[1]) else chooseMember() end
+			if #ids == 1 then skillsOf(ids[1]) else chooseMember(skillsOf) end
+		elseif name == "Equip" then
+			if #ids == 1 then equipOf(ids[1]) else chooseMember(equipOf) end
+		elseif name == "Memories" then gearPage(Q.memoryPage)
+		elseif name == "Safe World" or name == "Go Back" then
+			closed = true
+			task.spawn(name == "Go Back" and Q.safeLeave or Q.safeGo)
 		else
 			busy = true
 			board.Visible = false
@@ -39095,6 +39273,649 @@ Q.pauseMenu = function(token)
 	Q.menuGrace = tick() + 1
 	Q.sound(Q.sfx.select, 0.4, 0.9)
 	if not ok then warn("rpg menu: " .. tostring(err)) end
+end
+
+-- [58_gear_ui.lua]
+-- ---------- the gear screens: Equip, Memories, Remember the past, and Odds' shop ----------
+-- Pages follow the P menu's stack: page.key(k) gets "up" / "down" / "ok" / "back", page.close() takes it down.
+-- ctx = {board, Z, onClose, overlay(fn) (hides the menu while fn runs: the flashback), token}
+
+Q.copyTable = function(t)
+	if type(t) ~= "table" then return t end
+	local c = {}
+	for k, v in pairs(t) do c[k] = Q.copyTable(v) end
+	return c
+end
+
+-- member id's stats if change(equip) were made (nothing is kept)
+Q.previewWith = function(id, change)
+	local saved = Q.copyTable(Q.data.equip)
+	local ok, m = pcall(function()
+		change(Q.equipOf(id))
+		Q.equipOf(id)
+		return Q.member(id)
+	end)
+	Q.data.equip = saved
+	return ok and m or nil
+end
+
+Q.rarityColor = function(n)
+	if n >= 1000 then return Color3.fromRGB(255, 215, 90) end
+	if n >= 200 then return Color3.fromRGB(205, 120, 255) end
+	if n >= 50 then return Color3.fromRGB(110, 170, 255) end
+	if n >= 10 then return Color3.fromRGB(120, 255, 160) end
+	return Color3.fromRGB(235, 235, 245)
+end
+
+Q.memDesc = function(m)
+	local def = Q.memoryDefs[m.id]
+	local lv, mastered = Q.memLevel(m)
+	local bits = {def.desc}
+	local boost = Q.statText(Q.memBoost(m))
+	if boost ~= "" then table.insert(bits, boost) end
+	if def.skill then table.insert(bits, "Skill: " .. def.skill.name) end
+	table.insert(bits, mastered and "MASTERED" or ("AP " .. (m.ap or 0) .. " / " .. def.ap[lv]))
+	table.insert(bits, "1 in " .. def.rarity)
+	return table.concat(bits, "   |   ")
+end
+
+-- a stat window: each stat, and where it would go (green up / red down)
+Q.statPanel = function(parent, x, y, z)
+	local rows = {}
+	for i, k in ipairs(Q.statOrder) do
+		local yy = y + (i - 1) * 30
+		Q.text(parent, {Position = UDim2.new(0, x, 0, yy), Size = UDim2.new(0, 60, 0, 24), Text = Q.statNames[k], TextSize = 16, Font = Enum.Font.GothamBold,
+			TextColor3 = Color3.fromRGB(120, 170, 255), ZIndex = z})
+		local now = Q.text(parent, {Position = UDim2.new(0, x + 60, 0, yy), Size = UDim2.new(0, 70, 0, 24), Text = "", TextSize = 17, Font = Enum.Font.GothamBold,
+			TextXAlignment = Enum.TextXAlignment.Right, ZIndex = z})
+		local to = Q.text(parent, {Position = UDim2.new(0, x + 140, 0, yy), Size = UDim2.new(0, 110, 0, 24), Text = "", TextSize = 17, Font = Enum.Font.GothamBold, ZIndex = z})
+		rows[k] = {now = now, to = to}
+	end
+	return function(m, preview)
+		for _, k in ipairs(Q.statOrder) do
+			local r = rows[k]
+			r.now.Text = tostring(m[k])
+			local p = preview and preview[k]
+			if p and p ~= m[k] then
+				r.to.Text = ">  " .. p
+				r.to.TextColor3 = p > m[k] and Color3.fromRGB(120, 255, 140) or Color3.fromRGB(255, 110, 110)
+			else
+				r.to.Text = ""
+			end
+		end
+	end
+end
+
+-- the three-window layout every gear page uses: description bar, left panel, right list
+Q.gearLayout = function(ctx, title)
+	local Z = ctx.Z
+	local layer = Instance.new("Frame")
+	layer.Size = UDim2.new(1, 0, 1, 0)
+	layer.BackgroundTransparency = 1
+	layer.ZIndex = Z + 10
+	layer.Parent = ctx.board
+	local descWin = Q.win(layer, UDim2.new(0, 0, 0, 0), UDim2.new(0, 960, 0, 58), Z + 11)
+	Q.text(descWin, {Position = UDim2.new(0, 18, 0, 8), Size = UDim2.new(0, 600, 0, 18), Text = title, TextSize = 13, Font = Enum.Font.GothamBold,
+		TextColor3 = Color3.fromRGB(120, 170, 255), ZIndex = Z + 12})
+	local desc = Q.text(descWin, {Position = UDim2.new(0, 18, 0, 26), Size = UDim2.new(0, 924, 0, 24), Text = "", TextSize = 15, TextWrapped = true, ZIndex = Z + 12})
+	local leftWin = Q.win(layer, UDim2.new(0, 0, 0, 70), UDim2.new(0, 360, 0, 530), Z + 11)
+	local listWin = Q.win(layer, UDim2.new(0, 372, 0, 70), UDim2.new(0, 588, 0, 530), Z + 11)
+	local msg = Q.text(listWin, {Position = UDim2.new(0, 18, 0, 494), Size = UDim2.new(0, 552, 0, 22), Text = "", TextSize = 15, Font = Enum.Font.GothamBold,
+		TextColor3 = Color3.fromRGB(255, 220, 90), ZIndex = Z + 12})
+	local list = Q.menuList(listWin, 16, 16, 556, 38, Z + 12, 12)
+	return {layer = layer, desc = desc, left = leftWin, list = list, msg = msg}
+end
+
+-- ---------- Equip: a member's sword, armor and memory sockets ----------
+Q.equipPage = function(ctx, id)
+	local Z = ctx.Z
+	local L = Q.gearLayout(ctx, Q.members[id].name:upper() .. "  -  EQUIP")
+	local m = Q.member(id)
+	Q.portraitBox(L.left, id, 18, 16, 92, Z + 12)
+	Q.text(L.left, {Position = UDim2.new(0, 124, 0, 24), Size = UDim2.new(0, 220, 0, 26), Text = m.name, TextSize = 22, Font = Enum.Font.GothamBold, ZIndex = Z + 12})
+	local lvl = Q.text(L.left, {Position = UDim2.new(0, 124, 0, 54), Size = UDim2.new(0, 220, 0, 20), Text = "", TextSize = 15, ZIndex = Z + 12,
+		TextColor3 = Color3.fromRGB(170, 185, 220)})
+	local stats = Q.statPanel(L.left, 30, 140, Z + 12)
+	local mode, slotPick = "slots", nil
+	local rows = {}
+	local page = {layer = L.layer}
+
+	local function slotRows()
+		local e = Q.equipOf(id)
+		local out = {}
+		for _, slot in ipairs({"weapon", "armor"}) do
+			local g = Q.arsenal[e[slot] or ""]
+			table.insert(out, {text = (slot == "weapon" and "Weapon:  " or "Armor:  ") .. (g and g.name or "-"), right = g and (g.slots .. " socket" .. (g.slots > 1 and "s" or "")) or "",
+				desc = g and (g.desc .. "   " .. Q.statText(g.stats)) or "", slot = slot})
+		end
+		for i, uid in ipairs(e.sockets) do
+			local mem = uid and Q.memByUid(uid)
+			local name, lv = "", ""
+			if mem then name, lv = Q.memName(mem) end
+			table.insert(out, {text = "Memory " .. i .. ":  " .. (mem and name or "( empty )"), right = mem and lv or "", socket = i,
+				desc = mem and Q.memDesc(mem) or "An empty socket. Put a memory in it."})
+		end
+		return out
+	end
+	local function pickRows()
+		local e = Q.equipOf(id)
+		local out = {}
+		if slotPick.slot then
+			local ids = {}
+			for gid, g in pairs(Q.arsenal) do
+				if g.kind == slotPick.slot and (not g.who or g.who == id) and ((g.price or 0) == 0 or (Q.data.gear[gid] or 0) > 0 or e[slotPick.slot] == gid) then
+					table.insert(ids, gid)
+				end
+			end
+			table.sort(ids, function(a, b) return (Q.arsenal[a].price or 0) < (Q.arsenal[b].price or 0) end)
+			for _, gid in ipairs(ids) do
+				local g = Q.arsenal[gid]
+				local on = e[slotPick.slot] == gid
+				table.insert(out, {text = g.name, right = on and "equipped" or ((g.price or 0) > 0 and ("x" .. (Q.data.gear[gid] or 0)) or ""), desc = g.desc .. "   " .. Q.statText(g.stats),
+					gear = gid, preview = function(x) x[slotPick.slot] = gid end})
+			end
+		else
+			local cur = e.sockets[slotPick.socket]
+			table.insert(out, {text = "( take it out )", empty = true, desc = "Empty this socket.", preview = function(x) x.sockets[slotPick.socket] = false end})
+			for _, mem in ipairs(Q.data.memories) do
+				if mem.uid ~= cur then
+					local name, lv = Q.memName(mem)
+					local who = Q.memHolder(mem.uid)
+					table.insert(out, {text = name, right = lv .. (who and ("  [" .. Q.members[who].name .. "]") or ""), uid = mem.uid, desc = Q.memDesc(mem),
+						preview = function(x) x.sockets[slotPick.socket] = mem.uid end})
+				end
+			end
+		end
+		return out
+	end
+	local function redraw()
+		rows = mode == "slots" and slotRows() or pickRows()
+		L.list.set(rows)
+	end
+	L.list.onMove = function(i)
+		local r = rows[i]
+		L.desc.Text = r and r.desc or ""
+		m = Q.member(id)
+		lvl.Text = "LV " .. m.level .. "    " .. #Q.equipOf(id).sockets .. " memory sockets"
+		stats(m, r and r.preview and Q.previewWith(id, r.preview) or nil)
+	end
+	local function pick(i)
+		local r = rows[i]
+		if not r then return end
+		Q.sound(Q.sfx.select, 0.5)
+		L.msg.Text = ""
+		if mode == "slots" then
+			mode, slotPick = "pick", r
+			L.list.cursor = 1
+			redraw()
+			return
+		end
+		local err
+		if r.gear then err = Q.equipGear(id, r.gear)
+		elseif r.empty then err = Q.socket(id, slotPick.socket, false)
+		elseif r.uid then err = Q.socket(id, slotPick.socket, r.uid) end
+		if err then L.msg.Text = err Q.sound(Q.sfx.select, 0.4, 0.6) return end
+		Q.save()
+		mode = "slots"
+		redraw()
+	end
+	L.list.onClick = pick
+	page.key = function(k)
+		if k == "up" then L.list.move(-1)
+		elseif k == "down" then L.list.move(1)
+		elseif k == "ok" then pick(L.list.cursor)
+		elseif k == "back" then
+			if mode == "pick" then mode = "slots" L.list.cursor = 1 redraw() else page.close() end
+		end
+	end
+	page.close = function()
+		L.layer:Destroy()
+		ctx.onClose()
+	end
+	redraw()
+	return page
+end
+
+-- ---------- Memories: everything you carry, and Remember the past ----------
+Q.memoryPage = function(ctx)
+	local Z = ctx.Z
+	local L = Q.gearLayout(ctx, "MEMORIES")
+	local page = {layer = L.layer}
+	local rows = {}
+	Q.text(L.left, {Position = UDim2.new(0, 20, 0, 18), Size = UDim2.new(0, 320, 0, 24), Text = "Remembered", TextSize = 17, Font = Enum.Font.GothamBold,
+		TextColor3 = Color3.fromRGB(255, 225, 150), ZIndex = Z + 12})
+	local rem = Q.text(L.left, {Position = UDim2.new(0, 20, 0, 48), Size = UDim2.new(0, 320, 0, 420), Text = "", TextSize = 14, TextWrapped = true,
+		TextYAlignment = Enum.TextYAlignment.Top, TextColor3 = Color3.fromRGB(215, 205, 180), ZIndex = Z + 12})
+	Q.text(L.left, {Position = UDim2.new(0, 20, 0, 470), Size = UDim2.new(0, 320, 0, 44), TextWrapped = true, TextSize = 13, ZIndex = Z + 12,
+		TextColor3 = Color3.fromRGB(150, 165, 200), Text = "Socket memories from Equip. Wins give them AP. A MASTERED one can be remembered for good."})
+	local function redraw()
+		local lines = {}
+		for _, r in ipairs(Q.data.remembered or {}) do
+			local def = Q.memoryDefs[r.id]
+			local skill = def.skill and ("  (" .. def.skill.name .. ")") or ""
+			table.insert(lines, (Q.members[r.who] and Q.members[r.who].name or r.who) .. ":  " .. def.name .. skill)
+		end
+		rem.Text = #lines > 0 and table.concat(lines, "\n") or "Nothing yet."
+		rows = {}
+		local list = {}
+		for _, mem in ipairs(Q.data.memories or {}) do table.insert(list, mem) end
+		table.sort(list, function(a, b)
+			local ma, mb = select(2, Q.memLevel(a)), select(2, Q.memLevel(b))
+			if ma ~= mb then return ma end
+			return Q.memoryDefs[a.id].name < Q.memoryDefs[b.id].name
+		end)
+		for _, mem in ipairs(list) do
+			local name, lv = Q.memName(mem)
+			local who = Q.memHolder(mem.uid)
+			local _, mastered = Q.memLevel(mem)
+			table.insert(rows, {text = (mastered and "* " or "") .. name, right = lv .. (who and ("  [" .. Q.members[who].name .. "]") or ""), uid = mem.uid,
+				desc = Q.memDesc(mem) .. (mastered and "   |   Press to Remember the past." or ""), mastered = mastered})
+		end
+		L.list.set(rows)
+		if #rows == 0 then L.desc.Text = "No memories yet. They drop after fights, and Odds sells the small ones." end
+	end
+	L.list.onMove = function(i) L.desc.Text = rows[i] and rows[i].desc or "" end
+	local function pick(i)
+		local r = rows[i]
+		if not r then return end
+		if not r.mastered then
+			L.msg.Text = "Not mastered yet. Socket it and win fights."
+			Q.sound(Q.sfx.select, 0.4, 0.6)
+			return
+		end
+		local memId = Q.memByUid(r.uid).id
+		local who, err = Q.remember(r.uid)
+		if not who then L.msg.Text = err Q.sound(Q.sfx.select, 0.4, 0.6) return end
+		L.msg.Text = ""
+		ctx.overlay(function() Q.flashback(ctx.token, memId, who) end)
+		redraw()
+	end
+	L.list.onClick = pick
+	page.key = function(k)
+		if k == "up" then L.list.move(-1)
+		elseif k == "down" then L.list.move(1)
+		elseif k == "ok" then pick(L.list.cursor)
+		elseif k == "back" then page.close() end
+	end
+	page.close = function()
+		L.layer:Destroy()
+		ctx.onClose()
+	end
+	redraw()
+	return page
+end
+
+-- ---------- Remember the past: the flashback ----------
+-- warm, washed-out, slow: the memory's lines one at a time, then what it gave back for good
+Q.flashback = function(token, memId, who)
+	local def = Q.memoryDefs[memId]
+	local screen = Q.screen()
+	local Z = 200
+	local f = Instance.new("Frame")
+	f.Size = UDim2.new(1, 0, 1, 0)
+	-- (white under the gradient, so the page comes out warm cream to old-photo tan with dark ink on it)
+	f.BackgroundColor3 = Color3.new(1, 1, 1)
+	f.BackgroundTransparency = 1
+	f.BorderSizePixel = 0
+	f.ZIndex = Z
+	f.Parent = screen
+	local g = Instance.new("UIGradient")
+	g.Color = ColorSequence.new(Color3.fromRGB(250, 236, 210), Color3.fromRGB(196, 168, 128))
+	g.Rotation = 90
+	g.Parent = f
+	Q.sound(Q.sfx.flash, 0.4)
+	local white = Instance.new("Frame")
+	white.Size = UDim2.new(1, 0, 1, 0)
+	white.BackgroundColor3 = Color3.new(1, 1, 1)
+	white.BorderSizePixel = 0
+	white.ZIndex = Z + 5
+	white.Parent = f
+	TweenService:Create(f, TweenInfo.new(0.4), {BackgroundTransparency = 0}):Play()
+	TweenService:Create(white, TweenInfo.new(1.6), {BackgroundTransparency = 1}):Play()
+	local music = Q.sound(Q.music.hymn[1], 0)
+	if music then
+		music.Looped = true
+		TweenService:Create(music, TweenInfo.new(2), {Volume = 0.3}):Play()
+	end
+	local function line(y, text, size, font, color, z)
+		local l = Q.text(f, {AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, y, 0), Size = UDim2.new(0.8, 0, 0, size + 10), Text = text, TextSize = size,
+			Font = font, TextColor3 = color, TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = true, TextTransparency = 1, TextStrokeTransparency = 1, ZIndex = z or Z + 2})
+		TweenService:Create(l, TweenInfo.new(1.4), {TextTransparency = 0}):Play()
+		return l
+	end
+	local ink = Color3.fromRGB(70, 50, 34)
+	line(0.1, "REMEMBER THE PAST", 15, Enum.Font.Code, Color3.fromRGB(150, 110, 70))
+	task.wait(0.6)
+	line(0.15, def.name, 34, Enum.Font.Garamond, ink)
+	task.wait(1.2)
+	-- a click or a key shows the next line sooner
+	local skip = false
+	local conn = UserInputService.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.KeyCode == Enum.KeyCode.E or input.KeyCode == Enum.KeyCode.Return
+			or input.KeyCode == Enum.KeyCode.Z or input.KeyCode == Enum.KeyCode.Space then skip = true end
+	end)
+	for i, text in ipairs(def.lines) do
+		if token and not Q.alive(token) then break end
+		line(0.3 + (i - 1) * 0.08, text, 22, Enum.Font.Garamond, ink)
+		skip = false
+		local t0 = tick()
+		while tick() - t0 < 2.6 and not skip do task.wait() end
+	end
+	conn:Disconnect()
+	task.wait(0.5)
+	local name = Q.members[who] and Q.members[who].name or who
+	local gift = Q.statText(def.keep or def.boost)
+	if def.skill then gift = gift .. (gift ~= "" and "   " or "") .. "Learned " .. def.skill.name end
+	line(0.68, name .. " remembered.", 26, Enum.Font.GothamBold, Color3.fromRGB(120, 80, 40))
+	task.wait(0.5)
+	line(0.74, "For good:  " .. gift, 20, Enum.Font.GothamBold, Color3.fromRGB(150, 100, 50))
+	Q.sound(Q.sfx.levelup, 0.4)
+	task.wait(1)
+	Q.waitAdvance(token)
+	if music then TweenService:Create(music, TweenInfo.new(1), {Volume = 0}):Play() Services.Debris:AddItem(music, 1.2) end
+	for _, d in ipairs(f:GetDescendants()) do
+		if d:IsA("TextLabel") then TweenService:Create(d, TweenInfo.new(0.6), {TextTransparency = 1}):Play() end
+	end
+	TweenService:Create(f, TweenInfo.new(0.8), {BackgroundTransparency = 1}):Play()
+	task.wait(0.85)
+	f:Destroy()
+end
+
+-- ---------- Odds' stall ----------
+Q.oddsLines = {
+	hello = {"Step up, step up. Everything's for sale except my luck. That's spoken for.", "Bytes on the counter, friend. The sky's watching.",
+		"You look like someone who's been losing. Good. Losers make the best customers.", "Back again? The dice said you would be."},
+	buy = {"Pleasure doing business.", "Lucky pick.", "That one's got good energy. Trust me.", "Sold! Don't tell the sky what you paid."},
+	poor = {"Your pockets are lighter than your soul, friend.", "Short. Go win something and come back.", "No Bytes, no dice."},
+	locked = {"Not your roll yet. Come back further down the road.", "That's for later. The sky hasn't dealt it to you."},
+	sell = {"I'll take it. Somebody'll want it.", "Half price. House rules. The house is me."},
+	roll = {"Roll it. Go on. That's what the sky's for.", "Every roll's the one. Until it isn't.", "Feel that? That's luck. Or indigestion."},
+	rare = {"...Huh. Don't look at me like that. Just. Keep it safe.", "Oh. Oh, that's a good one. That's a GOOD one.", "The sky likes you. Don't let it go to your head."},
+}
+
+-- the stall: Buy / Sell / Roll / Leave. Runs until you leave (or the run stops)
+Q.shopMenu = function(token)
+	local screen = Q.screen()
+	local cam = workspace.CurrentCamera
+	local Z = 70
+	local closed = false
+	local back, fitConn, keyConn
+	Q.freeze(true)
+	Q.inMenu = true
+	local ok, err = pcall(function()
+	back = Instance.new("Frame")
+	back.Size = UDim2.new(1, 0, 1, 0)
+	back.BackgroundColor3 = Color3.new(0, 0, 0)
+	back.BackgroundTransparency = 1
+	back.BorderSizePixel = 0
+	back.ZIndex = Z
+	back.Parent = screen
+	TweenService:Create(back, TweenInfo.new(0.2), {BackgroundTransparency = 0.45}):Play()
+	local board = Instance.new("Frame")
+	board.AnchorPoint = Vector2.new(0.5, 0.5)
+	board.Position = UDim2.new(0.5, 0, 0.5, 0)
+	board.Size = UDim2.new(0, 960, 0, 600)
+	board.BackgroundTransparency = 1
+	board.ZIndex = Z
+	board.Parent = back
+	local scale = Instance.new("UIScale")
+	scale.Parent = board
+	local function fit()
+		local v = cam.ViewportSize
+		scale.Scale = math.min(1.25, (v.X - 32) / 960, (v.Y - 40) / 600)
+	end
+	fit()
+	fitConn = cam:GetPropertyChangedSignal("ViewportSize"):Connect(fit)
+
+	local gold = Color3.fromRGB(255, 225, 120)
+	local topWin = Q.win(board, UDim2.new(0, 0, 0, 0), UDim2.new(0, 960, 0, 84), Z + 1)
+	-- her portrait (requiem/portrait_odds.png from kas's Gemini prompt; a silhouette until it exists)
+	pcall(Q.portraitBox, topWin, "odds", 10, 6, 72, Z + 2)
+	Q.text(topWin, {Position = UDim2.new(0, 96, 0, 8), Size = UDim2.new(0, 400, 0, 20), Text = "ODDS", TextSize = 16, Font = Enum.Font.GothamBold,
+		TextColor3 = Color3.fromRGB(205, 160, 255), ZIndex = Z + 2})
+	local talk = Q.text(topWin, {Position = UDim2.new(0, 96, 0, 30), Size = UDim2.new(0, 620, 0, 46), Text = "", TextSize = 17, TextWrapped = true,
+		TextYAlignment = Enum.TextYAlignment.Top, ZIndex = Z + 2})
+	local bytes = Q.text(topWin, {Position = UDim2.new(0, 730, 0, 24), Size = UDim2.new(0, 210, 0, 30), Text = "", TextSize = 22, Font = Enum.Font.GothamBold,
+		TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = gold, ZIndex = Z + 2})
+	local descWin = Q.win(board, UDim2.new(0, 0, 0, 96), UDim2.new(0, 960, 0, 50), Z + 1)
+	local desc = Q.text(descWin, {Position = UDim2.new(0, 18, 0, 13), Size = UDim2.new(0, 924, 0, 24), Text = "", TextSize = 15, TextWrapped = true, ZIndex = Z + 2})
+	local cmdWin = Q.win(board, UDim2.new(0, 0, 0, 158), UDim2.new(0, 250, 0, 200), Z + 1)
+	local cmpWin = Q.win(board, UDim2.new(0, 0, 0, 370), UDim2.new(0, 250, 0, 230), Z + 1)
+	local cmp = Q.text(cmpWin, {Position = UDim2.new(0, 16, 0, 12), Size = UDim2.new(0, 220, 0, 206), Text = "", TextSize = 17, TextWrapped = true, RichText = true,
+		TextYAlignment = Enum.TextYAlignment.Top, ZIndex = Z + 2})
+	local listWin = Q.win(board, UDim2.new(0, 262, 0, 158), UDim2.new(0, 698, 0, 442), Z + 1)
+	local list = Q.menuList(listWin, 16, 14, 666, 34, Z + 2, 12)
+	local cmds = Q.menuList(cmdWin, 16, 14, 220, 44, Z + 2)
+	cmds.set({{text = "Buy"}, {text = "Sell"}, {text = "Roll", right = Q.rollCost .. " B"}, {text = "Leave"}})
+	local function say(kind)
+		local l = Q.oddsLines[kind]
+		talk.Text = l[math.random(1, #l)]
+	end
+	say("hello")
+	local function refreshBytes() bytes.Text = (Q.data.bytes or 0) .. " Bytes" end
+	refreshBytes()
+
+	-- comparison text for a gear row: each member who could wear it, stat by stat
+	local function compare(gid)
+		local g = Q.arsenal[gid]
+		local out = {}
+		for _, id in ipairs(Q.menuIds()) do
+			if not g.who or g.who == id then
+				local now = Q.member(id)
+				local after = Q.previewWith(id, function(x) x[g.kind] = gid end)
+				table.insert(out, "<b>" .. now.name .. "</b>")
+				for _, k in ipairs(Q.statOrder) do
+					if after and after[k] ~= now[k] then
+						local col = after[k] > now[k] and "#78FF8C" or "#FF6E6E"
+						table.insert(out, Q.statNames[k] .. "  " .. now[k] .. "  >  <font color=\"" .. col .. "\">" .. after[k] .. "</font>")
+					end
+				end
+				local e = Q.equipOf(id)
+				if e[g.kind] == gid then table.insert(out, "(equipped)") end
+				table.insert(out, "")
+			end
+		end
+		return table.concat(out, "\n")
+	end
+
+	local mode = "cmd"
+	local rows = {}
+	local function buyRows()
+		local out = {}
+		local ch = Q.data.chapter or 1
+		local function head(t) table.insert(out, {text = "-  " .. t .. "  -", enabled = false, head = true, why = ""}) end
+		head("POTIONS")
+		local ids = {}
+		for id in pairs(Q.prices) do table.insert(ids, id) end
+		table.sort(ids, function(a, b) return Q.prices[a] < Q.prices[b] end)
+		for _, id in ipairs(ids) do
+			local it = Q.items[id]
+			if (Q.itemCh[id] or 1) <= ch then
+				table.insert(out, {text = it.name, right = Q.prices[id] .. " B", kind = "item", id = id, desc = it.desc .. "   (you have " .. (Q.data.items[id] or 0) .. ")"})
+			end
+		end
+		for _, kind in ipairs({"weapon", "armor"}) do
+			head(kind == "weapon" and "WEAPONS" or "ARMOR")
+			local gl = {}
+			for gid, g in pairs(Q.arsenal) do if g.kind == kind and (g.price or 0) > 0 then table.insert(gl, gid) end end
+			table.sort(gl, function(a, b) return Q.arsenal[a].price < Q.arsenal[b].price end)
+			for _, gid in ipairs(gl) do
+				local g = Q.arsenal[gid]
+				if (g.ch or 1) <= ch then
+					local owner = g.who and ("  [" .. Q.members[g.who].name .. "]") or ""
+					table.insert(out, {text = g.name .. owner, right = g.price .. " B", kind = "gear", id = gid, cmp = gid,
+						desc = g.desc .. "   " .. Q.statText(g.stats) .. "   " .. g.slots .. " socket" .. (g.slots > 1 and "s" or "") .. "   (you have " .. (Q.data.gear[gid] or 0) .. ")"})
+				else
+					table.insert(out, {text = "? ? ? ? ?", right = g.price .. " B", enabled = false, locked = true, desc = "Further down the road."})
+				end
+			end
+		end
+		head("MEMORIES")
+		local ml = {}
+		for id, def in pairs(Q.memoryDefs) do if def.price then table.insert(ml, id) end end
+		table.sort(ml, function(a, b) return Q.memoryDefs[a].price < Q.memoryDefs[b].price end)
+		for _, id in ipairs(ml) do
+			local def = Q.memoryDefs[id]
+			local gift = Q.statText(def.boost or {})
+			table.insert(out, {text = def.name, right = def.price .. " B", kind = "memory", id = id,
+				desc = def.desc .. "   " .. gift .. "   (1 in " .. def.rarity .. ")"})
+		end
+		return out
+	end
+	local function sellRows()
+		local out = {}
+		local ids = {}
+		for id, n in pairs(Q.data.items) do if n > 0 and Q.items[id] then table.insert(ids, id) end end
+		table.sort(ids)
+		for _, id in ipairs(ids) do
+			table.insert(out, {text = Q.items[id].name .. "  x" .. Q.data.items[id], right = Q.sellPrice("item", id) .. " B", kind = "item", id = id, desc = Q.items[id].desc})
+		end
+		local gl = {}
+		for gid, n in pairs(Q.data.gear) do if n > 0 and Q.arsenal[gid] then table.insert(gl, gid) end end
+		table.sort(gl)
+		for _, gid in ipairs(gl) do
+			table.insert(out, {text = Q.arsenal[gid].name .. "  x" .. Q.data.gear[gid], right = Q.sellPrice("gear", gid) .. " B", kind = "gear", id = gid,
+				desc = Q.arsenal[gid].desc .. "   (spares only: what you wear stays on)"})
+		end
+		for _, mem in ipairs(Q.data.memories or {}) do
+			local name, lv = Q.memName(mem)
+			local who = Q.memHolder(mem.uid)
+			table.insert(out, {text = name .. "  (" .. lv .. ")", right = Q.sellPrice("memory", mem.id) .. " B", kind = "memory", id = mem.uid, enabled = not who,
+				why = "Take it out of " .. (who and Q.members[who].name or "") .. "'s socket first (P > Equip).", desc = Q.memDesc(mem)})
+		end
+		if #out == 0 then table.insert(out, {text = "( nothing to sell )", enabled = false, why = ""}) end
+		return out
+	end
+	list.onMove = function(i)
+		local r = rows[i]
+		desc.Text = r and r.desc or ""
+		cmp.Text = r and r.cmp and compare(r.cmp) or ""
+	end
+	local function showList()
+		rows = mode == "buy" and buyRows() or sellRows()
+		list.set(rows)
+		list.active = true
+		list.draw()
+		cmds.active = false
+		cmds.draw()
+	end
+	list.active = false
+	list.draw()
+	local function toCmd()
+		mode = "cmd"
+		list.active = false
+		list.set({})
+		desc.Text, cmp.Text = "", ""
+		cmds.active = true
+		cmds.draw()
+	end
+
+	-- Roll: the sky deals you a memory. Names spin and slow down like the aura rolls, then land.
+	local rolling = false
+	local function roll()
+		if rolling then return end
+		if not Q.spend(Q.rollCost) then say("poor") Q.sound(Q.sfx.select, 0.4, 0.6) return end
+		rolling = true
+		refreshBytes()
+		say("roll")
+		local id = Q.pickMemory(1)
+		local def = Q.memoryDefs[id]
+		local win = Q.win(board, UDim2.new(0.5, -280, 0.5, -80), UDim2.new(0, 560, 0, 160), Z + 20)
+		local name = Q.text(win, {Position = UDim2.new(0, 0, 0, 36), Size = UDim2.new(1, 0, 0, 40), Text = "", TextSize = 28, Font = Enum.Font.GothamBold,
+			TextXAlignment = Enum.TextXAlignment.Center, ZIndex = Z + 21})
+		local odds = Q.text(win, {Position = UDim2.new(0, 0, 0, 86), Size = UDim2.new(1, 0, 0, 30), Text = "", TextSize = 20, Font = Enum.Font.GothamBold,
+			TextXAlignment = Enum.TextXAlignment.Center, ZIndex = Z + 21})
+		local delay = 0.04
+		while delay < 0.42 do
+			local fake = Q.memoryDefs[Q.pickMemory(1.6)]
+			name.Text, odds.Text = fake.name, "1 in " .. fake.rarity
+			name.TextColor3, odds.TextColor3 = Q.rarityColor(fake.rarity), Q.rarityColor(fake.rarity)
+			Q.sound(Q.sfx.select, 0.25, 1.4)
+			task.wait(delay)
+			delay = delay * 1.18
+		end
+		name.Text, odds.Text = def.name, "1 in " .. def.rarity
+		name.TextColor3, odds.TextColor3 = Q.rarityColor(def.rarity), Q.rarityColor(def.rarity)
+		Q.sound(def.rarity >= 100 and Q.sfx.magic or Q.sfx.heal, 0.6)
+		if def.rarity >= 100 then
+			Q.flash(Q.rarityColor(def.rarity), 0.1)
+			say("rare")
+		end
+		Q.addMemory(id)
+		Q.save()
+		task.wait(1.6)
+		win:Destroy()
+		rolling = false
+	end
+
+	local function pickRow(i)
+		local r = rows[i]
+		if not r or r.head then return end
+		if r.enabled == false then
+			if r.locked then say("locked") elseif r.why and r.why ~= "" then talk.Text = r.why end
+			Q.sound(Q.sfx.select, 0.4, 0.6)
+			return
+		end
+		local e
+		if mode == "buy" then e = Q.buy(r.kind, r.id) else e = Q.sell(r.kind, r.id) end
+		if e then
+			if e == "Not enough Bytes." then say("poor") else talk.Text = e end
+			Q.sound(Q.sfx.select, 0.4, 0.6)
+		else
+			Q.sound(Q.sfx.levelup, 0.35, 1.3)
+			say(mode == "buy" and "buy" or "sell")
+		end
+		refreshBytes()
+		local keep = list.cursor
+		rows = mode == "buy" and buyRows() or sellRows()
+		list.set(rows)
+		list.cursor = math.clamp(keep, 1, #rows)
+		list.draw()
+	end
+	local function command(i)
+		Q.sound(Q.sfx.select, 0.5)
+		if i == 1 then mode = "buy" showList()
+		elseif i == 2 then mode = "sell" showList()
+		elseif i == 3 then task.spawn(roll)
+		else closed = true end
+	end
+	cmds.onClick = function(i) if mode == "cmd" and not rolling then command(i) end end
+	list.onClick = function(i) if mode ~= "cmd" and not rolling then pickRow(i) end end
+	Q.menuPress = function(k)
+		if rolling then return end
+		if mode == "cmd" then
+			if k == "up" then cmds.move(-1) elseif k == "down" then cmds.move(1)
+			elseif k == "ok" then command(cmds.cursor)
+			elseif k == "back" or k == "close" then closed = true end
+		else
+			if k == "up" then list.move(-1) elseif k == "down" then list.move(1)
+			elseif k == "ok" then pickRow(list.cursor)
+			elseif k == "back" or k == "close" then toCmd() end
+		end
+	end
+	local keyMap = {
+		[Enum.KeyCode.Up] = "up", [Enum.KeyCode.W] = "up", [Enum.KeyCode.Down] = "down", [Enum.KeyCode.S] = "down",
+		[Enum.KeyCode.Return] = "ok", [Enum.KeyCode.E] = "ok", [Enum.KeyCode.Z] = "ok", [Enum.KeyCode.ButtonA] = "ok",
+		[Enum.KeyCode.Backspace] = "back", [Enum.KeyCode.X] = "back", [Enum.KeyCode.ButtonB] = "back",
+	}
+	local opened = tick()
+	keyConn = UserInputService.InputBegan:Connect(function(input, processed)
+		if input.UserInputType == Enum.UserInputType.MouseButton2 then Q.menuPress("back") return end
+		if processed or tick() - opened < 0.25 then return end
+		local k = keyMap[input.KeyCode]
+		if k then Q.menuPress(k) end
+	end)
+	Q.sound(Q.sfx.select, 0.5, 1.1)
+	while not closed and Q.alive(token) do task.wait(0.1) end
+	end)
+	if keyConn then keyConn:Disconnect() end
+	if fitConn then fitConn:Disconnect() end
+	Q.menuPress = nil
+	if back then back:Destroy() end
+	Q.freeze(false)
+	Q.inMenu = false
+	Q.menuGrace = tick() + 1
+	if not ok then warn("rpg shop: " .. tostring(err)) end
 end
 
 -- [60_data.lua]
@@ -39168,6 +39989,614 @@ Q.enemies = {
 			death = {"> thank you. it doesn't hurt now."},
 		}},
 }
+
+-- [62_gear.lua]
+-- ---------- gear, Bytes and memories (kas's "big mechanic", v1.31.0) ----------
+-- Weapons and armor live here, NOT in Q.items (the battle Item menu lists everything in Q.items). Every piece has
+-- memory sockets. A socketed memory gives its boost (or a skill) and grows with AP from wins; when it's MASTERED,
+-- "Remember the past" plays its flashback, makes its gift permanent and frees the socket.
+-- who = the only member who can hold it (weapons); slots = memory sockets; ch = the chapter Odds starts selling it.
+-- Swords: kas's Place1 swords (mesh/texture ids read in Studio, checked on the economy API). rot turns the mesh so
+-- its blade runs up +Y with the hilt at the bottom; grip = how far below the blade's middle the hand goes (fraction
+-- of the length); grow = the glowing shell's scale (thin on the flat side, wide on the edges).
+Q.arsenal = {
+	shattered = {name = "Shattered Greatsword", kind = "weapon", who = "vane", slots = 1, stats = {}, price = 0,
+		desc = "Salvaged from a dying medieval server. Cracked down the middle. It still cuts.",
+		sword = {mesh = "rbxassetid://4613928725", native = {3.4927, 22.189, 1.8165}, len = 5.6, grip = 0.41, color = {90, 230, 255},
+			grow = {1.09, 1.012, 1.35}, auras = {{"ltn5", 0.4, 0.2}, {"ltn6", 0.35, 0.1}}}},
+	overseer = {name = "Overseer's Verdict", kind = "weapon", who = "vane", slots = 2, stats = {atk = 6}, price = 600, ch = 1,
+		desc = "A black blade from a server that judged its players. It still remembers every ban.",
+		sword = {mesh = "rbxassetid://94840342", tex = "rbxassetid://250727362", native = {0.468, 7.204, 3.036}, yaw = 90, len = 5.6, grip = 0.36, color = {255, 55, 70},
+			grow = {1.35, 1.012, 1.08}, auras = {{"redLtn", 0.4, 0.25}, {"darkFlame", 0.25, 0.3}}}},
+	error_blade = {name = "ERR_BLADE", kind = "weapon", who = "vane", slots = 2, stats = {atk = 11, mag = 4}, price = 1500, ch = 2,
+		desc = "Its texture never loaded. Whatever it hits forgets what it was for a second.",
+		sword = {mesh = "rbxassetid://12221720", tex = "rbxassetid://9099782826", native = {1.1503, 0.3393, 4.3707}, z = true, len = 5.4, grip = 0.32, color = {255, 40, 220},
+			grow = {1.12, 1.6, 1.012}, auras = {{"numbers", 0.3, 0.4}, {"box", 0.3, 0.3}}}},
+	tidebreaker = {name = "Tidebreaker", kind = "weapon", who = "vane", slots = 3, stats = {atk = 16, spd = 3}, price = 2800, ch = 3,
+		desc = "Found at the bottom of a flooded obby. It's still wet. It's always still wet.",
+		sword = {mesh = "rbxassetid://5355486008", tex = "rbxassetid://6583308264", native = {3.6753, 4.5168, 0.4202}, diag = true, len = 5.6, grip = 0.38, color = {70, 160, 255},
+			grow = {1.06, 1.06, 1.8}, auras = {{"bubble", 0.35, 0.4}, {"wave", 0.3, 0.15}}}},
+	periastron = {name = "Starfall Periastron", kind = "weapon", who = "vane", slots = 3, stats = {atk = 24, mag = 6}, price = 5200, ch = 5,
+		desc = "A sword from the oldest games, when swords were the whole game. It hums the old theme.",
+		sword = {mesh = "rbxassetid://80557857", tex = "rbxassetid://157345185", native = {1.3936, 0.6318, 5.2552}, z = true, len = 5.6, grip = 0.38, color = {255, 215, 120},
+			grow = {1.15, 1.4, 1.012}, auras = {{"superstars", 0.35, 0.3}, {"galax", 0.3, 0.15}}}},
+
+	stylus = {name = "Worn Stylus", kind = "weapon", who = "seris", slots = 1, stats = {}, price = 0, desc = "The pen she writes on arms with. The cap is chewed."},
+	debug_pen = {name = "Debug Pen", kind = "weapon", who = "seris", slots = 2, stats = {mag = 5, mp = 6}, price = 500, ch = 1,
+		desc = "Writes in a color only error logs use."},
+	root_quill = {name = "Root Quill", kind = "weapon", who = "seris", slots = 2, stats = {mag = 10, mp = 14}, price = 1400, ch = 2,
+		desc = "Has admin on anything it writes on. Probably shouldn't."},
+	first_quill = {name = "The Quill of Firsts", kind = "weapon", who = "seris", slots = 3, stats = {mag = 16, mp = 20}, price = 3000, ch = 4,
+		desc = "Wrote the first line of a game nobody remembers. It still has the ink."},
+
+	hoodie = {name = "Patched Hoodie", kind = "armor", slots = 1, stats = {}, price = 0, desc = "Everyone starts in one."},
+	static_weave = {name = "Static Weave", kind = "armor", slots = 1, stats = {def = 4}, price = 300, ch = 1,
+		desc = "Woven from TV static. Hits come out a little fuzzy."},
+	firewall_coat = {name = "Firewall Coat", kind = "armor", slots = 2, stats = {def = 8, hp = 40}, price = 800, ch = 1,
+		desc = "Blocks most incoming traffic. Warm, too."},
+	rollback_mail = {name = "Rollback Mail", kind = "armor", slots = 2, stats = {def = 13, hp = 90}, price = 2000, ch = 3,
+		desc = "Every dent undoes itself a second later."},
+	cache_plate = {name = "Cache Plate", kind = "armor", slots = 3, stats = {def = 19, hp = 140, mag = 3}, price = 4200, ch = 5,
+		desc = "Keeps a copy of you. Just in case."},
+}
+Q.startGear = {vane = {weapon = "shattered", armor = "hoodie"}, seris = {weapon = "stylus", armor = "hoodie"}}
+
+-- potions (Odds sells these and the old ones; prices are on every item now)
+Q.items.hi_patch = {name = "Patch+", kind = "heal", amount = 350, target = "ally", desc = "Restores 350 HP."}
+Q.items.ether_plus = {name = "Ether+", kind = "mp", amount = 100, target = "ally", desc = "Restores 100 MP."}
+Q.prices = {patch = 40, hi_patch = 160, ether = 120, ether_plus = 350, salve = 60, rollback = 300}
+Q.itemCh = {hi_patch = 2, ether_plus = 3}
+
+-- memories. rarity = "1 in N" (drops and Odds' Roll pick by it, like the sky's aura rolls). boost = while socketed,
+-- times the memory's level (x1, x1.5, x2, x2.5 mastered); skill = a skill it lends while socketed; keep = what
+-- Remembering makes permanent (defaults to boost; a skill becomes learned for good). ap = AP to reach Lv2, Lv3,
+-- MASTERED. price = Odds sells it (the common ones). lines = the flashback.
+Q.memoryDefs = {
+	warm_bread = {name = "Warm Bread on a Cold Morning", rarity = 4, boost = {hp = 30}, keep = {hp = 40}, ap = {15, 45, 100}, price = 150,
+		desc = "Someone was always up first.",
+		lines = {"The kitchen is still dark. The oven is the only light.", "Someone is humming. You never learned the song.",
+			"\"It's hot. Blow on it first.\"", "You didn't. You burned your tongue. You'd do it again."}},
+	recess_bell = {name = "The Recess Bell", rarity = 5, boost = {spd = 2}, ap = {15, 45, 100}, price = 200,
+		desc = "The fastest anyone ever ran.",
+		lines = {"The bell hasn't finished ringing and you're already at the door.", "Somebody yells \"LAST ONE THERE\"",
+			"You don't remember who won.", "You remember that it mattered more than anything."}},
+	night_light = {name = "A Night Light Left On", rarity = 5, boost = {mp = 8}, keep = {mp = 10}, ap = {15, 45, 100}, price = 180,
+		desc = "Somebody checked twice.",
+		lines = {"The hallway light makes a stripe across the floor.", "The door opens a crack. Closes. Opens again.",
+			"\"Just checking.\"", "You pretended to be asleep so they'd stop worrying. They knew."}},
+	scraped_knee = {name = "A Scraped Knee, Kissed Better", rarity = 6, boost = {def = 3}, ap = {15, 45, 100}, price = 220,
+		desc = "It didn't hurt after that. That's how it worked.",
+		lines = {"Gravel in your palms. Your knee is the loudest thing in the world.", "Someone kneels down to your height.",
+			"\"There. All better.\"", "It wasn't. It was."}},
+	first_win = {name = "Your First Win", rarity = 16, boost = {atk = 4}, ap = {25, 70, 160},
+		desc = "VICTORY in big gold letters, and you yelled.",
+		lines = {"A screen full of gold letters.", "You stood up so fast the chair fell over.",
+			"Someone in the next room yelled \"WHAT HAPPENED\"", "\"I WON. I WON.\" You'd never been so loud."}},
+	library_hush = {name = "The Library Hush", rarity = 16, boost = {mag = 4}, ap = {25, 70, 160},
+		desc = "The quiet that made you smarter just by sitting in it.",
+		lines = {"Dust in the window light. A clock you can only hear here.", "The librarian slides a book across without a word.",
+			"It's the one you were looking for.", "You never asked how she knew."}},
+	sleepover = {name = "A Sleepover Promise", rarity = 40, boost = {mp = 5}, ap = {30, 90, 200},
+		skill = {id = "m_stay_up", name = "Stay Up Late", kind = "heal", power = 1.0, mp = 10, target = "party",
+			desc = "Heals the whole party. Nobody sleeps until everyone's okay."},
+		desc = "\"We'll stay up till sunrise.\" Nobody made it past two.",
+		lines = {"Flashlights under a blanket fort.", "\"Promise we'll be friends when we're old.\"",
+			"\"Like OLD old?\" \"Like forty.\"", "You promised. You meant it. You were nine."}},
+	lucky_coin = {name = "A Lucky Coin", rarity = 120, boost = {spd = 2}, ap = {30, 90, 200},
+		skill = {id = "m_call_it", name = "Call It", kind = "attack", power = 2.6, mp = 7, target = "enemy",
+			desc = "Heads or tails. It's always heads."},
+		desc = "Found on the sidewalk. Heads up. You kept it for years.",
+		lines = {"A coin on the sidewalk, heads up, shining.", "\"Heads up means good luck. Everybody knows that.\"",
+			"You flipped it before every test. Every game.", "You lost it. The luck stayed. That's the trick."}},
+	snow_day = {name = "Snow Day", rarity = 300, boost = {atk = 2, def = 2, mag = 2, spd = 1}, ap = {40, 120, 260},
+		desc = "The radio said the name of your school.",
+		lines = {"The radio reads the list. You hold your breath.", "Your school. Your school is on the list.",
+			"The whole street is white and nobody has touched it yet.", "The day had no plans in it. It was perfect."}},
+	last_roll = {name = "The Last Roll", rarity = 1000, boost = {mag = 3, spd = 3}, ap = {50, 150, 320},
+		skill = {id = "m_jackpot", name = "Jackpot", kind = "magic", power = 3.6, mp = 18, target = "enemy",
+			desc = "Every roll you ever lost, cashed in at once."},
+		desc = "Not yours. Odds says it fell out of the sky. She won't look at it.",
+		lines = {"A sky full of light. A girl with a hand raised to it.", "\"One more. Just one more and it'll be the one.\"",
+			"It was the one. The sky turned gold.", "There was nobody left to show it to."}},
+	kitchen_table = {name = "Everyone at the Kitchen Table", rarity = 2500, boost = {hp = 60, atk = 5, mag = 5}, keep = {hp = 80, atk = 5, mag = 5}, ap = {60, 180, 400},
+		desc = "All the chairs were full. Once.",
+		lines = {"Every chair is full. Someone brought an extra from the garage.", "Two conversations at once. Nobody's listening. Everybody's laughing.",
+			"Someone passes you the bread without being asked.", "You didn't know this was the one you'd want back."}},
+}
+Q.memMult = {1, 1.5, 2, 2.5}
+Q.statNames = {hp = "HP", mp = "MP", atk = "ATK", def = "DEF", mag = "MAG", spd = "SPD"}
+Q.statOrder = {"hp", "mp", "atk", "def", "mag", "spd"}
+
+-- the Hollowed Echo: a Hollowed that was laid to rest, put back together out of leftover static. Echoes come back
+-- every time you pass through (the named ones you fought stay at rest), so there's always something to fight for
+-- Bytes, EXP, AP and memories.
+Q.enemies.hollowed_echo = {name = "Hollowed Echo", look = "hollowed", hp = 100, atk = 9, def = 5, mag = 4, spd = 9, xp = 20, bytes = 18, items = {},
+	weeps = true,
+	skills = {
+		{id = "grasp", name = "Grasp for a Memory", kind = "attack", power = 1.1, status = {id = "fading", chance = 0.2, turns = 2}},
+		{id = "flail", name = "Flail", kind = "attack", power = 0.9},
+	},
+	lines = {
+		start = {"> again", "> i was already sorry", "> did i do this before"},
+		attack = {"> again", "> sorry", "> i know you"},
+		hurt = {"> again", "> it's ok"},
+		death = {"> see you", "> again"},
+	}}
+
+-- ---------- the save side ----------
+-- equip[id] = {weapon, armor, sockets = {uid or false, ...}} (fixed length, false = empty, so the JSON stays an array)
+Q.equipOf = function(id)
+	local data = Q.data
+	data.equip = data.equip or {}
+	local e = data.equip[id]
+	if type(e) ~= "table" then
+		local start = Q.startGear[id] or {}
+		e = {weapon = start.weapon, armor = start.armor or "hoodie", sockets = {}}
+		data.equip[id] = e
+	end
+	e.sockets = type(e.sockets) == "table" and e.sockets or {}
+	local n = Q.socketCount(e)
+	-- more sockets than the gear has (it was swapped): the extra memories go back to the bag
+	for i = #e.sockets, n + 1, -1 do table.remove(e.sockets, i) end
+	for i = 1, n do
+		if e.sockets[i] == nil or (e.sockets[i] and not Q.memByUid(e.sockets[i])) then e.sockets[i] = false end
+	end
+	return e
+end
+
+Q.socketCount = function(e)
+	local w, a = Q.arsenal[e.weapon or ""], Q.arsenal[e.armor or ""]
+	return (w and w.slots or 0) + (a and a.slots or 0)
+end
+
+Q.memByUid = function(uid)
+	for _, m in ipairs(Q.data.memories or {}) do
+		if m.uid == uid then return m end
+	end
+end
+
+-- who has this memory socketed (and in which socket)
+Q.memHolder = function(uid)
+	for id, e in pairs(Q.data.equip or {}) do
+		for i, s in ipairs(e.sockets or {}) do
+			if s == uid then return id, i end
+		end
+	end
+end
+
+Q.memLevel = function(m)
+	local def = Q.memoryDefs[m.id]
+	local lv = 1
+	for i, need in ipairs(def.ap) do
+		if (m.ap or 0) >= need then lv = i + 1 end
+	end
+	return lv, lv > #def.ap
+end
+
+Q.memName = function(m)
+	local def = Q.memoryDefs[m.id]
+	local lv, mastered = Q.memLevel(m)
+	return def.name, mastered and "MASTERED" or ("Lv " .. lv)
+end
+
+Q.addMemory = function(id)
+	local data = Q.data
+	data.memories = data.memories or {}
+	data.memUid = (data.memUid or 0) + 1
+	local m = {uid = "m" .. data.memUid, id = id, ap = 0}
+	table.insert(data.memories, m)
+	data.memFound = data.memFound or {}
+	data.memFound[id] = true
+	return m
+end
+
+-- a memory's boost at its level, as {stat = n}
+Q.memBoost = function(m)
+	local def = Q.memoryDefs[m.id]
+	local lv = Q.memLevel(m)
+	local out = {}
+	for k, v in pairs(def.boost or {}) do out[k] = math.floor(v * Q.memMult[lv]) end
+	return out
+end
+
+-- adds gear, socketed memories and remembered gifts to a member's stats (called by Q.member)
+Q.applyGear = function(s, id)
+	if not Q.data then return end
+	local e = Q.equipOf(id)
+	local add = {}
+	local function plus(t)
+		for k, v in pairs(t or {}) do add[k] = (add[k] or 0) + v end
+	end
+	for _, slot in ipairs({e.weapon, e.armor}) do
+		local g = Q.arsenal[slot or ""]
+		if g then plus(g.stats) end
+	end
+	local have = {}
+	for _, sk in ipairs(s.skills) do have[sk.id] = true end
+	local function lend(sk)
+		if sk and not have[sk.id] then
+			have[sk.id] = true
+			table.insert(s.skills, sk)
+		end
+	end
+	for _, uid in ipairs(e.sockets) do
+		local m = uid and Q.memByUid(uid)
+		if m then
+			plus(Q.memBoost(m))
+			lend(Q.memoryDefs[m.id].skill)
+		end
+	end
+	for _, r in ipairs(Q.data.remembered or {}) do
+		if r.who == id then
+			local def = Q.memoryDefs[r.id]
+			plus(def.keep or def.boost)
+			lend(def.skill)
+		end
+	end
+	for k, v in pairs(add) do s[k] = (s[k] or 0) + v end
+	s.gear = add
+end
+
+-- socket a memory (uid) into member id's socket i; a memory someone else holds moves over
+Q.socket = function(id, i, uid)
+	local e = Q.equipOf(id)
+	if i < 1 or i > #e.sockets then return "No socket there." end
+	if uid then
+		local who, at = Q.memHolder(uid)
+		if who then Q.data.equip[who].sockets[at] = false end
+	end
+	e.sockets[i] = uid or false
+	return nil
+end
+
+-- put on a piece of gear you own (weapons only fit their owner); the old one goes back in the bag
+Q.equipGear = function(id, gearId)
+	local g = Q.arsenal[gearId]
+	if not g then return "No such gear." end
+	if g.who and g.who ~= id then return "Only " .. Q.members[g.who].name .. " can use that." end
+	local e = Q.equipOf(id)
+	local slot = g.kind
+	if e[slot] == gearId then return nil end
+	local gear = Q.data.gear
+	-- (starting gear costs nothing and is always there to go back to)
+	local free = (g.price or 0) == 0
+	if not free and (gear[gearId] or 0) <= 0 then return "You don't have one." end
+	if not free then gear[gearId] = gear[gearId] - 1 end
+	local old = e[slot]
+	if old and (Q.arsenal[old].price or 0) > 0 then gear[old] = (gear[old] or 0) + 1 end
+	e[slot] = gearId
+	Q.equipOf(id)
+	-- the new sword shows on your back at once
+	if id == "vane" and slot == "weapon" and Q.wieldSword then
+		local char = Players.LocalPlayer.Character
+		if char and char:FindFirstChild("NYSword") then pcall(Q.wieldSword, char, "back") end
+	end
+	Q.save()
+	return nil
+end
+
+-- ---------- Bytes, buying and selling ----------
+Q.spend = function(n)
+	if (Q.data.bytes or 0) < n then return false end
+	Q.data.bytes = Q.data.bytes - n
+	return true
+end
+
+-- kind = "item" | "gear" | "memory"
+Q.buy = function(kind, id)
+	local price = kind == "item" and Q.prices[id] or kind == "gear" and Q.arsenal[id].price or Q.memoryDefs[id].price
+	if not price then return "Not for sale." end
+	if not Q.spend(price) then return "Not enough Bytes." end
+	if kind == "item" then
+		Q.data.items[id] = (Q.data.items[id] or 0) + 1
+	elseif kind == "gear" then
+		Q.data.gear[id] = (Q.data.gear[id] or 0) + 1
+	else
+		Q.addMemory(id)
+	end
+	Q.save()
+	return nil
+end
+
+Q.sellPrice = function(kind, id)
+	if kind == "item" then return math.floor((Q.prices[id] or 20) / 2) end
+	if kind == "gear" then return math.floor((Q.arsenal[id].price or 0) / 2) end
+	local def = Q.memoryDefs[id]
+	return def.price and math.floor(def.price / 2) or math.min(3000, 20 + def.rarity * 2)
+end
+
+-- what = item id / gear id / memory uid. Socketed memories can't be sold (take them out first).
+Q.sell = function(kind, what)
+	local data = Q.data
+	if kind == "item" or kind == "gear" then
+		local bag = kind == "item" and data.items or data.gear
+		if (bag[what] or 0) <= 0 then return "You don't have one." end
+		bag[what] = bag[what] - 1
+		data.bytes = (data.bytes or 0) + Q.sellPrice(kind, what)
+	else
+		if Q.memHolder(what) then return "Take it out of its socket first." end
+		for i, m in ipairs(data.memories) do
+			if m.uid == what then
+				table.remove(data.memories, i)
+				data.bytes = (data.bytes or 0) + Q.sellPrice("memory", m.id)
+				Q.save()
+				return nil
+			end
+		end
+		return "You don't have it."
+	end
+	Q.save()
+	return nil
+end
+
+-- pick a memory by rarity ("1 in N" weights); luck > 1 tilts it toward the rare ones
+Q.pickMemory = function(luck, rng)
+	local list, total = {}, 0
+	for id, def in pairs(Q.memoryDefs) do
+		local w = (1 / def.rarity) ^ (1 / (luck or 1))
+		table.insert(list, {id = id, w = w})
+		total = total + w
+	end
+	table.sort(list, function(a, b) return a.id < b.id end)
+	local r = (rng or math.random)() * total
+	for _, it in ipairs(list) do
+		r = r - it.w
+		if r <= 0 then return it.id end
+	end
+	return list[#list].id
+end
+
+Q.rollCost = 100
+
+-- ---------- after a battle ----------
+-- AP to every socketed memory of the members who fought; returns the victory lines
+Q.giveAp = function(ids, ap)
+	local lines = {}
+	for _, id in ipairs(ids) do
+		local e = Q.equipOf(id)
+		for _, uid in ipairs(e.sockets) do
+			local m = uid and Q.memByUid(uid)
+			if m then
+				local before, wasMastered = Q.memLevel(m)
+				m.ap = (m.ap or 0) + ap
+				local after, mastered = Q.memLevel(m)
+				if mastered and not wasMastered then
+					table.insert(lines, Q.memoryDefs[m.id].name .. " is MASTERED! (Remember it from the menu)")
+				elseif after > before then
+					table.insert(lines, Q.memoryDefs[m.id].name .. " grew to Lv " .. after .. "!")
+				end
+			end
+		end
+	end
+	return lines
+end
+
+-- the chance that a won fight leaves a memory behind
+Q.dropChance = function(enemyCount, boss)
+	if boss then return 1 end
+	return math.min(0.75, 0.3 + 0.1 * math.max(0, (enemyCount or 1) - 1))
+end
+
+-- ---------- Remember the past ----------
+-- only a MASTERED memory in a socket; the one holding it keeps its gift for good and the memory is spent
+Q.remember = function(uid)
+	local m = Q.memByUid(uid)
+	if not m then return nil, "You don't have it." end
+	local _, mastered = Q.memLevel(m)
+	if not mastered then return nil, "Not mastered yet." end
+	local who, at = Q.memHolder(uid)
+	if not who then return nil, "Socket it into someone first: they're the one who remembers." end
+	Q.data.equip[who].sockets[at] = false
+	for i, x in ipairs(Q.data.memories) do
+		if x.uid == uid then table.remove(Q.data.memories, i) break end
+	end
+	Q.data.remembered = Q.data.remembered or {}
+	table.insert(Q.data.remembered, {who = who, id = m.id, chapter = Q.data.chapter})
+	Q.save()
+	return who
+end
+
+-- "+30 HP  +2 SPD" for a stat table
+Q.statText = function(t)
+	local out = {}
+	for _, k in ipairs(Q.statOrder) do
+		if t[k] and t[k] ~= 0 then table.insert(out, (t[k] > 0 and "+" or "") .. t[k] .. " " .. Q.statNames[k]) end
+	end
+	return table.concat(out, "  ")
+end
+
+-- [66_safe.lua]
+-- ---------- The Last Roll: Odds' safe world (a real game: Sol's RNG; never named in the story) ----------
+-- From the P menu any time you're exploring. Nothing hunts you here. Odds runs a stall by the spawn; a tear behind
+-- her (or P > Go Back) returns you to the same chapter and scene. She's Static-Bound: her world is dying and she
+-- refused to jump, because the next roll might be the aura that saves it.
+Q.places.safe = {id = 15532962292, name = "The Last Roll"}
+
+-- the safe world opens from exploring only (not a fight, a line of dialogue, or a scene), and only once the story
+-- has a world to come back to
+Q.safeOk = function()
+	return Q.data and Q.data.started and Q.placeOf(Q.data.chapter) ~= nil and not Q.dialog
+end
+
+Q.safeGo = function()
+	if not Q.safeOk() and not Q.inSafe then return end
+	if game.PlaceId == Q.places.safe.id then task.spawn(Q.safeHub) return end
+	Q.hop(Q.places.safe, {safe = true}, "> STEPPING OUT OF THE STORY.")
+end
+
+Q.safeLeave = function()
+	local place = Q.placeOf(Q.data.chapter)
+	Q.inSafe = false
+	if not place or place.id == game.PlaceId then
+		task.spawn(Q.run, Q.data.chapter, Q.data.scene)
+		return
+	end
+	Q.hop(place, nil, "> BACK TO THE STORY.")
+end
+
+-- Odds, all catalog items (ids read in Studio, checked on the economy API): "Loose White Anime Side Buns" hair
+-- (6216526940, bunnexh), the Roblox Visor (2646473721), the "[AC] Kakegurui Compulsive Gambler Uniform" shirt
+-- (1542356936, GunsBullets), Roblox's Black Slacks (129459077) and Roblox's "Check It" face (7074786).
+Q.looks.odds = {name = "Odds", tagColor = Color3.fromRGB(205, 160, 255), skin = Color3.fromRGB(226, 188, 160), shirt = Color3.fromRGB(40, 30, 50),
+	pants = Color3.fromRGB(20, 20, 24), sleeves = true,
+	hairMesh = {mesh = "rbxassetid://6213294393", tex = "rbxassetid://6215580473", scale = Vector3.new(0.96, 1, 1), att = CFrame.new(0.03, 1.1925, -0.1799)},
+	hatMesh = {mesh = "rbxassetid://1081088", tex = "rbxassetid://2646470932", scale = Vector3.new(1.02, 1.02, 1.02), att = CFrame.new(0, 0.19, 0.1797), hat = true},
+	shirtTemplate = "rbxassetid://1542356891", pantsTemplate = "rbxassetid://129459076",
+	props = function(rig, head)
+		if not head then return end
+		-- (your own face may be an accessory, which the copy drops)
+		local face = head:FindFirstChildOfClass("Decal") or Instance.new("Decal")
+		face.Name, face.Face, face.Texture = "face", Enum.NormalId.Front, "rbxassetid://7074780"
+		face.Parent = head
+	end}
+
+-- two dice turning over her right hand, glinting
+Q.oddsDice = function(rig)
+	local hand = rig:FindFirstChild("RightHand") or rig:FindFirstChild("Right Arm")
+	if not hand then return end
+	local P = NeverYieldAgartha.part
+	local dice = {}
+	for i = 1, 2 do
+		local d = P(Q.stage(), Vector3.new(0.42, 0.42, 0.42), hand.CFrame, Color3.fromRGB(245, 240, 250), Enum.Material.SmoothPlastic, nil, {CanCollide = false, CanQuery = false, CanTouch = false})
+		d.Anchored = true
+		local hl = Instance.new("SelectionBox")
+		hl.Adornee, hl.Color3, hl.LineThickness, hl.Transparency = d, Color3.fromRGB(205, 160, 255), 0.02, 0.2
+		hl.Parent = d
+		Q.aura("star", d, {color = Color3.fromRGB(255, 225, 150), scale = 0.25, rate = 0.5, vis = 0.5})
+		dice[i] = d
+	end
+	Q.connect("oddsDice", RunService.Heartbeat:Connect(function()
+		if not hand.Parent then return end
+		local t = tick()
+		for i, d in ipairs(dice) do
+			local a = t * 1.6 + i * math.pi
+			d.CFrame = CFrame.new(hand.Position + Vector3.new(math.cos(a) * 0.7, 1.2 + math.sin(t * 2.3 + i) * 0.25, math.sin(a) * 0.7))
+				* CFrame.Angles(t * 2.1 + i, t * 1.7, t * 1.3 * i)
+		end
+	end))
+end
+
+-- her stall: "fantasy dark wooden market stall" (Creator Store 123152534685302, DevCrispy; a copy is kept in kas's
+-- Place1 under NYStallRefs). It's one textured mesh, rebuilt here as a Part + SpecialMesh (a script can't set a
+-- MeshPart's mesh). Native 1.91 x 1.91 x 1.55, counter facing -Z. cf = where Odds stands, facing you.
+Q.stallScale = 0.75
+Q.oddsStall = function(cf)
+	local k = Q.stallScale
+	local size = Vector3.new(12.876, 12.878, 10.436) * k
+	local p = NeverYieldAgartha.part(Q.stage(), size, cf * CFrame.new(0, size.Y / 2, 0), Color3.new(1, 1, 1), Enum.Material.SmoothPlastic, nil,
+		{CanCollide = false, CanQuery = false, CanTouch = false})
+	p.Anchored = true
+	local m = Instance.new("SpecialMesh")
+	m.MeshType = Enum.MeshType.FileMesh
+	m.MeshId, m.TextureId = "rbxassetid://111572964977689", "rbxassetid://92038510990146"
+	m.Scale = Vector3.new(6.741, 6.741, 6.741) * k
+	m.Parent = p
+	-- a warm light under the roof (the lanterns are painted on)
+	local l = Instance.new("PointLight")
+	l.Color, l.Range, l.Brightness = Color3.fromRGB(255, 190, 110), 14, 0.9
+	l.Parent = p
+	local sign = Instance.new("BillboardGui")
+	sign.Size = UDim2.new(0, 240, 0, 44)
+	sign.StudsOffsetWorldSpace = Vector3.new(0, size.Y / 2 + 1, 0)
+	sign.MaxDistance = 80
+	sign.Adornee = p
+	sign.Parent = p
+	Q.text(sign, {Size = UDim2.new(1, 0, 1, 0), Text = "ODDS  -  LUCK FOR SALE", Font = Enum.Font.GothamBlack, TextSize = 20,
+		TextColor3 = Color3.fromRGB(255, 225, 150), TextStrokeTransparency = 0.2, TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 1})
+	return p
+end
+
+-- the hub
+Q.safeHub = function()
+	Q.stop()
+	Q.load()
+	local token = Q.token
+	Q.inSafe = true
+	Q.anchor = nil
+	Q.vaneLook(true)
+	Q.playMusic("camp", 0.3)
+	Q.hideGameGui(true)
+	local me = Q.root()
+	if not me then return end
+	-- her spot: open floor a few steps in front of you (the stall goes between you and her)
+	local look = me.CFrame.LookVector * Vector3.new(1, 0, 1)
+	look = look.Magnitude > 0.1 and look.Unit or Vector3.new(0, 0, -1)
+	local want = me.Position + look * 11
+	local spot = want
+	local best = math.huge
+	for _, c in ipairs({want, me.Position + look * 9, me.Position + (look + me.CFrame.RightVector * 0.5).Unit * 10, me.Position + (look - me.CFrame.RightVector * 0.5).Unit * 10}) do
+		local y = Q.groundY(c, nil)
+		if y and math.abs(y - (me.Position.Y - 3)) < 4 and (not Q.walkable or Q.walkable(me.Position, Vector3.new(c.X, y + 3, c.Z), me.Position.Y - 3)) then
+			local d = (c - want).Magnitude
+			if d < best then best, spot = d, Vector3.new(c.X, y, c.Z) end
+		end
+	end
+	if best == math.huge then spot = Vector3.new(want.X, Q.groundY(want, me.Position.Y - 3), want.Z) end
+	local face = CFrame.lookAt(spot, Vector3.new(me.Position.X, spot.Y, me.Position.Z))
+	local odds = Q.cast("odds")
+	if not odds then return end
+	Q.hairMesh(odds, Q.looks.odds.hatMesh)
+	Q.put(odds, face)
+	pcall(Q.life, odds, "odds")
+	Q.oddsDice(odds)
+	Q.oddsStall(face * CFrame.new(0, 0, 0.6))
+	-- the way back: a tear a few steps to her side
+	local gatePos = (face * CFrame.new(9, 0, 1)).Position
+	local gy = Q.groundY(gatePos, spot.Y)
+	Q.gate(CFrame.lookAt(Vector3.new(gatePos.X, gy, gatePos.Z), Vector3.new(me.Position.X, gy, me.Position.Z)), function()
+		if Q.alive(token) and not Q.inMenu then Q.safeLeave() end
+	end, Color3.fromRGB(205, 160, 255))
+
+	-- first visit: who she is (short; kas wants gameplay over cutscenes)
+	if not Q.flag("met_odds") then
+		local seris = Q.data.joined.seris
+		Q.say(token, "Odds", "Well. A walker. Haven't had one of those since the sky started skipping.", {rig = odds, color = Color3.fromRGB(205, 160, 255)})
+		Q.say(token, "Odds", "Name's Odds. I roll. That's the whole job. Every roll might be the one that fixes all this.", {rig = odds, color = Color3.fromRGB(205, 160, 255)})
+		Q.say(token, "Vane", "Fixes what?", {color = Q.cyan})
+		Q.say(token, "Odds", "Everything. There's an aura up there that could hold this world together. One in a billion. I'm due.", {rig = odds, color = Color3.fromRGB(205, 160, 255)})
+		if seris then
+			Q.say(token, "Seris", "(quietly) She's Static-Bound, Vane. She's not jumping.", {color = Color3.fromRGB(110, 255, 170)})
+				Q.say(token, "Odds", "Jumping's for people who stopped believing in the next roll, sweetheart.", {rig = odds, color = Color3.fromRGB(205, 160, 255)})
+			end
+		Q.say(token, "Odds", "Meanwhile a girl's gotta eat. Bytes on the counter. And the tear behind me takes you right back where you left off.", {rig = odds, color = Color3.fromRGB(205, 160, 255)})
+		Q.flag("met_odds", true)
+		Q.save()
+	else
+		Q.bubble(odds, ({"Back again. The dice said you would be.", "Lose anything good out there?", "Sky's been generous today. Not to me."})[math.random(1, 3)], 4)
+	end
+	Q.toast("Odds' stall: walk up and press E.   P > Go Back, or the tear, to return.", 7)
+
+	-- E near Odds opens the stall; P opens the menu
+	local root = odds:FindFirstChild("HumanoidRootPart")
+	Q.connect("oddsKey", UserInputService.InputBegan:Connect(function(input, processed)
+		if processed or Q.inMenu or Q.dialog or not Q.alive(token) then return end
+		local r = Q.root()
+		if input.KeyCode == Enum.KeyCode.E and r and root and (r.Position - root.Position).Magnitude < 10 then
+			task.spawn(Q.shopMenu, token)
+		elseif input.KeyCode == Enum.KeyCode.P then
+			Q.inMenu = true
+			task.spawn(function()
+				pcall(Q.pauseMenu, token)
+				Q.inMenu = false
+			end)
+		end
+	end))
+	-- a "[E] Odds" hint when you're close
+	local hint = Instance.new("BillboardGui")
+	hint.Size = UDim2.new(0, 120, 0, 30)
+	hint.StudsOffsetWorldSpace = Vector3.new(0, 4.2, 0)
+	hint.Adornee = root
+	hint.Parent = odds
+	Q.text(hint, {Size = UDim2.new(1, 0, 1, 0), Text = "[E]  Shop", Font = Enum.Font.GothamBold, TextSize = 18, TextColor3 = Color3.fromRGB(255, 225, 150),
+		TextStrokeTransparency = 0.3, TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 1})
+	while Q.alive(token) do
+		local r = Q.root()
+		hint.Enabled = r and root and (r.Position - root.Position).Magnitude < 10 and not Q.inMenu or false
+		if r and root and not Q.inMenu and not Q.dialog then Q.face(odds, r.Position) end
+		task.wait(0.3)
+	end
+	Q.inSafe = false
+end
 
 -- [70_ch1.lua]
 -- ---------- DISC ONE, CHAPTER 1: THE COLLAPSE OF THE ACADEMY (Genovia High) ----------
@@ -39701,6 +41130,27 @@ addcmd('rpgdebug',{},function(args, speaker)
 			Q.battle(token, {enemies = {args[2] or "hollowed_student"}, music = "battle", tutorial = args[3] == "tutorial", fit = true})
 			Q.stop()
 		end)
+	elseif args[1] == "shop" then
+		-- Odds' stall right here (no trip)
+		task.spawn(Q.shopMenu, Q.token)
+	elseif args[1] == "safe" then
+		-- Odds' whole safe world staged where you stand (test it in any game)
+		task.spawn(Q.safeHub)
+	elseif args[1] == "bytes" and tonumber(args[2]) then
+		Q.data.bytes = (Q.data.bytes or 0) + tonumber(args[2])
+		Q.save()
+		notify('rpgdebug', 'Bytes: ' .. Q.data.bytes)
+	elseif args[1] == "memory" and Q.memoryDefs[args[2] or ""] then
+		-- rpgdebug memory <id> [ap]: add one (with AP, e.g. 9999 = mastered)
+		local m = Q.addMemory(args[2])
+		m.ap = tonumber(args[3]) or 0
+		Q.save()
+		notify('rpgdebug', 'Added ' .. Q.memoryDefs[args[2]].name)
+	elseif args[1] == "memory" then
+		local ids = {}
+		for id in pairs(Q.memoryDefs) do table.insert(ids, id) end
+		table.sort(ids)
+		notify('rpgdebug memory', table.concat(ids, ", "), 12)
 	elseif args[1] == "lineup" then
 		-- 10 Hollowed in a row in front of you, to see how different they look (unrpg clears them)
 		Q.stop()
@@ -39728,7 +41178,7 @@ addcmd('rpgdebug',{},function(args, speaker)
 		pcall(setclipboard, text)
 		notify('rpgdebug guis', #lines .. " found (copied, also in F9 console)")
 	else
-		notify('rpgdebug', 'rpgdebug chapter <n> [scene] | rpgdebug battle [enemy] [tutorial] | rpgdebug lineup [count] | rpgdebug guis')
+		notify('rpgdebug', 'rpgdebug chapter <n> [scene] | rpgdebug battle [enemy] [tutorial] | rpgdebug lineup [count] | rpgdebug guis | rpgdebug shop | rpgdebug safe | rpgdebug bytes <n> | rpgdebug memory <id> [ap]')
 	end
 end)
 
