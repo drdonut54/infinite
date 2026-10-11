@@ -5,6 +5,7 @@ Versions before 1.11.3 were reconstructed from the Desktop `.bakN` backups (one 
 
 | Version | Date | Commands | Change |
 |---|---|---|---|
+| 1.30.5 | 10-11 | 642 | Requiem: every Hollowed looks different (hair/clothes/size/tint/face/posture/glitches, seeded); Avatar Joint Upgrade fix (attacks, sit, accessories); battles fit open space; roamers avoid walls; victory cam, waypoint arrow, quieter static |
 | 1.30.4 | 10-10 | 642 | Requiem review fixes: knockout pose race, follower double loop, guard stance, double drops game tags, R6 back sword measured |
 | 1.30.3 | 10-10 | 642 | Requiem: FF7 battle moves (52_moves), hits connect, blade-down glowing sword, Seris techwear, ground sit, footstep follow, game tags/beams hidden, campfire |
 | 1.30.2 | 10-10 | 642 | | 1.30.2 | 2026-10-10 | Requiem: Genovia courtyard/Library/Astronomy anchors with facing, wall-safe battle + scene cameras, draggable choice menus | |

@@ -1,4 +1,4 @@
--- NeverYield v1.30.4 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.30.5 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.30.4" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.30.5" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -33015,20 +33015,92 @@ end
 Q.junkClasses = {"BaseScript", "ModuleScript", "Tool", "Accessory", "Clothing", "ShirtGraphic", "ForceField", "Sound",
 	"BodyMover", "AlignPosition", "AlignOrientation", "LinearVelocity", "AngularVelocity", "VectorForce", "Highlight", "Trail", "Beam", "BillboardGui"}
 
-Q.rig = function(look)
+-- Games with Roblox's Avatar Joint Upgrade on (Genovia High) build characters out of AnimationConstraints +
+-- BallSocketConstraints, with accessories held by RigidConstraints: physics joints. On a copy that we pose and glide
+-- around they do nothing (poses never show, legs never fold to sit) or lag behind (accessories drift off the body).
+-- Turn them back into the classic rigid Motor6Ds and Welds the pose engine expects.
+Q.fixJoints = function(rig)
+	for _, d in ipairs(rig:GetDescendants()) do
+		if d:IsA("AnimationConstraint") or d:IsA("RigidConstraint") then
+			local a0, a1 = d.Attachment0, d.Attachment1
+			local p0, p1 = a0 and a0.Parent, a1 and a1.Parent
+			if p0 and p1 and p0:IsA("BasePart") and p1:IsA("BasePart") then
+				local j = Instance.new(d:IsA("AnimationConstraint") and "Motor6D" or "Weld")
+				j.Name = d.Name
+				j.Part0, j.Part1 = p0, p1
+				j.C0, j.C1 = a0.CFrame, a1.CFrame
+				j.Parent = d.Parent
+			end
+			d:Destroy()
+		elseif d:IsA("BallSocketConstraint") or d:IsA("NoCollisionConstraint") or d:IsA("HingeConstraint") then
+			d:Destroy()
+		end
+	end
+end
+
+-- The engine re-attaches every Accessory in a character with a physics RigidConstraint whenever the model is
+-- parented (Avatar Joint Upgrade), so on a copy that keeps your accessories (Vane's battle double) they'd still lag
+-- and drift. Take each handle out of its Accessory and weld it straight onto the body part it belongs on.
+-- (Layered clothing stays an Accessory: it needs that to wrap onto the body.)
+Q.flattenAccessories = function(rig)
+	local body = {}
+	for _, p in ipairs(rig:GetChildren()) do if p:IsA("BasePart") then table.insert(body, p) end end
+	for _, acc in ipairs(rig:GetChildren()) do
+		if acc:IsA("Accessory") then
+			local h = acc:FindFirstChild("Handle")
+			local a1 = h and h:FindFirstChildWhichIsA("Attachment")
+			local a0
+			if a1 then
+				for _, p in ipairs(body) do
+					local a = p:FindFirstChild(a1.Name)
+					if a and a:IsA("Attachment") then a0 = a break end
+				end
+			end
+			if h and a1 and a0 and not h:FindFirstChildOfClass("WrapLayer") then
+				for _, j in ipairs(h:GetChildren()) do
+					if j:IsA("JointInstance") or j:IsA("Constraint") then j:Destroy() end
+				end
+				local w = Instance.new("Weld")
+				w.Part0, w.Part1 = a0.Parent, h
+				w.C0, w.C1 = a0.CFrame, a1.CFrame
+				w.Parent = h
+				h.Name = "NYAccessory"
+				h.Parent = rig
+				acc:Destroy()
+			end
+		end
+	end
+end
+
+-- a copy of your character, with its joints made rigid (see fixJoints)
+Q.copyChar = function()
 	local char = Players.LocalPlayer.Character
 	if not char then return nil end
 	local was = char.Archivable
 	char.Archivable = true
 	local rig = char:Clone()
 	char.Archivable = was
+	if rig then
+		Q.fixJoints(rig)
+		-- forget any pose rest a copy might carry over; it's read fresh from this rig
+		for _, m in ipairs(rig:GetDescendants()) do
+			if m:IsA("Motor6D") then m:SetAttribute("NYBaseC0", nil) end
+		end
+	end
+	return rig
+end
+
+Q.rig = function(look)
+	local rig = Q.copyChar()
 	if not rig then return nil end
 	for _, d in ipairs(rig:GetDescendants()) do
 		local junk = d:IsA("BasePart") and d:GetAttribute("NYFx")
 		for _, class in ipairs(Q.junkClasses) do
 			if d:IsA(class) then junk = true break end
 		end
-		if d:IsA("Decal") and d.Name == "face" and look.hollowed then junk = true end
+		-- a Hollowed's face is gone: the face decal, a dynamic head's SurfaceAppearance, and any face/skin decals the
+		-- game layers on heads (Genovia High adds TemporaryFace, TemporarySkinDetails, TemporaryEyes...)
+		if look.hollowed and not look.keepFace and (d:IsA("Decal") or d:IsA("SurfaceAppearance")) and d.Parent and d.Parent.Name == "Head" then junk = true end
 		if junk then pcall(function() d:Destroy() end) end
 	end
 	local hum = rig:FindFirstChildOfClass("Humanoid")
@@ -33079,7 +33151,7 @@ Q.rig = function(look)
 	rig.Name = randomString()
 	rig.Parent = Q.stage()
 	Q.animate(rig, "idle")
-	if look.hollowed then Q.flicker(rig) end
+	if look.hollowed and not look.noFlicker then Q.flicker(rig) end
 	if look.name then Q.nameTag(rig, look.name, look.tagColor) end
 	return rig
 end
@@ -33145,19 +33217,56 @@ Q.put = function(rig, cf)
 	if not root then return end
 	local hum = rig:FindFirstChildOfClass("Humanoid")
 	local hip = (hum and hum.HipHeight or 2) + root.Size.Y / 2
-	if hum and hum.RigType == Enum.HumanoidRigType.R6 then hip = 3 end
+	if hum and hum.RigType == Enum.HumanoidRigType.R6 then hip = 3 * (rig:GetAttribute("NYScale") or 1) end
 	root.CFrame = cf + Vector3.new(0, hip, 0)
 end
 
--- Hollowed flicker: the body fades in and out, slowly
-Q.flicker = function(rig)
+-- Hollowed flicker: the body fades in and out, slowly. opts (all optional, set per Hollowed by 53_hollowed):
+-- base = {[part] = transparency} (a missing arm stays at 1, a half-derendered side stays faded), amp = how hard it
+-- fades, spike = chance of a sudden drop-out, glitch = chance per tick of an afterimage jolt or a colour flash,
+-- peel = chance per tick of a little gray pixel peeling up off the body.
+-- Stops while the rig is fading out for good (NYFading), so the derender isn't fought.
+Q.flicker = function(rig, opts)
+	opts = opts or {}
 	task.spawn(function()
-		local seed = math.random() * 10
+		local parts = {}
+		for _, p in ipairs(rig:GetDescendants()) do
+			if p:IsA("BasePart") and p.Name ~= "HumanoidRootPart" and not p:GetAttribute("NYFx") then table.insert(parts, p) end
+		end
+		local base = opts.base or {}
+		local amp, spike, glitch, peel = opts.amp or 0.12, opts.spike or 0.04, opts.glitch or 0, opts.peel or 0
+		local rng = Random.new()
+		local seed = rng:NextNumber() * 10
 		while rig.Parent do
+			if rig:GetAttribute("NYFading") then return end
 			local t = tick() + seed
-			local a = math.clamp(0.15 + math.sin(t * 2.3) * 0.12 + (math.random() < 0.04 and 0.5 or 0), 0, 0.9)
-			for _, p in ipairs(rig:GetDescendants()) do
-				if p:IsA("BasePart") and p.Name ~= "HumanoidRootPart" then p.Transparency = a end
+			local a = 0.15 + math.sin(t * 2.3) * amp + (rng:NextNumber() < spike and 0.5 or 0)
+			for _, p in ipairs(parts) do
+				local b = base[p] or 0
+				if p.Parent then p.Transparency = b >= 1 and 1 or math.clamp(math.max(a, b + a * 0.4), 0, 0.92) end
+			end
+			if glitch > 0 and rng:NextNumber() < glitch then
+				if rng:NextNumber() < 0.5 and Q.ghost then
+					-- a jolt: a see-through copy snaps a little to the side and fades
+					Q.ghost(rig, Color3.fromRGB(170, 175, 190), 0.18, Vector3.new(rng:NextNumber(-0.5, 0.5), rng:NextNumber(-0.1, 0.2), rng:NextNumber(-0.3, 0.3)))
+				else
+					-- a colour flash: the body drops to pure dark gray for a frame or two
+					local keep = {}
+					for _, p in ipairs(parts) do keep[p] = p.Color p.Color = Color3.fromRGB(40, 42, 50) end
+					task.wait(0.06)
+					for p, c in pairs(keep) do if p.Parent then p.Color = c end end
+				end
+			end
+			if peel > 0 and rng:NextNumber() < peel and #parts > 0 then
+				local from = parts[rng:NextInteger(1, #parts)]
+				if from.Parent and (base[from] or 0) < 1 then
+					local s = rng:NextNumber(0.1, 0.22)
+					local px = NeverYieldAgartha.part(Q.stage(), Vector3.new(s, s, 0.04), from.CFrame * CFrame.new(rng:NextNumber(-0.4, 0.4), rng:NextNumber(-0.5, 0.5), rng:NextNumber(-0.4, 0.4)),
+						Color3.fromRGB(150, 152, 162), Enum.Material.SmoothPlastic, nil, {CanCollide = false, CanQuery = false, CanTouch = false, CastShadow = false, Transparency = 0.2})
+					TweenService:Create(px, TweenInfo.new(1.4, Enum.EasingStyle.Sine, Enum.EasingDirection.In),
+						{CFrame = px.CFrame * CFrame.new(rng:NextNumber(-0.6, 0.6), rng:NextNumber(2, 3.5), 0) * CFrame.Angles(rng:NextNumber(0, 2), rng:NextNumber(0, 2), 0), Transparency = 1}):Play()
+					Services.Debris:AddItem(px, 1.6)
+				end
 			end
 			task.wait(0.08)
 		end
@@ -33323,7 +33432,7 @@ Q.tollPrompt = function(lines, canLeave)
 	local stroke = Instance.new("UIStroke")
 	stroke.Color, stroke.Thickness = Color3.fromRGB(90, 190, 255), 1.5
 	stroke.Parent = box
-	Q.sound(Q.sfx.static, 0.3)
+	Q.sound(Q.sfx.static, 0.12)
 	local labels = {}
 	for i, line in ipairs(lines) do
 		labels[i] = NeverYieldPets.label(box, {Position = UDim2.new(0, 22, 0, 14 + (i - 1) * 26), Size = UDim2.new(1, -44, 0, 24), Text = "",
@@ -33489,6 +33598,7 @@ end
 -- stop everything the RPG is doing (keep = keep the screen for a teleport message)
 Q.stop = function(keep)
 	Q.token = Q.token + 1
+	Q.exploring = false
 	Q.clearStage()
 	for key in pairs(WackyState.conns) do
 		if type(key) == "string" and key:sub(1, 4) == "rpg_" then WackyState.disconnect(key) end
@@ -33686,7 +33796,8 @@ end
 
 -- catalog hair, built from the item's own mesh + texture (ids read out of the real accessory in Studio). Built
 -- this way it works in any executor: no InsertService/GetObjects needed, and it can't fail to attach.
--- h = {mesh =, tex =, att = the Handle's HairAttachment CFrame, scale = optional}
+-- h = {mesh =, tex =, att = the Handle's HairAttachment CFrame, scale = optional, hat = true (sits on the
+-- HatAttachment instead), tint = Vector3 (multiplies the texture colour: the Hollowed's hair is grayed down)}
 Q.hairMesh = function(rig, h)
 	local head = rig:FindFirstChild("Head")
 	if not head then return end
@@ -33698,8 +33809,9 @@ Q.hairMesh = function(rig, h)
 	m.MeshType = Enum.MeshType.FileMesh
 	m.MeshId, m.TextureId = h.mesh, h.tex
 	m.Scale = h.scale or Vector3.new(1, 1, 1)
+	if h.tint then m.VertexColor = h.tint end
 	m.Parent = p
-	local headAtt = head:FindFirstChild("HairAttachment") or head:FindFirstChild("HatAttachment")
+	local headAtt = h.hat and head:FindFirstChild("HatAttachment") or head:FindFirstChild("HairAttachment") or head:FindFirstChild("HatAttachment")
 	local w = Instance.new("Weld")
 	w.Part0, w.Part1 = head, p
 	w.C0 = headAtt and headAtt.CFrame or CFrame.new(0, head.Size.Y / 2, 0)
@@ -33755,7 +33867,8 @@ Q.looks = {
 				for _, p in ipairs({stylus, tipPart}) do Q.weldTo(hand, p) end
 			end
 		end},
-	hollowedStudent = {name = "#%&@?!_", hollowed = true, tagColor = Color3.fromRGB(170, 170, 180), scrambleTag = true},
+	-- the bible: "an avatar in a school uniform from the academy, its face a smooth gray default"
+	hollowedStudent = {name = "#%&@?!_", hollowed = true, tagColor = Color3.fromRGB(170, 170, 180), scrambleTag = true, uniform = true, face = "blank"},
 	hollowed = {name = "Hollowed", hollowed = true, tagColor = Color3.fromRGB(170, 170, 180)},
 }
 
@@ -33763,12 +33876,16 @@ Q.cast = function(id, extra)
 	local look = {}
 	for k, v in pairs(Q.looks[id] or {}) do look[k] = v end
 	for k, v in pairs(extra or {}) do look[k] = v end
+	if look.hollowed and Q.hollowPick then Q.hollowPick(look) end
 	local rig = Q.rig(look)
 	if not rig then return nil end
 	rig:SetAttribute("NYCast", id)
 	if look.hairMesh then Q.hairMesh(rig, look.hairMesh) end
 	if look.shirtTemplate or look.pantsTemplate then Q.clothe(rig, look.shirtTemplate, look.pantsTemplate) end
-	if look.scrambleTag then
+	-- every Hollowed gets its own look (53_hollowed): hair, clothes, size, tint, face, posture, glitches, tag
+	if look.hollowed and Q.hollowDress then
+		Q.hollowDress(rig, look)
+	elseif look.scrambleTag then
 		task.spawn(function()
 			local glyphs = "#%&@$*/?!_~0123456789"
 			while rig.Parent do
@@ -33791,12 +33908,9 @@ end
 -- The real character stays still (anchored, invisible to you); an exact copy of it does the dashing and slashing,
 -- so the game never sees you teleport around.
 Q.vaneDouble = function()
-	local char = Players.LocalPlayer.Character
-	if not char then return nil end
-	local was = char.Archivable
-	char.Archivable = true
-	local rig = char:Clone()
-	char.Archivable = was
+	local rig = Q.copyChar()
+	if not rig then return nil end
+	Q.flattenAccessories(rig)
 	for _, d in ipairs(rig:GetDescendants()) do
 		if d:IsA("BaseScript") or d:IsA("ModuleScript") or d:IsA("Tool") or d:IsA("ForceField") or d:IsA("Sound") or d:IsA("BillboardGui") or d.Name == "NYSword" or d.Name == "NYVaneTag" then
 			pcall(function() d:Destroy() end)
@@ -33834,6 +33948,9 @@ Q.hideSelf = function(on)
 			Q.selfSpeed = Q.selfSpeed or hum.WalkSpeed
 			hum.WalkSpeed = 0
 		end
+		-- the "Vane" tag would float alone over the hidden body (the double fights without one)
+		local tag = char and char:FindFirstChild("NYVaneTag", true)
+		if tag then tag.Enabled = false end
 		Q.connect("hideSelf", RunService.RenderStepped:Connect(function()
 			local c = Players.LocalPlayer.Character
 			if not c then return end
@@ -33845,6 +33962,8 @@ Q.hideSelf = function(on)
 		if not Q.selfHidden then return end
 		Q.selfHidden = false
 		WackyState.disconnect("rpg_hideSelf")
+		local tag = char and char:FindFirstChild("NYVaneTag", true)
+		if tag then tag.Enabled = true end
 		if char then
 			for _, p in ipairs(char:GetDescendants()) do
 				if p:IsA("BasePart") or p:IsA("Decal") then p.LocalTransparencyModifier = 0 end
@@ -34609,21 +34728,32 @@ Q.deSync = function(token, strength)
 	Q.deSyncOn = true
 	task.spawn(function()
 		local rng = Random.new()
-		local colors = {Color3.fromRGB(255, 255, 255), Color3.fromRGB(200, 200, 215), Color3.fromRGB(255, 80, 220), Color3.fromRGB(90, 230, 255), Color3.fromRGB(150, 150, 165)}
+		local colors = {Color3.fromRGB(150, 150, 165), Color3.fromRGB(115, 115, 130), Color3.fromRGB(70, 150, 175), Color3.fromRGB(130, 120, 150)}
+		local nextCrackle = tick() + rng:NextNumber(20, 40)
 		while Q.alive(token) and Q.deSyncOn do
 			local a = Q.anchor or Q.makeAnchor()
-			for _ = 1, math.floor(6 * strength) do
-				local base = a:PointToWorldSpace(Vector3.new(rng:NextNumber(-60, 60), rng:NextNumber(0, 18), -rng:NextNumber(10, 80)))
-				local s = rng:NextNumber(0.3, 1.1)
+			-- small, dim and far off: never within 14 studs of the camera or you (up close they read as bugs)
+			local cam = workspace.CurrentCamera.CFrame.Position
+			local me = Q.root()
+			for _ = 1, math.floor(3 * strength) do
+				local base = a:PointToWorldSpace(Vector3.new(rng:NextNumber(-60, 60), rng:NextNumber(0, 18), -rng:NextNumber(20, 85)))
+				if (base - cam).Magnitude > 14 and not (me and (base - me.Position).Magnitude < 14) then
+				local s = rng:NextNumber(0.15, 0.4)
 				local px = NeverYieldAgartha.part(Q.stage(), Vector3.new(s, s, 0.05), CFrame.new(base) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), colors[rng:NextInteger(1, #colors)],
-					Enum.Material.Neon, nil, {CanCollide = false, CanQuery = false, CanTouch = false, CastShadow = false, Transparency = 0.15})
+					Enum.Material.Neon, nil, {CanCollide = false, CanQuery = false, CanTouch = false, CastShadow = false, Transparency = 0.45})
 				local rise = rng:NextNumber(14, 34)
 				TweenService:Create(px, TweenInfo.new(rng:NextNumber(3, 6), Enum.EasingStyle.Sine, Enum.EasingDirection.In),
 					{CFrame = px.CFrame * CFrame.new(rng:NextNumber(-3, 3), rise, 0) * CFrame.Angles(rng:NextNumber(0, 3), rng:NextNumber(0, 3), 0), Transparency = 1}):Play()
 				Services.Debris:AddItem(px, 6.5)
+				end
 			end
-			if rng:NextNumber() < 0.08 then Q.sound(Q.sfx.static, 0.12, rng:NextNumber(0.8, 1.2)) end
-			task.wait(0.25)
+			-- a rare, quiet crackle (kas: tone it down): one every 20-40 s, only in story scenes, never while you
+			-- explore, never over a line of dialogue
+			if tick() >= nextCrackle then
+				if not Q.exploring and not Q.dialog then Q.sound(Q.sfx.static, 0.04, rng:NextNumber(0.85, 1.1)) end
+				nextCrackle = tick() + rng:NextNumber(20, 40)
+			end
+			task.wait(0.35)
 		end
 	end)
 end
@@ -34703,6 +34833,70 @@ end)
 Q.pt = function(x, y, z)
 	local a = Q.anchor or Q.makeAnchor()
 	return a:PointToWorldSpace(Vector3.new(x, y, -z))
+end
+
+-- ---------- fitting a fight into the space you're standing in ----------
+-- (roamers catch you anywhere: corridors, next to walls.) Turn the battle line toward the most open direction, then
+-- shuffle anyone who'd stand inside a wall or a bench toward the middle until they're clear.
+Q.arenaParams = function()
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = {Q.folder, Players.LocalPlayer.Character}
+	return params
+end
+
+-- how far (0..1) you can see from a to b before something solid is in the way
+Q.clearFrac = function(a, b)
+	local params = Q.arenaParams()
+	local skip = {Q.folder, Players.LocalPlayer.Character}
+	for _ = 1, 8 do
+		params.FilterDescendantsInstances = skip
+		local hit = workspace:Raycast(a, b - a, params)
+		if not hit then return 1 end
+		if hit.Instance.Transparency < 0.9 and hit.Instance.CanCollide then return (hit.Position - a).Magnitude / (b - a).Magnitude end
+		table.insert(skip, hit.Instance)
+	end
+	return 1
+end
+
+-- is a standing body at this spot (on the ground) inside something solid?
+Q.blockedAt = function(cf)
+	local op = OverlapParams.new()
+	op.FilterType = Enum.RaycastFilterType.Exclude
+	op.FilterDescendantsInstances = {Q.folder, Players.LocalPlayer.Character}
+	local ok, parts = pcall(function() return workspace:GetPartBoundsInBox(CFrame.new(cf.Position + Vector3.new(0, 3, 0)), Vector3.new(2.2, 4.4, 2.2), op) end)
+	if not ok then return false end
+	for _, p in ipairs(parts) do
+		if p.CanCollide and p.Transparency < 0.9 then return true end
+	end
+	return false
+end
+
+Q.fitArena = function(a)
+	local o = a.Position + Vector3.new(0, 2.5, 0)
+	local best, bestScore
+	for _, yaw in ipairs({0, 30, -30, 60, -60, 90, -90, 120, -120, 150, -150, 180}) do
+		local cf = a * CFrame.Angles(0, math.rad(yaw), 0)
+		local score = 0
+		for _, s in ipairs({{0, 17}, {-6, 19}, {6, 19}, {0, 24}, {-5, 1.5}, {5, 1.5}, {0, -6}}) do
+			score = score + Q.clearFrac(o, cf:PointToWorldSpace(Vector3.new(s[1], 2.5, -s[2])))
+		end
+		-- keep facing the Hollowed that caught you unless somewhere else is clearly roomier
+		score = score - math.abs(yaw) / 600
+		if not bestScore or score > bestScore then best, bestScore = cf, score end
+	end
+	return best
+end
+
+-- a battle spot (x right, z forward) that isn't inside anything: try it, then nudge it in toward the middle
+Q.freeSpot = function(x, z, faceX, faceZ)
+	local tries = {{0, 0}, {0, -3}, {-2.5, 0}, {2.5, 0}, {0, -6}, {-2.5, -3}, {2.5, -3}, {0, -9}, {-5, -3}, {5, -3}}
+	for _, t in ipairs(tries) do
+		local nz = z > 4 and math.max(z + t[2], 8) or z
+		local cf = Q.spot(x + t[1], nz, faceX + t[1], faceZ)
+		if not Q.blockedAt(cf) then return cf end
+	end
+	return Q.spot(x, z, faceX, faceZ)
 end
 
 Q.unitOfMember = function(id)
@@ -34895,6 +35089,7 @@ Q.derender = function(u)
 	if not rig then return end
 	local lines = u.data.lines and u.data.lines.death
 	if lines then Q.bubble(rig, WackyState.pick(lines), 3.5) end
+	rig:SetAttribute("NYFading", true)
 	Q.unpose(rig, 0)
 	Q.sit(rig, true)
 	Q.sound(Q.sfx.weep, 0.3, 0.9)
@@ -35445,6 +35640,11 @@ Q.fight = function(token, spec)
 	local B = {token = token, party = {}, enemies = {}, queue = {}, ready = {}, hooks = spec.hooks or {}, xp = 0, drops = {}, tutorial = spec.tutorial, spec = spec}
 	Q.B = B
 	local a = Q.anchor or Q.makeAnchor()
+	if spec.fit then
+		Q.anchor = Q.fitArena(a)
+		a = Q.anchor
+	end
+	local spotFor = spec.fit and Q.freeSpot or Q.spot
 	-- party: you (Vane) in the middle, the others beside you
 	local ids = {}
 	for _, id in ipairs(Q.data.active) do if Q.data.joined[id] then table.insert(ids, id) end end
@@ -35455,7 +35655,7 @@ Q.fight = function(token, spec)
 		local u = Q.unitOfMember(id)
 		u.rig = id == "vane" and Q.vaneDouble() or Q.cast(id)
 		local s = slots[i] or {i * 3, 0}
-		u.home = Q.spot(s[1], s[2], s[1], 30)
+		u.home = spotFor(s[1], s[2], s[1], 30)
 		if u.rig then Q.put(u.rig, u.home) end
 		table.insert(B.party, u)
 	end
@@ -35465,8 +35665,8 @@ Q.fight = function(token, spec)
 		for j = 1, i do if spec.enemies[j] == eid then count = count + 1 end end
 		local u = Q.unitOfEnemy(eid, (function() local n = 0 for _, x in ipairs(spec.enemies) do if x == eid then n = n + 1 end end return n end)() > 1 and count or nil)
 		local s = espots[i] or {i * 4 - 10, 20}
-		u.rig = Q.cast(u.data.look or "hollowed", {name = u.name})
-		u.home = Q.spot(s[1], s[2], s[1], 0)
+		u.rig = Q.cast(u.data.look or "hollowed", {name = u.name, seed = spec.seeds and spec.seeds[i]})
+		u.home = spotFor(s[1], s[2], s[1], 0)
 		if u.rig then Q.put(u.rig, u.home) end
 		table.insert(B.enemies, u)
 	end
@@ -35574,13 +35774,25 @@ Q.victory = function(B)
 	for _, u in ipairs(B.party) do
 		if not u.dead and u.rig then Q.animate(u.rig, "cheer") end
 	end
-	-- slow orbit around the party
+	-- slow orbit around the party; where a wall would push the camera in close (into Vane's back), it holds the last
+	-- open angle instead, and if there's no room anywhere it looks down from above
 	task.spawn(function()
 		local c = Q.pt(0, 2.5, 0)
+		local a = Q.anchor or CFrame.new(c)
+		local cams = {}
+		for k = 0, 90 do
+			local ang = math.rad(k * 1.2) + math.pi + math.rad(20)
+			local want = c + (a.LookVector * math.cos(ang) + a.RightVector * math.sin(ang)) * -11 + Vector3.new(0, 3.5, 0)
+			local cam = Q.clearShot(c, want)
+			cams[k] = (cam - c).Magnitude >= 7.5 and cam or false
+		end
+		local last
+		for k = 0, 90 do last = last or cams[k] end
+		if not last then last = Q.clearShot(c, c + Vector3.new(0, 11, 0) + a.LookVector * 5) end
 		for k = 0, 90 do
 			if not Q.alive(B.token) then return end
-			local ang = math.rad(200 + k * 1.2)
-			Q.camTo(Q.clearShot(c, c + Vector3.new(math.sin(ang) * 11, 3.5, math.cos(ang) * 11)), c, 0)
+			last = cams[k] or last
+			Q.camTo(last, c, 0)
 			task.wait(0.03)
 		end
 	end)
@@ -35706,7 +35918,8 @@ Q.pose = function(rig, spec, seconds, style, dir)
 	local info = TweenInfo.new(seconds or 0.15, style or Enum.EasingStyle.Quad, dir or Enum.EasingDirection.Out)
 	for short, m in pairs(j) do
 		local base = m:GetAttribute("NYBaseC0")
-		local r = spec[short] or CFrame.new()
+		-- joints the pose doesn't name go back to the rig's own posture (a Hollowed's slump), or to rest
+		local r = spec[short] or (Q.postures[rig] and Q.postures[rig][short]) or CFrame.new()
 		local goal = CFrame.new(base.Position) * r * (base - base.Position)
 		-- a newer pose wins: stop the joint's running tween first (a set C0 doesn't stop it, it would land on top)
 		local running = Q.poseTweens[m]
@@ -35721,6 +35934,17 @@ Q.pose = function(rig, spec, seconds, style, dir)
 	end
 end
 Q.poseTweens = setmetatable({}, {__mode = "k"})
+-- a rig's resting posture ({neck =, root =, ...} like a pose); it shows under the Roblox idle/walk animations too
+Q.postures = Q.postures or setmetatable({}, {__mode = "k"})
+Q.setPosture = function(rig, spec)
+	local j = Q.joints(rig)
+	if not j then return end
+	Q.postures[rig] = spec
+	for short, m in pairs(j) do
+		local base = m:GetAttribute("NYBaseC0")
+		m.C0 = CFrame.new(base.Position) * (spec[short] or CFrame.new()) * (base - base.Position)
+	end
+end
 
 -- at rest in a fight: sword-holders stand in their guard (blade up), everyone else goes back to idle
 Q.rest = function(rig, seconds)
@@ -35741,8 +35965,8 @@ Q.unpose = function(rig, seconds)
 	Q.animate(rig, "idle")
 end
 
--- an afterimage: a see-through glowing copy of the body that fades where it stood
-Q.ghost = function(rig, color, life)
+-- an afterimage: a see-through glowing copy of the body that fades where it stood (offset = shifted by this much)
+Q.ghost = function(rig, color, life, offset)
 	local P = NeverYieldAgartha.part
 	local parts = {}
 	for _, p in ipairs(rig:GetDescendants()) do
@@ -35750,12 +35974,12 @@ Q.ghost = function(rig, color, life)
 			local g
 			local mesh = p:FindFirstChildOfClass("SpecialMesh")
 			if mesh and mesh.MeshType == Enum.MeshType.FileMesh then
-				g = P(Q.stage(), p.Size, p.CFrame, color, Enum.Material.Neon, nil, {CanCollide = false, CanQuery = false, CanTouch = false, CastShadow = false, Transparency = 0.55})
+				g = P(Q.stage(), p.Size, p.CFrame + (offset or Vector3.zero), color, Enum.Material.Neon, nil, {CanCollide = false, CanQuery = false, CanTouch = false, CastShadow = false, Transparency = 0.55})
 				local m = Instance.new("SpecialMesh")
 				m.MeshType, m.MeshId, m.Scale = mesh.MeshType, mesh.MeshId, mesh.Scale
 				m.Parent = g
 			elseif not p:IsA("MeshPart") or p.Name:find("Arm") or p.Name:find("Leg") or p.Name:find("Hand") or p.Name:find("Foot") or p.Name:find("Torso") or p.Name == "Head" then
-				g = P(Q.stage(), p.Size, p.CFrame, color, Enum.Material.Neon, nil, {CanCollide = false, CanQuery = false, CanTouch = false, CastShadow = false, Transparency = 0.55})
+				g = P(Q.stage(), p.Size, p.CFrame + (offset or Vector3.zero), color, Enum.Material.Neon, nil, {CanCollide = false, CanQuery = false, CanTouch = false, CastShadow = false, Transparency = 0.55})
 			end
 			if g then table.insert(parts, g) end
 		end
@@ -35886,7 +36110,7 @@ Q.sit = function(rig, on)
 	if not hum or not root then return end
 	if (on and true or false) == (rig:GetAttribute("NYSitting") and true or false) then return end
 	rig:SetAttribute("NYSitting", on or nil)
-	local drop = hum.RigType == Enum.HumanoidRigType.R15 and math.max(hum.HipHeight - 0.1, 0.5) or 1.5
+	local drop = hum.RigType == Enum.HumanoidRigType.R15 and math.max(hum.HipHeight - 0.1, 0.5) or 1.5 * (rig:GetAttribute("NYScale") or 1)
 	if on then
 		Q.pose(rig, {rh = Q.rot(90, 0, 4), lh = Q.rot(90, 0, -4), rs = Q.rot(35, 0, 5), ls = Q.rot(35, 0, -5), neck = Q.rot(8)}, 0)
 		root.CFrame = root.CFrame - Vector3.new(0, drop, 0)
@@ -36137,6 +36361,340 @@ Q.moveFor = function(u, sk)
 	return Q.moves.counter
 end
 
+-- [53_hollowed.lua]
+-- ---------- the Hollowed: no two alike ----------
+-- Every Hollowed was somebody's avatar once, so each one is dressed from pools: real catalog hair (built from the
+-- item's mesh + texture like Seris's, grayed down with VertexColor), real classic shirts/pants (dimmed with
+-- Clothing.Color3), a gray body with its own faint tint, a size (child-sized to tall), a face (blank, a grayed-out
+-- remnant of the old one, tears, empty eyes, cracks...), a resting posture (slumped, hunched, hands over the face),
+-- how badly it flickers and glitches, maybe a missing arm or a half-derendered side, and what its name tag shows.
+-- All of it comes from one seed: a roamer seeded with its id looks the same after a reload, the Hollowed you fight
+-- is the one that caught you, and no two Hollowed on screen share hair, clothes or posture if it can be helped.
+-- Mesh/texture/attachment/template ids were read out of the real items in Studio (game:GetObjects), 2026-10-11.
+
+-- hair: {item id, mesh, texture, attachment x, y, z, yaw, pitch, scale, hat}
+local HAIR = {
+	{63690008, 83293901, 6858317867, 0, 0.35, 0.25, 0, 0, Vector3.new(1, 1.05, 1)},          -- Pal Hair (Roblox)
+	{451221329, 188004660, 451217406, 0, 0.15, 0, 0, 0},                                     -- True Blue Hair (Roblox)
+	{1103003368, 220855121, 1102816925, 0, 1, -0.2, 0, 0, nil, true},                        -- Orange Beanie with Black Hair (Roblox)
+	{2956239660, 2907183829, 2907184367, 0.008, 0.929, -0.185, 0, 0},                        -- Belle Of Belfast Long Red Hair (Roblox)
+	{376526888, 319354652, 376186990, 0, 0.9, -0.02, 0, 0, Vector3.new(0.5, 0.5, 0.5)},      -- Straight Blonde Hair (Roblox)
+	{376524487, 319337852, 376189070, 0, 0.23, 0.031, 0, 0, Vector3.new(0.55, 0.55, 0.55)},  -- Blonde Spiked Hair (Roblox)
+	{376548738, 74878559, 382682502, 0, 0.175, 0.05, 0, 0, Vector3.new(1.05, 1, 1.05)},      -- Brown Charmer Hair (Roblox)
+	{16630147, 16627529, 16627494, 0, 0.1, 0, 0, 0, Vector3.new(1.05, 1.05, 1.05)},          -- Beautiful Hair for Beautiful People (Roblox)
+	{13745548, 13070796, 13694600, 0, 0.999, -0.01, 0, -5.7},                                -- Cinnamon Hair (Roblox)
+	{727320877, 365591808, 726597776, 0, 0.9, 0, 0, 0},                                      -- Long Pastel Hair (Roblox)
+	{323476364, 76056263, 323471838, 0.1, 0.5, -0.2, 0, 0},                                  -- Brown Scene Hair (Roblox)
+	{6501746646, 6477724733, 6477670900, 0.002, 1.333, -0.27, 0, -3, Vector3.new(0.95, 0.95, 0.95)}, -- Popular Girl Blonde & Brown Hair
+	{5890690147, 5878293268, 5871342242, 0, 1.2, -0.1, 0, 0},                                -- Popstar Hair
+	{15029424591, 15028824754, 15028937547, 0, 1.08, 0.07, 180, 0},                          -- Grunge hair w/ bunny beanie in Black
+	{5918940548, 5903051142, 5903051200, -0.001, 1.056, 0.266, 180, 0},                      -- Blonde curly celebrity hair
+	{11597599236, 11597360630, 11597368581, -0.101, 1.323, 0, 90, 0},                        -- Lush Wavy Hair (Blonde)
+	{5644883846, 5644849074, 5634134761, 0.011, 0.334, 0.008, 0, 0},                         -- Cool Boy Hair
+	{6778986933, 6741835839, 6599800799, 0, 1.218, -0.264, 0, 0},                            -- Adorbs black long hair
+	{4875445470, 4864624574, 4863506209, 0.02, 0.357, -0.052, 0, 0},                         -- Black Short Parted Hair
+	{6823338112, 6823025285, 6823025314, 0.001, 0.268, -0.024, 0, 0},                        -- Messy Boy Hair in Black
+	{7259123616, 7259065617, 7104179851, -0.043, 0.283, -0.07, 0, 0},                        -- Black Messy Hairstyle
+	{5314006793, 5283312739, 5283312955, -0.007, 0.538, 0.158, 180, 0},                      -- Black Trendy Messy Buns
+	{11770892209, 11770743558, 11122351447, -0.011, 0.742, 0.104, 180, 0},                   -- Grunge wolf hair Black
+	{10323360626, 10323131904, 6823025314, 0.012, 0.169, 0.181, 0, 0},                       -- Black Fluffy Middle Swept Hair
+	{15227777707, 15225046962, 15225171255, -0.009, 1.258, -0.156, 0, 0},                    -- Straight Hair with Headphones
+}
+
+-- classic clothing templates (the item id is in the comment)
+local SHIRTS = {
+	casual = {
+		607785311,   -- ROBLOX Jacket (Roblox, 607785314)
+		398633582,   -- Denim Jacket with White Hoodie (Roblox, 398633584)
+		3670737337,  -- Roblox Shirt - Simple Pattern (Roblox, 3670737444)
+		398635080,   -- Blue Plaid Shirt (Roblox, 398635081)
+		398634294,   -- Pastel Starburst Top with Gray Jacket (Roblox, 398634295)
+		144076357,   -- Blue and Black Motorcycle Shirt (Roblox, 144076358)
+		382537700,   -- Teal Shirt (Roblox, 382537702)
+		144076435,   -- Grey Striped Shirt with Denim Jacket (Roblox, 144076436)
+		13501063121, -- mud hoodie (13501063177)
+		7021249539,  -- Black and White Hoodie (7021249548)
+	},
+	uniform = {
+		100867764227976, -- japanese school uniform gym (98285228967705)
+		104505855593078, -- school boy (70533822568816)
+		76152085596665,  -- black n white kawaii uniform (112943137441722)
+		96031471898675,  -- anime school boy (91058281364560)
+		132295042270376, -- High School Uniform (125525562514116)
+	},
+}
+local PANTS = {
+	casual = {
+		398633811,       -- Black Jeans with White Shoes (Roblox, 398633812)
+		398634485,       -- Beautiful You Jeans (Roblox, 398634487)
+		398635336,       -- Ripped Skater Pants (Roblox, 398635338)
+		129881831655289, -- Old School Pants Black (132585044104565)
+	},
+	uniform = {
+		4707969841,      -- black anime school girl outfit (4707969872)
+		7210775995,      -- y2k school (7210775999)
+		127123414278241, -- School girl pleat skirt (85926546050440)
+		99581863720772,  -- Black Gray Plaid School Skirt (134645596258688)
+		77540802089785,  -- RHS Female Uniform Bottoms (100504816959406)
+		398633811,       -- Black Jeans with White Shoes (Roblox)
+	},
+}
+
+-- a faint colour in the gray, so a crowd of them isn't one flat shade
+local TINTS = {
+	Vector3.new(1, 1, 1), Vector3.new(0.94, 0.97, 1.08), Vector3.new(1, 0.93, 1.07), Vector3.new(0.95, 1.02, 0.95),
+	Vector3.new(1.06, 1, 0.9), Vector3.new(0.9, 0.95, 1.12), Vector3.new(1.04, 0.96, 0.96),
+}
+local SIZES = {1, 1, 1, 0.92, 1.08, 1.15, 0.86, 0.72, 0.64, 1.25}
+
+-- resting postures (the Roblox idle/walk animations still play on top). Q.rot(x, y, z): x = swing forward (negative
+-- tips the head/body forward), y = sweep around the body, z = out to the side. Leaning the body (root) also swings
+-- the legs, so the hips get the opposite to keep the feet under it.
+local POSTURES = {
+	{},                                                                                                       -- upright, staring
+	{neck = Q.rot(-30), root = Q.rot(-10), rh = Q.rot(10), lh = Q.rot(10)},                                   -- slumped, head hanging
+	{neck = Q.rot(-14), root = Q.rot(-26), rh = Q.rot(26), lh = Q.rot(26), rs = Q.rot(14), ls = Q.rot(14)},  -- hunched over
+	{neck = Q.rot(-8, 0, 28)},                                                                                -- head tilted
+	{neck = Q.rot(-6, 12, -34), root = Q.rot(0, 0, 6), rh = Q.rot(0, 0, -6), lh = Q.rot(0, 0, -6)},           -- crooked, leaning
+	{rs = Q.rot(70, 50), ls = Q.rot(70, -50), neck = Q.rot(-18), root = Q.rot(-8), rh = Q.rot(8), lh = Q.rot(8)}, -- holding itself
+	{rs = Q.rot(135, 32), ls = Q.rot(135, -32), neck = Q.rot(-24), root = Q.rot(-10), rh = Q.rot(10), lh = Q.rot(10)}, -- hands over its face, weeping
+	{rs = Q.rot(78, -6, 4), neck = Q.rot(-6, -10, 0)},                                                        -- one hand reaching out
+	{rs = Q.rot(-4, 0, 3), ls = Q.rot(-4, 0, -3), neck = Q.rot(16, 0, 8)},                                    -- arms dead, staring up
+}
+
+local FACES = {"blank", "blank", "remnant", "remnant", "tears", "tears", "void", "oneEye", "cracked", "static"}
+
+local HANDLE_A = {"milo", "juniper", "sk8r", "pixel", "bunni", "maple", "rook", "kiki", "sora", "nova", "echo", "wren",
+	"biscuit", "toast", "luna", "fern", "comet", "mochi", "ozzy", "pip", "dusk", "taro", "vix", "jelly"}
+local HANDLE_B = {"", "", "_x", "XD", "_yt", "gamer", "_rbx", "lol", "", "_2"}
+local GLYPHS = "#%&@$*/?!_~0123456789"
+
+local function hash(s)
+	if type(s) == "number" then return math.floor(s) % 2147483647 end
+	local h = 5381
+	for i = 1, #s do h = (h * 33 + s:byte(i)) % 2147483647 end
+	return h
+end
+
+local function corrupt(text, amount, rng)
+	local out = {}
+	for i = 1, #text do
+		if rng:NextNumber() < amount then
+			local n = rng:NextInteger(1, #GLYPHS)
+			out[i] = GLYPHS:sub(n, n)
+		else
+			out[i] = text:sub(i, i)
+		end
+	end
+	return table.concat(out)
+end
+
+-- what's in use by the Hollowed already standing around (so a new one picks something else)
+Q.hollowLive = Q.hollowLive or setmetatable({}, {__mode = "k"})
+local function used(field)
+	local u = {}
+	for rig, v in pairs(Q.hollowLive) do
+		if rig.Parent and v[field] ~= nil then u[v[field]] = true end
+	end
+	return u
+end
+-- (a seeded Hollowed always takes its own pick, so it looks the same every time whoever else is around)
+local function pickFree(rng, n, field, seeded)
+	if seeded then return rng:NextInteger(1, n) end
+	local u = used(field)
+	local i = rng:NextInteger(1, n)
+	for _ = 1, 8 do
+		if not u[i] then return i end
+		i = rng:NextInteger(1, n)
+	end
+	return i
+end
+
+-- choose everything (before the rig is built: some choices change how it's copied)
+Q.hollowPick = function(look)
+	local rng = Random.new(hash(look.seed or (tostring(tick()) .. math.random())))
+	local v = {}
+	-- the academy's Hollowed are mostly still in uniform
+	local school = look.school or (Q.data and Q.data.chapter or 1) <= 1
+	local seeded = look.seed ~= nil
+	v.hair = rng:NextNumber() < 0.85 and pickFree(rng, #HAIR, "hair", seeded) or nil
+	local kind = ((school and rng:NextNumber() < 0.7) or look.uniform) and "uniform" or "casual"
+	v.shirt = rng:NextNumber() < 0.85 and SHIRTS[kind][rng:NextInteger(1, #SHIRTS[kind])] or nil
+	v.pants = rng:NextNumber() < 0.85 and PANTS[kind][rng:NextInteger(1, #PANTS[kind])] or nil
+	v.tint = TINTS[rng:NextInteger(1, #TINTS)]
+	v.gray = rng:NextInteger(72, 135)
+	v.size = SIZES[rng:NextInteger(1, #SIZES)]
+	v.posture = pickFree(rng, #POSTURES, "posture", seeded)
+	v.face = FACES[rng:NextInteger(1, #FACES)]
+	if look.face then v.face = look.face end
+	v.missing = rng:NextNumber() < 0.14 and (rng:NextNumber() < 0.5 and "Left" or "Right") or nil
+	v.half = not v.missing and rng:NextNumber() < 0.18 and (rng:NextNumber() < 0.5 and "Left" or "Right") or nil
+	v.amp = rng:NextNumber(0.05, 0.2)
+	v.spike = rng:NextNumber(0.01, 0.07)
+	v.glitch = rng:NextNumber() < 0.6 and rng:NextNumber(0.004, 0.025) or 0
+	v.peel = (v.half and rng:NextNumber(0.08, 0.16)) or (rng:NextNumber() < 0.5 and rng:NextNumber(0.01, 0.05) or 0)
+	-- the tag: pure static, a corrupted version of the name it had as a player, or its enemy name fraying
+	local t = rng:NextNumber()
+	v.tag = look.scrambleTag and "scramble" or (t < 0.35 and "scramble" or t < 0.75 and "former" or "fray")
+	v.former = HANDLE_A[rng:NextInteger(1, #HANDLE_A)] .. (rng:NextNumber() < 0.5 and HANDLE_A[rng:NextInteger(1, #HANDLE_A)] or "") .. HANDLE_B[rng:NextInteger(1, #HANDLE_B)] .. (rng:NextNumber() < 0.6 and tostring(rng:NextInteger(1, 2009)) or "")
+	v.rng = rng
+	look.v = v
+	look.keepFace = v.face == "remnant"
+	look.noFlicker = true
+	return v
+end
+
+-- how far in front of the head centre its face is (the classic head mesh sticks out past the part)
+local function faceDepth(head)
+	local m = head:FindFirstChildOfClass("SpecialMesh")
+	if m and m.MeshType == Enum.MeshType.Head then return 0.5 * m.Scale.Z + 0.01, 0.5 * m.Scale.X * 0.8 end
+	return head.Size.Z / 2 + 0.01, head.Size.X / 2
+end
+
+local function facePart(rig, head, size, x, y, rotZ, color, material, transparency)
+	local z, _ = faceDepth(head)
+	local p = NeverYieldAgartha.part(rig, size, head.CFrame * CFrame.new(x, y, -z) * CFrame.Angles(0, 0, math.rad(rotZ or 0)), color, material or Enum.Material.SmoothPlastic, nil,
+		{CanCollide = false, CanQuery = false, CanTouch = false, Massless = true, CastShadow = false, Transparency = transparency or 0})
+	p.Anchored = false
+	p:SetAttribute("NYFx", nil)
+	Q.weldTo(head, p)
+	return p
+end
+
+local FACE_BUILD = {
+	remnant = function(rig, head, rng)
+		-- what's left of the face it had: a classic face decal, or a dynamic head's skin, grayed out
+		for _, d in ipairs(head:GetChildren()) do
+			if d:IsA("Decal") then d.Color3 = Color3.fromRGB(70, 72, 82) d.Transparency = math.max(d.Transparency, 0.3) end
+		end
+		local sa = head:FindFirstChildOfClass("SurfaceAppearance")
+		if sa then pcall(function() sa.Color = Color3.fromRGB(105, 107, 118) end) end
+	end,
+	tears = function(rig, head, rng)
+		local _, w = faceDepth(head)
+		for _, side in ipairs({-1, 1}) do
+			local x = side * w * 0.36
+			facePart(rig, head, Vector3.new(0.06, 0.06, 0.03), x, 0.12, 0, Color3.fromRGB(45, 46, 54))
+			facePart(rig, head, Vector3.new(0.035, 0.32, 0.03), x + rng:NextNumber(-0.02, 0.02), -0.08, rng:NextNumber(-6, 6), Color3.fromRGB(150, 200, 230), Enum.Material.Neon, 0.25)
+		end
+	end,
+	void = function(rig, head, rng)
+		local _, w = faceDepth(head)
+		for _, side in ipairs({-1, 1}) do
+			facePart(rig, head, Vector3.new(0.17, 0.2, 0.03), side * w * 0.36, 0.1, 0, Color3.fromRGB(8, 8, 10))
+		end
+	end,
+	oneEye = function(rig, head, rng)
+		local _, w = faceDepth(head)
+		local side = rng:NextNumber() < 0.5 and -1 or 1
+		facePart(rig, head, Vector3.new(0.17, 0.2, 0.03), side * w * 0.36, 0.1, 0, Color3.fromRGB(8, 8, 10))
+		facePart(rig, head, Vector3.new(0.07, 0.07, 0.035), -side * w * 0.36, 0.1, 0, Color3.fromRGB(225, 235, 245), Enum.Material.Neon)
+	end,
+	cracked = function(rig, head, rng)
+		local _, w = faceDepth(head)
+		for _ = 1, 3 do
+			facePart(rig, head, Vector3.new(rng:NextNumber(0.35, 0.7), 0.03, 0.03), rng:NextNumber(-w * 0.4, w * 0.4), rng:NextNumber(-0.25, 0.25), rng:NextNumber(-70, 70), Color3.fromRGB(28, 28, 34))
+		end
+	end,
+	static = function(rig, head, rng)
+		local _, w = faceDepth(head)
+		for _ = 1, 7 do
+			local g = rng:NextInteger(30, 220)
+			local s = rng:NextNumber(0.07, 0.16)
+			facePart(rig, head, Vector3.new(s, s, 0.03), rng:NextNumber(-w * 0.55, w * 0.55), rng:NextNumber(-0.25, 0.3), 0, Color3.fromRGB(g, g, g + 8))
+		end
+	end,
+}
+
+local function limbSide(name, side)
+	return name:find(side) and (name:find("Arm") or name:find("Hand")) and true or false
+end
+
+-- dress a freshly built Hollowed rig with its picks
+Q.hollowDress = function(rig, look)
+	local v = look.v or Q.hollowPick(look)
+	local rng = v.rng
+	Q.hollowLive[rig] = v
+	local head = rig:FindFirstChild("Head")
+	-- body: gray with its own tint, clothes dimmed to match
+	local function shade(off)
+		local g = math.clamp(v.gray + off, 30, 230)
+		return Color3.fromRGB(math.clamp(g * v.tint.X, 0, 255), math.clamp(g * v.tint.Y, 0, 255), math.clamp(g * v.tint.Z, 0, 255))
+	end
+	for _, p in ipairs(rig:GetDescendants()) do
+		if p:IsA("BasePart") and p.Name ~= "HumanoidRootPart" and not p:GetAttribute("NYFx") then
+			local n = p.Name
+			if n:find("Torso") then p.Color = shade(-22)
+			elseif n:find("Leg") or n:find("Foot") then p.Color = shade(-40)
+			else p.Color = shade(0) end
+		end
+	end
+	if v.shirt or v.pants then
+		Q.clothe(rig, v.shirt and ("rbxassetid://" .. v.shirt), v.pants and ("rbxassetid://" .. v.pants))
+		for _, c in ipairs(rig:GetChildren()) do
+			if c:IsA("Clothing") then c.Color3 = shade(-12) end
+		end
+	end
+	if v.hair and head then
+		local h = HAIR[v.hair]
+		local dim = rng:NextNumber(0.42, 0.72)
+		Q.hairMesh(rig, {mesh = "rbxassetid://" .. h[2], tex = "rbxassetid://" .. h[3], scale = h[9], hat = h[10],
+			att = CFrame.new(h[4], h[5], h[6]) * CFrame.Angles(math.rad(h[8] or 0), math.rad(h[7] or 0), 0), tint = v.tint * dim})
+	end
+	if head and FACE_BUILD[v.face] then pcall(FACE_BUILD[v.face], rig, head, rng) end
+	-- size, then the posture (joint rests are read after scaling)
+	if v.size ~= 1 then
+		pcall(function() rig:ScaleTo(v.size) end)
+		rig:SetAttribute("NYScale", v.size)
+	end
+	if Q.setPosture and next(POSTURES[v.posture]) then Q.setPosture(rig, POSTURES[v.posture]) end
+	-- the flicker, with a missing arm or a half-faded side
+	local base = {}
+	for _, p in ipairs(rig:GetDescendants()) do
+		if p:IsA("BasePart") and p.Name ~= "HumanoidRootPart" then
+			if v.missing and limbSide(p.Name, v.missing) then base[p] = 1
+			elseif v.half and p.Name:find(v.half) then base[p] = 0.6 end
+		end
+	end
+	Q.flicker(rig, {base = base, amp = v.amp, spike = v.spike, glitch = v.glitch, peel = v.peel})
+	-- the name tag
+	local tag = head and head:FindFirstChild("NYTag")
+	local label = tag and tag:FindFirstChildWhichIsA("TextLabel")
+	if label then
+		task.spawn(function()
+			local name = look.name or "Hollowed"
+			while rig.Parent do
+				if v.tag == "scramble" then
+					label.Text = corrupt(string.rep("#", 9), 1, rng)
+				elseif v.tag == "former" then
+					-- the name it had as a player, mostly gone; now and then it almost comes back
+					label.Text = corrupt(v.former, rng:NextNumber() < 0.08 and 0.1 or 0.45, rng)
+				else
+					label.Text = corrupt(name, rng:NextNumber() < 0.15 and 0.35 or 0.06, rng)
+				end
+				label.TextTransparency = rng:NextNumber() < 0.05 and 0.85 or 0
+				task.wait(v.tag == "scramble" and 0.15 or 0.22)
+			end
+		end)
+	end
+	return v
+end
+
+-- dev: a lineup of 10 Hollowed in front of you (rpgdebug lineup)
+Q.hollowLineup = function(count, kind)
+	Q.makeAnchor()
+	local rigs = {}
+	count = count or 10
+	for i = 1, count do
+		local rig = Q.cast(kind or "hollowed", {name = "Hollowed"})
+		if rig then
+			Q.put(rig, Q.spot((i - (count + 1) / 2) * 3.2, 10, 0, 0))
+			table.insert(rigs, rig)
+		end
+	end
+	return rigs
+end
+
 -- [55_world.lua]
 -- ---------- the overworld: walk the real map, objectives, Seris following, roaming Hollowed, pickups ----------
 -- Q.explore(token, {objective, target = place name / Vector3, roamers = {...}, pickups = {...}}) lets you walk the
@@ -36191,6 +36749,8 @@ Q.objective = function(text, target)
 	local screen = Q.screen()
 	if Q.objWin then Q.objWin:Destroy() Q.objWin = nil end
 	if Q.waypoint then Q.waypoint:Destroy() Q.waypoint = nil end
+	-- the off-screen arrow lives on the screen itself (not in the window), so it needs its own cleanup
+	if Q.objArrow then Q.objArrow:Destroy() Q.objArrow = nil end
 	WackyState.disconnect("rpg_waypoint")
 	if not text then return end
 	local w = Q.win(screen, UDim2.new(0, 18, 0, 70), UDim2.new(0, 330, 0, 66), 44)
@@ -36220,7 +36780,9 @@ Q.objective = function(text, target)
 	arrow.BackgroundColor3 = Q.cyan
 	arrow.BorderSizePixel = 0
 	arrow.ZIndex = 44
-	arrow.Parent = w
+	arrow.Visible = false
+	arrow.Parent = screen
+	Q.objArrow = arrow
 	Q.connect("waypoint", RunService.RenderStepped:Connect(function()
 		local root = Q.root()
 		if not root or not beam.Parent then return end
@@ -36239,7 +36801,6 @@ Q.objective = function(text, target)
 			if dir.Magnitude < 1 then dir = Vector2.new(0, -1) end
 			dir = dir.Unit
 			local edge = c + dir * math.min(vs.X, vs.Y) * 0.42
-			arrow.Parent = Q.screen()
 			arrow.Position = UDim2.new(0, edge.X, 0, edge.Y)
 			arrow.Rotation = math.deg(math.atan2(dir.Y, dir.X)) + 45
 		end
@@ -36351,23 +36912,51 @@ Q.pickup = function(pos, spec)
 end
 
 -- ---------- roaming Hollowed ----------
--- they drift between points near their home (they're ghosts: walls don't stop them); get close and you fight
-Q.roamer = function(home, enemyId, radius, B)
-	local rig = Q.cast(Q.enemies[enemyId].look or "hollowed", {name = Q.enemies[enemyId].name})
+-- they drift between points near their home, only to points they can see (no wandering into walls); get close and
+-- you fight. seed = the roamer's id, so it looks the same every time (and the one you fight is the one that caught you)
+Q.roamClear = function(from, to)
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	local skip = {Q.folder, Players.LocalPlayer.Character}
+	for _ = 1, 8 do
+		params.FilterDescendantsInstances = skip
+		local hit = workspace:Raycast(from, to - from, params)
+		if not hit then return true end
+		if hit.Instance.Transparency < 0.9 and hit.Instance.CanCollide then return false end
+		table.insert(skip, hit.Instance)
+	end
+	return true
+end
+
+Q.roamer = function(home, enemyId, radius, B, seed)
+	local rig = Q.cast(Q.enemies[enemyId].look or "hollowed", {name = Q.enemies[enemyId].name, seed = seed})
 	if not rig then return end
 	Q.put(rig, CFrame.new(home))
 	local root = rig:FindFirstChild("HumanoidRootPart")
 	local hip = root.Position.Y - home.Y
-	local r = {rig = rig, enemy = enemyId, alive = true}
+	local r = {rig = rig, enemy = enemyId, alive = true, seed = seed}
 	task.spawn(function()
 		local lines = Q.enemies[enemyId].lines and Q.enemies[enemyId].lines.start or {"> i'm sorry"}
 		while r.alive and rig.Parent do
-			local ang = math.random() * math.pi * 2
-			local d = math.random() * (radius or 18)
-			local to = home + Vector3.new(math.cos(ang) * d, 0, math.sin(ang) * d)
-			to = Vector3.new(to.X, Q.groundY(to + Vector3.new(0, 10, 0), home.Y) + hip, to.Z)
-			local dist = (to - root.Position).Magnitude
-			if dist > 1 then
+			-- a point it can walk to in a straight line: clear at chest and knee height, with floor near its own level
+			local to
+			for _ = 1, 8 do
+				local ang = math.random() * math.pi * 2
+				local d = 3 + math.random() * ((radius or 18) - 3)
+				local p = home + Vector3.new(math.cos(ang) * d, 0, math.sin(ang) * d)
+				local gy = Q.groundY(p + Vector3.new(0, 4, 0), -1e9)
+				local feet = root.Position.Y - hip
+				if gy > -1e8 and math.abs(gy - feet) < 2.5 then
+					local c = Vector3.new(p.X, gy + hip, p.Z)
+					local up, low = Vector3.new(0, 1.2, 0), Vector3.new(0, -hip + 1, 0)
+					-- (aim a little past the point, so it doesn't stop with its face in a wall)
+					local past = (c - root.Position) * Vector3.new(1, 0, 1)
+					past = past.Magnitude > 0.1 and past.Unit * 1.5 or Vector3.zero
+					if Q.roamClear(root.Position + up, c + up + past) and Q.roamClear(root.Position + low, c + low + past) then to = c break end
+				end
+			end
+			local dist = to and (to - root.Position).Magnitude or 0
+			if to and dist > 1 then
 				root.CFrame = CFrame.lookAt(root.Position, Vector3.new(to.X, root.Position.Y, to.Z))
 				Q.animate(rig, "walk")
 				local tw = TweenService:Create(root, TweenInfo.new(dist / 5, Enum.EasingStyle.Linear), {CFrame = CFrame.lookAt(to, to + root.CFrame.LookVector)})
@@ -36414,7 +37003,7 @@ Q.explore = function(token, spec)
 				home = p or home
 			end
 			if home then
-				local r = Q.roamer(home, rs.enemy, rs.radius, nil)
+				local r = Q.roamer(home, rs.enemy, rs.radius, nil, rs.id)
 				if r then r.id = rs.id r.party = rs.party table.insert(roamers, r) end
 			end
 		end
@@ -36440,6 +37029,7 @@ Q.explore = function(token, spec)
 		end
 	end))
 	local reached = false
+	Q.exploring = true
 	while Q.alive(token) and not reached do
 		task.wait(0.15)
 		local me = Q.root()
@@ -36463,9 +37053,11 @@ Q.explore = function(token, spec)
 					Q.objective(nil)
 					local enemies = {r.enemy}
 					for _, extra in ipairs(r.party or {}) do table.insert(enemies, extra) end
-					local won = Q.battle(token, {enemies = enemies, music = "battle"})
+					Q.exploring = false
+					local won = Q.battle(token, {enemies = enemies, music = "battle", seeds = {r.seed}, fit = true})
 					Q.anchor = keep
 					if not won then return false end
+					Q.exploring = true
 					Q.data.cleared = Q.data.cleared or {}
 					if r.id then Q.data.cleared[r.id] = true end
 					Q.data.stats.hollowed = (Q.data.stats.hollowed or 0) + 1
@@ -36484,6 +37076,7 @@ Q.explore = function(token, spec)
 			if target and (me.Position - target).Magnitude < (spec.radius or 12) then reached = true end
 		end
 	end
+	Q.exploring = false
 	Q.unfollow()
 	for _, f in ipairs(followers) do pcall(function() f:Destroy() end) end
 	for _, r in ipairs(roamers) do r.alive = false pcall(function() r.rig:Destroy() end) end
@@ -36647,7 +37240,7 @@ Q.chapters[1].scenes = {
 		Q.say(token, "SERIS", "What if it takes the day we met? What if it takes her face?", {color = Q.members.seris.color})
 		Q.shot("close", me, nil, 1)
 		Q.flickerHand(5)
-		Q.sound(Q.sfx.static, 0.25)
+		Q.sound(Q.sfx.static, 0.1)
 		Q.direct(token, "Vane looks down at his own hand. It is flickering.")
 		Q.say(token, "VANE", "If we stay, it takes everything. All at once.", {color = Q.cyan})
 		Q.sit(s, false)
@@ -36688,7 +37281,7 @@ Q.chapters[1].scenes = {
 			Q.emitter(pad, "rbxasset://textures/particles/fire_main.dds", Color3.fromRGB(150, 140, 255), {Rate = 14, Lifetime = NumberRange.new(0.8, 1.6), Speed = NumberRange.new(3, 6),
 				Size = NumberSequence.new(2.2, 0), LightEmission = 0.8, EmissionDirection = Enum.NormalId.Top})
 		end
-		local student = Q.cast("hollowedStudent")
+		local student = Q.cast("hollowedStudent", {seed = "c1_student"})
 		Q.put(student, Q.spot(2, 26, 0, 0))
 		Q.playMusic(nil)
 		Q.sound(Q.sfx.weep, 0.4)
@@ -36707,7 +37300,7 @@ Q.chapters[1].scenes = {
 		Q.sceneEnd()
 		student:Destroy()
 		s:Destroy()
-		local won = Q.battle(token, {enemies = {"hollowed_student"}, music = "battle", tutorial = true})
+		local won = Q.battle(token, {enemies = {"hollowed_student"}, music = "battle", tutorial = true, seeds = {"c1_student"}})
 		if not won then return end
 		Q.data.stats.hollowed = (Q.data.stats.hollowed or 0) + 1
 		-- afterwards
@@ -37108,11 +37701,16 @@ addcmd('rpgdebug',{},function(args, speaker)
 			if not Q.data.joined.seris then Q.join("seris") end
 			Q.anchor = nil
 			Q.makeAnchor()
-			Q.battle(token, {enemies = {args[2] or "hollowed_student"}, music = "battle", tutorial = args[3] == "tutorial"})
+			Q.battle(token, {enemies = {args[2] or "hollowed_student"}, music = "battle", tutorial = args[3] == "tutorial", fit = true})
 			Q.stop()
 		end)
+	elseif args[1] == "lineup" then
+		-- 10 Hollowed in a row in front of you, to see how different they look (unrpg clears them)
+		Q.stop()
+		Q.anchor = nil
+		Q.hollowLineup(tonumber(args[2]) or 10)
 	else
-		notify('rpgdebug', 'rpgdebug chapter <n> [scene] | rpgdebug battle [enemy] [tutorial]')
+		notify('rpgdebug', 'rpgdebug chapter <n> [scene] | rpgdebug battle [enemy] [tutorial] | rpgdebug lineup [count]')
 	end
 end)
 
