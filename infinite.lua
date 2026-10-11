@@ -1,4 +1,4 @@
--- NeverYield v1.30.1 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.30.2 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.30.1" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.30.2" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -33849,18 +33849,32 @@ Q.chapters = {
 	{n = 7, disc = 1, place = "waystation", title = "The Shattering", world = "The Waystation"},
 }
 
--- hand-picked staging spots per real game ({x, y, z} on the floor), read from the map's own named areas.
+-- hand-picked staging spots per real game: {x, y, z} on the floor, or {x, y, z, yaw} to also fix which way the scene
+-- faces (yaw in degrees like rpgspot's: 0 faces -Z, 90 faces -X, -90 faces +X, 180 faces +Z). A spot with a yaw is a
+-- staging anchor: the scene and any battle in it are laid out from there, checked against the real map's walls.
 -- Spots kas marks in-game with rpgspot take priority (Q.namedSpot).
 Q.mapSpots = {
-	[18600625012] = { -- Genovia High
-		spawn = {-20, 40, 35},        -- lobby spawn
-		library = {31, 45, 105},      -- the library: "the great archives burn into nothingness"
+	[18600625012] = { -- Genovia High (checked in the downloaded place, Studio, 2026-10-10)
+		spawn = {-20, 40, 35},              -- lobby spawn
+		-- the sunken garden quad: Vane on the east path, facing west over the dragon fountain to the library wing
+		courtyard = {118, 34, 34, 90},
+		-- the domed reading room: two storeys of shelves, booths, the fireplace at the far end. Facing +Z down the
+		-- aisle (about 18 wide, clear of the staircase), so the battle line, the swirl and the orbit fit
+		library = {20, 40.75, 106, 180},
 		ballroom = {-123, 52, 33},
 		history = {27, 46, -54},
-		astronomy = {246, 67, -31},   -- the astronomy tower: high up, the sky bleeding pixels
+		-- the observatory: a round room under a glass dome with an orrery. The middle is a ring of desks, so the scene
+		-- stands in the open south aisle facing the dome (+Z); the gate opens over the desk ring
+		astronomy = {246, 61.33, -33, 180},
 		theater = {65, 29, 172},
 	},
 }
+
+-- a hand-picked spot as a CFrame (facing its yaw; spots without a yaw face -Z)
+Q.mapSpot = function(name)
+	local s = (Q.mapSpots[game.PlaceId] or {})[name]
+	return s and CFrame.new(s[1], s[2], s[3]) * CFrame.Angles(0, math.rad(s[4] or 0), 0)
+end
 
 -- ---------- map test: travel to a chapter's real game and stage a small scene there ----------
 -- Checks the parts that can only be tested in-game: the teleport, NeverYield coming back, the RPG resuming,
@@ -33955,6 +33969,45 @@ Q.win = function(parent, pos, size, z)
 	return f
 end
 
+-- drag a window with the mouse or a finger, grabbing it anywhere (buttons too). A press that moves more than a few
+-- pixels is a drag, not a click: check Q.dragged(frame) before acting on a button click. onMoved(pos) runs after a drag.
+Q.drag = function(frame, onMoved)
+	frame.Active = true
+	local start, origin
+	local function begin(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			start, origin = input.Position, frame.Position
+			frame:SetAttribute("NYDragged", false)
+		end
+	end
+	frame.InputBegan:Connect(begin)
+	for _, d in ipairs(frame:GetDescendants()) do
+		if d:IsA("GuiObject") then d.InputBegan:Connect(begin) end
+	end
+	local moveConn = UserInputService.InputChanged:Connect(function(input)
+		if not start then return end
+		if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
+		local d = input.Position - start
+		if not frame:GetAttribute("NYDragged") and d.Magnitude < 6 then return end
+		frame:SetAttribute("NYDragged", true)
+		frame.Position = UDim2.new(origin.X.Scale, origin.X.Offset + d.X, origin.Y.Scale, origin.Y.Offset + d.Y)
+	end)
+	local endConn = UserInputService.InputEnded:Connect(function(input)
+		if start and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+			start = nil
+			if frame:GetAttribute("NYDragged") and onMoved then onMoved(frame.Position) end
+		end
+	end)
+	frame.Destroying:Connect(function()
+		moveConn:Disconnect()
+		endConn:Disconnect()
+	end)
+end
+
+Q.dragged = function(frame)
+	return frame:GetAttribute("NYDragged") == true
+end
+
 Q.text = function(parent, props)
 	local l = NeverYieldPets.label(parent, props)
 	l.Font = props.Font or Enum.Font.GothamMedium
@@ -34042,7 +34095,10 @@ Q.choose = function(token, options, title, opts)
 	for _, o in ipairs(options) do width = math.max(width, 80 + #o * 11) end
 	local top = title and 44 or 14
 	local h = top + #options * 38 + 12
-	local box = Q.win(screen, UDim2.new(0.5, -width / 2, opts.y or 0.5, -h / 2), UDim2.new(0, width, 0, h), z)
+	-- menus open where you last dragged one (this session), or centred
+	local at = Q.chooseAt or Vector2.new(0, 0)
+	local box = Q.win(screen, UDim2.new(0.5, -width / 2 + at.X, opts.y or 0.5, -h / 2 + at.Y), UDim2.new(0, width, 0, h), z)
+	local home = box.Position
 	if title then
 		Q.text(box, {Position = UDim2.new(0, 18, 0, 10), Size = UDim2.new(1, -36, 0, 24), Text = title, Font = Enum.Font.GothamBold, TextSize = 17, ZIndex = z + 1})
 	end
@@ -34067,10 +34123,13 @@ Q.choose = function(token, options, title, opts)
 		b.ZIndex = z + 2
 		b.Parent = box
 		b.MouseEnter:Connect(function() cursor = i draw() end)
-		b.MouseButton1Click:Connect(function() picked = i end)
+		b.MouseButton1Click:Connect(function() if not Q.dragged(box) then picked = i end end)
 		rows[i] = b
 	end
 	draw()
+	Q.drag(box, function(pos)
+		Q.chooseAt = at + Vector2.new(pos.X.Offset - home.X.Offset, pos.Y.Offset - home.Y.Offset)
+	end)
 	local conn = UserInputService.InputBegan:Connect(function(input)
 		local k = input.KeyCode
 		if k == Enum.KeyCode.Up or k == Enum.KeyCode.W then cursor = (cursor - 2) % #options + 1 draw() Q.sound(Q.sfx.select, 0.25, 1.4)
@@ -34203,17 +34262,18 @@ Q.subject = function(s)
 	return head.Position, f.Unit
 end
 
--- pull the camera in front of anything solid between it and what it looks at
+-- pull the camera in front of anything visible between it and what it looks at (walls, and decor you can walk
+-- through too, like shelves and ladders: the camera must never sit inside something you can see)
 Q.clearShot = function(look, cam)
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	local skip = {Q.folder, Players.LocalPlayer.Character}
-	for _ = 1, 6 do
+	for _ = 1, 24 do
 		params.FilterDescendantsInstances = skip
 		local dir = cam - look
 		local hit = workspace:Raycast(look, dir, params)
 		if not hit then return cam end
-		if hit.Instance.Transparency > 0.6 or not hit.Instance.CanCollide then
+		if hit.Instance.Transparency > 0.6 then
 			table.insert(skip, hit.Instance)
 		else
 			local d = math.max(3.2, (hit.Position - look).Magnitude - 0.6)
@@ -34223,25 +34283,22 @@ Q.clearShot = function(look, cam)
 	return cam
 end
 
--- kinds: "wide" (whole scene), "two" (subject + other), "medium", "close", "ots" (over subject's shoulder at other),
--- "low" (looking up at subject). side = 1 or -1 picks which side of the line the camera stands on.
-Q.shot = function(kind, subject, other, seconds, side)
-	side = side or 1
+-- where a shot puts the camera (before walls are checked)
+Q.shotAt = function(kind, subject, other, side)
 	local p, f = Q.subject(subject)
 	local right = f:Cross(Vector3.new(0, 1, 0)).Unit * side
-	local cam, look
 	if kind == "close" then
-		cam, look = p + f * 4.6 + right * 1.4 + Vector3.new(0, 0.25, 0), p - Vector3.new(0, 0.15, 0)
+		return p + f * 4.6 + right * 1.4 + Vector3.new(0, 0.25, 0), p - Vector3.new(0, 0.15, 0)
 	elseif kind == "medium" then
-		cam, look = p + f * 8 + right * 2.6 + Vector3.new(0, 0.6, 0), p - Vector3.new(0, 0.6, 0)
+		return p + f * 8 + right * 2.6 + Vector3.new(0, 0.6, 0), p - Vector3.new(0, 0.6, 0)
 	elseif kind == "low" then
-		cam, look = p + f * 7 + right * 2 - Vector3.new(0, 2.6, 0), p + Vector3.new(0, 0.4, 0)
+		return p + f * 7 + right * 2 - Vector3.new(0, 2.6, 0), p + Vector3.new(0, 0.4, 0)
 	elseif kind == "ots" and other then
 		local q = Q.subject(other)
 		local d = (q - p) * Vector3.new(1, 0, 1)
 		local u = d.Magnitude > 0.1 and d.Unit or f
 		local r = u:Cross(Vector3.new(0, 1, 0)).Unit * side
-		cam, look = p - u * 4.2 + r * 1.9 + Vector3.new(0, 0.7, 0), q - Vector3.new(0, 0.3, 0)
+		return p - u * 4.2 + r * 1.9 + Vector3.new(0, 0.7, 0), q - Vector3.new(0, 0.3, 0)
 	elseif kind == "two" and other then
 		local q = Q.subject(other)
 		local mid = (p + q) / 2
@@ -34249,11 +34306,37 @@ Q.shot = function(kind, subject, other, seconds, side)
 		local u = d.Magnitude > 0.1 and d.Unit or right
 		local perp = u:Cross(Vector3.new(0, 1, 0)).Unit * side
 		local dist = math.max(9, d.Magnitude * 1.3 + 6)
-		cam, look = mid + perp * dist + Vector3.new(0, 1.8, 0), mid - Vector3.new(0, 0.4, 0)
-	else -- wide
-		cam, look = p + f * 18 + right * 8 + Vector3.new(0, 7, 0), p - Vector3.new(0, 1, 0)
+		return mid + perp * dist + Vector3.new(0, 1.8, 0), mid - Vector3.new(0, 0.4, 0)
 	end
-	cam = Q.clearShot(look, cam)
+	-- wide
+	return p + f * 18 + right * 8 + Vector3.new(0, 7, 0), p - Vector3.new(0, 1, 0)
+end
+
+-- kinds: "wide" (whole scene), "two" (subject + other), "medium", "close", "ots" (over subject's shoulder at other),
+-- "low" (looking up at subject). side = 1 or -1 picks which side of the line the camera stands on.
+-- In tight rooms a wall can push the camera in too close: then the other side of the line is tried, and a two-shot
+-- that still doesn't fit is filmed down the line from behind the nearer of the two, raised a little.
+Q.shot = function(kind, subject, other, seconds, side)
+	side = side or 1
+	local cam, look = Q.shotAt(kind, subject, other, side)
+	local want = (cam - look).Magnitude
+	local got = Q.clearShot(look, cam)
+	if (got - look).Magnitude < want * 0.6 then
+		local cam2, look2 = Q.shotAt(kind, subject, other, -side)
+		local got2 = Q.clearShot(look2, cam2)
+		if (got2 - look2).Magnitude > (got - look).Magnitude then got, look = got2, look2 end
+		if (got - look).Magnitude < want * 0.6 and kind == "two" and other then
+			local p, q = Q.subject(subject), Q.subject(other)
+			local near, far = p, q
+			local here = workspace.CurrentCamera.CFrame.Position
+			if (q - here).Magnitude < (p - here).Magnitude then near, far = q, p end
+			local d = (far - near) * Vector3.new(1, 0, 1)
+			local u = d.Magnitude > 0.1 and d.Unit or Vector3.new(0, 0, -1)
+			look = (near + far) / 2 - Vector3.new(0, 0.4, 0)
+			got = Q.clearShot(look, near - u * 6 + u:Cross(Vector3.new(0, 1, 0)).Unit * 2.2 * side + Vector3.new(0, 2.6, 0))
+		end
+	end
+	cam = got
 	if seconds and seconds > 0 then Q.camGo(cam, look, seconds) else Q.camTo(cam, look, 0) end
 end
 
@@ -34363,10 +34446,7 @@ Q.journalLine = function(who, text)
 end
 
 Q.sceneStart = function(spotName)
-	local spot = spotName and (Q.namedSpot(spotName) or (function()
-		local s = (Q.mapSpots[game.PlaceId] or {})[spotName]
-		return s and CFrame.new(s[1], s[2], s[3])
-	end)())
+	local spot = spotName and (Q.namedSpot(spotName) or Q.mapSpot(spotName))
 	if spot then
 		Q.anchor = spot
 		-- stand Vane on the spot
@@ -34497,7 +34577,7 @@ Q.tollGate = function(token, opts)
 	Q.sound(Q.sfx.gate, 0.7)
 	Q.shake(0.8)
 	local gp = gate.core.Position
-	Q.camTo(Q.pt(4, 3, -5), gp, 1.2)
+	Q.camTo(Q.clearShot(gp, Q.pt(4, 3, -5)), gp, 1.2)
 	if opts.before then opts.before() end
 	local lines = opts.lines or {"> UNAUTHORIZED TRANSFER DETECTED.", "> TOLL REQUIRED: 1 (ONE) CORE MEMORY.", "> ACCEPT?"}
 	local yes = Q.tollPrompt(lines, false)
@@ -34537,6 +34617,8 @@ end)
 -- Q.battle(token, spec) stages the fight where you stand: your party in a line, the enemies across from you,
 -- the camera cutting between them. spec = {enemies = {"hollowed_student"}, music = "battle", tutorial = true,
 -- hooks = {start, enemyAction, damage, afterAction, commands}}. Returns true when won (losing retries the fight).
+-- Every battle camera goes through Q.clearShot, so fights staged in tight rooms (the Library aisle, halls where a
+-- roamer catches you) pull the camera in front of the walls instead of filming the inside of them.
 
 -- a point in battle space: x right, y up, z forward (toward the enemies)
 Q.pt = function(x, y, z)
@@ -34883,7 +34965,7 @@ Q.perform = function(B, u, sk, targets, isLimit)
 		local dir = (troot.Position - root.Position) * Vector3.new(1, 0, 1)
 		local stop = troot.Position - dir.Unit * 3.6
 		-- camera: low side angle on the attacker as they charge
-		Q.camGo(Q.pt(0, 0, 0):Lerp(stop, 0.5) + Vector3.new(0, 4.5, 0) + home.RightVector * 11, stop + Vector3.new(0, 1.8, 0), 0.35)
+		Q.camGo(Q.clearShot(stop + Vector3.new(0, 1.8, 0), Q.pt(0, 0, 0):Lerp(stop, 0.5) + Vector3.new(0, 4.5, 0) + home.RightVector * 11), stop + Vector3.new(0, 1.8, 0), 0.35)
 		Q.dash(u, stop, isLimit and 0.2 or 0.3)
 		Q.swordTrail(u, true)
 		local hits = sk.hits or 1
@@ -34906,7 +34988,8 @@ Q.perform = function(B, u, sk, targets, isLimit)
 				if sk.status and math.random() < sk.status.chance then Q.addStatus(B, t, sk.status.id, sk.status.turns) end
 			end
 			if isLimit and h < hits then
-				Q.camGo(stop + Vector3.new(math.cos(h * 1.3) * 9, 3 + h * 0.4, math.sin(h * 1.3) * 9), troot.Position + Vector3.new(0, 1.5, 0), 0.18)
+				local look = troot.Position + Vector3.new(0, 1.5, 0)
+				Q.camGo(Q.clearShot(look, stop + Vector3.new(math.cos(h * 1.3) * 9, 3 + h * 0.4, math.sin(h * 1.3) * 9)), look, 0.18)
 				task.wait(0.12)
 			else
 				task.wait(0.25)
@@ -34923,7 +35006,7 @@ Q.perform = function(B, u, sk, targets, isLimit)
 		for _, t in ipairs(targets) do
 			local troot = Q.rootOf(t)
 			if troot and not t.dead then
-				Q.camGo(root.Position + home.RightVector * 8 + Vector3.new(0, 4, 0) - home.LookVector * 4, troot.Position, 0.3)
+				Q.camGo(Q.clearShot(troot.Position, root.Position + home.RightVector * 8 + Vector3.new(0, 4, 0) - home.LookVector * 4), troot.Position, 0.3)
 				local orb = NeverYieldAgartha.part(Q.stage(), Vector3.new(0.9, 0.9, 0.9), root.CFrame * CFrame.new(0, 1.5, -1.5), color, Enum.Material.Neon, "Ball", {CanCollide = false})
 				Q.emitter(orb, Q.fxTex.specs, color, {Rate = 60, Lifetime = NumberRange.new(0.2, 0.4), Speed = NumberRange.new(1, 3), Size = NumberSequence.new(0.4, 0), LightEmission = 1})
 				local tw = TweenService:Create(orb, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {CFrame = CFrame.new(troot.Position + Vector3.new(0, 1.2, 0))})
@@ -35311,7 +35394,7 @@ Q.fight = function(token, spec)
 	local center = Q.pt(0, 2, 18)
 	for k = 0, 24 do
 		local ang = math.rad(-60 + k * 6)
-		Q.camTo(center + Vector3.new(math.sin(ang) * 14, 5 - k * 0.08, math.cos(ang) * 14), center, 0)
+		Q.camTo(Q.clearShot(center, center + Vector3.new(math.sin(ang) * 14, 5 - k * 0.08, math.cos(ang) * 14)), center, 0)
 		RunService.RenderStepped:Wait()
 		RunService.RenderStepped:Wait()
 	end
@@ -35319,7 +35402,7 @@ Q.fight = function(token, spec)
 		if e.data.lines and e.data.lines.start then Q.bubble(e.rig, WackyState.pick(e.data.lines.start), 3) end
 	end
 	B.wide = function()
-		Q.camGo(Q.pt(13, 8, -9), Q.pt(0, 1.5, 9), 0.6)
+		Q.camGo(Q.clearShot(Q.pt(0, 1.5, 9), Q.pt(13, 8, -9)), Q.pt(0, 1.5, 9), 0.6)
 	end
 	B.wide()
 	if B.hooks.start then B.hooks.start(B) end
@@ -35413,7 +35496,7 @@ Q.victory = function(B)
 		for k = 0, 90 do
 			if not Q.alive(B.token) then return end
 			local ang = math.rad(200 + k * 1.2)
-			Q.camTo(c + Vector3.new(math.sin(ang) * 11, 3.5, math.cos(ang) * 11), c, 0)
+			Q.camTo(Q.clearShot(c, c + Vector3.new(math.sin(ang) * 11, 3.5, math.cos(ang) * 11)), c, 0)
 			task.wait(0.03)
 		end
 	end)
@@ -35946,7 +36029,7 @@ Q.chapters[1].scenes = {
 		Q.put(s, Q.spot(-2.5, 6, -2.5, 30))
 		Q.animate(s, "sit")
 		-- high over the academy, drifting down onto Vane
-		Q.camTo(Q.pt(0, 30, -22), Q.pt(0, 4, 26), 0)
+		Q.camTo(Q.clearShot(Q.pt(0, 4.5, 0), Q.pt(0, 30, -22)), Q.pt(0, 4, 26), 0)
 		Q.shot("wide", me, nil, 7)
 		Q.direct(token, "The sky above the grand library is bleeding pixels. The marble pillars of the academy are fraying into wireframes, their textures peeling upward like burning paper that makes no sound.")
 		Q.direct(token, "Vane stands near the edge of the courtyard, the Null-Byte Key pulsing a heavy, cold blue in his hand. Seris is on her knees, watching the great archives burn into nothingness.")
@@ -35990,7 +36073,7 @@ Q.chapters[1].scenes = {
 
 	{id = "c1_weeping", title = "Something Weeping in the Archives", run = function(token)
 		Q.anchor = nil
-		Q.sceneStart()
+		Q.sceneStart("library")
 		Q.deSync(token, 1.4)
 		local me = Q.vane()
 		local s = seris(token)
@@ -36005,7 +36088,8 @@ Q.chapters[1].scenes = {
 		Q.put(student, Q.spot(2, 26, 0, 0))
 		Q.playMusic(nil)
 		Q.sound(Q.sfx.weep, 0.4)
-		Q.shot("two", s, student, 1.5)
+		-- over Seris's shoulder as it comes out of the shelves (the aisle is too narrow to see both from the side)
+		Q.shot("ots", s, student, 1.5)
 		task.spawn(Q.walk, student, Q.spot(1, 15, 0, 0), 3)
 		Q.direct(token, "A figure stumbles out of the burning shelves. An avatar in this academy's uniform, its face a smooth gray default, its name tag scrolling garbage characters.")
 		Q.shot("medium", student, nil, 1)
@@ -36013,7 +36097,7 @@ Q.chapters[1].scenes = {
 		Q.say(token, nil, "> i'm sorry i was going to remember you", {rig = student})
 		Q.say(token, nil, "> please can i have one. just one. i'll give it back", {rig = student})
 		Q.face(s, student)
-		Q.shot("ots", s, student, 1)
+		Q.shot("medium", s, nil, 1, -1)
 		Q.say(token, "SERIS", "A Hollowed. It jumped too many times... there's nothing left in it to pay with.", {color = Q.members.seris.color})
 		Q.say(token, "SERIS", "It's going to try to take one from us. Vane - don't let it.", {color = Q.members.seris.color})
 		Q.sceneEnd()
@@ -36055,7 +36139,7 @@ Q.chapters[1].scenes = {
 
 	{id = "c1_toll", title = "The First Gate", run = function(token)
 		Q.anchor = nil
-		Q.sceneStart()
+		Q.sceneStart("astronomy")
 		Q.deSync(token, 1.6)
 		Q.keyProp(true)
 		local me = Q.vane()
