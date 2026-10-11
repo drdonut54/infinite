@@ -1,4 +1,4 @@
--- NeverYield v1.30.12 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.30.13 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.30.12" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.30.13" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -5495,6 +5495,7 @@ CMDs[#CMDs + 1] = {NAME = 'rpgmaps', DESC = 'Lists the RPG worlds and the real g
 CMDs[#CMDs + 1] = {NAME = 'rpgmap [1-7 / here]', DESC = 'Map test: teleports you to that chapter\'s real game, NeverYield comes back and shows a Begin card, then stages a test scene (Seris, a Hollowed, a toll gate to the next world). here = test the game you are in'}
 CMDs[#CMDs + 1] = {NAME = 'rpgspot [name] / rpgspot del [name]', DESC = 'Marks where you stand in this game as a named spot for RPG scenes and battles (saved in NeverYield_rpg_spots.json)'}
 CMDs[#CMDs + 1] = {NAME = 'rpgspots', DESC = 'Lists the spots marked in this game and shows a blue beam on each'}
+CMDs[#CMDs + 1] = {NAME = 'rpgfanfare [n]', DESC = 'Hear the victory fanfares and pick the one that plays after battles (saved)'}
 CMDs[#CMDs + 1] = {NAME = 'unrpg', DESC = 'Stops the RPG and clears everything it put in the world'}
 -- wait()
 
@@ -32650,6 +32651,9 @@ Q.music = {
 	boss = {116873506692821, 137578574800255, 1837826831, 1842840001, 1840529722},
 	-- dread for later chapters (the Hotel, the Root): drones and bells from kas's list (APM / DistroKid)
 	dread = {1835949514, 1843053709, 1837835407, 1846999567, 140704980462451, 139967275703617},
+	-- under the victory window after the fanfare: majestic brass, heroic (APMOfficial: March of Justice 30A,
+	-- Determined And Ceremonial)
+	victory = {1835323453, 1836076912},
 	lacrimosa = {1844309470},
 	hymn = {1844309360},
 	lumen = {137203505283202},
@@ -32664,6 +32668,15 @@ Q.sfx = {
 	hum = 9125446564, flash = 9114588980, weep = {9113996909, 9113996681, 9113997213}, whisper = 9126214610,
 	kids = 9112811168, siren = 9119165140, plates = 9117656338, dog = 9113951726, rush = 9117390695,
 	select = 9118728158, gate = 9119468100, door = 9120839552, levelup = 1837762472, victory = 1836473422,
+}
+
+-- the victory fanfare (kas picks one by ear in-game: rpgfanfare <n>; saved). APMOfficial, lengths measured in Studio.
+Q.fanfares = {
+	{id = 94590027038118, len = 7.3, name = "Victorious Journey"},
+	{id = 83315768373322, len = 13.9, name = "Conquering Heroes"},
+	{id = 100735630401429, len = 12.1, name = "Glorious Morning"},
+	{id = 125879950348378, len = 12.7, name = "Land of the Brave"},
+	{id = 1836632906, len = 12.5, name = "Hollywood Fanfare"},
 }
 
 -- ---------- save ----------
@@ -35855,26 +35868,33 @@ end
 
 Q.victory = function(B)
 	Q.hint(B, nil)
+	-- FF7's victory: a fanfare sting, then a heroic theme under the window for as long as it's up (kas picks the
+	-- sting by ear with rpgfanfare; all APMOfficial)
 	Q.playMusic(nil)
-	Q.sound(Q.sfx.victory, 0.6)
+	local sting = Q.fanfares[Q.data.fanfare or 1] or Q.fanfares[1]
+	Q.sound(sting.id, 0.7)
+	task.delay(sting.len - 0.4, function()
+		if Q.alive(B.token) and not B.ended then Q.playMusic("victory", 0.35) end
+	end)
 	for _, u in ipairs(B.party) do
 		if not u.dead and u.rig then Q.animate(u.rig, "cheer") end
 	end
-	-- slow orbit around the party; where a wall would push the camera in close (into Vane's back), it holds the last
-	-- open angle instead, and if there's no room anywhere it looks down from above
+	-- the camera circles the party, round and round until you close the window. Where a wall would push it in close
+	-- (into Vane's back) it holds the last open angle; with no room anywhere it holds the most open low angle.
 	task.spawn(function()
 		local c = Q.pt(0, 2.5, 0)
 		local a = Q.anchor or CFrame.new(c)
+		local steps = 300
 		local cams = {}
-		for k = 0, 90 do
-			local ang = math.rad(k * 1.2) + math.pi + math.rad(20)
+		for k = 0, steps - 1 do
+			local ang = math.rad(k * 360 / steps) + math.pi + math.rad(20)
 			local want = c + (a.LookVector * math.cos(ang) + a.RightVector * math.sin(ang)) * -11 + Vector3.new(0, 3.5, 0)
 			local cam = Q.clearShot(c, want)
 			cams[k] = (cam - c).Magnitude >= 7.5 and cam or false
+			if k % 50 == 49 then task.wait() end
 		end
 		local last
-		for k = 0, 90 do last = last or cams[k] end
-		-- no room to orbit: the most open angle we found, kept low (never a top-down shot of the ground)
+		for k = 0, steps - 1 do last = last or cams[k] end
 		if not last then
 			local best, bestD = nil, 0
 			for k = 0, 11 do
@@ -35884,12 +35904,13 @@ Q.victory = function(B)
 			end
 			last = best
 		end
-		for k = 0, 90 do
-			-- (closing the window early ends the battle: stop, or this would grab the camera back after its release)
-			if not Q.alive(B.token) or B.ended then return end
-			last = cams[k] or last
+		local k = 0
+		-- (closing the window ends the battle: stop, or this would grab the camera back after its release)
+		while Q.alive(B.token) and not B.ended do
+			last = cams[k % steps] or last
 			Q.camTo(last, c, 0)
-			task.wait(0.03)
+			k = k + 1
+			task.wait(0.04)
 		end
 	end)
 	local lines = {"Victory!", "Gained " .. B.xp .. " EXP"}
@@ -35916,6 +35937,7 @@ end
 
 Q.endBattle = function(B)
 	B.ended = true
+	if Q.musicKind == "victory" then Q.playMusic(nil) end
 	Q.idleStop(B)
 	if B.gui then B.gui:Destroy() end
 	for _, u in ipairs(B.party) do if u.rig then pcall(function() u.rig:Destroy() end) end end
@@ -38656,6 +38678,22 @@ addcmd('rpgspots',{'listspots'},function(args, speaker)
 	end
 	table.sort(names)
 	notify('Requiem spots', #names == 0 and 'No spots in this game yet. Stand somewhere and type rpgspot <name>.' or (#names .. ' spots: ' .. table.concat(names, ", ") .. ' (blue beams; unrpg hides them)'), 12)
+end)
+
+addcmd('rpgfanfare',{'requiemfanfare'},function(args, speaker)
+	-- hear the victory fanfares and pick one: rpgfanfare (list), rpgfanfare <n> (play it and use it from now on)
+	Q.load()
+	local n = tonumber(args[1])
+	if n and Q.fanfares[n] then
+		Q.data.fanfare = n
+		Q.save()
+		Q.sound(Q.fanfares[n].id, 0.7)
+		notify('rpgfanfare', 'Victory fanfare ' .. n .. ': ' .. Q.fanfares[n].name .. ' (saved)')
+	else
+		local names = {}
+		for i, f in ipairs(Q.fanfares) do table.insert(names, i .. " " .. f.name .. (i == (Q.data.fanfare or 1) and " (current)" or "")) end
+		notify('rpgfanfare', table.concat(names, ", ") .. ". Type rpgfanfare <n> to hear and pick one.")
+	end
 end)
 
 addcmd('unrpg',{'stoprpg'},function(args, speaker)
