@@ -5,6 +5,12 @@ Versions before 1.11.3 were reconstructed from the Desktop `.bakN` backups (one 
 
 | Version | Date | Commands | Change |
 |---|---|---|---|
+| 1.31.2 | 10-11 | 643 | Requiem: Packet Trace / cast sound plays once and is clipped to 1.1 s |
+| 1.31.1 | 10-11 | 643 | Requiem: shorter memory level-up lines on the victory screen |
+| 1.31.0 | 10-11 | 643 | Requiem: Bytes, gear with memory sockets (Place1 swords), Remember the past, memory drops, Hollowed Echoes, Odds' shop in The Last Roll (Sol's RNG), P menu Equip/Memories/Safe World |
+| 1.30.21 | 10-11 | 643 | Requiem: battle double keeps its face and hair (no automatic rescale of head accessories) |
+| 1.30.20 | 10-11 | 643 | Requiem: revert the v1.30.19 accessory weld change (kas went bald) |
+| 1.30.19 | 10-11 | 643 | Requiem: hair stays on the head in battles; DING on every menu cursor move |
 | 1.30.18 | 10-11 | 643 | Requiem: music fixed (v1.30.17 name clash muted the RPG's own sounds) |
 | 1.30.17 | 10-11 | 643 | Requiem: smart positioner walks to open ground before scenes/fights; game tags + Stop Navigating stay hidden; camera avoids CanQuery-off leaves; rpgdebug guis |
 | 1.30.16 | 10-11 | 643 | Requiem auras from Sol's RNG + Place1 (sword, attacks, limit, gate portal, Hollowed, map); smart camera; living cutscenes + kneel; LaunchExperience gate hop |
