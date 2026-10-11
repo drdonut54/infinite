@@ -1,4 +1,4 @@
--- NeverYield v1.29.0 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.29.2 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.29.0" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.29.2" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -32870,8 +32870,10 @@ Q.playMusic = function(kind, volume)
 		if Q.musicSound then WackyState.fadeMusic(Q.musicSound, 0, 1.5) end
 		return
 	end
+	if Q.muteGame then Q.muteGame(true) end
 	if not Q.musicSound or not Q.musicSound.Parent then
 		Q.musicSound = WackyState.playlist(ids, 0)
+		Q.musicSound:SetAttribute("NYOwn", true)
 	else
 		WackyState.playlistSet(Q.musicSound, ids)
 	end
@@ -32880,7 +32882,8 @@ end
 
 Q.sound = function(id, volume, pitch)
 	if type(id) == "table" then id = WackyState.pick(id) end
-	pcall(WackyState.sound, id, nil, volume or 0.5, false, pitch or 1)
+	local ok, s = pcall(WackyState.sound, id, nil, volume or 0.5, false, pitch or 1)
+	if ok and s then s:SetAttribute("NYOwn", true) end
 end
 
 -- ---------- travel between real games ----------
@@ -32944,6 +32947,15 @@ end
 
 -- [20_stage.lua]
 -- ---------- the stage: everything the RPG puts into the real game (only you see it) ----------
+-- weld p1 to p0 exactly where it is now (a classic Weld with the offset written in, so it can't settle wrong)
+Q.weldTo = function(p0, p1)
+	local w = Instance.new("Weld")
+	w.Part0, w.Part1 = p0, p1
+	w.C0 = p0.CFrame:ToObjectSpace(p1.CFrame)
+	w.Parent = p1
+	return w
+end
+
 Q.stage = function()
 	if Q.folder and Q.folder.Parent then return Q.folder end
 	local m = Instance.new("Model")
@@ -33053,15 +33065,11 @@ Q.rig = function(look)
 	if head and look.hair then
 		local hair = NeverYieldAgartha.part(rig, Vector3.new(head.Size.X * 1.08, head.Size.Y * 0.45, head.Size.Z * 1.08), head.CFrame * CFrame.new(0, head.Size.Y * 0.38, 0.05), look.hair, Enum.Material.SmoothPlastic)
 		hair.Anchored, hair.CanCollide = false, false
-		local w = Instance.new("WeldConstraint")
-		w.Part0, w.Part1 = head, hair
-		w.Parent = hair
+		Q.weldTo(head, hair)
 		if look.longHair then
 			local back = NeverYieldAgartha.part(rig, Vector3.new(head.Size.X * 0.95, head.Size.Y * 1.3, head.Size.Z * 0.3), head.CFrame * CFrame.new(0, -head.Size.Y * 0.2, head.Size.Z * 0.5), look.hair, Enum.Material.SmoothPlastic)
 			back.Anchored, back.CanCollide = false, false
-			local w2 = Instance.new("WeldConstraint")
-			w2.Part0, w2.Part1 = head, back
-			w2.Parent = back
+			Q.weldTo(head, back)
 		end
 	end
 	if look.props then pcall(look.props, rig, head) end
@@ -33412,6 +33420,64 @@ Q.namedSpot = function(name)
 	return CFrame.new(s.x, s.y, s.z) * CFrame.Angles(0, math.rad(s.dir or 0), 0)
 end
 
+-- The game's own music would play on top of ours: while the RPG's music is on, every long or looped sound the
+-- game plays (music, ambience) is muted, and put back exactly as it was when the RPG stops.
+Q.muted = setmetatable({}, {__mode = "k"})
+Q.isOurs = function(s)
+	if s == Q.musicSound or s:GetAttribute("NYOwn") then return true end
+	if Q.folder and s:IsDescendantOf(Q.folder) then return true end
+	local char = Players.LocalPlayer.Character
+	return char and s:IsDescendantOf(char) and s:FindFirstAncestor("NYKey") ~= nil
+end
+Q.muteOne = function(s)
+	if not s:IsA("Sound") or Q.muted[s] ~= nil or Q.isOurs(s) then return end
+	if not s.Looped and not s.IsLoaded then
+		-- not loaded yet: decide once we know how long it is
+		local c
+		c = s.Loaded:Connect(function()
+			c:Disconnect()
+			if Q.muting then pcall(Q.muteOne, s) end
+		end)
+		return
+	end
+	if not (s.Looped or s.TimeLength >= 30) then return end
+	Q.muted[s] = s.Volume
+	s.Volume = 0
+	-- games fade their music back in or swap tracks: keep it at zero while we're muting
+	local c = s:GetPropertyChangedSignal("Volume"):Connect(function()
+		if Q.muting and Q.muted[s] ~= nil and s.Volume > 0 then
+			Q.muted[s] = s.Volume
+			s.Volume = 0
+		end
+	end)
+	Q.muteConns = Q.muteConns or {}
+	table.insert(Q.muteConns, c)
+end
+Q.muteGame = function(on)
+	if on and not Q.muting then
+		Q.muting = true
+		for _, root in ipairs({workspace, SoundService, Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")}) do
+			if root then
+				for _, d in ipairs(root:GetDescendants()) do
+					if d:IsA("Sound") then pcall(Q.muteOne, d) end
+				end
+				Q.connect("mute_" .. root.ClassName, root.DescendantAdded:Connect(function(d)
+					if d:IsA("Sound") then task.defer(function() pcall(Q.muteOne, d) end) end
+				end))
+			end
+		end
+	elseif not on and Q.muting then
+		Q.muting = false
+		for _, c in ipairs(Q.muteConns or {}) do pcall(function() c:Disconnect() end) end
+		Q.muteConns = {}
+		for _, name in ipairs({"Workspace", "SoundService", "PlayerGui"}) do WackyState.disconnect("rpg_mute_" .. name) end
+		for s, vol in pairs(Q.muted) do
+			pcall(function() if s.Parent then s.Volume = vol end end)
+		end
+		Q.muted = setmetatable({}, {__mode = "k"})
+	end
+end
+
 Q.clearStage = function()
 	if Q.folder then pcall(function() Q.folder:Destroy() end) Q.folder = nil end
 end
@@ -33428,7 +33494,10 @@ Q.stop = function(keep)
 	if Q.hideSelf then pcall(Q.hideSelf, false) end
 	if Q.freeze then pcall(Q.freeze, false) end
 	if not keep and Q.gui then pcall(function() Q.gui:Destroy() end) Q.gui = nil end
-	if not keep then Q.playMusic(nil) end
+	if not keep then
+		Q.playMusic(nil)
+		Q.muteGame(false)
+	end
 end
 
 -- [25_look.lua]
@@ -33461,9 +33530,7 @@ Q.greatsword = function(parent)
 	grip.Anchored = false
 	local function weld(p)
 		p.CanCollide, p.Massless, p.CanTouch, p.CanQuery, p.Anchored = false, true, false, false, false
-		local w = Instance.new("WeldConstraint")
-		w.Part0, w.Part1 = grip, p
-		w.Parent = p
+		Q.weldTo(grip, p)
 		return p
 	end
 	local L = Q.swordMesh.size.Y
@@ -33541,13 +33608,14 @@ Q.wieldSword = function(char, where)
 	local attachTo, offset
 	if where == "hand" then
 		attachTo = char:FindFirstChild("RightHand") or char:FindFirstChild("Right Arm")
-		offset = attachTo and attachTo.Name == "Right Arm" and CFrame.new(0, -1, -0.2) * CFrame.Angles(math.rad(-90), 0, 0) or CFrame.new(0, -0.15, -0.2) * CFrame.Angles(math.rad(-90), 0, 0)
+		-- ready stance: blade up and forward at 45 degrees
+		offset = attachTo and attachTo.Name == "Right Arm" and CFrame.new(0, -1, -0.2) * CFrame.Angles(math.rad(-45), 0, 0) or CFrame.new(0, -0.15, -0.2) * CFrame.Angles(math.rad(-45), 0, 0)
 	else
 		attachTo = char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
 		offset = CFrame.new(0, 0.2, 0.65) * CFrame.Angles(0, 0, math.rad(35)) * CFrame.new(0, -1.6, 0)
 	end
 	if not attachTo then model:Destroy() return end
-	grip.CFrame = attachTo.CFrame * offset
+	model:PivotTo(attachTo.CFrame * offset)
 	local w = Instance.new("Weld")
 	w.Part0, w.Part1 = attachTo, grip
 	w.C0 = offset
@@ -33582,9 +33650,7 @@ Q.vaneLook = function(on)
 						{CanCollide = false, Massless = true, Transparency = 0.2})
 					ink.Name = "NYArmInk"
 					ink.Anchored = false
-					local w = Instance.new("WeldConstraint")
-					w.Part0, w.Part1 = arm, ink
-					w.Parent = ink
+					Q.weldTo(arm, ink)
 				end
 			end
 		end
@@ -33615,9 +33681,7 @@ Q.ink = function(rig, armName, count)
 		local ink = NeverYieldAgartha.part(rig, Vector3.new(w, 0.045, 0.04), arm.CFrame * CFrame.new(-arm.Size.X * 0.05, -arm.Size.Y * 0.42 + i * arm.Size.Y * 0.09, -arm.Size.Z / 2 - 0.01), Q.cyan, Enum.Material.Neon, nil,
 			{CanCollide = false, Massless = true, Transparency = 0.15})
 		ink.Anchored = false
-		local wc = Instance.new("WeldConstraint")
-		wc.Part0, wc.Part1 = arm, ink
-		wc.Parent = ink
+		Q.weldTo(arm, ink)
 	end
 end
 
@@ -33633,11 +33697,7 @@ Q.looks = {
 				stylus.Anchored = false
 				local tipPart = NeverYieldAgartha.part(rig, Vector3.new(0.1, 0.1, 0.1), stylus.CFrame * CFrame.new(0.45, 0, 0), Q.cyan, Enum.Material.Neon, "Ball", {CanCollide = false, Massless = true})
 				tipPart.Anchored = false
-				for _, p in ipairs({stylus, tipPart}) do
-					local w = Instance.new("WeldConstraint")
-					w.Part0, w.Part1 = hand, p
-					w.Parent = p
-				end
+				for _, p in ipairs({stylus, tipPart}) do Q.weldTo(hand, p) end
 			end
 		end},
 	hollowedStudent = {name = "#%&@?!_", hollowed = true, tagColor = Color3.fromRGB(170, 170, 180), scrambleTag = true},
@@ -33958,31 +34018,39 @@ Q.say = function(token, who, text, opts)
 	if Q.journalLine then Q.journalLine(who, text) end
 end
 
--- choices: returns the index picked
-Q.choose = function(token, options, title)
+-- choices: returns the index picked. opts = {z = 62, y = 0.5 (screen fraction), width = 340}
+Q.choose = function(token, options, title, opts)
+	opts = opts or {}
 	local screen = Q.screen()
-	local h = 46 + #options * 34
-	local box = Q.win(screen, UDim2.new(0.5, -170, 0.5, -h / 2), UDim2.new(0, 340, 0, h), 62)
-	if title then Q.text(box, {Position = UDim2.new(0, 16, 0, 8), Size = UDim2.new(1, -32, 0, 22), Text = title, Font = Enum.Font.GothamBold, TextSize = 16}) end
+	local z = opts.z or 62
+	local width = opts.width or 340
+	-- grow to fit the longest option (about 11 px per character at size 20)
+	for _, o in ipairs(options) do width = math.max(width, 80 + #o * 11) end
+	local top = title and 44 or 14
+	local h = top + #options * 38 + 12
+	local box = Q.win(screen, UDim2.new(0.5, -width / 2, opts.y or 0.5, -h / 2), UDim2.new(0, width, 0, h), z)
+	if title then
+		Q.text(box, {Position = UDim2.new(0, 18, 0, 10), Size = UDim2.new(1, -36, 0, 24), Text = title, Font = Enum.Font.GothamBold, TextSize = 17, ZIndex = z + 1})
+	end
 	local picked
 	local cursor = 1
 	local rows = {}
 	local function draw()
 		for i, r in ipairs(rows) do
 			r.TextColor3 = i == cursor and Color3.fromRGB(255, 240, 150) or Color3.new(1, 1, 1)
-			r.Text = (i == cursor and "> " or "   ") .. options[i]
+			r.Text = (i == cursor and ">  " or "    ") .. options[i]
 		end
 	end
-	for i, opt in ipairs(options) do
+	for i in ipairs(options) do
 		local b = Instance.new("TextButton")
 		b.BackgroundTransparency = 1
-		b.Position = UDim2.new(0, 16, 0, 36 + (i - 1) * 34)
-		b.Size = UDim2.new(1, -32, 0, 32)
+		b.Position = UDim2.new(0, 20, 0, top + (i - 1) * 38)
+		b.Size = UDim2.new(1, -40, 0, 36)
 		b.Font = Enum.Font.GothamMedium
-		b.TextSize = 17
+		b.TextSize = 20
 		b.TextXAlignment = Enum.TextXAlignment.Left
-		b.TextStrokeTransparency = 0.55
-		b.ZIndex = 64
+		b.TextStrokeTransparency = 0.5
+		b.ZIndex = z + 2
 		b.Parent = box
 		b.MouseEnter:Connect(function() cursor = i draw() end)
 		b.MouseButton1Click:Connect(function() picked = i end)
@@ -34208,9 +34276,7 @@ Q.keyProp = function(on)
 		{CanCollide = false, Massless = true})
 	key.Name = "NYKey"
 	key.Anchored = false
-	local w = Instance.new("WeldConstraint")
-	w.Part0, w.Part1 = hand, key
-	w.Parent = key
+	Q.weldTo(hand, key)
 	local l = Instance.new("PointLight")
 	l.Color, l.Range, l.Brightness = Color3.fromRGB(110, 200, 255), 9, 2
 	l.Parent = key
@@ -35515,7 +35581,7 @@ Q.chapters[2].scenes = {
 Q.reader = function(token, title, lines)
 	-- a scrolling FF7 window of text lines; lines = {{t = text, color = Color3, font = Enum.Font}}
 	local screen = Q.screen()
-	local f = Q.win(screen, UDim2.new(0.5, -330, 0.5, -230), UDim2.new(0, 660, 0, 460), 75)
+	local f = Q.win(screen, UDim2.new(0.5, -330, 0.5, -230), UDim2.new(0, 660, 0, 460), 82)
 	Q.text(f, {Position = UDim2.new(0, 18, 0, 10), Size = UDim2.new(1, -36, 0, 26), Text = title, Font = Enum.Font.GothamBold, TextSize = 20})
 	local list = Instance.new("ScrollingFrame")
 	list.Position = UDim2.new(0, 14, 0, 44)
@@ -35523,18 +35589,18 @@ Q.reader = function(token, title, lines)
 	list.BackgroundTransparency = 1
 	list.BorderSizePixel = 0
 	list.ScrollBarThickness = 6
-	list.ZIndex = 76
+	list.ZIndex = 83
 	list.Parent = f
 	local y = 0
 	for _, line in ipairs(lines) do
 		local h = math.max(20, math.ceil(#line.t / 70) * 18 + 4)
 		Q.text(list, {Position = UDim2.new(0, 4, 0, y), Size = UDim2.new(1, -16, 0, h), Text = line.t, TextSize = line.size or 15, TextWrapped = true,
-			TextYAlignment = Enum.TextYAlignment.Top, Font = line.font or Enum.Font.GothamMedium, TextColor3 = line.color or Color3.new(1, 1, 1), ZIndex = 77})
+			TextYAlignment = Enum.TextYAlignment.Top, Font = line.font or Enum.Font.GothamMedium, TextColor3 = line.color or Color3.new(1, 1, 1), ZIndex = 84})
 		y = y + h + (line.gap or 2)
 	end
 	list.CanvasSize = UDim2.new(0, 0, 0, y + 10)
 	if #lines == 0 then
-		Q.text(list, {Size = UDim2.new(1, 0, 0, 30), Text = "(empty)", TextSize = 15, TextColor3 = Color3.fromRGB(160, 170, 200), ZIndex = 77})
+		Q.text(list, {Size = UDim2.new(1, 0, 0, 30), Text = "(empty)", TextSize = 15, TextColor3 = Color3.fromRGB(160, 170, 200), ZIndex = 84})
 	end
 	Q.text(f, {AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -16, 1, -10), Size = UDim2.new(0, 300, 0, 20), Text = "click / E to close", TextSize = 12,
 		TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = Color3.fromRGB(160, 170, 200)})
@@ -35594,18 +35660,56 @@ Q.title = function()
 	local bg = Instance.new("Frame")
 	bg.Size = UDim2.new(1, 0, 1, 0)
 	bg.BackgroundColor3 = Color3.new(0, 0, 0)
-	bg.BackgroundTransparency = 0.15
+	bg.BackgroundColor3 = Color3.fromRGB(2, 4, 10)
+	bg.BackgroundTransparency = 0.04
 	bg.BorderSizePixel = 0
 	bg.ZIndex = 70
 	bg.Parent = screen
-	Q.text(bg, {AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.16, 0), Size = UDim2.new(0.9, 0, 0, 60), Text = "THE NULL-BYTE REQUIEM", Font = Enum.Font.Garamond,
-		TextSize = 52, TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = Color3.fromRGB(225, 235, 255), ZIndex = 71})
-	Q.text(bg, {AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.16, 64), Size = UDim2.new(0.9, 0, 0, 24),
-		Text = "Nothing you love is ever lost. It is only ever being carried by someone else.", TextSize = 16, TextXAlignment = Enum.TextXAlignment.Center,
-		TextColor3 = Color3.fromRGB(140, 190, 255), ZIndex = 71})
+	local grad = Instance.new("UIGradient")
+	grad.Color = ColorSequence.new(Color3.fromRGB(14, 30, 64), Color3.fromRGB(0, 0, 0))
+	grad.Rotation = 90
+	grad.Parent = bg
+	-- the De-Sync, quietly: cyan pixels drifting up behind everything
+	task.spawn(function()
+		while bg.Parent do
+			local px = Instance.new("Frame")
+			local s = math.random(3, 7)
+			px.Size = UDim2.new(0, s, 0, s)
+			px.Position = UDim2.new(math.random(), 0, 1, 10)
+			px.BackgroundColor3 = math.random() < 0.8 and Q.cyan or Color3.new(1, 1, 1)
+			px.BackgroundTransparency = 0.35
+			px.BorderSizePixel = 0
+			px.ZIndex = 71
+			px.Parent = bg
+			local life = 6 + math.random() * 5
+			TweenService:Create(px, TweenInfo.new(life, Enum.EasingStyle.Linear), {Position = UDim2.new(px.Position.X.Scale + (math.random() - 0.5) * 0.08, 0, -0.05, 0),
+				BackgroundTransparency = 1}):Play()
+			Services.Debris:AddItem(px, life + 0.2)
+			task.wait(0.18)
+		end
+	end)
+	Q.text(bg, {AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.27, 0), Size = UDim2.new(0.9, 0, 0, 72), Text = "THE NULL-BYTE REQUIEM", Font = Enum.Font.Garamond,
+		TextSize = 66, TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = Color3.fromRGB(232, 240, 255), TextStrokeTransparency = 0.75, ZIndex = 73})
+	local rule = Instance.new("Frame")
+	rule.AnchorPoint = Vector2.new(0.5, 0.5)
+	rule.Position = UDim2.new(0.5, 0, 0.27, 46)
+	rule.Size = UDim2.new(0, 460, 0, 2)
+	rule.BackgroundColor3 = Q.cyan
+	rule.BorderSizePixel = 0
+	rule.ZIndex = 73
+	rule.Parent = bg
+	local rg = Instance.new("UIGradient")
+	rg.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0), NumberSequenceKeypoint.new(1, 1)})
+	rg.Parent = rule
+	Q.text(bg, {AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.27, 74), Size = UDim2.new(0.9, 0, 0, 26),
+		Text = "Nothing you love is ever lost.  It is only ever being carried by someone else.", TextSize = 19, Font = Enum.Font.Garamond,
+		TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = Color3.fromRGB(150, 195, 255), ZIndex = 73})
+	Q.text(bg, {AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -28), Size = UDim2.new(0.9, 0, 0, 20),
+		Text = "W / S  move          Enter  choose          or click", TextSize = 13, TextXAlignment = Enum.TextXAlignment.Center,
+		TextColor3 = Color3.fromRGB(110, 130, 170), ZIndex = 73})
 	if Q.data.flags.delivered then
-		Q.text(bg, {AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -20), Size = UDim2.new(0.9, 0, 0, 20), Text = "-- she snorts when she laughs. somebody remembered.",
-			TextSize = 12, Font = Enum.Font.Code, TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = Q.cyan, ZIndex = 71})
+		Q.text(bg, {AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -54), Size = UDim2.new(0.9, 0, 0, 20), Text = "-- she snorts when she laughs. somebody remembered.",
+			TextSize = 12, Font = Enum.Font.Code, TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = Q.cyan, ZIndex = 73})
 	end
 	Q.playMusic("title", 0.35)
 	while Q.alive(token) do
@@ -35620,7 +35724,7 @@ Q.title = function()
 		table.insert(options, "Arms") table.insert(ids, "arms")
 		table.insert(options, "Ledger") table.insert(ids, "ledger")
 		table.insert(options, "Close") table.insert(ids, "close")
-		local pick = ids[Q.choose(token, options)]
+		local pick = ids[Q.choose(token, options, nil, {z = 80, y = 0.64, width = 400})]
 		if pick == "close" or not pick then break end
 		if pick == "journal" then Q.reader(token, "Journal", Q.journalLines())
 		elseif pick == "arms" then Q.reader(token, "Arms", Q.armLines())
@@ -35628,7 +35732,7 @@ Q.title = function()
 		elseif pick == "new" or pick == "continue" then
 			local go = true
 			if pick == "new" and started then
-				go = Q.choose(token, {"Yes, start over", "No"}, "Erase your save? (a backup is kept)") == 1
+				go = Q.choose(token, {"Yes, start over", "No"}, "Erase your save? (a backup is kept)", {z = 85, width = 400}) == 1
 				if go then
 					pcall(function() writefile(Q.file .. ".old", readfile(Q.file)) end)
 					Q.data = Q.blank()
@@ -35643,7 +35747,7 @@ Q.title = function()
 					Q.run(n, sc)
 				else
 					local place = Q.placeOf(n)
-					if Q.choose(token, {"Cross to " .. (place and place.name or "?"), "Not now"}, "Chapter " .. n .. " is in " .. (place and place.name or "another game")) == 1 then
+					if Q.choose(token, {"Cross to " .. (place and place.name or "?"), "Not now"}, "Chapter " .. n .. " is in " .. (place and place.name or "another game"), {z = 85, width = 420}) == 1 then
 						Q.travel(n, sc)
 					else
 						Q.stop()
