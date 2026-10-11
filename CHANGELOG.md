@@ -5,6 +5,7 @@ Versions before 1.11.3 were reconstructed from the Desktop `.bakN` backups (one 
 
 | Version | Date | Commands | Change |
 |---|---|---|---|
+| 1.31.2 | 10-11 | 643 | Requiem: Packet Trace / cast sound plays once and is clipped to 1.1 s |
 | 1.31.1 | 10-11 | 643 | Requiem: shorter memory level-up lines on the victory screen |
 | 1.31.0 | 10-11 | 643 | Requiem: Bytes, gear with memory sockets (Place1 swords), Remember the past, memory drops, Hollowed Echoes, Odds' shop in The Last Roll (Sol's RNG), P menu Equip/Memories/Safe World |
 | 1.30.21 | 10-11 | 643 | Requiem: battle double keeps its face and hair (no automatic rescale of head accessories) |

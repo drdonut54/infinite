@@ -1,4 +1,4 @@
--- NeverYield v1.31.1 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.31.2 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.31.1" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.31.2" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -32915,6 +32915,19 @@ Q.sound = function(id, volume, pitch)
 	return ok and s or nil
 end
 
+-- a sound cut short: plays for len seconds, then fades out over 0.25 s (long clips like the magic cast dragged on)
+Q.soundClip = function(id, volume, pitch, len)
+	local s = Q.sound(id, volume, pitch)
+	if s then
+		task.delay(len or 1, function()
+			if s.Parent then TweenService:Create(s, TweenInfo.new(0.25), {Volume = 0}):Play() end
+			task.wait(0.3)
+			pcall(function() s:Destroy() end)
+		end)
+	end
+	return s
+end
+
 -- the menu cursor's DING (kas: every time the highlight moves, in battles and the P menu). A new one cuts the last
 -- one off, so scrolling fast doesn't stack up a wall of ringing.
 Q.ding = function()
@@ -36262,8 +36275,8 @@ Q.perform = function(B, u, sk, targets, isLimit)
 		root.CFrame = home
 		Q.rest(u.rig, 0.15)
 	elseif sk.kind == "magic" then
+		-- (castFx plays the cast sound)
 		Q.castFx(u, sk)
-		Q.sound(Q.sfx.magic, 0.5)
 		for _, t in ipairs(targets) do
 			local troot = Q.rootOf(t)
 			if troot and not t.dead then
@@ -37481,7 +37494,7 @@ Q.castFx = function(u, sk, up)
 	Services.Debris:AddItem(glyphs, 1.5)
 	Q.auraBurst(CFrame.new(root.Position.X, gy + 0.2, root.Position.Z), {{"groundRing", 1, {scale = 0.35}}, {"glow3", 1, {scale = 2.5}},
 		{"numbers", 14, {scale = 1.5}}, {"box", 10, {scale = 1.3}}}, {color = color})
-	Q.sound(Q.sfx.magic, 0.5)
+	Q.soundClip(Q.sfx.magic, 0.5, 1, 1.1)
 	task.wait(0.25)
 end
 
