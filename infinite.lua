@@ -1,4 +1,4 @@
--- NeverYield v1.30.19 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.30.20 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.30.19" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.30.20" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -33167,15 +33167,6 @@ Q.flattenAccessories = function(rig)
 			-- layered clothing (WrapLayer) too: kas's checker belt was skipped and flew off on its own physics.
 			-- No matching attachment: weld it to the torso where it is now.
 			local torso = rig:FindFirstChild("UpperTorso") or rig:FindFirstChild("Torso")
-			-- hair, hats and face things ride on the HEAD where they sit now: long hair hangs from NeckAttachment,
-			-- which is on the torso, so the battle idles turned kas's head inside hair that stayed put (kas: "his
-			-- head got all weird in battles")
-			local head = rig:FindFirstChild("Head")
-			local okT, kind = pcall(function() return acc.AccessoryType end)
-			local onHead = head and h and ((okT and (kind == Enum.AccessoryType.Hair or kind == Enum.AccessoryType.Hat or kind == Enum.AccessoryType.Face
-				or kind == Enum.AccessoryType.Eyebrow or kind == Enum.AccessoryType.Eyelash)) or acc.Name:lower():find("hair")
-				or (a1 and (a1.Name == "HairAttachment" or a1.Name == "HatAttachment" or a1.Name:find("^Face"))))
-			if onHead then a0 = nil torso = head end
 			if h and h:IsA("BasePart") and (a0 or torso) then
 				for _, j in ipairs(h:GetChildren()) do
 					if j:IsA("JointInstance") or j:IsA("Constraint") then j:Destroy() end
