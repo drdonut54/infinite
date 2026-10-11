@@ -1,4 +1,4 @@
--- NeverYield v1.30.3 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.30.4 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.30.3" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.30.4" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -33638,7 +33638,8 @@ Q.wieldSword = function(char, where)
 		-- across the back to the left
 		attachTo = char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
 		local top = attachTo and attachTo.Size.Y / 2 or 1
-		offset = CFrame.new(0.55, top + 0.35, 0.68) * CFrame.Angles(0, 0, math.rad(152))
+		-- (measured on kas's R6 body in Studio: the tip clears the floor by 0.44, the pommel level with the head top)
+		offset = CFrame.new(0.55, top + 0.6, 0.68) * CFrame.Angles(0, 0, math.rad(144))
 	end
 	if not attachTo then model:Destroy() return end
 	model:PivotTo(attachTo.CFrame * offset)
@@ -33797,7 +33798,7 @@ Q.vaneDouble = function()
 	local rig = char:Clone()
 	char.Archivable = was
 	for _, d in ipairs(rig:GetDescendants()) do
-		if d:IsA("BaseScript") or d:IsA("ModuleScript") or d:IsA("Tool") or d:IsA("ForceField") or d:IsA("Sound") or d.Name == "NYSword" or d.Name == "NYVaneTag" then
+		if d:IsA("BaseScript") or d:IsA("ModuleScript") or d:IsA("Tool") or d:IsA("ForceField") or d:IsA("Sound") or d:IsA("BillboardGui") or d.Name == "NYSword" or d.Name == "NYVaneTag" then
 			pcall(function() d:Destroy() end)
 		end
 	end
@@ -33813,7 +33814,8 @@ Q.vaneDouble = function()
 	rig.Name = randomString()
 	rig.Parent = Q.stage()
 	Q.wieldSword(rig, "hand")
-	Q.animate(rig, "idle")
+	-- in a fight he stands in his guard, blade up (52_moves)
+	task.defer(function() if rig.Parent and Q.rest then Q.rest(rig, 0) end end)
 	return rig
 end
 
@@ -35059,7 +35061,7 @@ Q.perform = function(B, u, sk, targets, isLimit)
 					task.spawn(function()
 						Q.pose(t.rig, Q.poses.hurt, 0.06)
 						task.wait(0.22)
-						if not t.dead then Q.unpose(t.rig, 0.2) end
+						if not t.dead then Q.rest(t.rig, 0.2) end
 					end)
 				end
 				local who = Q.hurt(B, t, dmg, u)
@@ -35081,7 +35083,7 @@ Q.perform = function(B, u, sk, targets, isLimit)
 		Q.pose(u.rig, Q.poses.ready or {}, 0.12)
 		Q.dash(u, home.Position, 0.3)
 		root.CFrame = home
-		Q.unpose(u.rig, 0.15)
+		Q.rest(u.rig, 0.15)
 	elseif sk.kind == "magic" then
 		Q.castFx(u, sk)
 		Q.sound(Q.sfx.magic, 0.5)
@@ -35105,7 +35107,7 @@ Q.perform = function(B, u, sk, targets, isLimit)
 			end
 		end
 		task.wait(0.4)
-		Q.unpose(u.rig, 0.2)
+		Q.rest(u.rig, 0.2)
 	elseif sk.kind == "heal" then
 		Q.castFx(u, sk, true)
 		Q.sound(Q.sfx.heal, 0.6)
@@ -35127,7 +35129,7 @@ Q.perform = function(B, u, sk, targets, isLimit)
 			end
 		end
 		task.wait(0.6)
-		Q.unpose(u.rig, 0.2)
+		Q.rest(u.rig, 0.2)
 	elseif sk.kind == "guard" then
 		u.statuses.defending = {turns = 1}
 		u.statuses.braced = {turns = 1}
@@ -35146,7 +35148,7 @@ Q.perform = function(B, u, sk, targets, isLimit)
 			end
 		end
 		task.wait(0.6)
-		Q.unpose(u.rig, 0.2)
+		Q.rest(u.rig, 0.2)
 	end
 end
 
@@ -35706,7 +35708,27 @@ Q.pose = function(rig, spec, seconds, style, dir)
 		local base = m:GetAttribute("NYBaseC0")
 		local r = spec[short] or CFrame.new()
 		local goal = CFrame.new(base.Position) * r * (base - base.Position)
-		if (seconds or 0.15) <= 0 then m.C0 = goal else TweenService:Create(m, info, {C0 = goal}):Play() end
+		-- a newer pose wins: stop the joint's running tween first (a set C0 doesn't stop it, it would land on top)
+		local running = Q.poseTweens[m]
+		if running then running:Cancel() Q.poseTweens[m] = nil end
+		if (seconds or 0.15) <= 0 then
+			m.C0 = goal
+		else
+			local tw = TweenService:Create(m, info, {C0 = goal})
+			Q.poseTweens[m] = tw
+			tw:Play()
+		end
+	end
+end
+Q.poseTweens = setmetatable({}, {__mode = "k"})
+
+-- at rest in a fight: sword-holders stand in their guard (blade up), everyone else goes back to idle
+Q.rest = function(rig, seconds)
+	if not rig then return end
+	if rig:FindFirstChild("NYSword") and not rig:GetAttribute("NYSitting") then
+		Q.pose(rig, Q.poses.ready, seconds or 0.15)
+	else
+		Q.unpose(rig, seconds)
 	end
 end
 
@@ -35828,7 +35850,7 @@ end
 -- right arm (sword arm): x = swing forward/up, y = sweep around the body, z = out to the side
 Q.poses = {
 	-- sword raised in front, weight forward
-	ready = {rs = Q.rot(40, 0, 10), ls = Q.rot(20, 0, -10), rh = Q.rot(-10), lh = Q.rot(15), root = Q.rot(-5)},
+	ready = {rs = Q.rot(50, 0, 10), ls = Q.rot(20, 0, -10), rh = Q.rot(-10), lh = Q.rot(15), root = Q.rot(-5)},
 	-- the run: leaning hard into it, sword up in front
 	charge = {rs = Q.rot(25, 0, 25), ls = Q.rot(30, 0, -5), rh = Q.rot(-30), lh = Q.rot(35), root = Q.rot(-25), neck = Q.rot(15)},
 	-- horizontal sweep, wound up (sword out to the right and back) and finished (across the front)
@@ -35871,6 +35893,7 @@ Q.sit = function(rig, on)
 	else
 		root.CFrame = root.CFrame + Vector3.new(0, drop, 0)
 		Q.unpose(rig, 0)
+		if rig:FindFirstChild("NYSword") then Q.rest(rig, 0.15) end
 	end
 end
 
@@ -36287,7 +36310,7 @@ end
 
 Q.unfollow = function()
 	WackyState.disconnect("rpg_trail")
-	for i = 1, 3 do WackyState.disconnect("rpg_follow_" .. i) end
+	for i = 0, 3 do WackyState.disconnect("rpg_follow_" .. i) end
 end
 
 -- ---------- pickups ----------
