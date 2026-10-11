@@ -1,4 +1,4 @@
--- NeverYield v1.29.2 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.30.4 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.29.2" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.30.4" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -33065,10 +33065,12 @@ Q.rig = function(look)
 	if head and look.hair then
 		local hair = NeverYieldAgartha.part(rig, Vector3.new(head.Size.X * 1.08, head.Size.Y * 0.45, head.Size.Z * 1.08), head.CFrame * CFrame.new(0, head.Size.Y * 0.38, 0.05), look.hair, Enum.Material.SmoothPlastic)
 		hair.Anchored, hair.CanCollide = false, false
+		hair:SetAttribute("NYHair", true)
 		Q.weldTo(head, hair)
 		if look.longHair then
 			local back = NeverYieldAgartha.part(rig, Vector3.new(head.Size.X * 0.95, head.Size.Y * 1.3, head.Size.Z * 0.3), head.CFrame * CFrame.new(0, -head.Size.Y * 0.2, head.Size.Z * 0.5), look.hair, Enum.Material.SmoothPlastic)
 			back.Anchored, back.CanCollide = false, false
+			back:SetAttribute("NYHair", true)
 			Q.weldTo(head, back)
 		end
 	end
@@ -33091,6 +33093,8 @@ Q.anims = {
 Q.animate = function(rig, name, looped)
 	local hum = rig and rig:FindFirstChildOfClass("Humanoid")
 	if not hum then return end
+	-- a rig held in a pose (a battle move, sitting) keeps it; Roblox animations would stack on top
+	if rig:GetAttribute("NYPosed") then return end
 	local kind = hum.RigType == Enum.HumanoidRigType.R15 and "R15" or "R6"
 	local id = Q.anims[kind][name]
 	if not id then return end
@@ -33490,9 +33494,11 @@ Q.stop = function(keep)
 		if type(key) == "string" and key:sub(1, 4) == "rpg_" then WackyState.disconnect(key) end
 	end
 	pcall(function() workspace.CurrentCamera.CameraType = Enum.CameraType.Custom end)
+	pcall(function() RunService:UnbindFromRenderStep("NYRpgCam") end)
 	Q.camConn = nil
 	if Q.hideSelf then pcall(Q.hideSelf, false) end
 	if Q.freeze then pcall(Q.freeze, false) end
+	if Q.hideGameGui then pcall(Q.hideGameGui, false) end
 	if not keep and Q.gui then pcall(function() Q.gui:Destroy() end) Q.gui = nil end
 	if not keep then
 		Q.playMusic(nil)
@@ -33504,11 +33510,16 @@ end
 -- ---------- looks: Vane's greatsword, catalog gear, the party ----------
 Q.cyan = Color3.fromRGB(90, 230, 255)
 
--- the shattered greatsword, salvaged from a decaying medieval server (kas picked the look): a 7.7-stud greatsword
--- mesh in dark steel, glowing cyan cracks across the blade, and kas's sword-aura effects recoloured to the Key's
--- cold cyan. Built around a grip Part (returned) at the hilt; the blade runs up its +Y axis.
--- the mesh is 22.19 studs tall at native size (MeshSize 3.49 x 22.19 x 1.82); scaled to 7.66, it has its own hilt
-Q.swordMesh = {mesh = "rbxassetid://4613928725", size = Vector3.new(1.21, 7.66, 0.63), scale = Vector3.new(1.2057 / 3.4927, 7.6595 / 22.189, 0.6271 / 1.8165)}
+-- the shattered greatsword, salvaged from a decaying medieval server (kas picked the mesh): dark steel with a cold
+-- cyan glow running along its edges (a neon shell a hair bigger than the blade + an outline), slow cyan embers
+-- drifting off it, and a bright trail when it swings. Built around a grip Part (returned) at the hilt; the blade
+-- runs up its +Y axis. The mesh is 22.19 studs tall at native size (MeshSize 3.49 x 22.19 x 1.82) and has its own
+-- hilt; it's scaled to Q.swordLen so it fits on a 5-stud body (blade-down on the back without hitting the ground).
+Q.swordLen = 5.6
+Q.swordMesh = (function()
+	local k = Q.swordLen / 22.189
+	return {mesh = "rbxassetid://4613928725", size = Vector3.new(3.4927 * k, Q.swordLen, 1.8165 * k), scale = Vector3.new(k, k, k)}
+end)()
 Q.fxTex = {fire1 = "rbxassetid://84255950226412", fire2 = "rbxassetid://97804907354427", dots = "rbxassetid://16543943176",
 	specs = "rbxassetid://120373077246679", smoke = "rbxassetid://18259038159", aura = "rbxassetid://833874434",
 	slash = "rbxassetid://1084976679", ring = "rbxassetid://1315202524", spark = "rbxassetid://243664729", rays = "rbxassetid://1084999891"}
@@ -33526,47 +33537,59 @@ Q.greatsword = function(parent)
 	local P = NeverYieldAgartha.part
 	local model = Instance.new("Model")
 	model.Name = randomString()
-	local grip = P(model, Vector3.new(0.3, 1.4, 0.3), CFrame.new(), Color3.fromRGB(45, 30, 22), Enum.Material.Fabric, nil, {CanCollide = false, Massless = true, Transparency = 1})
+	local grip = P(model, Vector3.new(0.3, 1.2, 0.3), CFrame.new(), Color3.fromRGB(45, 30, 22), Enum.Material.Fabric, nil, {CanCollide = false, Massless = true, Transparency = 1})
 	grip.Anchored = false
 	local function weld(p)
-		p.CanCollide, p.Massless, p.CanTouch, p.CanQuery, p.Anchored = false, true, false, false, false
+		p.CanCollide, p.Massless, p.CanTouch, p.CanQuery, p.Anchored, p.CastShadow = false, true, false, false, false, false
 		Q.weldTo(grip, p)
 		return p
 	end
-	local L = Q.swordMesh.size.Y
-	local blade = weld(P(model, Q.swordMesh.size, CFrame.new(0, L / 2 - 0.7, 0), Color3.fromRGB(70, 74, 84), Enum.Material.Metal))
-	local mesh = Instance.new("SpecialMesh")
-	mesh.MeshType = Enum.MeshType.FileMesh
-	mesh.MeshId = Q.swordMesh.mesh
-	mesh.Scale = Q.swordMesh.scale
-	mesh.Parent = blade
-	-- the cracks: thin neon lines across the blade, front and back, a little crooked
-	local cracks = {{2.2, 0.55, 18}, {3.2, 0.45, -24}, {4.2, 0.6, 12}, {5.1, 0.4, -30}, {5.9, 0.35, 20}}
-	for _, c in ipairs(cracks) do
-		for _, face in ipairs({-1, 1}) do
-			weld(P(model, Vector3.new(c[2] * 2, 0.07, 0.04), CFrame.new(0, c[1], face * 0.33) * CFrame.Angles(0, 0, math.rad(c[3])), Q.cyan, Enum.Material.Neon, nil, {Transparency = 0.1}))
-		end
+	local L = Q.swordLen
+	local hilt = L * 0.09
+	local function meshOn(p, grow)
+		local m = Instance.new("SpecialMesh")
+		m.MeshType = Enum.MeshType.FileMesh
+		m.MeshId = Q.swordMesh.mesh
+		m.Scale = Q.swordMesh.scale * grow
+		m.Parent = p
+		return m
 	end
-	-- the aura: kas's sword-aura effects, cyan, gentle while idle
-	local core = weld(P(model, Vector3.new(0.4, L * 0.8, 0.2), CFrame.new(0, L / 2 - 0.6, 0), Q.cyan, Enum.Material.Neon, nil, {Transparency = 1}))
-	Q.emitter(core, Q.fxTex.specs, Q.cyan, {Rate = 10, Lifetime = NumberRange.new(0.25, 0.5), Speed = NumberRange.new(2, 5), Size = NumberSequence.new(0.2, 0),
-		LightEmission = 1, LockedToPart = true, Orientation = Enum.ParticleOrientation.VelocityParallel, SpreadAngle = Vector2.new(180, 180)})
-	Q.emitter(core, Q.fxTex.aura, Q.cyan, {Rate = 6, Lifetime = NumberRange.new(1.5, 2), Speed = NumberRange.new(0.3, 0.6), Size = NumberSequence.new(0.8, 0.8),
-		Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.15, 0.75), NumberSequenceKeypoint.new(0.7, 0.8), NumberSequenceKeypoint.new(1, 1)}),
-		LightEmission = 0.4, LockedToPart = true, RotSpeed = NumberRange.new(-100, 100)})
+	local blade = weld(P(model, Q.swordMesh.size, CFrame.new(0, L / 2 - hilt, 0), Color3.fromRGB(52, 56, 66), Enum.Material.Metal))
+	blade.Reflectance = 0.15
+	meshOn(blade, Vector3.new(1, 1, 1))
+	-- the glowing edge: the same mesh a little bigger, neon and see-through, so only a cyan rim shows past the steel
+	local edge = weld(P(model, Q.swordMesh.size, CFrame.new(0, L / 2 - hilt, 0), Q.cyan, Enum.Material.Neon, nil, {Transparency = 0.72}))
+	meshOn(edge, Vector3.new(1.09, 1.012, 1.35))
+	edge.Name = "NYSwordEdge"
+	local hl = Instance.new("Highlight")
+	hl.Adornee = blade
+	hl.FillTransparency, hl.OutlineTransparency = 1, 0.35
+	hl.OutlineColor = Q.cyan
+	hl.DepthMode = Enum.HighlightDepthMode.Occluded
+	hl.Parent = blade
+	-- slow cyan embers drifting up off the blade, and a faint aura (kas's texture)
+	local core = weld(P(model, Vector3.new(0.35, L * 0.75, 0.15), CFrame.new(0, L / 2 - hilt + L * 0.05, 0), Q.cyan, Enum.Material.Neon, nil, {Transparency = 1}))
+	core.Name = "NYSwordCore"
+	Q.emitter(core, Q.fxTex.dots, Q.cyan, {Rate = 7, Lifetime = NumberRange.new(1, 1.8), Speed = NumberRange.new(0.2, 0.6), Acceleration = Vector3.new(0, 1.2, 0),
+		Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.2, 0.14), NumberSequenceKeypoint.new(1, 0)}),
+		Transparency = NumberSequence.new(0.1, 1), LightEmission = 1, SpreadAngle = Vector2.new(180, 180), Name = "NYEmbers"})
+	Q.emitter(core, Q.fxTex.aura, Q.cyan, {Rate = 3, Lifetime = NumberRange.new(1.4, 2), Speed = NumberRange.new(0.1, 0.3), Size = NumberSequence.new(0.9, 1.2),
+		Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.3, 0.85), NumberSequenceKeypoint.new(1, 1)}),
+		LightEmission = 0.5, LockedToPart = true, RotSpeed = NumberRange.new(-60, 60), Name = "NYAura"})
 	-- the swing trail (switched on while attacking)
 	local a0, a1 = Instance.new("Attachment"), Instance.new("Attachment")
-	a0.Position, a1.Position = Vector3.new(0, -L * 0.3, 0), Vector3.new(0, L * 0.45, 0)
+	a0.Position, a1.Position = Vector3.new(0, -L * 0.28, 0), Vector3.new(0, L * 0.42, 0)
 	a0.Parent, a1.Parent = core, core
 	local trail = Instance.new("Trail")
 	trail.Attachment0, trail.Attachment1 = a0, a1
-	trail.Color = ColorSequence.new(Color3.fromRGB(200, 250, 255), Q.cyan)
-	trail.Transparency = NumberSequence.new(0.2, 1)
-	trail.Lifetime, trail.LightEmission, trail.Enabled = 0.22, 1, false
+	trail.Color = ColorSequence.new(Color3.fromRGB(220, 252, 255), Q.cyan)
+	trail.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.1), NumberSequenceKeypoint.new(1, 1)})
+	trail.Lifetime, trail.LightEmission, trail.Enabled = 0.25, 1, false
+	trail.FaceCamera = true
 	trail.Name = "NYSwordTrail"
 	trail.Parent = core
 	local glow = Instance.new("PointLight")
-	glow.Color, glow.Range, glow.Brightness = Q.cyan, 8, 0.9
+	glow.Color, glow.Range, glow.Brightness = Q.cyan, 7, 0.8
 	glow.Parent = core
 	model.PrimaryPart = grip
 	model.Parent = parent
@@ -33608,11 +33631,15 @@ Q.wieldSword = function(char, where)
 	local attachTo, offset
 	if where == "hand" then
 		attachTo = char:FindFirstChild("RightHand") or char:FindFirstChild("Right Arm")
-		-- ready stance: blade up and forward at 45 degrees
-		offset = attachTo and attachTo.Name == "Right Arm" and CFrame.new(0, -1, -0.2) * CFrame.Angles(math.rad(-45), 0, 0) or CFrame.new(0, -0.15, -0.2) * CFrame.Angles(math.rad(-45), 0, 0)
+		-- the blade points straight forward out of the fist, so the battle poses (52_moves) swing it with the arm
+		offset = attachTo and attachTo.Name == "Right Arm" and CFrame.new(0, -0.95, -0.1) * CFrame.Angles(math.rad(-90), 0, 0) or CFrame.new(0, -0.15, -0.1) * CFrame.Angles(math.rad(-90), 0, 0)
 	else
+		-- on the back, blade DOWN: the hilt sticks up over the right shoulder (ready to draw), the blade runs down
+		-- across the back to the left
 		attachTo = char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
-		offset = CFrame.new(0, 0.2, 0.65) * CFrame.Angles(0, 0, math.rad(35)) * CFrame.new(0, -1.6, 0)
+		local top = attachTo and attachTo.Size.Y / 2 or 1
+		-- (measured on kas's R6 body in Studio: the tip clears the floor by 0.44, the pommel level with the head top)
+		offset = CFrame.new(0.55, top + 0.6, 0.68) * CFrame.Angles(0, 0, math.rad(144))
 	end
 	if not attachTo then model:Destroy() return end
 	model:PivotTo(attachTo.CFrame * offset)
@@ -33657,19 +33684,43 @@ Q.vaneLook = function(on)
 	end
 end
 
--- catalog gear (Roblox-made items, ids checked) loaded through the executor; returns false if it can't
-Q.gear = function(rig, id)
-	local ok, objs = pcall(function() return game:GetObjects("rbxassetid://" .. id) end)
-	if not ok or type(objs) ~= "table" or not objs[1] then return false end
-	local acc = objs[1]
-	if not acc:IsA("Accessory") then acc:Destroy() return false end
-	local hum = rig:FindFirstChildOfClass("Humanoid")
-	if not hum then return false end
-	for _, p in ipairs(acc:GetDescendants()) do
-		if p:IsA("BasePart") then p.CanCollide, p.CanTouch, p.CanQuery, p.Massless = false, false, false, true end
+-- catalog hair, built from the item's own mesh + texture (ids read out of the real accessory in Studio). Built
+-- this way it works in any executor: no InsertService/GetObjects needed, and it can't fail to attach.
+-- h = {mesh =, tex =, att = the Handle's HairAttachment CFrame, scale = optional}
+Q.hairMesh = function(rig, h)
+	local head = rig:FindFirstChild("Head")
+	if not head then return end
+	local p = Instance.new("Part")
+	p.Name = "NYHairMesh"
+	p.Size = Vector3.new(1, 1, 1)
+	p.CanCollide, p.CanTouch, p.CanQuery, p.Massless, p.Anchored, p.CastShadow = false, false, false, true, false, false
+	local m = Instance.new("SpecialMesh")
+	m.MeshType = Enum.MeshType.FileMesh
+	m.MeshId, m.TextureId = h.mesh, h.tex
+	m.Scale = h.scale or Vector3.new(1, 1, 1)
+	m.Parent = p
+	local headAtt = head:FindFirstChild("HairAttachment") or head:FindFirstChild("HatAttachment")
+	local w = Instance.new("Weld")
+	w.Part0, w.Part1 = head, p
+	w.C0 = headAtt and headAtt.CFrame or CFrame.new(0, head.Size.Y / 2, 0)
+	w.C1 = h.att or CFrame.new()
+	w.Parent = p
+	p.Parent = rig
+	return p
+end
+
+-- real catalog clothing (classic Shirt/Pants templates work on R6 and R15)
+Q.clothe = function(rig, shirt, pants)
+	if shirt then
+		local c = Instance.new("Shirt")
+		c.ShirtTemplate = shirt
+		c.Parent = rig
 	end
-	local placed = pcall(function() hum:AddAccessory(acc) end)
-	return placed
+	if pants then
+		local c = Instance.new("Pants")
+		c.PantsTemplate = pants
+		c.Parent = rig
+	end
 end
 
 -- a few lines of glowing cyan code on a forearm (Seris writes on her arms)
@@ -33687,8 +33738,12 @@ end
 
 -- ---------- the cast ----------
 Q.looks = {
-	seris = {name = "Seris", skin = Color3.fromRGB(196, 140, 108), shirt = Color3.fromRGB(28, 36, 82), pants = Color3.fromRGB(38, 38, 48), sleeves = true,
-		hair = Color3.fromRGB(28, 20, 22), longHair = true, gear = {376527350, 11884330}, -- Black Ponytail, Nerd Glasses
+	-- dark techwear (kas's pick): "Black Anime Hair" (5891039736, PolarCub), "Dark Techwear [+]" shirt (9634059041,
+	-- Shiba's Squad), "Black TechWear digi camo Sock + Boots" pants (11725509290); template/mesh ids read in Studio
+	seris = {name = "Seris", skin = Color3.fromRGB(196, 140, 108), shirt = Color3.fromRGB(22, 22, 26), pants = Color3.fromRGB(22, 22, 26),
+		hairMesh = {mesh = "rbxassetid://5891026804", tex = "rbxassetid://5891026832",
+			att = CFrame.new(-0.02, 0.41, 0) * CFrame.fromMatrix(Vector3.zero, Vector3.new(0, 0, -1), Vector3.new(0, 1, 0), Vector3.new(1, 0, 0))},
+		shirtTemplate = "rbxassetid://9634059036", pantsTemplate = "rbxassetid://11725509258",
 		props = function(rig, head)
 			Q.ink(rig, "LeftLowerArm", 7)
 			local hand = rig:FindFirstChild("RightHand") or rig:FindFirstChild("Right Arm")
@@ -33711,14 +33766,8 @@ Q.cast = function(id, extra)
 	local rig = Q.rig(look)
 	if not rig then return nil end
 	rig:SetAttribute("NYCast", id)
-	for _, gid in ipairs(look.gear or {}) do
-		if Q.gear(rig, gid) and gid == 376527350 then
-			-- real hair loaded: drop the block hair
-			for _, p in ipairs(rig:GetChildren()) do
-				if p:IsA("BasePart") and p:GetAttribute("NYFx") and p.Size.Y < 2 and p.Color == look.hair then p:Destroy() end
-			end
-		end
-	end
+	if look.hairMesh then Q.hairMesh(rig, look.hairMesh) end
+	if look.shirtTemplate or look.pantsTemplate then Q.clothe(rig, look.shirtTemplate, look.pantsTemplate) end
 	if look.scrambleTag then
 		task.spawn(function()
 			local glyphs = "#%&@$*/?!_~0123456789"
@@ -33749,7 +33798,7 @@ Q.vaneDouble = function()
 	local rig = char:Clone()
 	char.Archivable = was
 	for _, d in ipairs(rig:GetDescendants()) do
-		if d:IsA("BaseScript") or d:IsA("ModuleScript") or d:IsA("Tool") or d:IsA("ForceField") or d:IsA("Sound") or d.Name == "NYSword" or d.Name == "NYVaneTag" then
+		if d:IsA("BaseScript") or d:IsA("ModuleScript") or d:IsA("Tool") or d:IsA("ForceField") or d:IsA("Sound") or d:IsA("BillboardGui") or d.Name == "NYSword" or d.Name == "NYVaneTag" then
 			pcall(function() d:Destroy() end)
 		end
 	end
@@ -33765,7 +33814,8 @@ Q.vaneDouble = function()
 	rig.Name = randomString()
 	rig.Parent = Q.stage()
 	Q.wieldSword(rig, "hand")
-	Q.animate(rig, "idle")
+	-- in a fight he stands in his guard, blade up (52_moves)
+	task.defer(function() if rig.Parent and Q.rest then Q.rest(rig, 0) end end)
 	return rig
 end
 
@@ -33835,18 +33885,32 @@ Q.chapters = {
 	{n = 7, disc = 1, place = "waystation", title = "The Shattering", world = "The Waystation"},
 }
 
--- hand-picked staging spots per real game ({x, y, z} on the floor), read from the map's own named areas.
+-- hand-picked staging spots per real game: {x, y, z} on the floor, or {x, y, z, yaw} to also fix which way the scene
+-- faces (yaw in degrees like rpgspot's: 0 faces -Z, 90 faces -X, -90 faces +X, 180 faces +Z). A spot with a yaw is a
+-- staging anchor: the scene and any battle in it are laid out from there, checked against the real map's walls.
 -- Spots kas marks in-game with rpgspot take priority (Q.namedSpot).
 Q.mapSpots = {
-	[18600625012] = { -- Genovia High
-		spawn = {-20, 40, 35},        -- lobby spawn
-		library = {31, 45, 105},      -- the library: "the great archives burn into nothingness"
+	[18600625012] = { -- Genovia High (checked in the downloaded place, Studio, 2026-10-10)
+		spawn = {-20, 40, 35},              -- lobby spawn
+		-- the sunken garden quad: Vane on the east path, facing west over the dragon fountain to the library wing
+		courtyard = {118, 34, 34, 90},
+		-- the domed reading room: two storeys of shelves, booths, the fireplace at the far end. Facing +Z down the
+		-- aisle (about 18 wide, clear of the staircase), so the battle line, the swirl and the orbit fit
+		library = {20, 40.75, 106, 180},
 		ballroom = {-123, 52, 33},
 		history = {27, 46, -54},
-		astronomy = {246, 67, -31},   -- the astronomy tower: high up, the sky bleeding pixels
+		-- the observatory: a round room under a glass dome with an orrery. The middle is a ring of desks, so the scene
+		-- stands in the open south aisle facing the dome (+Z); the gate opens over the desk ring
+		astronomy = {246, 61.33, -33, 180},
 		theater = {65, 29, 172},
 	},
 }
+
+-- a hand-picked spot as a CFrame (facing its yaw; spots without a yaw face -Z)
+Q.mapSpot = function(name)
+	local s = (Q.mapSpots[game.PlaceId] or {})[name]
+	return s and CFrame.new(s[1], s[2], s[3]) * CFrame.Angles(0, math.rad(s[4] or 0), 0)
+end
 
 -- ---------- map test: travel to a chapter's real game and stage a small scene there ----------
 -- Checks the parts that can only be tested in-game: the teleport, NeverYield coming back, the RPG resuming,
@@ -33941,6 +34005,45 @@ Q.win = function(parent, pos, size, z)
 	return f
 end
 
+-- drag a window with the mouse or a finger, grabbing it anywhere (buttons too). A press that moves more than a few
+-- pixels is a drag, not a click: check Q.dragged(frame) before acting on a button click. onMoved(pos) runs after a drag.
+Q.drag = function(frame, onMoved)
+	frame.Active = true
+	local start, origin
+	local function begin(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			start, origin = input.Position, frame.Position
+			frame:SetAttribute("NYDragged", false)
+		end
+	end
+	frame.InputBegan:Connect(begin)
+	for _, d in ipairs(frame:GetDescendants()) do
+		if d:IsA("GuiObject") then d.InputBegan:Connect(begin) end
+	end
+	local moveConn = UserInputService.InputChanged:Connect(function(input)
+		if not start then return end
+		if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
+		local d = input.Position - start
+		if not frame:GetAttribute("NYDragged") and d.Magnitude < 6 then return end
+		frame:SetAttribute("NYDragged", true)
+		frame.Position = UDim2.new(origin.X.Scale, origin.X.Offset + d.X, origin.Y.Scale, origin.Y.Offset + d.Y)
+	end)
+	local endConn = UserInputService.InputEnded:Connect(function(input)
+		if start and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+			start = nil
+			if frame:GetAttribute("NYDragged") and onMoved then onMoved(frame.Position) end
+		end
+	end)
+	frame.Destroying:Connect(function()
+		moveConn:Disconnect()
+		endConn:Disconnect()
+	end)
+end
+
+Q.dragged = function(frame)
+	return frame:GetAttribute("NYDragged") == true
+end
+
 Q.text = function(parent, props)
 	local l = NeverYieldPets.label(parent, props)
 	l.Font = props.Font or Enum.Font.GothamMedium
@@ -34028,7 +34131,10 @@ Q.choose = function(token, options, title, opts)
 	for _, o in ipairs(options) do width = math.max(width, 80 + #o * 11) end
 	local top = title and 44 or 14
 	local h = top + #options * 38 + 12
-	local box = Q.win(screen, UDim2.new(0.5, -width / 2, opts.y or 0.5, -h / 2), UDim2.new(0, width, 0, h), z)
+	-- menus open where you last dragged one (this session), or centred
+	local at = Q.chooseAt or Vector2.new(0, 0)
+	local box = Q.win(screen, UDim2.new(0.5, -width / 2 + at.X, opts.y or 0.5, -h / 2 + at.Y), UDim2.new(0, width, 0, h), z)
+	local home = box.Position
 	if title then
 		Q.text(box, {Position = UDim2.new(0, 18, 0, 10), Size = UDim2.new(1, -36, 0, 24), Text = title, Font = Enum.Font.GothamBold, TextSize = 17, ZIndex = z + 1})
 	end
@@ -34053,10 +34159,13 @@ Q.choose = function(token, options, title, opts)
 		b.ZIndex = z + 2
 		b.Parent = box
 		b.MouseEnter:Connect(function() cursor = i draw() end)
-		b.MouseButton1Click:Connect(function() picked = i end)
+		b.MouseButton1Click:Connect(function() if not Q.dragged(box) then picked = i end end)
 		rows[i] = b
 	end
 	draw()
+	Q.drag(box, function(pos)
+		Q.chooseAt = at + Vector2.new(pos.X.Offset - home.X.Offset, pos.Y.Offset - home.Y.Offset)
+	end)
 	local conn = UserInputService.InputBegan:Connect(function(input)
 		local k = input.KeyCode
 		if k == Enum.KeyCode.Up or k == Enum.KeyCode.W then cursor = (cursor - 2) % #options + 1 draw() Q.sound(Q.sfx.select, 0.25, 1.4)
@@ -34126,9 +34235,13 @@ Q.camHold = function()
 	local cam = workspace.CurrentCamera
 	if not Q.camConn then
 		Q.camCF = cam.CFrame
-		-- some games grab the camera every frame; keep it ours while a scene or battle runs
-		Q.camConn = RunService.RenderStepped:Connect(function()
+		-- games set the camera every frame from their own scripts (Genovia High does): bind at the very last render
+		-- priority so ours is applied after theirs, and keep forcing Scriptable while a scene or battle runs
+		Q.camConn = true
+		pcall(function() RunService:UnbindFromRenderStep("NYRpgCam") end)
+		RunService:BindToRenderStep("NYRpgCam", Enum.RenderPriority.Last.Value + 50, function()
 			local c = workspace.CurrentCamera
+			if not c or not Q.camCF then return end
 			if c.CameraType ~= Enum.CameraType.Scriptable then c.CameraType = Enum.CameraType.Scriptable end
 			if Q.camShake and Q.camShake > 0 then
 				Q.camShake = math.max(0, Q.camShake - 0.06)
@@ -34137,12 +34250,12 @@ Q.camHold = function()
 				c.CFrame = Q.camCF
 			end
 		end)
-		Q.connect("cam", Q.camConn)
 	end
 end
 
 Q.camRelease = function()
-	if Q.camConn then pcall(function() Q.camConn:Disconnect() end) Q.camConn = nil end
+	pcall(function() RunService:UnbindFromRenderStep("NYRpgCam") end)
+	Q.camConn = nil
 	WackyState.disconnect("rpg_cam")
 	pcall(function() workspace.CurrentCamera.CameraType = Enum.CameraType.Custom end)
 end
@@ -34171,6 +34284,199 @@ end
 -- start a camera move without waiting for it
 Q.camGo = function(pos, look, seconds, style)
 	task.spawn(Q.camTo, pos, look, seconds, style)
+end
+
+-- ---------- shots: framed from the real characters, never inside them ----------
+-- subject = a rig (Model), your character, or a Vector3. Returns head position and facing.
+Q.subject = function(s)
+	if typeof(s) == "Vector3" then return s, (Q.anchor and Q.anchor.LookVector or Vector3.new(0, 0, -1)) end
+	local head = s and (s:FindFirstChild("Head") or s:FindFirstChild("HumanoidRootPart"))
+	local root = s and s:FindFirstChild("HumanoidRootPart")
+	if not head then return Q.pt(0, 2, 0), Vector3.new(0, 0, -1) end
+	local f = (root or head).CFrame.LookVector * Vector3.new(1, 0, 1)
+	if f.Magnitude < 0.1 then f = Vector3.new(0, 0, -1) end
+	return head.Position, f.Unit
+end
+
+-- pull the camera in front of anything visible between it and what it looks at (walls, and decor you can walk
+-- through too, like shelves and ladders: the camera must never sit inside something you can see)
+-- never park the camera inside one of our own rigs (Hollowed are see-through, so the wall check skips them):
+-- push it out to 3.2 studs from any rig's body
+Q.awayFromRigs = function(cam)
+	if not Q.folder then return cam end
+	for _ = 1, 3 do
+		local moved = false
+		for _, m in ipairs(Q.folder:GetChildren()) do
+			local r = m:IsA("Model") and m:FindFirstChild("HumanoidRootPart")
+			if r then
+				local off = cam - r.Position
+				if off.Magnitude < 3.2 then
+					local away = off.Magnitude > 0.05 and off.Unit or Vector3.new(0, 1, 0)
+					cam = r.Position + away * 3.2
+					moved = true
+				end
+			end
+		end
+		if not moved then break end
+	end
+	return cam
+end
+
+Q.clearShot = function(look, cam)
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	local skip = {Q.folder, Players.LocalPlayer.Character}
+	cam = Q.awayFromRigs(cam)
+	for _ = 1, 24 do
+		params.FilterDescendantsInstances = skip
+		local dir = cam - look
+		local hit = workspace:Raycast(look, dir, params)
+		if not hit then return cam end
+		if hit.Instance.Transparency > 0.6 then
+			table.insert(skip, hit.Instance)
+		else
+			local d = math.max(3.2, (hit.Position - look).Magnitude - 0.6)
+			return Q.awayFromRigs(look + dir.Unit * d)
+		end
+	end
+	return cam
+end
+
+-- where a shot puts the camera (before walls are checked)
+Q.shotAt = function(kind, subject, other, side)
+	local p, f = Q.subject(subject)
+	local right = f:Cross(Vector3.new(0, 1, 0)).Unit * side
+	if kind == "close" then
+		return p + f * 4.6 + right * 1.4 + Vector3.new(0, 0.25, 0), p - Vector3.new(0, 0.15, 0)
+	elseif kind == "medium" then
+		return p + f * 8 + right * 2.6 + Vector3.new(0, 0.6, 0), p - Vector3.new(0, 0.6, 0)
+	elseif kind == "low" then
+		return p + f * 7 + right * 2 - Vector3.new(0, 2.6, 0), p + Vector3.new(0, 0.4, 0)
+	elseif kind == "ots" and other then
+		local q = Q.subject(other)
+		local d = (q - p) * Vector3.new(1, 0, 1)
+		local u = d.Magnitude > 0.1 and d.Unit or f
+		local r = u:Cross(Vector3.new(0, 1, 0)).Unit * side
+		return p - u * 4.2 + r * 1.9 + Vector3.new(0, 0.7, 0), q - Vector3.new(0, 0.3, 0)
+	elseif kind == "two" and other then
+		local q = Q.subject(other)
+		local mid = (p + q) / 2
+		local d = (q - p) * Vector3.new(1, 0, 1)
+		local u = d.Magnitude > 0.1 and d.Unit or right
+		local perp = u:Cross(Vector3.new(0, 1, 0)).Unit * side
+		local dist = math.max(9, d.Magnitude * 1.3 + 6)
+		return mid + perp * dist + Vector3.new(0, 1.8, 0), mid - Vector3.new(0, 0.4, 0)
+	end
+	-- wide
+	return p + f * 18 + right * 8 + Vector3.new(0, 7, 0), p - Vector3.new(0, 1, 0)
+end
+
+-- kinds: "wide" (whole scene), "two" (subject + other), "medium", "close", "ots" (over subject's shoulder at other),
+-- "low" (looking up at subject). side = 1 or -1 picks which side of the line the camera stands on.
+-- In tight rooms a wall can push the camera in too close: then the other side of the line is tried, and a two-shot
+-- that still doesn't fit is filmed down the line from behind the nearer of the two, raised a little.
+Q.shot = function(kind, subject, other, seconds, side)
+	side = side or 1
+	local cam, look = Q.shotAt(kind, subject, other, side)
+	local want = (cam - look).Magnitude
+	local got = Q.clearShot(look, cam)
+	if (got - look).Magnitude < want * 0.6 then
+		local cam2, look2 = Q.shotAt(kind, subject, other, -side)
+		local got2 = Q.clearShot(look2, cam2)
+		if (got2 - look2).Magnitude > (got - look).Magnitude then got, look = got2, look2 end
+		if (got - look).Magnitude < want * 0.6 and kind == "two" and other then
+			local p, q = Q.subject(subject), Q.subject(other)
+			local near, far = p, q
+			local here = workspace.CurrentCamera.CFrame.Position
+			if (q - here).Magnitude < (p - here).Magnitude then near, far = q, p end
+			local d = (far - near) * Vector3.new(1, 0, 1)
+			local u = d.Magnitude > 0.1 and d.Unit or Vector3.new(0, 0, -1)
+			look = (near + far) / 2 - Vector3.new(0, 0.4, 0)
+			got = Q.clearShot(look, near - u * 6 + u:Cross(Vector3.new(0, 1, 0)).Unit * 2.2 * side + Vector3.new(0, 2.6, 0))
+		end
+	end
+	cam = got
+	if seconds and seconds > 0 then Q.camGo(cam, look, seconds) else Q.camTo(cam, look, 0) end
+end
+
+-- a slow push in on a shot (for long lines)
+Q.drift = function(seconds)
+	local from = Q.camCF
+	if not from then return end
+	task.spawn(function()
+		local t0 = tick()
+		local token = {}
+		Q.camTween = token
+		while tick() - t0 < seconds and Q.camTween == token do
+			Q.camCF = from * CFrame.new(0, 0, -(tick() - t0) * 0.35)
+			RunService.RenderStepped:Wait()
+		end
+	end)
+end
+
+-- make a rig (or your character) turn to face a point or another rig
+Q.face = function(rig, target)
+	local root = rig and rig:FindFirstChild("HumanoidRootPart")
+	if not root then return end
+	local tp = typeof(target) == "Vector3" and target or (target and target:FindFirstChild("HumanoidRootPart") and target.HumanoidRootPart.Position)
+	if not tp then return end
+	local flat = Vector3.new(tp.X, root.Position.Y, tp.Z)
+	if (flat - root.Position).Magnitude < 0.1 then return end
+	if rig == Players.LocalPlayer.Character then
+		root.CFrame = CFrame.lookAt(root.Position, flat)
+	else
+		TweenService:Create(root, TweenInfo.new(0.4, Enum.EasingStyle.Sine), {CFrame = CFrame.lookAt(root.Position, flat)}):Play()
+	end
+end
+
+-- the game's own HUD (hotbars, buttons, "Stop Navigating"...) hides during scenes and battles
+Q.hideGameGui = function(on)
+	local pg = Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")
+	if on then
+		if Q.hiddenGuis then return end
+		Q.hiddenGuis = {}
+		if pg then
+			for _, g in ipairs(pg:GetChildren()) do
+				if g:IsA("ScreenGui") and g.Enabled and g ~= Q.gui then
+					g.Enabled = false
+					table.insert(Q.hiddenGuis, g)
+				end
+			end
+		end
+		-- the game's overhead tags on you (name, rank, level badges) and its own guide beams (Medieval Life's GPS
+		-- chevrons) would show in the shots: switch them off, ours stay
+		local char = Players.LocalPlayer.Character
+		for _, root in ipairs({char, workspace}) do
+			for _, d in ipairs(root and root:GetDescendants() or {}) do
+				local ours = (Q.folder and d:IsDescendantOf(Q.folder)) or d.Name == "NYVaneTag" or d.Name == "NYTag" or d.Name == "NYBubble"
+				if not ours and ((d:IsA("BillboardGui") and root == char) or d:IsA("Beam")) and d.Enabled then
+					d.Enabled = false
+					table.insert(Q.hiddenGuis, d)
+				end
+			end
+		end
+		if pg then
+			for _, b in ipairs(pg:GetDescendants()) do
+				if b:IsA("BillboardGui") and b.Enabled and b.Adornee and char and b.Adornee:IsDescendantOf(char) then
+					b.Enabled = false
+					table.insert(Q.hiddenGuis, b)
+				end
+			end
+		end
+		Q.coreWas = {}
+		for _, t in ipairs({Enum.CoreGuiType.Backpack, Enum.CoreGuiType.Chat, Enum.CoreGuiType.PlayerList, Enum.CoreGuiType.Health}) do
+			local ok, en = pcall(function() return StarterGui:GetCoreGuiEnabled(t) end)
+			if ok and en then
+				Q.coreWas[#Q.coreWas + 1] = t
+				pcall(function() StarterGui:SetCoreGuiEnabled(t, false) end)
+			end
+		end
+	elseif Q.hiddenGuis then
+		for _, g in ipairs(Q.hiddenGuis) do pcall(function() if g.Parent then g.Enabled = true end end) end
+		Q.hiddenGuis = nil
+		for _, t in ipairs(Q.coreWas or {}) do pcall(function() StarterGui:SetCoreGuiEnabled(t, true) end) end
+		Q.coreWas = nil
+	end
 end
 
 Q.shake = function(amount)
@@ -34219,10 +34525,7 @@ Q.journalLine = function(who, text)
 end
 
 Q.sceneStart = function(spotName)
-	local spot = spotName and (Q.namedSpot(spotName) or (function()
-		local s = (Q.mapSpots[game.PlaceId] or {})[spotName]
-		return s and CFrame.new(s[1], s[2], s[3])
-	end)())
+	local spot = spotName and (Q.namedSpot(spotName) or Q.mapSpot(spotName))
 	if spot then
 		Q.anchor = spot
 		-- stand Vane on the spot
@@ -34234,12 +34537,17 @@ Q.sceneStart = function(spotName)
 		Q.makeAnchor()
 	end
 	Q.freeze(true)
+	Q.hideGameGui(true)
+	-- Vane faces into the scene
+	local me = Q.vane()
+	if me then Q.face(me, Q.pt(0, 0, 30)) end
 	Q.bars(true)
 	Q.camHold()
 	Q.camCF = workspace.CurrentCamera.CFrame
 end
 
 Q.sceneEnd = function()
+	Q.hideGameGui(false)
 	Q.bars(false)
 	Q.freeze(false)
 	Q.camRelease()
@@ -34348,7 +34656,7 @@ Q.tollGate = function(token, opts)
 	Q.sound(Q.sfx.gate, 0.7)
 	Q.shake(0.8)
 	local gp = gate.core.Position
-	Q.camTo(Q.pt(4, 3, -5), gp, 1.2)
+	Q.camTo(Q.clearShot(gp, Q.pt(4, 3, -5)), gp, 1.2)
 	if opts.before then opts.before() end
 	local lines = opts.lines or {"> UNAUTHORIZED TRANSFER DETECTED.", "> TOLL REQUIRED: 1 (ONE) CORE MEMORY.", "> ACCEPT?"}
 	local yes = Q.tollPrompt(lines, false)
@@ -34388,6 +34696,8 @@ end)
 -- Q.battle(token, spec) stages the fight where you stand: your party in a line, the enemies across from you,
 -- the camera cutting between them. spec = {enemies = {"hollowed_student"}, music = "battle", tutorial = true,
 -- hooks = {start, enemyAction, damage, afterAction, commands}}. Returns true when won (losing retries the fight).
+-- Every battle camera goes through Q.clearShot, so fights staged in tight rooms (the Library aisle, halls where a
+-- roamer catches you) pull the camera in front of the walls instead of filming the inside of them.
 
 -- a point in battle space: x right, y up, z forward (toward the enemies)
 Q.pt = function(x, y, z)
@@ -34571,7 +34881,8 @@ Q.knockout = function(B, u)
 		for item, n in pairs(u.data.items or {}) do B.drops[item] = (B.drops[item] or 0) + n end
 		task.spawn(Q.derender, u)
 	else
-		Q.animate(u.rig, "sit")
+		Q.unpose(u.rig, 0)
+		Q.sit(u.rig, true)
 		for _, p in ipairs(u.rig:GetDescendants()) do
 			if p:IsA("BasePart") and p.Name ~= "HumanoidRootPart" then p.Transparency = math.max(p.Transparency, 0.45) end
 		end
@@ -34584,7 +34895,8 @@ Q.derender = function(u)
 	if not rig then return end
 	local lines = u.data.lines and u.data.lines.death
 	if lines then Q.bubble(rig, WackyState.pick(lines), 3.5) end
-	Q.animate(rig, "sit")
+	Q.unpose(rig, 0)
+	Q.sit(rig, true)
 	Q.sound(Q.sfx.weep, 0.3, 0.9)
 	local root = Q.rootOf(u)
 	if root then
@@ -34713,7 +35025,7 @@ Q.useItem = function(B, u, id, t)
 		for _, p in ipairs(t.rig:GetDescendants()) do
 			if p:IsA("BasePart") and p.Name ~= "HumanoidRootPart" then p.Transparency = 0 end
 		end
-		Q.animate(t.rig, "idle")
+		Q.sit(t.rig, false)
 		Q.pop(t, t.hp, Color3.fromRGB(120, 255, 140))
 	end
 	task.wait(0.7)
@@ -34731,18 +35043,12 @@ Q.perform = function(B, u, sk, targets, isLimit)
 		if not t then return end
 		local troot = Q.rootOf(t)
 		if not troot then return end
-		local dir = (troot.Position - root.Position) * Vector3.new(1, 0, 1)
-		local stop = troot.Position - dir.Unit * 3.6
-		-- camera: low side angle on the attacker as they charge
-		Q.camGo(Q.pt(0, 0, 0):Lerp(stop, 0.5) + Vector3.new(0, 4.5, 0) + home.RightVector * 11, stop + Vector3.new(0, 1.8, 0), 0.35)
-		Q.dash(u, stop, isLimit and 0.2 or 0.3)
-		Q.swordTrail(u, true)
 		local hits = sk.hits or 1
-		for h = 1, hits do
-			if t.dead then break end
-			Q.animate(u.rig, "slash")
-			Q.sound(Q.sfx.slash, 0.55, 0.9 + math.random() * 0.2)
-			task.wait(0.15)
+		local landed = 0
+		-- one hit: damage, numbers, sparks; false once the target is down
+		local function strike()
+			if t.dead or landed >= hits then return false end
+			landed = landed + 1
 			local dmg, crit, miss = Q.calc(B, u, t, sk.power or 1, false)
 			if miss then
 				Q.pop(t, "MISS", Color3.fromRGB(220, 220, 230))
@@ -34751,30 +35057,40 @@ Q.perform = function(B, u, sk, targets, isLimit)
 				Q.hitFx(hitPos, color, crit or isLimit)
 				Q.sound(Q.sfx.hit, 0.6)
 				Q.shake(crit and 1.4 or 0.7)
+				if t.rig then
+					task.spawn(function()
+						Q.pose(t.rig, Q.poses.hurt, 0.06)
+						task.wait(0.22)
+						if not t.dead then Q.rest(t.rig, 0.2) end
+					end)
+				end
 				local who = Q.hurt(B, t, dmg, u)
 				Q.pop(who, dmg, crit and Color3.fromRGB(255, 220, 80) or Color3.new(1, 1, 1), crit or isLimit)
 				if t.side == "enemy" and t.data.lines and t.data.lines.hurt and math.random() < 0.4 then Q.bubble(t.rig, WackyState.pick(t.data.lines.hurt), 2) end
 				if sk.status and math.random() < sk.status.chance then Q.addStatus(B, t, sk.status.id, sk.status.turns) end
 			end
-			if isLimit and h < hits then
-				Q.camGo(stop + Vector3.new(math.cos(h * 1.3) * 9, 3 + h * 0.4, math.sin(h * 1.3) * 9), troot.Position + Vector3.new(0, 1.5, 0), 0.18)
-				task.wait(0.12)
-			else
-				task.wait(0.25)
-			end
+			return not t.dead
 		end
+		local flat = (troot.Position - root.Position) * Vector3.new(1, 0, 1)
+		local c = {root = root, troot = troot, home = home, color = color, isLimit = isLimit, hits = hits,
+			dir = flat.Magnitude > 0.1 and flat.Unit or home.LookVector, offset = u.rig and u.rig:FindFirstChild("NYSword") and 1.4 or 0}
+		local ok, err = pcall(Q.moveFor(u, sk), B, u, t, strike, c)
+		if not ok then warn("[Requiem] move: " .. tostring(err)) end
+		-- whatever the move didn't land still lands
+		while landed < hits and not t.dead do strike() task.wait(0.15) end
 		Q.swordTrail(u, false)
-		task.wait(0.15)
+		task.wait(0.1)
+		Q.pose(u.rig, Q.poses.ready or {}, 0.12)
 		Q.dash(u, home.Position, 0.3)
 		root.CFrame = home
-		Q.animate(u.rig, "idle")
+		Q.rest(u.rig, 0.15)
 	elseif sk.kind == "magic" then
-		Q.animate(u.rig, "point")
+		Q.castFx(u, sk)
 		Q.sound(Q.sfx.magic, 0.5)
 		for _, t in ipairs(targets) do
 			local troot = Q.rootOf(t)
 			if troot and not t.dead then
-				Q.camGo(root.Position + home.RightVector * 8 + Vector3.new(0, 4, 0) - home.LookVector * 4, troot.Position, 0.3)
+				Q.camGo(Q.clearShot(troot.Position, root.Position + home.RightVector * 8 + Vector3.new(0, 4, 0) - home.LookVector * 4), troot.Position, 0.3)
 				local orb = NeverYieldAgartha.part(Q.stage(), Vector3.new(0.9, 0.9, 0.9), root.CFrame * CFrame.new(0, 1.5, -1.5), color, Enum.Material.Neon, "Ball", {CanCollide = false})
 				Q.emitter(orb, Q.fxTex.specs, color, {Rate = 60, Lifetime = NumberRange.new(0.2, 0.4), Speed = NumberRange.new(1, 3), Size = NumberSequence.new(0.4, 0), LightEmission = 1})
 				local tw = TweenService:Create(orb, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {CFrame = CFrame.new(troot.Position + Vector3.new(0, 1.2, 0))})
@@ -34791,9 +35107,9 @@ Q.perform = function(B, u, sk, targets, isLimit)
 			end
 		end
 		task.wait(0.4)
-		Q.animate(u.rig, "idle")
+		Q.rest(u.rig, 0.2)
 	elseif sk.kind == "heal" then
-		Q.animate(u.rig, "point")
+		Q.castFx(u, sk, true)
 		Q.sound(Q.sfx.heal, 0.6)
 		for _, t in ipairs(targets) do
 			local troot = Q.rootOf(t)
@@ -34804,7 +35120,7 @@ Q.perform = function(B, u, sk, targets, isLimit)
 					for _, p in ipairs(t.rig:GetDescendants()) do
 						if p:IsA("BasePart") and p.Name ~= "HumanoidRootPart" then p.Transparency = 0 end
 					end
-					Q.animate(t.rig, "idle")
+					Q.sit(t.rig, false)
 				end
 				local amount = math.floor(u.mag * (sk.power or 1) * 3.2 * (0.95 + math.random() * 0.1))
 				t.hp = math.min(t.maxHp, t.hp + amount)
@@ -34813,7 +35129,7 @@ Q.perform = function(B, u, sk, targets, isLimit)
 			end
 		end
 		task.wait(0.6)
-		Q.animate(u.rig, "idle")
+		Q.rest(u.rig, 0.2)
 	elseif sk.kind == "guard" then
 		u.statuses.defending = {turns = 1}
 		u.statuses.braced = {turns = 1}
@@ -34821,7 +35137,7 @@ Q.perform = function(B, u, sk, targets, isLimit)
 		Q.hitFx(root.Position + Vector3.new(0, 1, 0), color)
 		task.wait(0.6)
 	elseif sk.kind == "buff" then
-		Q.animate(u.rig, "point")
+		Q.castFx(u, sk, true)
 		Q.sound(Q.sfx.magic, 0.45, 1.3)
 		for _, t in ipairs(targets) do
 			local troot = Q.rootOf(t)
@@ -34832,7 +35148,7 @@ Q.perform = function(B, u, sk, targets, isLimit)
 			end
 		end
 		task.wait(0.6)
-		Q.animate(u.rig, "idle")
+		Q.rest(u.rig, 0.2)
 	end
 end
 
@@ -35134,6 +35450,7 @@ Q.fight = function(token, spec)
 	for _, id in ipairs(Q.data.active) do if Q.data.joined[id] then table.insert(ids, id) end end
 	local slots = {{0, 0}, {-5, 1.5}, {5, 1.5}}
 	Q.hideSelf(true)
+	Q.hideGameGui(true)
 	for i, id in ipairs(ids) do
 		local u = Q.unitOfMember(id)
 		u.rig = id == "vane" and Q.vaneDouble() or Q.cast(id)
@@ -35161,7 +35478,7 @@ Q.fight = function(token, spec)
 	local center = Q.pt(0, 2, 18)
 	for k = 0, 24 do
 		local ang = math.rad(-60 + k * 6)
-		Q.camTo(center + Vector3.new(math.sin(ang) * 14, 5 - k * 0.08, math.cos(ang) * 14), center, 0)
+		Q.camTo(Q.clearShot(center, center + Vector3.new(math.sin(ang) * 14, 5 - k * 0.08, math.cos(ang) * 14)), center, 0)
 		RunService.RenderStepped:Wait()
 		RunService.RenderStepped:Wait()
 	end
@@ -35169,7 +35486,7 @@ Q.fight = function(token, spec)
 		if e.data.lines and e.data.lines.start then Q.bubble(e.rig, WackyState.pick(e.data.lines.start), 3) end
 	end
 	B.wide = function()
-		Q.camGo(Q.pt(13, 8, -9), Q.pt(0, 1.5, 9), 0.6)
+		Q.camGo(Q.clearShot(Q.pt(0, 1.5, 9), Q.pt(13, 8, -9)), Q.pt(0, 1.5, 9), 0.6)
 	end
 	B.wide()
 	if B.hooks.start then B.hooks.start(B) end
@@ -35263,7 +35580,7 @@ Q.victory = function(B)
 		for k = 0, 90 do
 			if not Q.alive(B.token) then return end
 			local ang = math.rad(200 + k * 1.2)
-			Q.camTo(c + Vector3.new(math.sin(ang) * 11, 3.5, math.cos(ang) * 11), c, 0)
+			Q.camTo(Q.clearShot(c, c + Vector3.new(math.sin(ang) * 11, 3.5, math.cos(ang) * 11)), c, 0)
 			task.wait(0.03)
 		end
 	end)
@@ -35294,6 +35611,7 @@ Q.endBattle = function(B)
 	for _, u in ipairs(B.party) do if u.rig then pcall(function() u.rig:Destroy() end) end end
 	for _, u in ipairs(B.enemies) do if u.rig then pcall(function() u.rig:Destroy() end) end end
 	Q.hideSelf(false)
+	Q.hideGameGui(false)
 	Q.B = nil
 end
 
@@ -35324,6 +35642,883 @@ Q.battle = function(token, spec)
 		end
 	end
 	return false
+end
+
+-- [52_moves.lua]
+-- ---------- battle moves: FF7-style attack animations, built from poses ----------
+-- Games only play animations they own (or Roblox's), so the fighting moves are posed by hand: every joint is
+-- rotated about its own pivot, in its parent part's space (x right, y up, -z forward), and tweened between
+-- keyframes. Same numbers on R6 and R15. Vane's sword sits in his right hand with the blade pointing forward
+-- out of the fist, so raising the arm swings the blade up and back over his head.
+
+Q.jointNames = {
+	R6 = {rs = "Right Shoulder", ls = "Left Shoulder", rh = "Right Hip", lh = "Left Hip", neck = "Neck", root = "RootJoint"},
+	R15 = {rs = "RightShoulder", ls = "LeftShoulder", rh = "RightHip", lh = "LeftHip", neck = "Neck", root = "Root"},
+}
+
+-- the rig's joints by short name, with the C0 they had before any posing
+Q.joints = function(rig)
+	local hum = rig and rig:FindFirstChildOfClass("Humanoid")
+	if not hum then return nil end
+	local names = Q.jointNames[hum.RigType == Enum.HumanoidRigType.R15 and "R15" or "R6"]
+	local byName = {}
+	for _, m in ipairs(rig:GetDescendants()) do
+		if m:IsA("Motor6D") then byName[m.Name] = m end
+	end
+	local j = {}
+	for short, name in pairs(names) do
+		local m = byName[name]
+		if m then
+			if m:GetAttribute("NYBaseC0") == nil then m:SetAttribute("NYBaseC0", m.C0) end
+			j[short] = m
+		end
+	end
+	return j
+end
+
+-- degrees -> a rotation in the parent's space: first x (swing forward/back), then z (raise out to the side), then
+-- y (sweep around the body)
+Q.rot = function(x, y, z)
+	return CFrame.Angles(0, math.rad(y or 0), 0) * CFrame.Angles(0, 0, math.rad(z or 0)) * CFrame.Angles(math.rad(x or 0), 0, 0)
+end
+
+-- stop the Roblox animations so the pose owns the joints (a stopped animation leaves its last frame in Transform)
+Q.takeJoints = function(rig)
+	for _, track in pairs((Q.tracks or {})[rig] or {}) do pcall(function() track:Stop(0) end) end
+	local hum = rig:FindFirstChildOfClass("Humanoid")
+	local animator = hum and hum:FindFirstChildOfClass("Animator")
+	if animator then
+		for _, track in ipairs(animator:GetPlayingAnimationTracks()) do pcall(function() track:Stop(0) end) end
+	end
+	for _, m in ipairs(rig:GetDescendants()) do
+		if m:IsA("Motor6D") then m.Transform = CFrame.new() end
+	end
+end
+
+-- tween a rig into a pose: spec = {rs = CFrame, ls =, rh =, lh =, neck =, root =} (missing joints go back to rest)
+Q.pose = function(rig, spec, seconds, style, dir)
+	local j = Q.joints(rig)
+	if not j then return end
+	if not rig:GetAttribute("NYPosed") then
+		Q.takeJoints(rig)
+		rig:SetAttribute("NYPosed", true)
+	end
+	local info = TweenInfo.new(seconds or 0.15, style or Enum.EasingStyle.Quad, dir or Enum.EasingDirection.Out)
+	for short, m in pairs(j) do
+		local base = m:GetAttribute("NYBaseC0")
+		local r = spec[short] or CFrame.new()
+		local goal = CFrame.new(base.Position) * r * (base - base.Position)
+		-- a newer pose wins: stop the joint's running tween first (a set C0 doesn't stop it, it would land on top)
+		local running = Q.poseTweens[m]
+		if running then running:Cancel() Q.poseTweens[m] = nil end
+		if (seconds or 0.15) <= 0 then
+			m.C0 = goal
+		else
+			local tw = TweenService:Create(m, info, {C0 = goal})
+			Q.poseTweens[m] = tw
+			tw:Play()
+		end
+	end
+end
+Q.poseTweens = setmetatable({}, {__mode = "k"})
+
+-- at rest in a fight: sword-holders stand in their guard (blade up), everyone else goes back to idle
+Q.rest = function(rig, seconds)
+	if not rig then return end
+	if rig:FindFirstChild("NYSword") and not rig:GetAttribute("NYSitting") then
+		Q.pose(rig, Q.poses.ready, seconds or 0.15)
+	else
+		Q.unpose(rig, seconds)
+	end
+end
+
+-- back to normal: joints to rest, the idle animation again
+Q.unpose = function(rig, seconds)
+	if not rig or not rig:GetAttribute("NYPosed") then return end
+	Q.pose(rig, {}, seconds or 0.2)
+	task.wait(seconds or 0.2)
+	rig:SetAttribute("NYPosed", nil)
+	Q.animate(rig, "idle")
+end
+
+-- an afterimage: a see-through glowing copy of the body that fades where it stood
+Q.ghost = function(rig, color, life)
+	local P = NeverYieldAgartha.part
+	local parts = {}
+	for _, p in ipairs(rig:GetDescendants()) do
+		if p:IsA("BasePart") and p.Name ~= "HumanoidRootPart" and p.Transparency < 0.9 and p.Size.Magnitude > 0.3 then
+			local g
+			local mesh = p:FindFirstChildOfClass("SpecialMesh")
+			if mesh and mesh.MeshType == Enum.MeshType.FileMesh then
+				g = P(Q.stage(), p.Size, p.CFrame, color, Enum.Material.Neon, nil, {CanCollide = false, CanQuery = false, CanTouch = false, CastShadow = false, Transparency = 0.55})
+				local m = Instance.new("SpecialMesh")
+				m.MeshType, m.MeshId, m.Scale = mesh.MeshType, mesh.MeshId, mesh.Scale
+				m.Parent = g
+			elseif not p:IsA("MeshPart") or p.Name:find("Arm") or p.Name:find("Leg") or p.Name:find("Hand") or p.Name:find("Foot") or p.Name:find("Torso") or p.Name == "Head" then
+				g = P(Q.stage(), p.Size, p.CFrame, color, Enum.Material.Neon, nil, {CanCollide = false, CanQuery = false, CanTouch = false, CastShadow = false, Transparency = 0.55})
+			end
+			if g then table.insert(parts, g) end
+		end
+	end
+	for _, g in ipairs(parts) do
+		TweenService:Create(g, TweenInfo.new(life or 0.35), {Transparency = 1}):Play()
+		Services.Debris:AddItem(g, (life or 0.35) + 0.1)
+	end
+end
+
+-- a streak of afterimages while a root moves (returns a stop function)
+Q.ghostTrail = function(rig, color, every)
+	local alive = true
+	task.spawn(function()
+		while alive and rig.Parent do
+			Q.ghost(rig, color, 0.3)
+			task.wait(every or 0.05)
+		end
+	end)
+	return function() alive = false end
+end
+
+-- is the blade inside the target's body? (points along the sword vs each body part's box; gripCF = where the hilt
+-- is, defaulting to now)
+Q.bladeIn = function(rig, target, gripCF)
+	local sword = rig and rig:FindFirstChild("NYSword")
+	local grip = sword and sword.PrimaryPart
+	if not grip or not target then return false end
+	local cf = gripCF or grip.CFrame
+	for i = 2, 24 do
+		local p = cf.Position + cf.UpVector * (i / 24 * Q.swordLen * 0.92)
+		for _, part in ipairs(target:GetChildren()) do
+			if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+				local lp = part.CFrame:PointToObjectSpace(p)
+				local h = part.Size / 2 + Vector3.new(0.15, 0.15, 0.15)
+				if math.abs(lp.X) <= h.X and math.abs(lp.Y) <= h.Y and math.abs(lp.Z) <= h.Z then return true end
+			end
+		end
+	end
+	return false
+end
+
+-- wait (up to maxT) for the swing to reach the target, so the hit lands the moment the blade is in it. A fast swing
+-- can pass right through between two frames, so the in-between blade positions are checked too.
+Q.contact = function(rig, target, maxT)
+	local sword = rig and rig:FindFirstChild("NYSword")
+	local grip = sword and sword.PrimaryPart
+	if not grip then task.wait(maxT or 0.2) return false end
+	local t0 = tick()
+	local last = grip.CFrame
+	while tick() - t0 < (maxT or 0.2) do
+		local now = grip.CFrame
+		for k = 1, 4 do
+			if Q.bladeIn(rig, target, last:Lerp(now, k / 4)) then return true end
+		end
+		last = now
+		RunService.Heartbeat:Wait()
+	end
+	return false
+end
+
+-- the ground cracks: a shockwave ring, rocks thrown up, dust
+Q.shockwave = function(pos, color, size)
+	local P = NeverYieldAgartha.part
+	size = size or 1
+	local gy = Q.groundY(pos, pos.Y)
+	local at = Vector3.new(pos.X, gy + 0.1, pos.Z)
+	local ring = P(Q.stage(), Vector3.new(0.2, 1, 1), CFrame.new(at) * CFrame.Angles(0, 0, math.rad(90)), color, Enum.Material.Neon, "Cylinder",
+		{CanCollide = false, CanQuery = false, CanTouch = false, CastShadow = false, Transparency = 0.2})
+	TweenService:Create(ring, TweenInfo.new(0.45, Enum.EasingStyle.Quad), {Size = Vector3.new(0.2, 18 * size, 18 * size), Transparency = 1}):Play()
+	Services.Debris:AddItem(ring, 0.6)
+	for i = 1, math.floor(8 * size) do
+		local a = (i / (8 * size)) * math.pi * 2 + math.random() * 0.5
+		local rock = P(Q.stage(), Vector3.new(1, 1, 1) * (0.4 + math.random() * 0.6), CFrame.new(at) * CFrame.Angles(math.random() * 6, math.random() * 6, math.random() * 6),
+			Color3.fromRGB(70, 70, 76), Enum.Material.Slate, nil, {CanCollide = false, CanQuery = false, CanTouch = false})
+		local out = Vector3.new(math.cos(a), 0, math.sin(a)) * (3 + math.random() * 3) * size
+		TweenService:Create(rock, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CFrame = CFrame.new(at + out * 0.6 + Vector3.new(0, 2 + math.random() * 2, 0)) * CFrame.Angles(math.random() * 6, 0, math.random() * 6)}):Play()
+		task.delay(0.25, function()
+			if rock.Parent then TweenService:Create(rock, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {CFrame = CFrame.new(at + out), Transparency = 1}):Play() end
+		end)
+		Services.Debris:AddItem(rock, 0.8)
+	end
+	local dust = P(Q.stage(), Vector3.new(1, 1, 1), CFrame.new(at), Color3.new(), Enum.Material.SmoothPlastic, nil, {Transparency = 1, CanCollide = false, CanQuery = false, CanTouch = false})
+	local e = Q.emitter(dust, Q.fxTex.smoke, Color3.fromRGB(150, 150, 160), {Lifetime = NumberRange.new(0.6, 1), Speed = NumberRange.new(6, 10), SpreadAngle = Vector2.new(10, 180),
+		Size = NumberSequence.new(1.5 * size, 4 * size), Transparency = NumberSequence.new(0.4, 1), Drag = 4, Rotation = NumberRange.new(0, 360)})
+	e.Enabled = false
+	e:Emit(18)
+	Services.Debris:AddItem(dust, 1.5)
+end
+
+-- ---------- the poses ----------
+-- right arm (sword arm): x = swing forward/up, y = sweep around the body, z = out to the side
+Q.poses = {
+	-- sword raised in front, weight forward
+	ready = {rs = Q.rot(50, 0, 10), ls = Q.rot(20, 0, -10), rh = Q.rot(-10), lh = Q.rot(15), root = Q.rot(-5)},
+	-- the run: leaning hard into it, sword up in front
+	charge = {rs = Q.rot(25, 0, 25), ls = Q.rot(30, 0, -5), rh = Q.rot(-30), lh = Q.rot(35), root = Q.rot(-25), neck = Q.rot(15)},
+	-- horizontal sweep, wound up (sword out to the right and back) and finished (across the front)
+	sweepWind = {rs = Q.rot(0, -55, 90), ls = Q.rot(10, 0, -25), rh = Q.rot(-15), lh = Q.rot(20), root = Q.rot(-8, -35, 0)},
+	sweepEnd = {rs = Q.rot(0, 95, 90), ls = Q.rot(-15, 0, -35), rh = Q.rot(15), lh = Q.rot(-20), root = Q.rot(-12, 40, 0)},
+	-- rising cut: from low behind to high overhead
+	riseWind = {rs = Q.rot(-45, 0, 8), ls = Q.rot(15, 0, -20), rh = Q.rot(-25), lh = Q.rot(25), root = Q.rot(-20)},
+	-- (a tween takes the short way round, so a swing past 180 degrees needs this middle key to go through the front)
+	riseMid = {rs = Q.rot(60, 0, 6), ls = Q.rot(30, 0, -25), rh = Q.rot(-5), lh = Q.rot(10), root = Q.rot(-5), neck = Q.rot(-5)},
+	riseEnd = {rs = Q.rot(170, 0, 5), ls = Q.rot(40, 0, -30), rh = Q.rot(10), lh = Q.rot(-5), root = Q.rot(10), neck = Q.rot(-15)},
+	-- overhead: sword over the head and behind the back, then slammed down in front
+	overhead = {rs = Q.rot(205, 0, -5), ls = Q.rot(190, 0, 15), rh = Q.rot(-20), lh = Q.rot(10), root = Q.rot(8), neck = Q.rot(-15)},
+	slam = {rs = Q.rot(55, 0, -8), ls = Q.rot(10, 0, -10), rh = Q.rot(-60), lh = Q.rot(50), root = Q.rot(-35), neck = Q.rot(20)},
+	-- a low crouch before a big move, sword held back
+	crouch = {rs = Q.rot(-50, 0, 20), ls = Q.rot(40, 0, -20), rh = Q.rot(-70), lh = Q.rot(50), root = Q.rot(-30), neck = Q.rot(20)},
+	-- the pass-through cut (sword swept out behind after the blow)
+	passEnd = {rs = Q.rot(-70, 0, 35), ls = Q.rot(30, 0, -35), rh = Q.rot(-40), lh = Q.rot(30), root = Q.rot(-20, 20, 0), neck = Q.rot(10)},
+	-- Seris casting: left hand thrown forward, right hand typing in the air
+	cast = {ls = Q.rot(90, 0, -5), rs = Q.rot(60, 30, 10), rh = Q.rot(-10), lh = Q.rot(10), root = Q.rot(-5, -20, 0)},
+	castUp = {ls = Q.rot(160, 0, -15), rs = Q.rot(160, 0, 15), neck = Q.rot(-20), root = Q.rot(8)},
+	-- the Hollowed: reaching for a memory, arms out like someone drowning
+	reach = {rs = Q.rot(95, 0, 8), ls = Q.rot(95, 0, -8), neck = Q.rot(25, 0, 10), root = Q.rot(-20), rh = Q.rot(-20), lh = Q.rot(15)},
+	flailA = {rs = Q.rot(150, 0, 30), ls = Q.rot(20, 0, -40), neck = Q.rot(-10, 0, -15), root = Q.rot(-10, 20, 0)},
+	flailB = {rs = Q.rot(10, 0, 40), ls = Q.rot(150, 0, -30), neck = Q.rot(-10, 0, 15), root = Q.rot(-10, -20, 0)},
+	hurt = {rs = Q.rot(-25, 0, 20), ls = Q.rot(-25, 0, -20), neck = Q.rot(-25), root = Q.rot(15)},
+}
+
+-- sit on the ground (legs out in front, hands on the knees, body lowered to the floor), or stand back up.
+-- Used for Seris in scenes, knocked-out allies, and a Hollowed sitting down to derender.
+Q.sit = function(rig, on)
+	local hum = rig and rig:FindFirstChildOfClass("Humanoid")
+	local root = rig and rig:FindFirstChild("HumanoidRootPart")
+	if not hum or not root then return end
+	if (on and true or false) == (rig:GetAttribute("NYSitting") and true or false) then return end
+	rig:SetAttribute("NYSitting", on or nil)
+	local drop = hum.RigType == Enum.HumanoidRigType.R15 and math.max(hum.HipHeight - 0.1, 0.5) or 1.5
+	if on then
+		Q.pose(rig, {rh = Q.rot(90, 0, 4), lh = Q.rot(90, 0, -4), rs = Q.rot(35, 0, 5), ls = Q.rot(35, 0, -5), neck = Q.rot(8)}, 0)
+		root.CFrame = root.CFrame - Vector3.new(0, drop, 0)
+	else
+		root.CFrame = root.CFrame + Vector3.new(0, drop, 0)
+		Q.unpose(rig, 0)
+		if rig:FindFirstChild("NYSword") then Q.rest(rig, 0.15) end
+	end
+end
+
+-- ---------- the moves ----------
+-- Each move gets (B, u, t, strike, c): strike() deals the next hit (damage, numbers, sparks) and returns false once
+-- the target is down; c = {root, troot, home, color, isLimit, hits}. A move runs its own camera.
+local function lookAt(root, pos)
+	local flat = Vector3.new(pos.X, root.Position.Y, pos.Z)
+	if (flat - root.Position).Magnitude > 0.1 then root.CFrame = CFrame.lookAt(root.Position, flat) end
+end
+local function slide(root, cf, seconds, style, dir)
+	local tw = TweenService:Create(root, TweenInfo.new(seconds, style or Enum.EasingStyle.Quad, dir or Enum.EasingDirection.Out), {CFrame = cf})
+	tw:Play()
+	return tw
+end
+-- where to stand to hit: dist in front of the target, and shifted left by c.offset so the sword (in the right hand,
+-- 1.4 studs off-center) lines up with the target's body instead of slicing past its side
+local function standIn(c, dist)
+	local dir = (c.troot.Position - c.root.Position) * Vector3.new(1, 0, 1)
+	if dir.Magnitude < 0.1 then dir = c.home.LookVector end
+	dir = dir.Unit
+	local right = dir:Cross(Vector3.new(0, 1, 0))
+	return c.troot.Position - dir * (dist or 3.6) - right * (c.offset or 0)
+end
+local function camSide(c, at, side, up, back)
+	local right = c.home.RightVector * (side or 1)
+	local look = at + Vector3.new(0, 1.6, 0)
+	Q.camGo(Q.clearShot(look, look + right * 9 + Vector3.new(0, up or 2.5, 0) - c.home.LookVector * (back or 3)), look, 0.25)
+end
+local function swish(pitch) Q.sound(Q.sfx.slash, 0.55, pitch or (0.9 + math.random() * 0.2)) end
+
+Q.moves = {}
+
+-- the basic Attack: charge in with afterimages, a wide horizontal sweep, a rising cut
+Q.moves.combo = function(B, u, t, strike, c)
+	local stop = standIn(c, 3.8)
+	camSide(c, stop, 1, 2, 4)
+	Q.pose(u.rig, Q.poses.charge, 0.12)
+	local quit = Q.ghostTrail(u.rig, c.color, 0.04)
+	lookAt(c.root, c.troot.Position)
+	slide(c.root, CFrame.lookAt(stop, stop + c.dir) + Vector3.new(0, c.root.Position.Y - stop.Y, 0), 0.24).Completed:Wait()
+	quit()
+	Q.swordTrail(u, true)
+	Q.pose(u.rig, Q.poses.sweepWind, 0.1)
+	task.wait(0.1)
+	swish()
+	Q.pose(u.rig, Q.poses.sweepEnd, 0.12, Enum.EasingStyle.Back)
+	Q.contact(u.rig, t.rig, 0.12)
+	-- a one-hit Attack still swings twice: the sweep only sparks, the rising cut lands the damage
+	local alive = true
+	if c.hits > 1 then alive = strike() else Q.hitFx(c.troot.Position + Vector3.new(0, 1.2, 0), c.color) end
+	task.wait(0.14)
+	if alive ~= false then
+		Q.pose(u.rig, Q.poses.riseWind, 0.12)
+		task.wait(0.12)
+		swish(1.15)
+		Q.pose(u.rig, Q.poses.riseMid, 0.06, Enum.EasingStyle.Linear)
+		local hit = Q.contact(u.rig, t.rig, 0.06)
+		Q.pose(u.rig, Q.poses.riseEnd, 0.07)
+		if not hit then Q.contact(u.rig, t.rig, 0.07) end
+		strike()
+		task.wait(0.2)
+	end
+	Q.swordTrail(u, false)
+end
+
+-- Cleave: a leap into the air and the sword brought down like a falling tower
+Q.moves.cleave = function(B, u, t, strike, c)
+	local stop = standIn(c, 3)
+	local up = c.root.Position.Y
+	Q.pose(u.rig, Q.poses.crouch, 0.15)
+	camSide(c, (c.root.Position + stop) / 2, -1, 3, 8)
+	task.wait(0.22)
+	Q.sound(Q.sfx.slash, 0.4, 0.6)
+	local face = CFrame.lookAt(c.root.Position, c.root.Position + c.dir)
+	local apex = (c.root.Position + stop) / 2 + Vector3.new(0, 9, 0)
+	Q.pose(u.rig, Q.poses.overhead, 0.2)
+	local quit = Q.ghostTrail(u.rig, c.color, 0.05)
+	slide(c.root, CFrame.new(apex) * (face - face.Position), 0.28, Enum.EasingStyle.Quad, Enum.EasingDirection.Out).Completed:Wait()
+	Q.swordTrail(u, true)
+	local look = stop + Vector3.new(0, 1, 0)
+	Q.camGo(Q.clearShot(look, look - c.home.LookVector * 6 + c.home.RightVector * 6 + Vector3.new(0, 1, 0)), look + Vector3.new(0, 2, 0), 0.15)
+	task.wait(0.08)
+	swish(0.8)
+	Q.pose(u.rig, Q.poses.slam, 0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+	slide(c.root, CFrame.new(Vector3.new(stop.X, up, stop.Z)) * (face - face.Position), 0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.In).Completed:Wait()
+	quit()
+	Q.shockwave(c.troot.Position, c.color, 1.2)
+	Q.shake(2)
+	strike()
+	task.wait(0.35)
+	Q.swordTrail(u, false)
+end
+
+-- Severance: one huge strike. He gathers himself, vanishes, and is already behind the enemy. Then the cut lands.
+Q.moves.severance = function(B, u, t, strike, c)
+	Q.pose(u.rig, Q.poses.crouch, 0.25)
+	local look = c.root.Position + Vector3.new(0, 1.5, 0)
+	Q.camGo(Q.clearShot(look, look + c.home.LookVector * 7 + c.home.RightVector * 3), look, 0.3)
+	local sword = u.rig:FindFirstChild("NYSword")
+	local edge = sword and sword:FindFirstChild("NYSwordEdge")
+	if edge then TweenService:Create(edge, TweenInfo.new(0.5), {Transparency = 0.35}):Play() end
+	Q.hitFx(c.root.Position + Vector3.new(0, 1, 0), c.color)
+	task.wait(0.6)
+	local dir = (c.troot.Position - c.root.Position) * Vector3.new(1, 0, 1)
+	local behind = c.troot.Position + dir.Unit * 4.5
+	behind = Vector3.new(behind.X, c.root.Position.Y, behind.Z)
+	Q.swordTrail(u, true)
+	local quit = Q.ghostTrail(u.rig, c.color, 0.025)
+	Q.pose(u.rig, Q.poses.sweepEnd, 0.08)
+	swish(0.75)
+	slide(c.root, CFrame.lookAt(behind, behind + dir.Unit), 0.12, Enum.EasingStyle.Linear).Completed:Wait()
+	quit()
+	Q.pose(u.rig, Q.poses.passEnd, 0.15)
+	local tl = c.troot.Position + Vector3.new(0, 1.4, 0)
+	Q.camGo(Q.clearShot(tl, tl - dir.Unit * 8 + c.home.RightVector * 4 + Vector3.new(0, 1.5, 0)), tl, 0.2)
+	task.wait(0.55)
+	Q.flash(Color3.new(1, 1, 1), 0)
+	Q.hitFx(tl, c.color, true)
+	Q.shake(2)
+	strike()
+	if edge then TweenService:Create(edge, TweenInfo.new(0.6), {Transparency = 0.82}):Play() end
+	task.wait(0.45)
+	Q.swordTrail(u, false)
+end
+
+-- Limit, Shattered Edge: he blinks around the enemy cutting from every side, then drops out of the sky
+Q.moves.shattered_edge = function(B, u, t, strike, c)
+	local center = Vector3.new(c.troot.Position.X, c.root.Position.Y, c.troot.Position.Z)
+	Q.swordTrail(u, true)
+	local cuts = {Q.poses.sweepEnd, Q.poses.riseMid, Q.poses.sweepWind, Q.poses.slam}
+	local winds = {Q.poses.sweepWind, Q.poses.riseWind, Q.poses.sweepEnd, Q.poses.overhead}
+	for h = 1, c.hits - 1 do
+		local a = h * 2.1 + 0.4
+		local p = center + Vector3.new(math.cos(a), 0, math.sin(a)) * 3.6
+		local toward = (center - p).Unit
+		p = p - toward:Cross(Vector3.new(0, 1, 0)) * (c.offset or 0)
+		Q.ghost(u.rig, c.color, 0.4)
+		c.root.CFrame = CFrame.lookAt(p, p + toward)
+		Q.pose(u.rig, winds[(h - 1) % 4 + 1], 0)
+		local look = center + Vector3.new(0, 1.5, 0)
+		Q.camGo(Q.clearShot(look, look + Vector3.new(math.cos(a + 1.6), 0, math.sin(a + 1.6)) * 9 + Vector3.new(0, 2 + h * 0.5, 0)), look, 0.12)
+		task.wait(0.06)
+		swish(1 + h * 0.06)
+		Q.pose(u.rig, cuts[(h - 1) % 4 + 1], 0.08, Enum.EasingStyle.Back)
+		Q.contact(u.rig, t.rig, 0.08)
+		if strike() == false then break end
+		task.wait(0.12)
+	end
+	if not t.dead then
+		-- the last hit: straight up, and down through it
+		local high = center + Vector3.new(0, 14, 0)
+		Q.ghost(u.rig, c.color, 0.4)
+		c.root.CFrame = CFrame.lookAt(high - c.home.LookVector * 3 - c.home.RightVector * (c.offset or 0), high + c.home.LookVector * 3)
+		Q.pose(u.rig, Q.poses.overhead, 0)
+		local look = center + Vector3.new(0, 1, 0)
+		Q.camGo(Q.clearShot(look, look - c.home.LookVector * 9 + c.home.RightVector * 5 + Vector3.new(0, 1, 0)), high:Lerp(look, 0.6), 0.1)
+		task.wait(0.3)
+		local quit = Q.ghostTrail(u.rig, c.color, 0.02)
+		swish(0.7)
+		Q.pose(u.rig, Q.poses.slam, 0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+		local land = center - c.home.LookVector * 3 - c.home.RightVector * (c.offset or 0)
+		slide(c.root, CFrame.lookAt(land, land + c.home.LookVector), 0.13, Enum.EasingStyle.Quad, Enum.EasingDirection.In).Completed:Wait()
+		quit()
+		Q.flash(Color3.fromRGB(200, 250, 255), 0)
+		Q.shockwave(center, c.color, 1.6)
+		Q.shake(2.5)
+		strike()
+		task.wait(0.5)
+	end
+	Q.swordTrail(u, false)
+end
+
+-- Counter: one quick sweep, no run-up
+Q.moves.counter = function(B, u, t, strike, c)
+	local stop = standIn(c, 3.6)
+	Q.pose(u.rig, Q.poses.sweepWind, 0.08)
+	slide(c.root, CFrame.lookAt(stop, stop + c.dir) + Vector3.new(0, c.root.Position.Y - stop.Y, 0), 0.12).Completed:Wait()
+	Q.swordTrail(u, true)
+	swish(1.2)
+	Q.pose(u.rig, Q.poses.sweepEnd, 0.1, Enum.EasingStyle.Back)
+	Q.contact(u.rig, t.rig, 0.1)
+	strike()
+	task.wait(0.2)
+	Q.swordTrail(u, false)
+end
+
+-- the Hollowed: a slow, drowning lunge, hands out for a memory
+Q.moves.grasp = function(B, u, t, strike, c)
+	local stop = standIn(c, 3.2)
+	camSide(c, stop, -1, 2, 2)
+	Q.pose(u.rig, Q.poses.reach, 0.35, Enum.EasingStyle.Sine)
+	task.wait(0.2)
+	slide(c.root, CFrame.lookAt(stop, Vector3.new(c.troot.Position.X, stop.Y, c.troot.Position.Z)) + Vector3.new(0, c.root.Position.Y - stop.Y, 0), 0.45, Enum.EasingStyle.Sine).Completed:Wait()
+	Q.ghost(u.rig, Color3.fromRGB(150, 150, 160), 0.6)
+	strike()
+	task.wait(0.35)
+end
+
+-- the Hollowed: arms thrown about blindly
+Q.moves.flail = function(B, u, t, strike, c)
+	local stop = standIn(c, 3.4)
+	camSide(c, stop, -1, 2, 2)
+	slide(c.root, CFrame.lookAt(stop, Vector3.new(c.troot.Position.X, stop.Y, c.troot.Position.Z)) + Vector3.new(0, c.root.Position.Y - stop.Y, 0), 0.3).Completed:Wait()
+	for i = 1, 3 do
+		Q.pose(u.rig, i % 2 == 1 and Q.poses.flailA or Q.poses.flailB, 0.1)
+		task.wait(0.1)
+	end
+	strike()
+	task.wait(0.25)
+end
+
+-- casting (Seris's code, heals, buffs): the casting pose and a ring of glowing code under the caster
+Q.castFx = function(u, sk, up)
+	local root = Q.rootOf(u)
+	if not root then return end
+	Q.pose(u.rig, up and Q.poses.castUp or Q.poses.cast, 0.15, Enum.EasingStyle.Back)
+	local color = u.color or Q.cyan
+	local gy = Q.groundY(root.Position, root.Position.Y - 3)
+	local ring = NeverYieldAgartha.part(Q.stage(), Vector3.new(0.1, 1, 1), CFrame.new(root.Position.X, gy + 0.08, root.Position.Z) * CFrame.Angles(0, 0, math.rad(90)), color, Enum.Material.Neon, "Cylinder",
+		{CanCollide = false, CanQuery = false, CanTouch = false, CastShadow = false, Transparency = 0.35})
+	TweenService:Create(ring, TweenInfo.new(0.35, Enum.EasingStyle.Back), {Size = Vector3.new(0.1, 6, 6)}):Play()
+	task.delay(0.9, function()
+		if ring.Parent then TweenService:Create(ring, TweenInfo.new(0.4), {Transparency = 1}):Play() end
+	end)
+	Services.Debris:AddItem(ring, 1.5)
+	local glyphs = NeverYieldAgartha.part(Q.stage(), Vector3.new(1, 1, 1), CFrame.new(root.Position.X, gy + 0.3, root.Position.Z), color, Enum.Material.Neon, nil, {Transparency = 1, CanCollide = false, CanQuery = false, CanTouch = false})
+	local e = Q.emitter(glyphs, Q.fxTex.dots, color, {Rate = 0, Lifetime = NumberRange.new(0.6, 1), Speed = NumberRange.new(2, 4), SpreadAngle = Vector2.new(25, 25),
+		Size = NumberSequence.new(0.25, 0), LightEmission = 1, Transparency = NumberSequence.new(0, 1)})
+	e:Emit(30)
+	Services.Debris:AddItem(glyphs, 1.5)
+	Q.sound(Q.sfx.magic, 0.5)
+	task.wait(0.25)
+end
+
+-- which move a skill plays
+Q.moveFor = function(u, sk)
+	if Q.moves[sk.move or sk.id] then return Q.moves[sk.move or sk.id] end
+	if u.side == "enemy" then return Q.moves.grasp end
+	if u.rig and u.rig:FindFirstChild("NYSword") then return Q.moves.combo end
+	return Q.moves.counter
+end
+
+-- [55_world.lua]
+-- ---------- the overworld: walk the real map, objectives, Seris following, roaming Hollowed, pickups ----------
+-- Q.explore(token, {objective, target = place name / Vector3, roamers = {...}, pickups = {...}}) lets you walk the
+-- real game until you reach the target (then returns true). Battles start where a Hollowed catches you.
+
+-- a named place in the current game: a spot kas marked (rpgspot), the map's own named area, or a reachable
+-- point picked once per chapter (cached in the save so it stays the same place)
+Q.place = function(name, minDist, maxDist)
+	local marked = Q.namedSpot(name)
+	if marked then return marked.Position end
+	local known = (Q.mapSpots[game.PlaceId] or {})[name]
+	if known then return Vector3.new(known[1], known[2], known[3]) end
+	local key = tostring(game.PlaceId) .. ":" .. name
+	Q.data.places = Q.data.places or {}
+	local cached = Q.data.places[key]
+	if cached then return Vector3.new(cached[1], cached[2], cached[3]) end
+	local p = Q.findSpot(minDist or 60, maxDist or 140)
+	if p then
+		Q.data.places[key] = {math.floor(p.X * 10) / 10, math.floor(p.Y * 10) / 10, math.floor(p.Z * 10) / 10}
+		Q.save()
+	end
+	return p
+end
+
+-- a spot you can walk to, between minDist and maxDist away (checked with Roblox pathfinding)
+Q.findSpot = function(minDist, maxDist, around)
+	local root = Q.root()
+	if not root then return nil end
+	local from = around or root.Position
+	local best
+	for _ = 1, 14 do
+		local ang = math.random() * math.pi * 2
+		local d = minDist + math.random() * (maxDist - minDist)
+		local guess = from + Vector3.new(math.cos(ang) * d, 0, math.sin(ang) * d)
+		local y = Q.groundY(guess + Vector3.new(0, 30, 0), nil)
+		if y then
+			local p = Vector3.new(guess.X, y, guess.Z)
+			local ok, path = pcall(function()
+				local path = Services.PathfindingService:CreatePath({AgentRadius = 2, AgentHeight = 5, AgentCanJump = true})
+				path:ComputeAsync(from, p)
+				return path
+			end)
+			if ok and path.Status == Enum.PathStatus.Success then return p end
+			best = best or p
+		end
+	end
+	return best
+end
+
+-- ---------- the objective window and the waypoint ----------
+Q.objective = function(text, target)
+	local screen = Q.screen()
+	if Q.objWin then Q.objWin:Destroy() Q.objWin = nil end
+	if Q.waypoint then Q.waypoint:Destroy() Q.waypoint = nil end
+	WackyState.disconnect("rpg_waypoint")
+	if not text then return end
+	local w = Q.win(screen, UDim2.new(0, 18, 0, 70), UDim2.new(0, 330, 0, 66), 44)
+	Q.text(w, {Position = UDim2.new(0, 14, 0, 6), Size = UDim2.new(1, -28, 0, 16), Text = "OBJECTIVE", Font = Enum.Font.GothamBold, TextSize = 12, TextColor3 = Color3.fromRGB(150, 200, 255)})
+	local body = Q.text(w, {Position = UDim2.new(0, 14, 0, 22), Size = UDim2.new(1, -28, 0, 40), Text = text, TextSize = 15, TextWrapped = true, TextYAlignment = Enum.TextYAlignment.Top})
+	Q.objWin = w
+	Q.sound(Q.sfx.select, 0.4, 0.8)
+	if not target then return end
+	-- a tall beam of light at the target and a distance tag on it
+	local beam = NeverYieldAgartha.part(Q.stage(), Vector3.new(0.6, 60, 0.6), CFrame.new(target + Vector3.new(0, 30, 0)), Q.cyan, Enum.Material.Neon, nil,
+		{CanCollide = false, CanQuery = false, CanTouch = false, CastShadow = false, Transparency = 0.45})
+	local ring = NeverYieldAgartha.part(Q.stage(), Vector3.new(0.1, 7, 7), CFrame.new(target + Vector3.new(0, 0.1, 0)) * CFrame.Angles(0, 0, math.rad(90)), Q.cyan, Enum.Material.Neon, "Cylinder",
+		{CanCollide = false, CanQuery = false, CanTouch = false, Transparency = 0.6})
+	ring.Parent = beam
+	local bb = Instance.new("BillboardGui")
+	bb.Size = UDim2.new(0, 160, 0, 40)
+	bb.StudsOffset = Vector3.new(0, -24, 0)
+	bb.AlwaysOnTop = true
+	bb.Parent = beam
+	local dist = NeverYieldPets.label(bb, {Size = UDim2.new(1, 0, 1, 0), Text = "", TextSize = 16, TextColor3 = Q.cyan, TextStrokeTransparency = 0.3, ZIndex = 1})
+	Q.waypoint = beam
+	-- an arrow at the edge of the screen when the target is off-screen
+	local arrow = Instance.new("Frame")
+	arrow.AnchorPoint = Vector2.new(0.5, 0.5)
+	arrow.Size = UDim2.new(0, 18, 0, 18)
+	arrow.Rotation = 45
+	arrow.BackgroundColor3 = Q.cyan
+	arrow.BorderSizePixel = 0
+	arrow.ZIndex = 44
+	arrow.Parent = w
+	Q.connect("waypoint", RunService.RenderStepped:Connect(function()
+		local root = Q.root()
+		if not root or not beam.Parent then return end
+		local d = (root.Position - target).Magnitude
+		dist.Text = math.floor(d) .. " studs"
+		local cam = workspace.CurrentCamera
+		local sp, onScreen = cam:WorldToViewportPoint(target + Vector3.new(0, 3, 0))
+		local vs = cam.ViewportSize
+		if onScreen and sp.Z > 0 then
+			arrow.Visible = false
+		else
+			arrow.Visible = true
+			local c = vs / 2
+			local dir = Vector2.new(sp.X, sp.Y) - c
+			if sp.Z < 0 then dir = -dir end
+			if dir.Magnitude < 1 then dir = Vector2.new(0, -1) end
+			dir = dir.Unit
+			local edge = c + dir * math.min(vs.X, vs.Y) * 0.42
+			arrow.Parent = Q.screen()
+			arrow.Position = UDim2.new(0, edge.X, 0, edge.Y)
+			arrow.Rotation = math.deg(math.atan2(dir.Y, dir.X)) + 45
+		end
+	end))
+end
+
+-- ---------- party members following you ----------
+-- Like a classic RPG party: they walk the exact path you walked (a trail of your footsteps), a few steps back,
+-- so they go around walls and up the same stairs you did instead of cutting straight through.
+Q.trail = {}
+Q.trailStep = function()
+	local me = Q.root()
+	if not me then return end
+	local hum = me.Parent and me.Parent:FindFirstChildOfClass("Humanoid")
+	local feet = me.Position.Y - (hum and hum.RigType == Enum.HumanoidRigType.R6 and 3 or ((hum and hum.HipHeight or 2) + me.Size.Y / 2))
+	local p = Vector3.new(me.Position.X, feet, me.Position.Z)
+	local last = Q.trail[#Q.trail]
+	if not last or (last - p).Magnitude > 0.6 then
+		if last and (last - p).Magnitude > 30 then Q.trail = {} end -- a teleport: start over
+		table.insert(Q.trail, p)
+		if #Q.trail > 200 then table.remove(Q.trail, 1) end
+	end
+end
+-- the point `back` studs behind you along your footsteps
+Q.trailPoint = function(back)
+	local n = #Q.trail
+	if n == 0 then return nil end
+	local left = back
+	for i = n, 2, -1 do
+		local seg = (Q.trail[i] - Q.trail[i - 1]).Magnitude
+		if seg >= left then return Q.trail[i]:Lerp(Q.trail[i - 1], left / seg) end
+		left = left - seg
+	end
+	return nil -- not that much trail yet: stay put
+end
+
+Q.follow = function(rig, slot)
+	local root = rig and rig:FindFirstChild("HumanoidRootPart")
+	if not root then return end
+	local hum = rig:FindFirstChildOfClass("Humanoid")
+	local hip = hum and hum.RigType == Enum.HumanoidRigType.R6 and 3 or ((hum and hum.HipHeight or 2) + root.Size.Y / 2)
+	local walking = false
+	local back = 3.5 + (math.max(slot or 1, 1) - 1) * 3
+	Q.connect("trail", RunService.Heartbeat:Connect(Q.trailStep))
+	Q.connect("follow_" .. (slot or 1), RunService.Heartbeat:Connect(function(dt)
+		local me = Q.root()
+		if not me or not rig.Parent then return end
+		local goal = Q.trailPoint(back)
+		if not goal then return end
+		goal = goal + Vector3.new(0, hip, 0)
+		local d = goal - root.Position
+		local flat = d * Vector3.new(1, 0, 1)
+		if d.Magnitude > 45 then
+			root.CFrame = CFrame.new(goal) * (me.CFrame - me.Position)
+			return
+		end
+		if flat.Magnitude > 0.8 then
+			local speed = math.min(26, 10 + flat.Magnitude * 2)
+			local np = root.Position + d.Unit * math.min(d.Magnitude, speed * dt)
+			root.CFrame = CFrame.lookAt(np, np + flat.Unit)
+			if not walking then walking = true Q.animate(rig, "walk") end
+		elseif walking then
+			walking = false
+			Q.animate(rig, "idle")
+		end
+	end))
+end
+
+Q.unfollow = function()
+	WackyState.disconnect("rpg_trail")
+	for i = 0, 3 do WackyState.disconnect("rpg_follow_" .. i) end
+end
+
+-- ---------- pickups ----------
+-- kind = "item" (gives Q.items[id]) or "lore" (a journal entry about the world)
+Q.pickup = function(pos, spec)
+	local P = NeverYieldAgartha.part
+	local color = spec.kind == "lore" and Color3.fromRGB(255, 220, 140) or Color3.fromRGB(120, 255, 170)
+	local gem = P(Q.stage(), Vector3.new(0.9, 0.9, 0.9), CFrame.new(pos + Vector3.new(0, 1.6, 0)), color, Enum.Material.Neon, nil, {CanCollide = false, CanQuery = false, CanTouch = false})
+	local l = Instance.new("PointLight")
+	l.Color, l.Range, l.Brightness = color, 10, 1.5
+	l.Parent = gem
+	Q.emitter(gem, Q.fxTex.specs, color, {Rate = 8, Lifetime = NumberRange.new(0.5, 1), Speed = NumberRange.new(0.5, 1.5), Size = NumberSequence.new(0.25, 0), LightEmission = 1, SpreadAngle = Vector2.new(180, 180)})
+	local base = gem.CFrame
+	local t0 = tick()
+	local conn
+	conn = RunService.Heartbeat:Connect(function()
+		if not gem.Parent then conn:Disconnect() return end
+		local t = tick() - t0
+		gem.CFrame = base * CFrame.new(0, math.sin(t * 2) * 0.3, 0) * CFrame.Angles(t, t * 1.3, 0)
+		local me = Q.root()
+		if me and (me.Position - gem.Position).Magnitude < 5 then
+			conn:Disconnect()
+			gem:Destroy()
+			Q.sound(Q.sfx.heal, 0.5, 1.2)
+			if spec.kind == "item" then
+				Q.data.items[spec.item] = (Q.data.items[spec.item] or 0) + (spec.count or 1)
+				Q.toast("Found " .. Q.items[spec.item].name .. ((spec.count or 1) > 1 and (" x" .. spec.count) or ""), 4)
+			else
+				Q.journalAdd(spec.id, spec.title, spec.lines)
+				Q.toast("\u{1F4DC} " .. spec.title .. "  (added to the Journal)", 5)
+			end
+			Q.data.picked = Q.data.picked or {}
+			Q.data.picked[spec.id] = true
+			Q.save()
+		end
+	end)
+	return gem
+end
+
+-- ---------- roaming Hollowed ----------
+-- they drift between points near their home (they're ghosts: walls don't stop them); get close and you fight
+Q.roamer = function(home, enemyId, radius, B)
+	local rig = Q.cast(Q.enemies[enemyId].look or "hollowed", {name = Q.enemies[enemyId].name})
+	if not rig then return end
+	Q.put(rig, CFrame.new(home))
+	local root = rig:FindFirstChild("HumanoidRootPart")
+	local hip = root.Position.Y - home.Y
+	local r = {rig = rig, enemy = enemyId, alive = true}
+	task.spawn(function()
+		local lines = Q.enemies[enemyId].lines and Q.enemies[enemyId].lines.start or {"> i'm sorry"}
+		while r.alive and rig.Parent do
+			local ang = math.random() * math.pi * 2
+			local d = math.random() * (radius or 18)
+			local to = home + Vector3.new(math.cos(ang) * d, 0, math.sin(ang) * d)
+			to = Vector3.new(to.X, Q.groundY(to + Vector3.new(0, 10, 0), home.Y) + hip, to.Z)
+			local dist = (to - root.Position).Magnitude
+			if dist > 1 then
+				root.CFrame = CFrame.lookAt(root.Position, Vector3.new(to.X, root.Position.Y, to.Z))
+				Q.animate(rig, "walk")
+				local tw = TweenService:Create(root, TweenInfo.new(dist / 5, Enum.EasingStyle.Linear), {CFrame = CFrame.lookAt(to, to + root.CFrame.LookVector)})
+				tw:Play()
+				local t0 = tick()
+				while r.alive and tick() - t0 < dist / 5 do task.wait(0.1) end
+				tw:Cancel()
+				Q.animate(rig, "idle")
+			end
+			if math.random() < 0.35 then Q.bubble(rig, WackyState.pick(lines), 3) end
+			local t0 = tick()
+			while r.alive and tick() - t0 < 1.5 + math.random() * 2 do task.wait(0.1) end
+		end
+	end)
+	return r
+end
+
+-- ---------- exploring ----------
+Q.explore = function(token, spec)
+	local target = spec.target
+	Q.sceneEnd()
+	Q.objective(spec.objective, target)
+	Q.playMusic(spec.music or "explore", 0.3)
+	-- Seris (and later the others) walk behind you
+	local followers = {}
+	for i, id in ipairs(Q.data.active) do
+		if id ~= "vane" and Q.data.joined[id] then
+			local rig = Q.cast(id)
+			if rig then
+				local me = Q.root()
+				if me then Q.put(rig, me.CFrame * CFrame.new(i * 2.6, -3, 4.5)) end
+				Q.follow(rig, i - 1)
+				table.insert(followers, rig)
+			end
+		end
+	end
+	-- roaming Hollowed and pickups along the way
+	local roamers = {}
+	for _, rs in ipairs(spec.roamers or {}) do
+		if not (Q.data.cleared and Q.data.cleared[rs.id]) then
+			local home = rs.pos or (target and Q.root() and Q.root().Position:Lerp(target, rs.along or 0.5)) or Q.findSpot(30, 60)
+			if home and not rs.pos then
+				local p = Q.findSpot(4, 14, home)
+				home = p or home
+			end
+			if home then
+				local r = Q.roamer(home, rs.enemy, rs.radius, nil)
+				if r then r.id = rs.id r.party = rs.party table.insert(roamers, r) end
+			end
+		end
+	end
+	local gems = {}
+	for _, pk in ipairs(spec.pickups or {}) do
+		if not (Q.data.picked and Q.data.picked[pk.id]) then
+			local spot = pk.pos or (target and Q.root() and Q.root().Position:Lerp(target, pk.along or 0.5))
+			if spot then
+				local p = Q.findSpot(3, 12, spot) or spot
+				table.insert(gems, Q.pickup(p, pk))
+			end
+		end
+	end
+	-- M opens the menu while exploring
+	Q.connect("menuKey", UserInputService.InputBegan:Connect(function(input, processed)
+		if not processed and input.KeyCode == Enum.KeyCode.M and not Q.inMenu then
+			Q.inMenu = true
+			task.spawn(function()
+				pcall(Q.pauseMenu, token)
+				Q.inMenu = false
+			end)
+		end
+	end))
+	local reached = false
+	while Q.alive(token) and not reached do
+		task.wait(0.15)
+		local me = Q.root()
+		if me and not Q.inMenu then
+			-- caught by a Hollowed?
+			for _, r in ipairs(roamers) do
+				local rr = r.alive and r.rig:FindFirstChild("HumanoidRootPart")
+				if rr and (rr.Position - me.Position).Magnitude < 7 then
+					r.alive = false
+					Q.bubble(r.rig, "!", 1)
+					Q.sound(Q.sfx.whisper, 0.5)
+					task.wait(0.4)
+					Q.unfollow()
+					for _, f in ipairs(followers) do f.Parent = nil end
+					r.rig:Destroy()
+					-- the fight happens right here, facing where it came from
+					local keep = Q.anchor
+					local look = (rr.Position - me.Position) * Vector3.new(1, 0, 1)
+					local gy = Q.groundY(me.Position, me.Position.Y - 3)
+					Q.anchor = CFrame.lookAt(Vector3.new(me.Position.X, gy, me.Position.Z), Vector3.new(me.Position.X, gy, me.Position.Z) + (look.Magnitude > 0.1 and look.Unit or Vector3.new(0, 0, -1)))
+					Q.objective(nil)
+					local enemies = {r.enemy}
+					for _, extra in ipairs(r.party or {}) do table.insert(enemies, extra) end
+					local won = Q.battle(token, {enemies = enemies, music = "battle"})
+					Q.anchor = keep
+					if not won then return false end
+					Q.data.cleared = Q.data.cleared or {}
+					if r.id then Q.data.cleared[r.id] = true end
+					Q.data.stats.hollowed = (Q.data.stats.hollowed or 0) + 1
+					Q.save()
+					Q.playMusic(spec.music or "explore", 0.3)
+					Q.objective(spec.objective, target)
+					for i, f in ipairs(followers) do
+						f.Parent = Q.stage()
+						local m2 = Q.root()
+						if m2 then Q.put(f, m2.CFrame * CFrame.new(i * 2.6, -3, 4.5)) end
+						Q.follow(f, i)
+					end
+					break
+				end
+			end
+			if target and (me.Position - target).Magnitude < (spec.radius or 12) then reached = true end
+		end
+	end
+	Q.unfollow()
+	for _, f in ipairs(followers) do pcall(function() f:Destroy() end) end
+	for _, r in ipairs(roamers) do r.alive = false pcall(function() r.rig:Destroy() end) end
+	-- pickups you walked past stay in the save as not found; they come back if this part is replayed
+	for _, g in ipairs(gems) do pcall(function() g:Destroy() end) end
+	WackyState.disconnect("rpg_menuKey")
+	Q.objective(nil)
+	return reached
+end
+
+-- the pause menu while exploring (M)
+Q.pauseMenu = function(token)
+	local opts = {"Items", "Journal", "Arms", "Ledger", "Party", "Back"}
+	local pick = opts[Q.choose(token, opts, "MENU", {z = 80, width = 300})]
+	if pick == "Journal" then Q.reader(token, "Journal", Q.journalLines())
+	elseif pick == "Arms" then Q.reader(token, "Arms", Q.armLines())
+	elseif pick == "Ledger" then Q.reader(token, "Ledger", Q.ledgerLines())
+	elseif pick == "Items" then
+		local lines = {}
+		for id, n in pairs(Q.data.items) do
+			if n > 0 and Q.items[id] then table.insert(lines, {t = Q.items[id].name .. "  x" .. n .. "   -   " .. (Q.items[id].desc or "")}) end
+		end
+		Q.reader(token, "Items", lines)
+	elseif pick == "Party" then
+		local lines = {}
+		for id in pairs(Q.data.joined) do
+			local m = Q.member(id)
+			local saved = Q.data.party and Q.data.party[id]
+			table.insert(lines, {t = m.name .. "   Lv " .. m.level .. "   HP " .. (saved and saved.hp or m.hp) .. "/" .. m.hp .. "   MP " .. (saved and saved.mp or m.mp) .. "/" .. m.mp, font = Enum.Font.GothamBold})
+			local names = {}
+			for _, sk in ipairs(m.skills) do table.insert(names, Q.skillName(sk)) end
+			table.insert(lines, {t = "   Skills: " .. table.concat(names, ", "), color = Color3.fromRGB(170, 190, 230), gap = 8})
+		end
+		Q.reader(token, "Party", lines)
+	end
 end
 
 -- [60_data.lua]
@@ -35399,109 +36594,175 @@ Q.enemies = {
 }
 
 -- [70_ch1.lua]
--- ---------- DISC ONE, CHAPTER 1: THE COLLAPSE OF THE ACADEMY (Genovia High, the courtyard) ----------
--- Changed from the story file (kas gave Claude the reins): the tutorial fight happens here, in the courtyard,
--- before the first gate, so Chapter 1 has its first battle in its own world. The Hollowed Student is from this
--- academy anyway. The morning-after scenes in the grass open Chapter 2.
+-- ---------- DISC ONE, CHAPTER 1: THE COLLAPSE OF THE ACADEMY (Genovia High) ----------
+-- Played on the real map: a short opening where you stand, then you walk the academy (Seris following, Hollowed
+-- drifting through the halls, things to find) to the archives (the Library), fight the Hollowed Student there,
+-- and climb to the Astronomy tower, where the Key can open a gate to open sky.
+-- Changed from the story file (kas gave Claude the reins): the tutorial fight and the walk happen in this world.
+
+Q.music.explore = {87279187741090, 123816023992616, 128518235802809, 1838577168}
+Q.enemies.hollowed_classmate = {name = "Hollowed Classmate", look = "hollowed", hp = 120, atk = 10, def = 6, mag = 5, spd = 9, xp = 28, items = {},
+	weeps = true,
+	skills = {
+		{id = "grasp", name = "Grasp for a Memory", kind = "attack", power = 1.15, status = {id = "fading", chance = 0.25, turns = 2}},
+		{id = "flail", name = "Flail", kind = "attack", power = 0.95},
+		{id = "weep", name = "i'm sorry", kind = "weep"},
+	},
+	lines = {
+		start = {"> who are you", "> is class still on", "> i'm sorry i forgot your name", "> did you see where everyone went"},
+		hurt = {"> sorry", "> i'm sorry", "> ow. it's ok"},
+		death = {"> oh. it's quiet now.", "> tell them i came to class"},
+	}}
+
+local function seris(token)
+	local s = Q.cast("seris")
+	return s
+end
 
 Q.chapters[1].scenes = {
 	{id = "c1_collapse", title = "The Collapse of the Academy", run = function(token)
 		Q.titleCard(token, {"Nothing you love is ever lost.", "It is only ever being carried by someone else."}, 3)
 		Q.titleCard(token, {"THE NULL-BYTE REQUIEM", "DISC ONE  -  WHAT IT TAKES", "CHAPTER 1  -  THE COLLAPSE OF THE ACADEMY"}, 3.5)
 		if not Q.alive(token) then return end
+		Q.anchor = nil
 		Q.sceneStart("courtyard")
 		Q.playMusic("title", 0.4)
 		Q.deSync(token, 1)
-		-- Seris on her knees, watching the archives burn into nothing
-		local seris = Q.cast("seris")
-		Q.put(seris, Q.spot(-3, 8, -3, 30))
-		Q.animate(seris, "sit")
-		local you = Q.root()
-		-- the opening shot: high above the courtyard, drifting down behind Vane
-		Q.camTo(Q.pt(0, 34, -26), Q.pt(0, 6, 30), 0)
-		Q.camGo(Q.pt(5, 6, -9), Q.pt(-2, 3, 18), 9, "linear")
+		local me = Q.vane()
+		local s = seris(token)
+		Q.put(s, Q.spot(-2.5, 6, -2.5, 30))
+		Q.sit(s, true)
+		-- high over the academy, drifting down onto Vane
+		Q.camTo(Q.clearShot(Q.pt(0, 4.5, 0), Q.pt(0, 30, -22)), Q.pt(0, 4, 26), 0)
+		Q.shot("wide", me, nil, 7)
 		Q.direct(token, "The sky above the grand library is bleeding pixels. The marble pillars of the academy are fraying into wireframes, their textures peeling upward like burning paper that makes no sound.")
-		Q.direct(token, "Vane stands near the edge of the courtyard, the Null-Byte Key pulsing a heavy, cold blue in his hand. Seris is on her knees, watching the great archives burn into nothingness. The wind is entirely silent.")
+		Q.direct(token, "Vane stands near the edge of the courtyard, the Null-Byte Key pulsing a heavy, cold blue in his hand. Seris is on her knees, watching the great archives burn into nothingness.")
 		Q.keyProp(true)
-		Q.camGo(Q.pt(2.5, 4, 1.5), you and you.Position + Vector3.new(0, 1.5, 0) or Q.pt(0, 2, 0), 1.2)
+		Q.shot("medium", me, nil, 1.2)
 		Q.say(token, "VANE", "We are out of time, Seris. The root code is failing.", {color = Q.cyan})
-		Q.camGo(Q.pt(-6, 2.6, 4), Q.pt(-3, 2, 8), 1.2)
+		Q.face(s, me)
+		Q.shot("medium", s, nil, 1.2, -1)
 		Q.say(token, "SERIS", "If we jump now... what will it take this time? Last time it took the color of the ocean. I don't know what it looks like anymore.", {color = Q.members.seris.color})
+		Q.shot("close", s, nil, 0.8, -1)
 		Q.say(token, "SERIS", "What if it takes the day we met? What if it takes her face?", {color = Q.members.seris.color})
-		Q.camGo(Q.pt(1.6, 3, 2.2), you and you.Position + Vector3.new(0, 0.5, 0) or Q.pt(0, 1, 0), 1)
+		Q.shot("close", me, nil, 1)
 		Q.flickerHand(5)
 		Q.sound(Q.sfx.static, 0.25)
-		Q.direct(token, "Vane tightens his grip on his heavy blade. He looks down at his own hand. It is flickering.")
+		Q.direct(token, "Vane looks down at his own hand. It is flickering.")
 		Q.say(token, "VANE", "If we stay, it takes everything. All at once.", {color = Q.cyan})
-		Q.sceneEnd()
-		Q.wieldSword(Q.vane(), "back")
-		Q.seris = seris
+		Q.sit(s, false)
+		Q.shot("two", s, me, 1.2)
+		Q.say(token, "SERIS", "Then not here. Not in the courtyard. My notes are in the archives - every name I ever wrote down. I'm not leaving them to burn.", {color = Q.members.seris.color})
+		Q.say(token, "VANE", "Then we go through the archives. And up to the tower. The Key needs open sky.", {color = Q.cyan})
+		s:Destroy()
+		Q.join("seris")
+		Q.flag("hardcode", false)
+		Q.wieldSword(me, "back")
+	end},
+
+	{id = "c1_halls", title = "The Burning Halls", run = function(token)
+		Q.deSync(token, 1)
+		local target = Q.place("library", 60, 140)
+		Q.explore(token, {objective = "Reach the archives (the Library) before they burn away.", target = target,
+			roamers = {
+				{id = "c1_r1", enemy = "hollowed_classmate", along = 0.4, radius = 14},
+				{id = "c1_r2", enemy = "hollowed_classmate", along = 0.75, radius = 12},
+			},
+			pickups = {
+				{id = "c1_p1", kind = "item", item = "patch", along = 0.3},
+				{id = "c1_card", kind = "lore", title = "A Library Card", along = 0.6,
+					lines = {"Third floor reading room. Seat 41.", "On the back, in tiny careful letters: 'this is MY seat.  - i.'"}},
+			}})
 	end},
 
 	{id = "c1_weeping", title = "Something Weeping in the Archives", run = function(token)
-		Q.sceneStart("courtyard")
-		Q.deSync(token, 1)
-		local seris = Q.seris and Q.seris.Parent and Q.seris or Q.cast("seris")
-		Q.put(seris, Q.spot(-4, 3, 0, 20))
-		Q.animate(seris, "idle")
-		-- a figure stumbles out of the archives: a student, its face a smooth gray default, its name tag garbage
+		Q.anchor = nil
+		Q.sceneStart("library")
+		Q.deSync(token, 1.4)
+		local me = Q.vane()
+		local s = seris(token)
+		Q.put(s, Q.spot(-3.5, 1, 0, 20))
+		-- the archives burning into nothing: fire, ash, pixels
+		for i = -1, 1 do
+			local pad = NeverYieldAgartha.part(Q.stage(), Vector3.new(6, 0.2, 2), Q.spot(i * 7, 24, 0, 0) * CFrame.new(0, 0.1, 0), Color3.new(), nil, nil, {Transparency = 1, CanCollide = false})
+			Q.emitter(pad, "rbxasset://textures/particles/fire_main.dds", Color3.fromRGB(150, 140, 255), {Rate = 14, Lifetime = NumberRange.new(0.8, 1.6), Speed = NumberRange.new(3, 6),
+				Size = NumberSequence.new(2.2, 0), LightEmission = 0.8, EmissionDirection = Enum.NormalId.Top})
+		end
 		local student = Q.cast("hollowedStudent")
-		Q.put(student, Q.spot(2, 30, 0, 0))
+		Q.put(student, Q.spot(2, 26, 0, 0))
 		Q.playMusic(nil)
 		Q.sound(Q.sfx.weep, 0.4)
-		Q.camGo(Q.pt(-3, 3, 8), Q.pt(2, 3, 26), 1.5)
-		task.spawn(Q.walk, student, Q.spot(1, 17, 0, 0), 3)
-		Q.direct(token, "A figure stumbles out of the burning archives. An avatar in this academy's uniform, its face a smooth gray default, its name tag scrolling garbage characters.")
+		-- over Seris's shoulder as it comes out of the shelves (the aisle is too narrow to see both from the side)
+		Q.shot("ots", s, student, 1.5)
+		task.spawn(Q.walk, student, Q.spot(1, 15, 0, 0), 3)
+		Q.direct(token, "A figure stumbles out of the burning shelves. An avatar in this academy's uniform, its face a smooth gray default, its name tag scrolling garbage characters.")
+		Q.shot("medium", student, nil, 1)
 		Q.say(token, nil, "> i'm sorry", {rig = student})
 		Q.say(token, nil, "> i'm sorry i was going to remember you", {rig = student})
 		Q.say(token, nil, "> please can i have one. just one. i'll give it back", {rig = student})
+		Q.face(s, student)
+		Q.shot("medium", s, nil, 1, -1)
 		Q.say(token, "SERIS", "A Hollowed. It jumped too many times... there's nothing left in it to pay with.", {color = Q.members.seris.color})
 		Q.say(token, "SERIS", "It's going to try to take one from us. Vane - don't let it.", {color = Q.members.seris.color})
 		Q.sceneEnd()
 		student:Destroy()
-		seris:Destroy()
-		Q.seris = nil
-		-- Seris fights from here on
-		Q.join("seris")
-		Q.flag("hardcode", false)
+		s:Destroy()
 		local won = Q.battle(token, {enemies = {"hollowed_student"}, music = "battle", tutorial = true})
 		if not won then return end
 		Q.data.stats.hollowed = (Q.data.stats.hollowed or 0) + 1
-	end},
-
-	{id = "c1_names", title = "Names", run = function(token)
-		Q.sceneStart("courtyard")
-		Q.deSync(token, 1)
+		-- afterwards
+		Q.sceneStart()
 		Q.playMusic("sad", 0.3)
-		local seris = Q.cast("seris")
-		Q.put(seris, Q.spot(-3, 5, -3, 14))
-		Q.camGo(Q.pt(-7, 2.5, 3), Q.pt(-3, 2, 6), 1.5)
-		Q.direct(token, "When the Hollowed falls, it doesn't die. It sits down in the grass, covers its face, and slowly derenders.")
+		s = seris(token)
+		Q.put(s, Q.spot(-3, 4, 0, 10))
+		Q.shot("medium", s, nil, 1.5, -1)
+		Q.direct(token, "When the Hollowed falls, it doesn't die. It sits down, covers its face, and slowly derenders. Its last words hang in the air a moment after it's gone.")
 		Q.direct(token, "Seris doesn't speak for a long time after that.")
 		Q.say(token, "SERIS", "That was someone in my year. I think.", {color = Q.members.seris.color})
-		Q.animate(seris, "point")
+		Q.animate(s, "point")
 		Q.direct(token, "She checks her arm. There's nothing about it there.")
+		Q.shot("close", s, nil, 1, -1)
 		Q.say(token, "SERIS", "I should have written down more names.", {color = Q.members.seris.color})
-		Q.camGo(Q.pt(-1.5, 3.5, 1), Q.pt(-3, 2.6, 6), 2)
-		Q.direct(token, "She stands slowly. Her tears render as small, perfect glass spheres.")
-		Q.say(token, "SERIS", "There is a server out there, Vane. Across the void. I have to believe it's still running.", {color = Q.members.seris.color, slow = true})
-		Q.say(token, "SERIS", "I have to believe she is looking up at the same magenta sky, waiting for me.", {color = Q.members.seris.color, slow = true})
-		Q.seris = seris
+		s:Destroy()
+	end},
+
+	{id = "c1_stairs", title = "Open Sky", run = function(token)
+		Q.deSync(token, 1.4)
+		local target = Q.place("astronomy", 90, 200)
+		Q.explore(token, {objective = "Climb to the Astronomy tower. The Key needs open sky.", target = target,
+			roamers = {
+				{id = "c1_r3", enemy = "hollowed_classmate", along = 0.45, radius = 14},
+				{id = "c1_r4", enemy = "hollowed_classmate", along = 0.8, radius = 10, party = {"hollowed_classmate"}},
+			},
+			pickups = {
+				{id = "c1_p2", kind = "item", item = "ether", along = 0.5},
+				{id = "c1_note", kind = "lore", title = "A Note Under a Desk", along = 0.25,
+					lines = {"if anyone finds this: we jumped. i paid with my birthday. i don't know which one.", "it's fine. i have others. i think."}},
+			}})
 	end},
 
 	{id = "c1_toll", title = "The First Gate", run = function(token)
-		if not Q.camConn then Q.sceneStart("courtyard") end
-		Q.deSync(token, 1.4)
+		Q.anchor = nil
+		Q.sceneStart("astronomy")
+		Q.deSync(token, 1.6)
 		Q.keyProp(true)
-		local seris = Q.seris and Q.seris.Parent and Q.seris or Q.cast("seris")
-		Q.put(seris, Q.spot(-3, 3, 0, 7))
+		local me = Q.vane()
+		local s = seris(token)
+		Q.put(s, Q.spot(-3, 2, 0, 8))
+		Q.face(s, me)
 		Q.playMusic(nil)
+		Q.shot("two", s, me, 1.5)
+		Q.say(token, "SERIS", "There is a server out there, Vane. Across the void. I have to believe it's still running.", {color = Q.members.seris.color, slow = true})
+		Q.shot("close", s, nil, 1, -1)
+		Q.say(token, "SERIS", "I have to believe she is looking up at the same magenta sky, waiting for me.", {color = Q.members.seris.color, slow = true})
+		Q.face(s, Q.pt(0, 0, 8))
+		Q.shot("ots", me, Q.pt(0, 4, 7), 1.2)
 		Q.direct(token, "Vane activates the Key. A jagged tear opens in the fabric of the world, revealing a lush, tragic, unfamiliar forest on the other side. The interface demands its toll.")
-		-- the journal keeps the one thing this toll will take
 		Q.journalAdd("c1_memory", "What Vane Carried", {"Two girls in a doorway, laughing at something he said.", "Their laughter, all the way up the stairs."})
 		Q.tollGate(token, {
 			to = 2,
 			before = function()
+				Q.shot("close", me, nil, 0.8)
 				Q.say(token, "VANE", "Forgive me.", {color = Q.cyan, slow = true})
 			end,
 			toll = {who = "vane", memory = "their laughter", journal = {id = "c1_memory", words = {"laugh"}}},
@@ -35510,67 +36771,134 @@ Q.chapters[1].scenes = {
 	end},
 }
 
+-- a real campfire at cf (on the ground); returns the fire's core part
+Q.campfire = function(cf)
+	local P = NeverYieldAgartha.part
+	local model = Instance.new("Model")
+	model.Name = randomString()
+	model.Parent = Q.stage()
+	local base = CFrame.new(cf.Position)
+	local noCol = {CanCollide = false, CanQuery = false, CanTouch = false}
+	local rng = Random.new(7)
+	for i = 1, 9 do
+		local a = i / 9 * math.pi * 2
+		P(model, Vector3.new(0.7, 0.45, 0.55) * rng:NextNumber(0.8, 1.2), base * CFrame.new(math.cos(a) * 1.5, 0.2, math.sin(a) * 1.5) * CFrame.Angles(0, -a, rng:NextNumber(-0.2, 0.2)),
+			Color3.fromRGB(95, 92, 88), Enum.Material.Slate, nil, noCol)
+	end
+	for i = 1, 4 do
+		local a = i / 4 * math.pi * 2 + 0.4
+		-- leaning in like a teepee (a cylinder's length runs along its X axis)
+		P(model, Vector3.new(2.3, 0.35, 0.35), base * CFrame.Angles(0, a, 0) * CFrame.new(0.55, 0.55, 0) * CFrame.Angles(0, 0, math.rad(-35)),
+			Color3.fromRGB(72, 48, 30), Enum.Material.Wood, "Cylinder", noCol)
+	end
+	local embers = P(model, Vector3.new(1.6, 0.15, 1.6), base * CFrame.new(0, 0.1, 0), Color3.fromRGB(255, 110, 40), Enum.Material.Neon, "Cylinder", noCol)
+	embers.Size = Vector3.new(0.15, 1.7, 1.7)
+	embers.CFrame = base * CFrame.new(0, 0.12, 0) * CFrame.Angles(0, 0, math.rad(90))
+	local core = P(model, Vector3.new(0.5, 0.5, 0.5), base * CFrame.new(0, 0.6, 0), Color3.new(), Enum.Material.SmoothPlastic, nil, {CanCollide = false, CanQuery = false, CanTouch = false, Transparency = 1})
+	Q.emitter(core, Q.fxTex.fire1, Color3.fromRGB(255, 150, 60), {Rate = 22, Lifetime = NumberRange.new(0.5, 0.9), Speed = NumberRange.new(2, 3.5), SpreadAngle = Vector2.new(12, 12),
+		Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 1.3), NumberSequenceKeypoint.new(1, 0.2)}), Transparency = NumberSequence.new(0.1, 1), LightEmission = 0.9,
+		Rotation = NumberRange.new(-20, 20), Acceleration = Vector3.new(0, 2, 0)})
+	Q.emitter(core, Q.fxTex.fire2, Color3.fromRGB(255, 220, 120), {Rate = 14, Lifetime = NumberRange.new(0.3, 0.6), Speed = NumberRange.new(1.5, 2.5), SpreadAngle = Vector2.new(8, 8),
+		Size = NumberSequence.new(0.8, 0.1), Transparency = NumberSequence.new(0, 1), LightEmission = 1})
+	Q.emitter(core, Q.fxTex.dots, Color3.fromRGB(255, 170, 70), {Rate = 6, Lifetime = NumberRange.new(1.2, 2), Speed = NumberRange.new(2, 4), SpreadAngle = Vector2.new(25, 25),
+		Size = NumberSequence.new(0.12, 0), LightEmission = 1, Acceleration = Vector3.new(0, 1, 0)})
+	Q.emitter(core, Q.fxTex.smoke, Color3.fromRGB(70, 70, 75), {Rate = 4, Lifetime = NumberRange.new(2.5, 3.5), Speed = NumberRange.new(2, 3), SpreadAngle = Vector2.new(10, 10),
+		Size = NumberSequence.new(1, 4), Transparency = NumberSequence.new(0.7, 1), Rotation = NumberRange.new(0, 360)})
+	local flame = Instance.new("Fire")
+	flame.Size, flame.Heat = 3.2, 7
+	flame.Color, flame.SecondaryColor = Color3.fromRGB(255, 120, 40), Color3.fromRGB(255, 220, 110)
+	flame.Parent = core
+	local glow = Instance.new("PointLight")
+	glow.Color, glow.Range, glow.Brightness, glow.Shadows = Color3.fromRGB(255, 160, 80), 20, 2.2, true
+	glow.Parent = core
+	task.spawn(function()
+		while core.Parent do
+			glow.Brightness = 1.8 + math.random() * 0.9
+			embers.Color = Color3.fromRGB(255, 90 + math.random(0, 50), 30)
+			task.wait(0.08 + math.random() * 0.1)
+		end
+	end)
+	return core
+end
+
 -- ---------- CHAPTER 2 opening: the morning after the first gate (Medieval Life) ----------
 Q.chapters[2].scenes = {
 	{id = "c2_grass", title = "It's Completely Quiet", run = function(token)
 		Q.titleCard(token, {"CHAPTER 2", "THE VERDANT KINGDOM"}, 2.5)
+		Q.anchor = nil
 		Q.sceneStart("forest")
 		Q.playMusic("sad", 0.3)
-		local seris = Q.cast("seris")
-		Q.put(seris, Q.spot(-4, 2, 0, 0))
-		Q.animate(seris, "sit")
-		Q.camTo(Q.pt(0, 22, 4), Q.pt(0, 0, 2), 0)
-		Q.camGo(Q.pt(3, 4, -4), Q.pt(-1, 1, 2), 6, "linear")
+		local me = Q.vane()
+		local s = seris(token)
+		Q.put(s, Q.spot(-4, 2, 0, 0))
+		Q.sit(s, true)
+		Q.camTo(Q.pt(0, 22, 3), Q.pt(0, 0, 2), 0)
+		Q.shot("wide", me, nil, 6)
 		Q.direct(token, "When Vane opens his eyes, he is lying in the grass. The sky is a brilliant, mocking blue. The academy is gone. Seris is lying a few feet away, breathing heavily, but safe.")
-		Q.direct(token, "Vane reaches into his inventory. He pulls out the corrupted image file: two blurry, pixelated figures in a doorway. He feels a profound, aching numbness - a hollow space where a feeling used to be.")
-		Q.camGo(Q.pt(-6, 2.4, 4), Q.pt(-4, 1.6, 2), 1.2)
+		Q.shot("medium", me, nil, 1.2)
+		Q.direct(token, "Vane pulls out the corrupted image file: two blurry, pixelated figures in a doorway. He feels a profound, aching numbness - a hollow space where a feeling used to be.")
+		Q.face(s, me)
+		Q.shot("medium", s, nil, 1.2, -1)
 		Q.say(token, "SERIS", "Vane... what did it take?", {color = Q.members.seris.color})
-		Q.camGo(Q.pt(1.5, 2.8, 2.5), Q.pt(0, 1.8, 0), 1.2)
+		Q.shot("close", me, nil, 1.2)
 		Q.say(token, "VANE", "I remember I have to find them. But... I don't remember their laughter anymore.", {color = Q.cyan, slow = true})
 		Q.say(token, "VANE", "It's completely quiet.", {color = Q.cyan, slow = true})
-		Q.direct(token, "He stands up, the heavy sword dragging in the dirt: a man walking toward a destination he must reach, even as the reasons why slowly fade away.")
-		Q.sceneEnd()
-		seris:Destroy()
+		Q.sit(s, false)
+		Q.shot("two", s, me, 1.2)
+		Q.say(token, "SERIS", "It'll be dark soon. We need somewhere to make camp.", {color = Q.members.seris.color})
+		s:Destroy()
+	end},
+
+	{id = "c2_findcamp", title = "Somewhere to Rest", run = function(token)
+		local target = Q.place("camp", 50, 110)
+		Q.explore(token, {objective = "Find somewhere to make camp before dark.", target = target, music = "camp",
+			roamers = {{id = "c2_r1", enemy = "hollowed_classmate", along = 0.55, radius = 14}},
+			pickups = {{id = "c2_p1", kind = "item", item = "patch", along = 0.35}}})
 	end},
 
 	{id = "c2_campfire", title = "You're in My Cache", run = function(token)
-		Q.sceneStart("forest")
+		Q.anchor = nil
+		Q.sceneStart()
 		Q.playMusic("camp", 0.3)
-		-- a campfire
-		local fire = NeverYieldAgartha.part(Q.stage(), Vector3.new(1.6, 0.4, 1.6), Q.spot(0, 5, 0, 0) * CFrame.new(0, 0.2, 0), Color3.fromRGB(60, 40, 30), Enum.Material.Wood)
-		local flame = Instance.new("Fire")
-		flame.Heat, flame.Size = 6, 4
-		flame.Parent = fire
-		local glow = Instance.new("PointLight")
-		glow.Color, glow.Range, glow.Brightness = Color3.fromRGB(255, 170, 90), 18, 2
-		glow.Parent = fire
-		WackyState.sound(Q.sfx.fire or 9112780212, fire, 0.4, true)
-		local seris = Q.cast("seris")
-		Q.put(seris, Q.spot(-3.5, 5, 0, 5))
-		Q.animate(seris, "sit")
-		Q.camGo(Q.pt(-6, 3, 9), Q.pt(-3, 1.5, 5), 1.5)
+		local me = Q.vane()
+		-- a campfire: a ring of stones, crossed logs, glowing embers, flames, smoke, flickering light
+		local fire = Q.campfire(Q.spot(0, 5, 0, 0))
+		WackyState.sound(9112780212, fire, 0.4, true)
+		local s = seris(token)
+		Q.put(s, Q.spot(-3.5, 5, 0, 5))
+		Q.sit(s, true)
+		Q.face(me, fire.Position)
+		Q.shot("two", s, me, 1.5)
 		Q.direct(token, "That night, they make camp under a tree whose leaves have started to render one polygon at a time. Seris sits cross-legged in the firelight with a stylus between her teeth, rolling up her left sleeve.")
-		Q.direct(token, "Her forearm is already written on. Neat, cramped lines in glowing cyan:")
 		for _, line in ipairs({"local ines = { eyes = \"brown, gold at the edge\", laugh = \"snorts\" }", "-- she hates cilantro. she pretends she doesn't. let her.",
 			"-- the ocean was BLUE-GREEN. you liked it. (you don't remember. fine.)", "-- mom: calls you 'Ser-IS', up at the end. like a question she already knows the answer to."}) do
 			Q.armWrite("seris", line)
 		end
+		Q.shot("close", s, nil, 1.2, -1)
 		Q.say(token, nil, "local ines = { eyes = \"brown, gold at the edge\", laugh = \"snorts\" }\n-- she hates cilantro. she pretends she doesn't. let her.\n-- the ocean was BLUE-GREEN. you liked it. (you don't remember. fine.)", {tall = true, stage = true})
 		Q.armWrite("seris", "-- vane lost their laughter today. be kind to him tomorrow.")
 		Q.direct(token, "She adds a new line, very slowly, under the last one: \"-- vane lost their laughter today. be kind to him tomorrow.\"")
+		Q.shot("medium", me, nil, 1)
 		Q.say(token, "VANE", "You're writing about me now.", {color = Q.cyan})
+		Q.shot("medium", s, nil, 0.8, -1)
 		Q.say(token, "SERIS", "You're in my cache. Might as well index you.", {color = Q.members.seris.color})
+		Q.shot("medium", me, nil, 0.8)
 		Q.say(token, "VANE", "What happens when you run out of arm?", {color = Q.cyan})
+		Q.shot("medium", s, nil, 0.8, -1)
 		Q.say(token, "SERIS", "I have two.", {color = Q.members.seris.color})
 		Q.say(token, "SERIS", "And legs. And a back, if you're ever useful enough to hold the stylus.", {color = Q.members.seris.color})
+		Q.shot("close", me, nil, 1)
 		Q.direct(token, "He almost smiles. It doesn't quite load.")
-		Q.camGo(Q.pt(2, 2.4, 2), Q.pt(0, 1.6, 0), 2)
+		Q.shot("wide", me, nil, 3)
 		Q.direct(token, "Later, when he thinks she's asleep, Vane holds the image file up to the firelight and hums. A slow, four-note tune that climbs and then falls, like someone carrying something heavy up a flight of stairs and setting it down gently at the top.")
+		Q.shot("medium", s, nil, 1, -1)
 		Q.say(token, "SERIS", "What is that?", {color = Q.members.seris.color})
+		Q.shot("medium", me, nil, 1)
 		Q.say(token, "VANE", "I don't know. It's just always been there.", {color = Q.cyan})
 		Q.armWrite("seris", "4 . 6 . 8 . 5")
 		Q.direct(token, "She writes it down. Four notes, as numbers, on the back of her hand. She doesn't know yet that she will need them.")
 		Q.sceneEnd()
+		s:Destroy()
 		Q.titleCard(token, {"TO BE CONTINUED", "The Verdant Kingdom opens in the next update."}, 3)
 		Q.save()
 	end},
