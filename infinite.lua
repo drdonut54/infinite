@@ -1,4 +1,4 @@
--- NeverYield v1.30.20 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.30.21 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.30.20" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.30.21" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -33198,6 +33198,11 @@ Q.copyChar = function()
 	local rig = char:Clone()
 	char.Archivable = was
 	if rig then
+		-- games that scale your head up (Genovia) leave head accessories bigger than the Humanoid's scale values say;
+		-- with automatic scaling on, the copy shrank them back as it was parented (kas's double: eyes sunk inside the
+		-- head, smaller hair, a pale blank face). Studio-checked in the Genovia place: off = nothing resizes.
+		local hum = rig:FindFirstChildOfClass("Humanoid")
+		if hum then pcall(function() hum.AutomaticScalingEnabled = false end) end
 		Q.fixJoints(rig)
 		-- forget any pose rest a copy might carry over; it's read fresh from this rig
 		for _, m in ipairs(rig:GetDescendants()) do
