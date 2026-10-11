@@ -5,6 +5,7 @@ Versions before 1.11.3 were reconstructed from the Desktop `.bakN` backups (one 
 
 | Version | Date | Commands | Change |
 |---|---|---|---|
+| 1.30.8 | 10-11 | 642 | Requiem: FF7 pause menu on P (portraits, LV/HP/MP/Limit, Items, Skills, Journal, Arms, Ledger); replaces M |
 | 1.30.7 | 10-11 | 642 | Requiem: battle sub-menus get a Back row (+ right-click back); target arrow follows the highlight |
 | 1.30.6 | 10-11 | 642 | Requiem: kas's music picks (APM/DistroKid, verified) in sad/explore/boss playlists + dread list |
 | 1.30.5 | 10-11 | 642 | Requiem: every Hollowed looks different (hair/clothes/size/tint/face/posture/glitches, seeded); Avatar Joint Upgrade fix (attacks, sit, accessories); battles fit open space; roamers avoid walls; victory cam, waypoint arrow, quieter static |

@@ -1,4 +1,4 @@
--- NeverYield v1.30.7 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.30.8 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.30.7" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.30.8" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -32695,11 +32695,15 @@ Q.load = function()
 		if type(data.arms[k]) ~= "table" then data.arms[k] = v end
 	end
 	Q.data = data
+	Q.sessionAt = os.time()
 	return data
 end
 
 Q.save = function()
 	if not Q.data then return end
+	-- play time (shown in the P menu)
+	if Q.sessionAt then Q.data.stats.time = (Q.data.stats.time or 0) + (os.time() - Q.sessionAt) end
+	Q.sessionAt = os.time()
 	local ok, encoded = pcall(function() return HttpService:JSONEncode(Q.data) end)
 	if ok and encoded then pcall(writefile, Q.file, encoded) end
 end
@@ -36770,6 +36774,8 @@ Q.objective = function(text, target)
 	if not text then return end
 	local w = Q.win(screen, UDim2.new(0, 18, 0, 70), UDim2.new(0, 330, 0, 66), 44)
 	Q.text(w, {Position = UDim2.new(0, 14, 0, 6), Size = UDim2.new(1, -28, 0, 16), Text = "OBJECTIVE", Font = Enum.Font.GothamBold, TextSize = 12, TextColor3 = Color3.fromRGB(150, 200, 255)})
+	Q.text(w, {Position = UDim2.new(0, 14, 0, 6), Size = UDim2.new(1, -28, 0, 16), Text = "P  Menu", Font = Enum.Font.GothamBold, TextSize = 11,
+		TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = Color3.fromRGB(150, 165, 205)})
 	local body = Q.text(w, {Position = UDim2.new(0, 14, 0, 22), Size = UDim2.new(1, -28, 0, 40), Text = text, TextSize = 15, TextWrapped = true, TextYAlignment = Enum.TextYAlignment.Top})
 	Q.objWin = w
 	Q.sound(Q.sfx.select, 0.4, 0.8)
@@ -36953,6 +36959,7 @@ Q.roamer = function(home, enemyId, radius, B, seed)
 	task.spawn(function()
 		local lines = Q.enemies[enemyId].lines and Q.enemies[enemyId].lines.start or {"> i'm sorry"}
 		while r.alive and rig.Parent do
+			while Q.inMenu and r.alive do task.wait(0.2) end
 			-- a point it can walk to in a straight line: clear at chest and knee height, with floor near its own level
 			local to
 			for _ = 1, 8 do
@@ -37033,9 +37040,9 @@ Q.explore = function(token, spec)
 			end
 		end
 	end
-	-- M opens the menu while exploring
+	-- P opens the menu while exploring (not in a fight or mid-line)
 	Q.connect("menuKey", UserInputService.InputBegan:Connect(function(input, processed)
-		if not processed and input.KeyCode == Enum.KeyCode.M and not Q.inMenu then
+		if not processed and input.KeyCode == Enum.KeyCode.P and Q.exploring and not Q.dialog and not Q.inMenu then
 			Q.inMenu = true
 			task.spawn(function()
 				pcall(Q.pauseMenu, token)
@@ -37048,7 +37055,7 @@ Q.explore = function(token, spec)
 	while Q.alive(token) and not reached do
 		task.wait(0.15)
 		local me = Q.root()
-		if me and not Q.inMenu then
+		if me and not Q.inMenu and tick() > (Q.menuGrace or 0) then
 			-- caught by a Hollowed?
 			for _, r in ipairs(roamers) do
 				local rr = r.alive and r.rig:FindFirstChild("HumanoidRootPart")
@@ -37102,31 +37109,614 @@ Q.explore = function(token, spec)
 	return reached
 end
 
--- the pause menu while exploring (M)
-Q.pauseMenu = function(token)
-	local opts = {"Items", "Journal", "Arms", "Ledger", "Party", "Back"}
-	local pick = opts[Q.choose(token, opts, "MENU", {z = 80, width = 300})]
-	if pick == "Journal" then Q.reader(token, "Journal", Q.journalLines())
-	elseif pick == "Arms" then Q.reader(token, "Arms", Q.armLines())
-	elseif pick == "Ledger" then Q.reader(token, "Ledger", Q.ledgerLines())
-	elseif pick == "Items" then
-		local lines = {}
-		for id, n in pairs(Q.data.items) do
-			if n > 0 and Q.items[id] then table.insert(lines, {t = Q.items[id].name .. "  x" .. n .. "   -   " .. (Q.items[id].desc or "")}) end
-		end
-		Q.reader(token, "Items", lines)
-	elseif pick == "Party" then
-		local lines = {}
-		for id in pairs(Q.data.joined) do
-			local m = Q.member(id)
-			local saved = Q.data.party and Q.data.party[id]
-			table.insert(lines, {t = m.name .. "   Lv " .. m.level .. "   HP " .. (saved and saved.hp or m.hp) .. "/" .. m.hp .. "   MP " .. (saved and saved.mp or m.mp) .. "/" .. m.mp, font = Enum.Font.GothamBold})
-			local names = {}
-			for _, sk in ipairs(m.skills) do table.insert(names, Q.skillName(sk)) end
-			table.insert(lines, {t = "   Skills: " .. table.concat(names, ", "), color = Color3.fromRGB(170, 190, 230), gap = 8})
-		end
-		Q.reader(token, "Party", lines)
+-- [57_menu.lua]
+-- ---------- the FF7 main menu (P while exploring) ----------
+-- party window with portraits on the left, commands / play stats / location on the right. Items and Skills open
+-- FF7-style sub-screens (description bar on top, party on the left, list on the right); Journal, Arms and Ledger
+-- open the reader. Keys: arrows / W S move, Enter / E / Z pick, Backspace / X / right-click back, P closes.
+
+-- a member's portrait from Volt's workspace (requiem/portrait_<id>.png), cached; nil = draw a silhouette
+Q.portrait = function(id)
+	Q.portraits = Q.portraits or {}
+	if Q.portraits[id] == nil then
+		local path = "requiem/portrait_" .. id .. ".png"
+		local ok, asset = pcall(function()
+			if isfile and not isfile(path) then return nil end
+			return getcustomasset(path)
+		end)
+		Q.portraits[id] = ok and type(asset) == "string" and asset ~= "" and asset or false
 	end
+	return Q.portraits[id] or nil
+end
+
+-- the framed portrait (or a silhouette in the member's colour)
+Q.portraitBox = function(parent, id, x, y, size, z)
+	local color = Q.members[id] and Q.members[id].color or Q.cyan
+	local f = Instance.new("Frame")
+	f.Position, f.Size = UDim2.new(0, x, 0, y), UDim2.new(0, size, 0, size)
+	f.BackgroundColor3 = Color3.fromRGB(4, 6, 16)
+	f.BorderSizePixel = 0
+	f.ClipsDescendants = true
+	f.ZIndex = z
+	f.Parent = parent
+	NeverYieldPortal.corner(f, UDim.new(0, 4))
+	local s = Instance.new("UIStroke")
+	s.Color, s.Thickness = Color3.fromRGB(215, 220, 235), 2
+	s.Parent = f
+	local asset = Q.portrait(id)
+	if asset then
+		local img = Instance.new("ImageLabel")
+		img.Size = UDim2.new(1, 0, 1, 0)
+		img.BackgroundTransparency = 1
+		img.Image = asset
+		img.ScaleType = Enum.ScaleType.Crop
+		img.ZIndex = z + 1
+		img.Parent = f
+	else
+		local g = Instance.new("UIGradient")
+		g.Color = ColorSequence.new(color:Lerp(Color3.new(0, 0, 0), 0.72), Color3.fromRGB(4, 6, 16))
+		g.Rotation = 90
+		g.Parent = f
+		local function blob(px, py, w, h, round)
+			local b = Instance.new("Frame")
+			b.AnchorPoint = Vector2.new(0.5, 0)
+			b.Position, b.Size = UDim2.new(px, 0, py, 0), UDim2.new(w, 0, h, 0)
+			b.BackgroundColor3 = Color3.fromRGB(14, 18, 32)
+			b.BorderSizePixel = 0
+			b.ZIndex = z + 1
+			b.Parent = f
+			NeverYieldPortal.corner(b, round)
+			local st = Instance.new("UIStroke")
+			st.Color, st.Thickness, st.Transparency = color, 1.5, 0.35
+			st.Parent = b
+		end
+		blob(0.5, 0.66, 0.78, 0.6, UDim.new(0.4, 0))
+		blob(0.5, 0.2, 0.4, 0.42, UDim.new(1, 0))
+	end
+	return f
+end
+
+-- a gradient bar; returns a setter (fraction, colour override)
+Q.menuBar = function(parent, x, y, w, c1, c2, z)
+	local back = Instance.new("Frame")
+	back.Position, back.Size = UDim2.new(0, x, 0, y), UDim2.new(0, w, 0, 6)
+	back.BackgroundColor3 = Color3.fromRGB(10, 12, 30)
+	back.BorderSizePixel = 0
+	back.ZIndex = z
+	back.Parent = parent
+	local st = Instance.new("UIStroke")
+	st.Color, st.Thickness, st.Transparency = Color3.fromRGB(120, 130, 170), 1, 0.4
+	st.Parent = back
+	local fill = Instance.new("Frame")
+	fill.BackgroundColor3 = Color3.new(1, 1, 1)
+	fill.BorderSizePixel = 0
+	fill.ZIndex = z + 1
+	fill.Parent = back
+	local g = Instance.new("UIGradient")
+	g.Color = ColorSequence.new(c1, c2)
+	g.Parent = fill
+	return function(frac, flat)
+		fill.Size = UDim2.new(math.clamp(frac, 0, 1), 0, 1, 0)
+		g.Color = flat and ColorSequence.new(flat) or ColorSequence.new(c1, c2)
+	end
+end
+
+-- current HP/MP outside battle (nil in the save = full)
+Q.partyState = function(id)
+	local m = Q.member(id)
+	Q.data.party = Q.data.party or {}
+	local s = Q.data.party[id] or {}
+	Q.data.party[id] = s
+	return m, s, s.hp and math.min(s.hp, m.hp) or m.hp, s.mp and math.min(s.mp, m.mp) or m.mp
+end
+
+Q.menuIds = function()
+	local ids = {}
+	for _, id in ipairs(Q.data.active) do
+		if Q.data.joined[id] and Q.members[id] and #ids < 3 then table.insert(ids, id) end
+	end
+	return ids
+end
+
+-- one party member's block. big = the main menu row; otherwise the compact row in the sub-screens. returns refresh()
+Q.memberBlock = function(parent, id, x, y, big, z)
+	local ps = big and 164 or 92
+	Q.portraitBox(parent, id, x, y, ps, z)
+	-- the text sits centred beside the portrait
+	y = y + (big and 20 or 7)
+	local tx = x + ps + (big and 22 or 14)
+	local blue = Color3.fromRGB(120, 170, 255)
+	Q.text(parent, {Position = UDim2.new(0, tx, 0, y + (big and 4 or 0)), Size = UDim2.new(0, 200, 0, 26), Text = Q.members[id].name,
+		Font = Enum.Font.GothamBold, TextSize = big and 24 or 18, ZIndex = z})
+	local lvY = y + (big and 34 or 22)
+	Q.text(parent, {Position = UDim2.new(0, tx, 0, lvY), Size = UDim2.new(0, 30, 0, 20), Text = "LV", Font = Enum.Font.GothamBold, TextSize = big and 14 or 12,
+		TextColor3 = blue, ZIndex = z})
+	local lv = Q.text(parent, {Position = UDim2.new(0, tx + 34, 0, lvY - 2), Size = UDim2.new(0, 60, 0, 22), Text = "", Font = Enum.Font.GothamBold,
+		TextSize = big and 20 or 16, ZIndex = z})
+	local rows = {}
+	for i, key in ipairs({"HP", "MP"}) do
+		local ry = y + (big and 62 or 42) + (i - 1) * (big and 34 or 24)
+		Q.text(parent, {Position = UDim2.new(0, tx, 0, ry), Size = UDim2.new(0, 30, 0, 18), Text = key, Font = Enum.Font.GothamBold, TextSize = big and 14 or 11,
+			TextColor3 = blue, ZIndex = z})
+		local val = Q.text(parent, {Position = UDim2.new(0, tx + 34, 0, ry - 2), Size = UDim2.new(0, big and 150 or 110, 0, 20), Text = "",
+			Font = Enum.Font.GothamBold, TextSize = big and 18 or 14, TextXAlignment = Enum.TextXAlignment.Right, ZIndex = z})
+		local set = Q.menuBar(parent, tx + 34, ry + (big and 20 or 15), big and 150 or 110, i == 1 and Color3.fromRGB(90, 170, 255) or Color3.fromRGB(80, 220, 150),
+			i == 1 and Color3.fromRGB(170, 240, 255) or Color3.fromRGB(190, 255, 160), z)
+		rows[i] = {val = val, set = set}
+	end
+	local limitSet, nextSet, nextVal, ready
+	if big then
+		local lx = tx + 220
+		Q.text(parent, {Position = UDim2.new(0, lx, 0, y + 8), Size = UDim2.new(0, 160, 0, 18), Text = "LIMIT", Font = Enum.Font.GothamBold, TextSize = 14,
+			TextColor3 = blue, ZIndex = z})
+		Q.text(parent, {Position = UDim2.new(0, lx, 0, y + 26), Size = UDim2.new(0, 190, 0, 18), Text = Q.members[id].limit and Q.members[id].limit.name or "",
+			TextSize = 13, TextColor3 = Color3.fromRGB(200, 205, 225), ZIndex = z})
+		ready = Q.text(parent, {Position = UDim2.new(0, lx + 70, 0, y + 8), Size = UDim2.new(0, 100, 0, 18), Text = "READY", Font = Enum.Font.GothamBlack,
+			TextSize = 14, TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = Color3.fromRGB(255, 170, 220), ZIndex = z})
+		limitSet = Q.menuBar(parent, lx, y + 48, 170, Color3.fromRGB(220, 60, 120), Color3.fromRGB(255, 160, 210), z)
+		Q.text(parent, {Position = UDim2.new(0, lx, 0, y + 74), Size = UDim2.new(0, 160, 0, 18), Text = "NEXT LEVEL", Font = Enum.Font.GothamBold, TextSize = 14,
+			TextColor3 = blue, ZIndex = z})
+		nextVal = Q.text(parent, {Position = UDim2.new(0, lx, 0, y + 92), Size = UDim2.new(0, 170, 0, 18), Text = "", TextSize = 13,
+			TextColor3 = Color3.fromRGB(200, 205, 225), ZIndex = z})
+		nextSet = Q.menuBar(parent, lx, y + 114, 170, Color3.fromRGB(220, 170, 60), Color3.fromRGB(255, 235, 150), z)
+	end
+	return function()
+		local m, s, hp, mp = Q.partyState(id)
+		lv.Text = tostring(m.level)
+		rows[1].val.Text = hp .. " / " .. m.hp
+		rows[2].val.Text = mp .. " / " .. m.mp
+		rows[1].val.TextColor3 = hp <= m.hp / 4 and Color3.fromRGB(255, 220, 90) or Color3.new(1, 1, 1)
+		rows[1].set(hp / m.hp)
+		rows[2].set(mp / m.mp)
+		if limitSet then
+			local lim = s.limit or 0
+			limitSet(lim / 100, lim >= 100 and Color3.fromHSV(tick() * 1.5 % 1, 0.55, 1) or nil)
+			ready.Visible = lim >= 100
+			local need = Q.xpNeeded(m.level)
+			nextVal.Text = (need - m.xp) .. " EXP to go"
+			nextSet(m.xp / need)
+		end
+	end
+end
+
+-- a vertical list of rows with the FF7 cursor. rows = {{text, right, enabled}}. returns the list object
+Q.menuList = function(parent, x, y, w, rowH, z)
+	local L = {cursor = 1, rows = {}, buttons = {}, active = true}
+	local hand = Q.text(parent, {Position = UDim2.new(0, x, 0, y), Size = UDim2.new(0, 20, 0, rowH), Text = ">", Font = Enum.Font.GothamBlack,
+		TextSize = 20, TextColor3 = Color3.fromRGB(255, 235, 140), ZIndex = z + 3})
+	L.hand = hand
+	function L.set(rows)
+		for _, b in ipairs(L.buttons) do b:Destroy() end
+		L.rows, L.buttons = rows, {}
+		for i, r in ipairs(rows) do
+			local b = Instance.new("TextButton")
+			b.BackgroundTransparency = 1
+			b.AutoButtonColor = false
+			b.Position, b.Size = UDim2.new(0, x + 24, 0, y + (i - 1) * rowH), UDim2.new(0, w - 24, 0, rowH)
+			b.Font = Enum.Font.GothamMedium
+			b.TextSize = math.min(20, rowH - 12)
+			b.TextXAlignment = Enum.TextXAlignment.Left
+			b.TextStrokeTransparency = 0.55
+			b.Text = r.text
+			b.TextColor3 = r.enabled == false and Color3.fromRGB(125, 130, 155) or Color3.new(1, 1, 1)
+			b.ZIndex = z + 2
+			b.Parent = parent
+			if r.right then
+				Q.text(b, {Size = UDim2.new(1, -6, 1, 0), Text = r.right, TextSize = b.TextSize, Font = Enum.Font.GothamBold,
+					TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = b.TextColor3, ZIndex = z + 3})
+			end
+			b.MouseEnter:Connect(function() if L.active and L.cursor ~= i then L.cursor = i L.draw() Q.sound(Q.sfx.select, 0.2, 1.4) end end)
+			b.MouseButton1Click:Connect(function() if L.active and L.onClick then L.cursor = i L.draw() L.onClick(i) end end)
+			L.buttons[i] = b
+		end
+		L.cursor = math.clamp(L.cursor, 1, math.max(1, #rows))
+		L.draw()
+	end
+	function L.draw()
+		hand.Visible = L.active and #L.rows > 0
+		hand.Position = UDim2.new(0, x, 0, y + (L.cursor - 1) * rowH)
+		if L.onMove then L.onMove(L.cursor) end
+	end
+	function L.move(d)
+		if #L.rows == 0 then return end
+		L.cursor = (L.cursor - 1 + d) % #L.rows + 1
+		L.draw()
+		Q.sound(Q.sfx.select, 0.25, 1.4)
+	end
+	return L
+end
+
+Q.playTime = function()
+	local t = math.floor((Q.data.stats.time or 0) + (Q.sessionAt and os.time() - Q.sessionAt or 0))
+	return string.format("%02d:%02d:%02d", math.floor(t / 3600), math.floor(t / 60) % 60, t % 60)
+end
+
+-- use an item or a skill outside battle on member id; returns a message if it can't be used
+Q.menuUse = function(what, id, caster)
+	local m, s, hp, mp = Q.partyState(id)
+	if what.item then
+		local it = Q.items[what.item]
+		if it.kind == "heal" then
+			if hp >= m.hp then return "HP is already full." end
+			s.hp = math.min(m.hp, hp + it.amount)
+		elseif it.kind == "mp" then
+			if mp >= m.mp then return "MP is already full." end
+			s.mp = math.min(m.mp, mp + it.amount)
+		else
+			return "Only in battle."
+		end
+		Q.data.items[what.item] = math.max(0, (Q.data.items[what.item] or 0) - 1)
+	else
+		local sk = what.skill
+		local cm, cs, _, cmp = Q.partyState(caster)
+		if cmp < (sk.mp or 0) then return "Not enough MP." end
+		local targets = sk.target == "party" and Q.menuIds() or {id}
+		local healed = false
+		for _, t in ipairs(targets) do
+			local tm, ts, thp = Q.partyState(t)
+			if thp < tm.hp then
+				ts.hp = math.min(tm.hp, thp + math.floor(cm.mag * (sk.power or 1) * 3.2))
+				healed = true
+			end
+		end
+		if not healed then return "HP is already full." end
+		cs.mp = cmp - (sk.mp or 0)
+	end
+	Q.sound(Q.sfx.heal, 0.5)
+	Q.save()
+	return nil
+end
+
+Q.pauseMenu = function(token)
+	local screen = Q.screen()
+	local cam = workspace.CurrentCamera
+	local Z = 70
+	local closed = false
+	local busy = false
+	local stack = {} -- the screen that gets the keys is the last one
+	local refreshers = {}
+	Q.freeze(true)
+
+	local back = Instance.new("Frame")
+	back.Size = UDim2.new(1, 0, 1, 0)
+	back.BackgroundColor3 = Color3.new(0, 0, 0)
+	back.BackgroundTransparency = 1
+	back.BorderSizePixel = 0
+	back.ZIndex = Z
+	back.Parent = screen
+	TweenService:Create(back, TweenInfo.new(0.2), {BackgroundTransparency = 0.4}):Play()
+	-- everything is laid out on a 960 x 600 board, scaled to fit the screen
+	local board = Instance.new("Frame")
+	board.AnchorPoint = Vector2.new(0.5, 0.5)
+	board.Position = UDim2.new(0.5, 0, 0.5, 0)
+	board.Size = UDim2.new(0, 960, 0, 600)
+	board.BackgroundTransparency = 1
+	board.ZIndex = Z
+	board.Parent = back
+	local scale = Instance.new("UIScale")
+	scale.Parent = board
+	local function fit()
+		local v = cam.ViewportSize
+		scale.Scale = math.min(1.25, (v.X - 32) / 960, (v.Y - 40) / 600)
+	end
+	fit()
+	local fitConn = cam:GetPropertyChangedSignal("ViewportSize"):Connect(fit)
+
+	local function slide(f, dx)
+		local to = f.Position
+		f.Position = to + UDim2.new(0, dx, 0, 0)
+		TweenService:Create(f, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = to}):Play()
+	end
+	local function label(parent, x, y, w, text, color, size, font, z)
+		return Q.text(parent, {Position = UDim2.new(0, x, 0, y), Size = UDim2.new(0, w, 0, (size or 16) + 4), Text = text, TextSize = size or 16,
+			Font = font or Enum.Font.GothamMedium, TextColor3 = color or Color3.new(1, 1, 1), ZIndex = z})
+	end
+	local blue = Color3.fromRGB(120, 170, 255)
+
+	-- ---- the main screen ----
+	local partyWin = Q.win(board, UDim2.new(0, 0, 0, 0), UDim2.new(0, 700, 0, 600), Z + 1)
+	local cmdWin = Q.win(board, UDim2.new(0, 712, 0, 0), UDim2.new(0, 248, 0, 284), Z + 1)
+	local statWin = Q.win(board, UDim2.new(0, 712, 0, 296), UDim2.new(0, 248, 0, 150), Z + 1)
+	local locWin = Q.win(board, UDim2.new(0, 712, 0, 458), UDim2.new(0, 248, 0, 142), Z + 1)
+	slide(partyWin, -80) slide(cmdWin, 80) slide(statWin, 80) slide(locWin, 80)
+	local mainWins = {partyWin, cmdWin, statWin, locWin}
+
+	local ids = Q.menuIds()
+	local partyRows = {}
+	for i, id in ipairs(ids) do
+		local y = 26 + (i - 1) * 190
+		table.insert(refreshers, Q.memberBlock(partyWin, id, 36, y, true, Z + 2))
+		partyRows[i] = y
+		if i < #ids then
+			local line = Instance.new("Frame")
+			line.Position, line.Size = UDim2.new(0, 24, 0, y + 175), UDim2.new(1, -48, 0, 1)
+			line.BackgroundColor3, line.BackgroundTransparency, line.BorderSizePixel = Color3.fromRGB(150, 170, 230), 0.75, 0
+			line.ZIndex = Z + 2
+			line.Parent = partyWin
+		end
+	end
+	-- a hand on the party rows (for "whose skills?")
+	local partyHand = label(partyWin, 8, 0, 24, ">", Color3.fromRGB(255, 235, 140), 26, Enum.Font.GothamBlack, Z + 4)
+	partyHand.Visible = false
+
+	local stat = {}
+	for i, row in ipairs({{"Time"}, {"Tolls paid"}, {"Memories"}, {"Laid to rest"}}) do
+		local y = 14 + (i - 1) * 32
+		label(statWin, 16, y, 120, row[1], blue, 15, Enum.Font.GothamBold, Z + 2)
+		stat[i] = label(statWin, 120, y, 112, "", nil, 17, Enum.Font.GothamBold, Z + 2)
+		stat[i].TextXAlignment = Enum.TextXAlignment.Right
+	end
+	table.insert(refreshers, function()
+		stat[1].Text = Q.playTime()
+		stat[2].Text = tostring(#Q.data.tolls)
+		stat[3].Text = tostring(#Q.data.ledger)
+		stat[4].Text = tostring(Q.data.stats.hollowed or 0)
+	end)
+	local ch = Q.chapters[Q.data.chapter] or Q.chapters[1]
+	label(locWin, 16, 12, 216, "CHAPTER " .. ch.n .. "  -  DISC " .. ch.disc, blue, 13, Enum.Font.GothamBold, Z + 2)
+	local t = label(locWin, 16, 34, 216, ch.title, nil, 19, Enum.Font.GothamBold, Z + 2)
+	t.TextWrapped, t.Size = true, UDim2.new(0, 216, 0, 50)
+	t.TextYAlignment = Enum.TextYAlignment.Top
+	label(locWin, 16, 104, 216, ch.world, Color3.fromRGB(170, 185, 220), 14, nil, Z + 2)
+
+	local cmds = Q.menuList(cmdWin, 16, 14, 224, 42, Z + 2)
+	local cmdRows = {
+		{text = "Items"}, {text = "Skills"}, {text = "Journal"}, {text = "Arms"}, {text = "Ledger"}, {text = "Close"},
+	}
+	cmds.set(cmdRows)
+
+	local function refresh()
+		for _, r in ipairs(refreshers) do r() end
+	end
+	refresh()
+
+	-- ---- the sub-screens (Items, Skills): description bar, party on the left, list on the right ----
+	local function subScreen(title, rowsFn, needsCaster)
+		local caster = needsCaster
+		for _, w in ipairs(mainWins) do w.Visible = false end
+		local layer = Instance.new("Frame")
+		layer.Size = UDim2.new(1, 0, 1, 0)
+		layer.BackgroundTransparency = 1
+		layer.ZIndex = Z + 10
+		layer.Parent = board
+		local descWin = Q.win(layer, UDim2.new(0, 0, 0, 0), UDim2.new(0, 960, 0, 58), Z + 11)
+		label(descWin, 18, 8, 200, title, blue, 13, Enum.Font.GothamBold, Z + 12)
+		local desc = label(descWin, 18, 26, 924, "", nil, 17, nil, Z + 12)
+		local leftWin = Q.win(layer, UDim2.new(0, 0, 0, 70), UDim2.new(0, 360, 0, 530), Z + 11)
+		local listWin = Q.win(layer, UDim2.new(0, 372, 0, 70), UDim2.new(0, 588, 0, 530), Z + 11)
+		slide(leftWin, -60) slide(listWin, 60)
+		local subRefresh = {}
+		for i, id in ipairs(ids) do
+			local y = 24 + (i - 1) * 120
+			table.insert(subRefresh, Q.memberBlock(leftWin, id, 36, y, false, Z + 12))
+			if id == caster then
+				label(leftWin, 262, y + 8, 80, "casting", Color3.fromRGB(255, 235, 140), 12, Enum.Font.GothamBold, Z + 12)
+			end
+		end
+		local targetHand = label(leftWin, 8, 0, 24, ">", Color3.fromRGB(255, 235, 140), 24, Enum.Font.GothamBlack, Z + 14)
+		targetHand.Visible = false
+		local msg = label(listWin, 18, 494, 552, "", Color3.fromRGB(255, 220, 90), 15, Enum.Font.GothamBold, Z + 12)
+		local list = Q.menuList(listWin, 16, 16, 556, 40, Z + 12)
+		local rows
+		local function reload()
+			rows = rowsFn(caster)
+			list.set(rows)
+			for _, r in ipairs(subRefresh) do r() end
+			refresh()
+		end
+		list.onMove = function(i)
+			desc.Text = rows and rows[i] and rows[i].desc or ""
+		end
+		reload()
+		if #rows == 0 then desc.Text = "Nothing here yet." end
+		local page = {layer = layer}
+		local picking, tcur = nil, 1
+		local function showTarget()
+			targetHand.Visible = picking ~= nil
+			targetHand.Position = UDim2.new(0, 8, 0, 56 + (tcur - 1) * 120)
+			list.active = picking == nil
+			list.draw()
+		end
+		local function pick(i)
+			local r = rows[i]
+			if not r then return end
+			if r.enabled == false or not r.use then
+				msg.Text = r.why or ""
+				Q.sound(Q.sfx.select, 0.4, 0.6)
+				return
+			end
+			Q.sound(Q.sfx.select, 0.5)
+			picking, tcur = r, 1
+			for k, id in ipairs(ids) do if id == caster then tcur = k end end
+			showTarget()
+		end
+		local function useOn(k)
+			local err = Q.menuUse(picking.use, ids[k], caster)
+			msg.Text = err or ""
+			if err then Q.sound(Q.sfx.select, 0.4, 0.6) else
+				if picking.use.item and (Q.data.items[picking.use.item] or 0) <= 0 then picking = nil end
+			end
+			reload()
+			showTarget()
+		end
+		list.onClick = pick
+		page.key = function(k)
+			if picking then
+				if k == "up" then tcur = (tcur - 2) % #ids + 1 showTarget() Q.sound(Q.sfx.select, 0.25, 1.4)
+				elseif k == "down" then tcur = tcur % #ids + 1 showTarget() Q.sound(Q.sfx.select, 0.25, 1.4)
+				elseif k == "ok" then useOn(tcur)
+				elseif k == "back" then picking = nil msg.Text = "" showTarget() end
+			else
+				if k == "up" then list.move(-1)
+				elseif k == "down" then list.move(1)
+				elseif k == "ok" then pick(list.cursor)
+				elseif k == "back" then page.close() end
+			end
+		end
+		page.close = function()
+			layer:Destroy()
+			for _, w in ipairs(mainWins) do w.Visible = true end
+			table.remove(stack)
+			cmds.active = true
+			cmds.draw()
+			refresh()
+		end
+		-- click a party member to use the picked thing on them
+		for k in ipairs(ids) do
+			local b = Instance.new("TextButton")
+			b.BackgroundTransparency, b.Text = 1, ""
+			b.Position, b.Size = UDim2.new(0, 0, 0, 14 + (k - 1) * 120), UDim2.new(1, 0, 0, 100)
+			b.ZIndex = Z + 15
+			b.Parent = leftWin
+			b.MouseEnter:Connect(function() if picking then tcur = k showTarget() end end)
+			b.MouseButton1Click:Connect(function() if picking then tcur = k useOn(k) end end)
+		end
+		cmds.active = false
+		cmds.draw()
+		table.insert(stack, page)
+	end
+
+	local function itemRows()
+		local out = {}
+		local order = {}
+		for id, n in pairs(Q.data.items) do
+			if n > 0 and Q.items[id] then table.insert(order, id) end
+		end
+		table.sort(order, function(a, b) return Q.items[a].name < Q.items[b].name end)
+		for _, id in ipairs(order) do
+			local it = Q.items[id]
+			local field = it.kind == "heal" or it.kind == "mp"
+			table.insert(out, {text = it.name, right = ":  " .. Q.data.items[id], desc = it.desc, enabled = field,
+				why = "Only in battle.", use = field and {item = id} or nil})
+		end
+		return out
+	end
+	local function skillRows(caster)
+		local out = {}
+		local m = Q.member(caster)
+		local have = {}
+		for _, sk in ipairs(m.skills) do
+			have[sk.id] = true
+			local field = sk.kind == "heal" and not sk.revive
+			table.insert(out, {text = Q.skillName(sk), right = (sk.mp or 0) .. " MP", desc = sk.desc, enabled = field,
+				why = sk.revive and "Only in battle (nobody has fallen)." or "Only in battle.", use = field and {skill = sk} or nil})
+		end
+		-- the ones still to come
+		for _, sk in ipairs(m.info.skills) do
+			if not have[sk.id] and not Q.data.removed[sk.id] then
+				local lvl = not sk.flag and sk.level
+				table.insert(out, {text = "- - - - - -", right = lvl and ("LV " .. lvl) or "???", enabled = false,
+					desc = lvl and ("Learned at level " .. lvl .. ".") or "Not yet.", why = ""})
+			end
+		end
+		if m.info.limit then
+			table.insert(out, {text = "LIMIT:  " .. m.info.limit.name, enabled = false, desc = m.info.limit.desc,
+				why = "Fill the Limit gauge by taking hits, then pick LIMIT in battle."})
+		end
+		return out
+	end
+
+	-- "whose skills?": the hand moves on the party rows
+	local function chooseMember()
+		local p = {}
+		local cur = 1
+		local function draw()
+			partyHand.Visible = true
+			partyHand.Position = UDim2.new(0, 8, 0, partyRows[cur] + 66)
+		end
+		draw()
+		cmds.active = false
+		cmds.draw()
+		p.key = function(k)
+			if k == "up" then cur = (cur - 2) % #ids + 1 draw() Q.sound(Q.sfx.select, 0.25, 1.4)
+			elseif k == "down" then cur = cur % #ids + 1 draw() Q.sound(Q.sfx.select, 0.25, 1.4)
+			elseif k == "back" then
+				partyHand.Visible = false
+				table.remove(stack)
+				cmds.active = true
+				cmds.draw()
+			elseif k == "ok" then
+				partyHand.Visible = false
+				table.remove(stack)
+				Q.sound(Q.sfx.select, 0.5)
+				subScreen(Q.members[ids[cur]].name:upper() .. "  -  SKILLS", skillRows, ids[cur])
+			end
+		end
+		p.pickRow = function(i) cur = i p.key("ok") end
+		p.hover = function(i) if cur ~= i then cur = i draw() end end
+		table.insert(stack, p)
+	end
+	-- clicking a party row while choosing a member
+	for i in ipairs(ids) do
+		local b = Instance.new("TextButton")
+		b.BackgroundTransparency, b.Text = 1, ""
+		b.Position, b.Size = UDim2.new(0, 0, 0, partyRows[i] - 10), UDim2.new(1, 0, 0, 170)
+		b.ZIndex = Z + 5
+		b.Parent = partyWin
+		b.MouseEnter:Connect(function() local p = stack[#stack] if p and p.hover then p.hover(i) end end)
+		b.MouseButton1Click:Connect(function() local p = stack[#stack] if p and p.pickRow then p.pickRow(i) end end)
+	end
+
+	local function command(i)
+		local name = cmdRows[i].text
+		Q.sound(Q.sfx.select, 0.5)
+		if name == "Close" then closed = true
+		elseif name == "Items" then subScreen("ITEMS", itemRows)
+		elseif name == "Skills" then
+			if #ids == 1 then subScreen(Q.members[ids[1]].name:upper() .. "  -  SKILLS", skillRows, ids[1]) else chooseMember() end
+		else
+			busy = true
+			board.Visible = false
+			if name == "Journal" then Q.reader(token, "Journal", Q.journalLines())
+			elseif name == "Arms" then Q.reader(token, "Arms", Q.armLines())
+			elseif name == "Ledger" then Q.reader(token, "Ledger", Q.ledgerLines()) end
+			board.Visible = true
+			busy = false
+		end
+	end
+	cmds.onClick = function(i) if #stack == 0 and not busy then task.spawn(command, i) end end
+
+	-- keys go to the top screen, or to the command list
+	Q.menuPress = function(k)
+		if busy or closed then return end
+		local p = stack[#stack]
+		if k == "close" then closed = true return end
+		if p then p.key(k) return end
+		if k == "up" then cmds.move(-1)
+		elseif k == "down" then cmds.move(1)
+		elseif k == "ok" then task.spawn(command, cmds.cursor)
+		elseif k == "back" then closed = true end
+	end
+	local keyMap = {
+		[Enum.KeyCode.Up] = "up", [Enum.KeyCode.W] = "up", [Enum.KeyCode.Down] = "down", [Enum.KeyCode.S] = "down",
+		[Enum.KeyCode.Return] = "ok", [Enum.KeyCode.E] = "ok", [Enum.KeyCode.Z] = "ok", [Enum.KeyCode.ButtonA] = "ok",
+		[Enum.KeyCode.Backspace] = "back", [Enum.KeyCode.X] = "back", [Enum.KeyCode.ButtonB] = "back", [Enum.KeyCode.P] = "close",
+	}
+	local opened = tick()
+	local keyConn = UserInputService.InputBegan:Connect(function(input, processed)
+		if input.UserInputType == Enum.UserInputType.MouseButton2 then Q.menuPress("back") return end
+		if processed then return end
+		local k = keyMap[input.KeyCode]
+		-- (the P that opened the menu doesn't close it)
+		if k and not (k == "close" and tick() - opened < 0.2) then Q.menuPress(k) end
+	end)
+	Q.sound(Q.sfx.select, 0.5, 1.1)
+
+	local ok, err = pcall(function()
+		local last = 0
+		while not closed and Q.alive(token) do
+			if tick() - last > 0.25 then last = tick() refresh() end
+			task.wait()
+		end
+	end)
+	keyConn:Disconnect()
+	fitConn:Disconnect()
+	Q.menuPress = nil
+	back:Destroy()
+	Q.freeze(false)
+	Q.menuGrace = tick() + 1
+	Q.sound(Q.sfx.select, 0.4, 0.9)
+	if not ok then warn("rpg menu: " .. tostring(err)) end
 end
 
 -- [60_data.lua]
