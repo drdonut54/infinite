@@ -1,4 +1,4 @@
--- NeverYield v1.30.15 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.30.16 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.30.15" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.30.16" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -32936,11 +32936,90 @@ Q.travel = function(n, scene)
 	if queueteleport and not KeepInfYield then
 		pcall(queueteleport, "pcall(function() loadstring(game:HttpGet('" .. CustomSourceURL .. "'))() end)")
 	end
-	notify('The Null-Byte Requiem', 'Crossing to ' .. place.name .. '...', 6)
+	-- The white-out stays up the whole way (no game UI, no popups) until the next game loads.
+	Q.crossingScreen(place.name)
+	if Q.launch(place.id) then
+		-- still here after a while: the launch did nothing. Fall back to a teleport, or straight to leaving with the
+		-- link where teleports out are off.
+		task.delay(20, function()
+			if Q.blocksTeleports() then Q.leaveFor({id = place.id, name = place.name}) return end
+			pcall(function() TeleportService:Teleport(place.id, Players.LocalPlayer) end)
+		end)
+		return
+	end
+	-- a game we know turns teleports out off: don't try (its failure throws two error popups over the white-out)
+	if Q.blocksTeleports() then
+		task.wait(2)
+		Q.leaveFor({id = place.id, name = place.name})
+		return
+	end
 	local ok, err = pcall(function() TeleportService:Teleport(place.id, Players.LocalPlayer) end)
 	if not ok then
+		Q.crossingScreen(nil)
 		notify('The Null-Byte Requiem', 'The gate failed: ' .. tostring(err) .. '. Type rpg to try again.', 10)
 	end
+end
+
+-- games whose owners turned third-party teleports off (error 773). Genovia High is known; any other is remembered
+-- the first time it refuses.
+Q.noTeleportOut = {[18600625012] = true}
+Q.blocksTeleports = function()
+	return Q.noTeleportOut[game.PlaceId] or (Q.data.blocked and Q.data.blocked[tostring(game.PlaceId)]) or false
+end
+
+-- this world won't open a gate: the toll is already paid and saved, so copy the next game's link and leave with a
+-- message in the story's voice (joining it resumes the story with a Begin card)
+Q.leaveFor = function(place)
+	local link = "https://www.roblox.com/games/" .. place.id
+	pcall(function() everyClipboard(link) end)
+	pcall(function()
+		Players.LocalPlayer:Kick("> TOLL PAID.\n> THIS WORLD WILL NOT OPEN A GATE.\n> CONTINUE IN: " .. place.name:upper() .. "\n> (the link is copied: " .. link .. ")\n\nJoin it and press Begin. Your story is saved.")
+	end)
+end
+
+-- Jump to the next game the way Roblox's own "go to experience" button does (Inspect & Buy calls
+-- ExperienceService:LaunchExperience). It's your own client launching a game, like pressing Leave and clicking it, so
+-- a game whose teleports out are off (Genovia High, error 773) doesn't throw its popups. Client only. Returns true if
+-- the launch was accepted.
+Q.launch = function(placeId)
+	local ok, res = pcall(function()
+		return game:GetService("ExperienceService"):LaunchExperience({placeId = placeId})
+	end)
+	if not ok then warn("[Requiem] LaunchExperience: " .. tostring(res)) return false end
+	Q.launchTries = (Q.launchTries or 0) + 1
+	return true
+end
+
+-- a white screen in the story's voice that covers everything (the game's own UI and Roblox's prompts included)
+-- while we cross; nil takes it down
+Q.crossingScreen = function(name)
+	local old = Q.crossGui
+	if old then pcall(function() old:Destroy() end) Q.crossGui = nil end
+	if not name then return end
+	local g = Instance.new("ScreenGui")
+	g.Name = randomString()
+	g.IgnoreGuiInset = true
+	g.DisplayOrder = 2147483647
+	g.ResetOnSpawn = false
+	local f = Instance.new("Frame")
+	f.Size = UDim2.new(1, 0, 1, 0)
+	f.BackgroundColor3 = Color3.new(1, 1, 1)
+	f.BorderSizePixel = 0
+	f.Parent = g
+	local t = Instance.new("TextLabel")
+	t.BackgroundTransparency = 1
+	t.Size = UDim2.new(1, 0, 0, 80)
+	t.Position = UDim2.new(0, 0, 0.5, -40)
+	t.Font = Enum.Font.Code
+	t.TextSize = 20
+	t.TextColor3 = Color3.fromRGB(150, 160, 175)
+	t.TextTransparency = 1
+	t.Text = "> TOLL PAID.\n> CROSSING TO: " .. name:upper()
+	t.Parent = f
+	pcall(function() g.Parent = (gethui and gethui()) or game:GetService("CoreGui") end)
+	if not g.Parent then g.Parent = Players.LocalPlayer:WaitForChild("PlayerGui") end
+	TweenService:Create(t, TweenInfo.new(1.5), {TextTransparency = 0}):Play()
+	Q.crossGui = g
 end
 
 -- on load: resume if we just came through a gate
@@ -33235,10 +33314,23 @@ Q.walk = function(rig, cf, speed)
 	if dist < 0.2 then root.CFrame = target return end
 	local face = CFrame.lookAt(root.Position, Vector3.new(target.X, root.Position.Y, target.Z))
 	root.CFrame = face
+	-- a living scene rig (56_life) hands its joints to the walk animation while it walks
+	local living = rig:GetAttribute("NYLife") and rig:GetAttribute("NYPosed")
+	if living then
+		rig:SetAttribute("NYLifeHold", true)
+		for _, m in ipairs(rig:GetDescendants()) do if m:IsA("Motor6D") then m.Transform = CFrame.new() end end
+		rig:SetAttribute("NYPosed", nil)
+	end
 	Q.animate(rig, "walk")
 	local tween = TweenService:Create(root, TweenInfo.new(dist / (speed or 10), Enum.EasingStyle.Linear), {CFrame = target})
 	tween:Play()
 	tween.Completed:Wait()
+	if living then
+		Q.takeJoints(rig)
+		rig:SetAttribute("NYPosed", true)
+		rig:SetAttribute("NYLifeHold", nil)
+		return
+	end
 	Q.animate(rig, "idle")
 end
 
@@ -33376,6 +33468,16 @@ Q.gate = function(cf, onEnter, color)
 	e.LightEmission, e.Color = 1, ColorSequence.new(color)
 	e.SpreadAngle = Vector2.new(180, 180)
 	e.Parent = core
+	-- the tear itself, from the aura sets: a vortex spiralling into the dark core, lightning on its face, bubbles
+	-- of light leaking out (the holder is turned so the flat effects lie in the gate's plane; z pulls them in
+	-- front of the core so it doesn't hide them). Studio-checked at dusk.
+	local face = Q.auraHolder(base * CFrame.Angles(math.rad(90), 0, 0))
+	face.Parent = model
+	Q.aura("vortex", face, {color = color, scale = 0.2, rate = 0.4, light = 1, z = 1.5})
+	Q.aura("vortexBits", face, {color = color, scale = 0.12, rate = 1, z = 1.5})
+	Q.aura("swirl2", face, {color = color, scale = 0.6, rate = 0.3, z = 1.5})
+	Q.aura("ltn1", core, {color = color, scale = 1, rate = 0.4, z = 1})
+	Q.aura("bubble", core, {color = color, scale = 0.5, rate = 1})
 	local hum = WackyState.sound(Q.sfx.hum, core, 0.4, true)
 	local gate = {model = model, core = core, cf = cf, hum = hum}
 	local busy = false
@@ -33749,15 +33851,15 @@ Q.greatsword = function(parent)
 	hl.OutlineColor = Q.cyan
 	hl.DepthMode = Enum.HighlightDepthMode.Occluded
 	hl.Parent = blade
-	-- slow cyan embers drifting up off the blade, and a faint aura (kas's texture)
+	-- slow cyan embers drifting up off the blade, and lightning
 	local core = weld(P(model, Vector3.new(0.35, L * 0.75, 0.15), CFrame.new(0, L / 2 - hilt + L * 0.05, 0), Q.cyan, Enum.Material.Neon, nil, {Transparency = 1}))
 	core.Name = "NYSwordCore"
 	Q.emitter(core, Q.fxTex.dots, Q.cyan, {Rate = 7, Lifetime = NumberRange.new(1, 1.8), Speed = NumberRange.new(0.2, 0.6), Acceleration = Vector3.new(0, 1.2, 0),
 		Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.2, 0.14), NumberSequenceKeypoint.new(1, 0)}),
 		Transparency = NumberSequence.new(0.1, 1), LightEmission = 1, SpreadAngle = Vector2.new(180, 180), Name = "NYEmbers"})
-	Q.emitter(core, Q.fxTex.aura, Q.cyan, {Rate = 3, Lifetime = NumberRange.new(1.4, 2), Speed = NumberRange.new(0.1, 0.3), Size = NumberSequence.new(0.9, 1.2),
-		Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.3, 0.85), NumberSequenceKeypoint.new(1, 1)}),
-		LightEmission = 0.5, LockedToPart = true, RotSpeed = NumberRange.new(-60, 60), Name = "NYAura"})
+	-- cyan lightning crawling along the steel (the "electric aura" in kas's Place1), a few arcs a second
+	Q.aura("ltn5", core, {color = Q.cyan, scale = 0.4, rate = 0.2, name = "NYAura"})
+	Q.aura("ltn6", core, {color = Q.cyan, scale = 0.35, rate = 0.1, name = "NYAura2"})
 	-- the swing trail (switched on while attacking)
 	local a0, a1 = Instance.new("Attachment"), Instance.new("Attachment")
 	a0.Position, a1.Position = Vector3.new(0, -L * 0.28, 0), Vector3.new(0, L * 0.42, 0)
@@ -33796,6 +33898,8 @@ Q.hitFx = function(pos, color, big)
 	burst(Q.fxTex.spark, big and 30 or 16, {Lifetime = NumberRange.new(0.2, 0.4), Speed = NumberRange.new(12, 20), LightEmission = 1, SpreadAngle = Vector2.new(180, 180),
 		Size = NumberSequence.new(0.6 * s, 0)})
 	burst(Q.fxTex.rays, 1, {Lifetime = NumberRange.new(0.2), Speed = NumberRange.new(0), LightEmission = 1, Size = NumberSequence.new(0, 10 * s), Transparency = NumberSequence.new(0.5, 1)})
+	Q.auraBurst(pos, {{"slashes", 1, {scale = 0.22 * s}}, {"spec2", big and 10 or 5, {scale = 0.5 * s}}}, {color = color})
+	if big then Q.auraBurst(pos, {{"eklectric", 2, {scale = 0.45}}, {"wind", 1, {scale = 0.35}}}, {color = color}) end
 	local l = Instance.new("PointLight")
 	l.Color, l.Range, l.Brightness = color, 14 * s, 4
 	l.Parent = p
@@ -34093,6 +34197,212 @@ Q.freeze = function(on)
 	end
 end
 
+-- [26_auras.lua]
+-- ---------- auras: particle effects rebuilt from real aura sets (kas: "use the auras in place1 and sols rng to make
+-- the moves, monsters and world cooler") ----------
+-- Exported from Studio: the "sols rng" place (the aura characters Kazz7O8, GoodDemonL0rd, ckq8fui, KAkA7240) and
+-- kas's Place1 (electric aura, AURA, Ethereal Harmony, Sung Jinwoo, Rimuru, the backrooms portal, Rainbow Star
+-- Periastron, ...). Each entry is one emitter's full setup (texture, size/transparency curves, flipbook, spin,
+-- light); Q.aura() builds it again on any part or attachment, recoloured and scaled.
+-- size/tr/squash = {time, value} keypoints; life/speed/rot/spin = {min, max}; col = the original colour.
+Q.auraFx = {
+	-- Sol's RNG
+	burst = {tex=13795445083,col={55,68,152},size={{0,1.02},{0.25,3.04},{0.5,8.46},{0.75,16.2},{1,25.5}},tr={{0,1},{0.5,0.722},{1,1}},life={1,1.4},rate=20,le=1,accel={0.001,0.1,0},flip="Grid4x4",flipMode="OneShot",fps=10,orient="VelocityPerpendicular",locked=true,bright=2,rot={-360,360}},
+	circles = {tex=9997556038,col={255,65,65},size={{0,0.974},{0.25,0.895},{0.5,0.68},{0.75,0.37},{1,0}},tr={{0,0},{1,0}},life={0.9,1.3},rate=25,le=0,drag=2,z=2.5,shape="Sphere",dir="Left",orient="VelocityParallel",bright=4,rot={-1e+03,1e+03},speed={5.85,9.74}},
+	crackSigil = {tex=91988304966696,col={55,68,152},size={{0,1.02},{0.25,3.04},{0.5,8.46},{0.75,16.2},{1,25.5}},tr={{0,1},{0.5,0.815},{1,1}},life={0.592,0.828},rate=33.8,le=1,accel={0.001,0.1,0},orient="VelocityPerpendicular",locked=true,bright=2,rot={-360,360}},
+	dots = {tex=18351687315,col={255,61,61},size={{0,10.9},{0.25,9.04},{0.5,7.1},{0.75,4.7},{1,1.21}},tr={{0,1},{0.132,0.7},{0.49,0.806},{0.777,1},{1,1}},life={0.3,0.3},rate=25,le=0,dir="Left",orient="VelocityPerpendicular",locked=true,bright=16,rot={0,360}},
+	eklectric = {tex=16771412543,col={92,108,255},size={{0,9.22},{0.25,9.22},{0.5,9.22},{0.75,9.22},{1,9.22}},tr={{0,1},{0.501,0.801},{1,1}},life={0.4,0.4},rate=25,le=1,flip="Grid4x4",flipMode="OneShot",fps=1,spread={70,70},orient="VelocityPerpendicular",locked=true,bright=15,rot={-360,360}},
+	electric = {tex=7216850212,col={255,61,61},size={{0,15.7},{0.25,13},{0.5,10},{0.75,6.44},{1,1.21}},tr={{0,1},{0.132,0.7},{0.49,0.806},{0.777,1},{1,1}},life={0.3,0.3},rate=40,le=0,dir="Left",orient="VelocityPerpendicular",locked=true,bright=16,rot={0,360}},
+	fog = {tex=18671990931,col={94,124,255},size={{0,1.85},{1,1.85}},tr={{0,1},{0.5,0},{1,1}},life={0.2,0.2},rate=100,le=1,flip="Grid8x8",flipMode="OneShot",fps=10,z=0.001,spread={360,360},orient="VelocityParallel",locked=true,bright=2,ts=0.05,rot={-360,360}},
+	galax = {tex=18475192728,col={71,88,197},size={{0,6.43},{0.25,7.38},{0.5,9.91},{0.75,13.5},{1,17.9}},tr={{0,1},{0.5,0},{1,1}},life={0.231,1.15},rate=23.4,le=1,accel={0.001,0.1,0},spread={10,10},orient="VelocityPerpendicular",bright=17,spin={-39,39},rot={-360,360}},
+	glare = {tex=3052949762,col={106,146,255},size={{0,9.66},{1,9.66}},tr={{0,1},{0.5,0},{1,1}},life={2,2},rate=2,le=1,locked=true,bright=0.2},
+	glitchSigil = {tex=16397769425,col={255,46,46},size={{0,12.1},{0.25,7.69},{0.5,5.38},{0.75,4.54},{1,4.4}},tr={{0,1},{0.501,0.319},{0.619,1},{1,1}},life={0.5,0.5},rate=20,le=0,accel={0.285,0.00285,0},z=0.25,orient="VelocityPerpendicular",locked=true,bright=6,rot={-20,20}},
+	innerSigil = {tex=12364252868,col={255,46,46},size={{0,7.94},{0.25,7.9},{0.5,7.75},{0.75,7.74},{1,5.73}},tr={{0,1},{0.5,0},{1,1}},life={0.2,0.2},rate=14,le=1,accel={0.229,0.00229,0},z=0.25,orient="VelocityPerpendicular",locked=true,bright=5},
+	lightning = {tex=9732664178,col={255,255,255},size={{0,1.2},{0.25,1.3},{0.5,1.4},{0.75,1.5},{1,1.6}},tr={{0,0},{1,1}},life={0.6,0.6},rate=20,le=1,flip="Grid4x4",flipMode="OneShot",fps=1,z=-0.75,spread={360,360},locked=true,bright=5,rot={-1e+03,1e+03}},
+	lines = {tex=85595763912682,col={51,51,252},size={{0,24.2},{1,24.2}},tr={{0,1},{0.295,0},{1,1}},life={1.06,1.8},rate=20.3,le=1,accel={0,2.96,0},z=0.1,spread={2,-2},dir="Back",orient="VelocityParallel",locked=true,bright=10,rot={45,45},speed={30.3,75.7}},
+	ripple = {tex=17113590856,col={55,68,152},size={{0,1.01},{0.25,3.01},{0.5,8.37},{0.75,16},{1,25.2}},tr={{0,1},{0.5,0.525},{1,1}},life={1,1.3},rate=17,le=0,accel={0.001,0.1,0},flip="Grid4x4",flipMode="OneShot",fps=10,z=0.001,orient="VelocityPerpendicular",locked=true,bright=0.5,rot={-360,360}},
+	squares = {tex=15841621175,col={255,65,65},size={{0,0.682},{0.25,0.627},{0.5,0.476},{0.75,0.259},{1,0}},tr={{0,0},{1,0}},life={0.9,1.3},rate=8,le=0.3,drag=2,flip="Grid8x8",flipMode="OneShot",fps=1,z=2.5,shape="Sphere",dir="Left",orient="VelocityParallel",bright=4,rot={-1e+03,1e+03},speed={5.85,9.74}},
+	star = {tex=15501870094,col={83,100,255},size={{0,7},{1,7}},tr={{0,1},{0.5,0.224},{1,1}},life={2,2},rate=2,le=2,z=1.01,locked=true,squash={{0,-3},{0.536,-0.475},{0.744,-3},{1,-3}},rot={-180,-180}},
+	superstars = {tex=77238335454443,col={51,51,252},size={{0,10.1},{1,10.1}},tr={{0,1},{0.295,0},{1,1}},life={1.48,2.49},rate=13.6,le=1,accel={0,1.36,0},drag=0.0412,z=0.1,dir="Back",orient="VelocityParallel",locked=true,bright=2,squash={{0,1.25},{1,1.25}},rot={90,90},speed={21.8,27.3}},
+	swirl = {tex=15124481454,col={71,88,197},size={{0,6.43},{0.25,7.38},{0.5,9.91},{0.75,13.5},{1,17.9}},tr={{0,1},{0.501,0.739},{1,1}},life={0.385,1.38},rate=13,le=1,accel={0.001,0.1,0},flip="Grid4x4",flipMode="OneShot",fps=13,spread={10,10},orient="VelocityPerpendicular",bright=5,spin={-468,468},rot={-360,360}},
+	swirl2 = {tex=14006234837,col={83,100,255},size={{0,10.2},{0.25,10.2},{0.5,10.2},{0.75,10.2},{1,10.2}},tr={{0,1},{0.2,0.256},{0.5,0},{0.799,0.244},{1,1}},life={0.5,0.5},rate=25,le=1,flip="Grid4x4",flipMode="OneShot",fps=1,z=-3,spread={70,70},orient="VelocityPerpendicular",locked=true,bright=5,spin={300,300},rot={-360,360}},
+	triang = {tex=13973317169,col={108,128,255},size={{0,0.405},{0.25,0.405},{0.5,0.405},{0.75,0.405},{1,0.405}},tr={{0,1},{0.201,0},{1,1}},life={1,1},rate=30,le=1,accel={0,2.43,0},flip="Grid4x4",flipMode="OneShot",fps=10,shape="Disc",bright=10,rot={-360,360},speed={8.1,12.1}},
+	wiggle = {tex=16056965573,col={102,88,255},size={{0,0.462},{1,0.462}},tr={{0,0},{1,0}},life={0.2,0.2},rate=100,le=1,flip="Grid4x4",flipMode="OneShot",fps=10,z=2,orient="VelocityParallel",locked=true,ts=0.1,squash={{0,2},{1,2}},rot={-90,-90}},
+	-- Place1
+	aura4glow = {tex=8451174579,col={210,28,255},size={{0,0.667},{1,2.77}},tr={{0,1},{0.5,0.908},{1,1}},life={0.4,0.62},rate=25,le=1,drag=1,z=-1,spread={33,33},locked=true,rot={-360,360}},
+	aura4specs = {tex=10205180639,col={210,28,255},size={{0,0},{0.103,0.308},{1,0}},tr={{0,0},{1,0}},life={0.7,0.7},rate=42,le=1,drag=1.1,z=-1,spread={-360,360},orient="VelocityParallel",locked=true,bright=3,spin={-75,75},rot={-360,360},speed={1.7,2.8}},
+	awaken = {tex=7857596636,col={0,134,218},size={{0,4.19},{1,5.5}},tr={{0,1},{0.501,0.356},{1,1}},life={0.25,0.25},rate=12,le=1,z=1,spread={10,10},orient="FacingCameraWorldUp",locked=true,rot={-5,5},speed={5,5}},
+	bolts = {tex=1084955012,col={255,255,150},size={{0,4.8},{0.532,8.62},{1,4.8}},tr={{0,0.883},{0.25,0.528},{0.5,0.237},{0.75,0.641},{1,1}},life={0.333,0.333},rate=12,le=1,locked=true,rot={-180,180}},
+	box = {tex=13273852131,col={0,249,41},size={{0,0.2},{1,0.4}},tr={{0,1},{0.115,0},{0.871,0},{1,1}},life={1,2},rate=10,le=0,accel={0,10,0},drag=10,spread={360,360},bright=10,squash={{0,0},{0.873,0},{0.925,1.16},{1,-0.6}},speed={25,25}},
+	bubble = {tex=1084955488,col={255,255,255},size={{0,4.5},{1,4.5}},tr={{0,1},{0.25,0.391},{0.5,0.7},{0.75,1},{1,1}},life={1,1},rate=7,le=1,z=3,spread={360,360},locked=true,squash={{0,1},{1,1}},rot={180,180},speed={0.5,0.5}},
+	clockFade = {tex=137684712495086,col={255,225,36},size={{0,16},{1,16}},tr={{0,0.794},{1,1}},life={1.5,1.5},rate=1,le=1,orient="VelocityPerpendicular",bright=10,spin={50,50}},
+	comet = {tex=197195522,col={170,0,255},size={{0,2.94},{1,0}},tr={{0,0},{1,1}},life={1,1},rate=50,le=1,drag=5,spread={30,30},dir="Back",rot={-180,180},speed={100,100}},
+	constSpark = {tex=569507414,col={255,255,0},size={{0,0},{1,0.312}},tr={{0,0},{0.701,0},{0.898,0.506},{1,1}},life={1,1},rate=500,le=1,drag=5,spread={0,360},locked=true,rot={0,45},speed={5,5}},
+	cubes = {tex=9470888178,col={85,170,255},size={{0,0},{0.25,0.65},{1,0}},tr={{0,0},{1,0}},life={1,1.5},rate=0,le=0.6,accel={0,5,0},drag=7,z=2,spread={-360,360},bright=5,spin={-300,300},rot={-360,360},speed={50,70}},
+	darkAura = {tex=5406968633,col={0,0,0},size={{0,1.06},{1,0}},tr={{0,1},{0.301,0},{0.701,0},{1,1}},life={0.4,0.6},rate=100,le=0,accel={0,6,0},z=-1,spread={90,-90},orient="VelocityParallel",locked=true,ts=0.5,spin={-100,100},rot={-360,360},speed={2.4,2.4}},
+	darkAura2 = {tex=5407035714,col={0,0,0},size={{0,0.875},{1,0}},tr={{0,1},{0.298,0},{0.699,0},{1,1}},life={0.4,0.6},rate=59,le=0,accel={0,6,0},z=-1,spread={90,-90},orient="VelocityParallel",locked=true,ts=0.5,spin={-100,100},rot={-360,360},speed={2.4,2.4}},
+	darkFlame = {tex=15371082237,col={94,124,255},size={{0,0},{0.25,1.4},{0.5,1.99},{0.75,2.27},{1,2.48}},tr={{0,0},{1,0}},life={0.7,0.7},rate=5,le=0,flip="Grid4x4",flipMode="OneShot",fps=70,z=-2.75,spread={-360,360},locked=true,bright=7,rot={-1e+03,1e+03}},
+	darkness = {tex=6679618752,col={0,0,0},size={{0,1.4},{1,1.4}},tr={{0,1},{0.117,0.705},{0.655,0.732},{1,1}},life={2,2},rate=340,le=0.2,z=-1,spread={15,15},locked=true,spin={-100,100},speed={0.25,0.25}},
+	disint = {tex=304846479,col={255,255,255},size={{0,0.188},{1,0}},tr={{0,0},{1,1}},life={1,2},rate=100,le=0,spread={-180,180},spin={-300,300},rot={-180,180},speed={5,30}},
+	dust2 = {tex=272050333,col={81,81,81},size={{0,1.2},{0.7,3.18},{1,3.18}},tr={{0,1},{0.204,0.494},{0.711,0},{1,1}},life={0.6,0.9},rate=45,le=0.5,accel={0,6,0},drag=3,z=0.2,spread={0,900},dir="Front",rot={-360,360},speed={48,48}},
+	ehFire = {tex=13266124480,col={85,170,255},size={{0,0},{0.098,2.44},{1,4.94}},tr={{0,0},{1,0}},life={0.5,1},rate=50,le=1,drag=8,flip="Grid4x4",flipMode="OneShot",fps=1,z=5,spread={360,360},bright=5,rot={-360,360},speed={40,100}},
+	ehSmoke = {tex=10180479311,col={85,170,255},size={{0,0},{0.25,3},{1,3.5}},tr={{0,0.4},{0.21,0.4},{0.45,0.94},{1,1}},life={0.4,0.65},rate=0,le=0.5,drag=12.5,z=2,spread={-360,360},locked=true,bright=4.5,spin={-100,100},rot={-360,360},speed={60,100}},
+	energy = {tex=10435576555,col={255,255,255},size={{0,2},{1,0.375}},tr={{0,1},{0.123,1},{0.265,0},{0.572,0},{1,1}},life={0.4,0.5},rate=45,le=0,accel={0,100,0},drag=1,spread={0,180},dir="Left",orient="VelocityParallel",locked=true,bright=4,squash={{0,0.075},{0.256,0},{0.431,-0.525},{1,-2.18}},rot={180,180},speed={55,55}},
+	fire18 = {tex=16846986401,col={222,47,0},size={{0,0},{0.25,1.31},{0.5,1.56},{0.75,1.6},{1,1.6}},tr={{0,0},{1,0}},life={0.4,0.6},rate=5,le=1,flip="Grid4x4",flipMode="OneShot",fps=1,z=-2.5,locked=true,bright=3.5,rot={-100,1e+03}},
+	flameBurst = {tex=11852978685,col={94,124,255},size={{0,0},{0.25,1.4},{0.5,1.99},{0.75,2.27},{1,2.48}},tr={{0,0},{1,0}},life={0.7,0.7},rate=5,le=0,flip="Grid4x4",flipMode="OneShot",fps=70,z=-2.75,spread={-360,360},locked=true,bright=7,rot={-1e+03,1e+03}},
+	flareE = {tex=13948669435,col={255,225,36},size={{0,0},{0.3,3.5},{1,0}},tr={{0,0},{1,0}},life={0.3,0.6},rate=25,le=1,shape="Disc",orient="VelocityParallel",bright=10,squash={{0,-1},{1,3}},speed={10,35}},
+	glow3 = {tex=12364081650,col={41,253,58},size={{0,1.5},{1,1.5}},tr={{0,1},{0.26,0.05},{0.451,0.9},{0.703,0},{1,0}},life={1.5,1.5},rate=2,le=1,orient="VelocityPerpendicular",locked=true,bright=10,spin={360,360},rot={10,10}},
+	groundRing = {tex=18921751176,col={255,225,26},size={{0,20},{1,20}},tr={{0,1},{0.5,0.466},{1,1}},life={1,1},rate=3,le=1,orient="VelocityPerpendicular",locked=true,bright=10},
+	jlight1 = {tex=6959235625,col={41,91,255},size={{0,4.5},{1,4.5}},tr={{0,0},{0.618,0},{1,1}},life={0.05,0.05},rate=15,le=1,z=2,spread={360,360},orient="VelocityParallel",locked=true,bright=33,rot={-180,180},speed={0.1,0.1}},
+	jsmoke = {tex=15410021685,col={94,124,255},size={{0,0},{0.25,1.41},{0.5,2},{0.75,2.28},{1,2.49}},tr={{0,0},{1,1}},life={0.7,0.7},rate=5,le=0,flip="Grid4x4",flipMode="OneShot",fps=1,z=-2.5,spread={-360,360},locked=true,bright=5,rot={-1e+03,1e+03}},
+	ltn1 = {tex=14197083420,col={34,185,255},size={{0,3},{1,3}},tr={{0,1},{0.2,0.7},{0.8,0.7},{1,1}},life={1,1},rate=20,le=1,flip="Grid8x8",flipMode="OneShot",fps=16,spread={360,360},orient="VelocityPerpendicular",locked=true,bright=3,squash={{0,0.3},{1,0.3}},rot={0,360},speed={0.05,0.05}},
+	ltn3 = {tex=14068947349,col={34,185,255},size={{0,4},{1,4}},tr={{0,1},{0.2,0},{0.8,0},{1,1}},life={1,1},rate=5,le=1,flip="Grid4x4",flipMode="OneShot",fps=16,spread={360,360},orient="VelocityPerpendicular",locked=true,bright=3,squash={{0,0.3},{1,0.3}},spin={10,10},rot={0,360},speed={0.05,0.05}},
+	ltn5 = {tex=16504113471,col={34,185,255},size={{0,4},{1,4}},tr={{0,1},{0.2,0.7},{0.8,0.7},{1,1}},life={1,1},rate=20,le=1,flip="Grid4x4",flipMode="OneShot",fps=16,spread={360,360},orient="VelocityPerpendicular",locked=true,bright=3,squash={{0,0.3},{1,0.3}},rot={0,360},speed={0.05,0.05}},
+	ltn6 = {tex=139759126655001,col={34,185,255},size={{0,3},{1,3}},tr={{0,1},{0.2,0},{0.8,0},{1,1}},life={0.2,0.2},rate=20,le=1,flip="Grid2x2",flipMode="OneShot",fps=16,z=1,spread={360,360},orient="VelocityPerpendicular",locked=true,bright=3,squash={{0,0.3},{1,0.3}},rot={0,360},speed={0.05,0.05}},
+	numbers = {tex=12285599556,col={0,249,41},size={{0,0.2},{1,0.2}},tr={{0,1},{0.115,0},{0.871,0},{1,1}},life={1,2},rate=5,le=1,accel={0,-5,0},drag=10,flip="Grid8x8",flipMode="Loop",fps=30,spread={360,360},bright=10,speed={25,25}},
+	redLtn = {tex=9135310747,col={255,0,0},size={{0,0.8},{1,0.8}},tr={{0,0},{1,0}},life={0.1,0.1},rate=160,le=1,flip="Grid4x4",flipMode="OneShot",fps=6.4,spread={180,180},shape="Sphere",locked=true,bright=40,squash={{0,-1.18},{0.671,-0.179},{1,-1.11}},rot={-180,180},speed={1,1}},
+	rimBack = {tex=8133994161,col={0,0,255},size={{0,0},{0.219,1.6},{0.58,2.3},{1,3.18}},tr={{0,1},{0.25,0.0766},{0.5,0.464},{0.75,0.884},{1,1}},life={0.4,0.4},rate=50,le=1,accel={0,1,0},drag=10,z=-2,spread={10,180},dir="Front",orient="VelocityPerpendicular",locked=true,bright=10,ts=0.5,speed={0.1,0.1}},
+	rimGround = {tex=8618373035,col={117,136,255},size={{0,0},{1,4}},tr={{0,1},{0.221,0},{0.547,0},{1,1}},life={0.5,0.6},rate=50,le=0,orient="VelocityPerpendicular",bright=4,spin={500,800},rot={-360,360}},
+	rimSpecs = {tex=8030760338,col={170,85,255},size={{0,0},{0.25,1.75},{1,0}},tr={{0,0},{1,0}},life={0.35,0.65},rate=0,le=0.5,drag=7,z=2,spread={-360,360},bright=5,speed={60,100}},
+	rings = {tex=6246398215,col={255,255,255},size={{0,3},{0.6,3.75},{1,2.85}},tr={{0,1},{0.5,0},{1,1}},life={0.5,1},rate=15,le=0,accel={0,6,0},drag=5,spread={11,11},orient="VelocityPerpendicular",spin={500,1e+03},rot={-180,180},speed={13,17}},
+	rocks = {tex=36952938,col={94,58,0},size={{0,0.2},{1,0.2}},tr={{0,1},{0.324,1},{0.325,0},{0.8,0},{1,1}},life={0.75,0.75},rate=8,le=0.15,accel={0,30,0},drag=-2,z=1,spread={90,90},spin={360,360},speed={-10,-10}},
+	shadowFire = {tex=15371144313,col={94,124,255},size={{0,0},{0.25,0.675},{0.5,0.961},{0.75,1.09},{1,1.19}},tr={{0,0},{1,0}},life={0.7,0.7},rate=5,le=0,flip="Grid4x4",flipMode="OneShot",fps=70,z=-2.75,spread={-360,360},locked=true,bright=7,rot={-1e+03,1e+03}},
+	shards = {tex=10439119562,col={170,85,255},size={{0,0},{0.25,0.8},{1,0}},tr={{0,0.2},{1,0.2}},life={0.45,0.7},rate=0,le=1,drag=8,z=2,spread={-360,360},orient="VelocityParallel",bright=5,squash={{0,0},{1,-0.637}},rot={90,90},speed={45,90}},
+	slashes = {tex=101193551658917,col={255,225,26},size={{0,5},{1,25}},tr={{0,0},{1,1}},life={0.4,1},rate=25,le=1,drag=2.5,spread={15,15},orient="VelocityPerpendicular",bright=10,spin={-200,-100},rot={-360,360},speed={0.001,10}},
+	smash = {tex=528256032,col={130,130,130},size={{0,1},{0.3,10},{1,10}},tr={{0,1},{0.1,0.463},{1,1}},life={1,3},rate=200,le=0,accel={0,10,0},drag=3,spread={180,180},dir="Bottom",spin={-200,200},rot={-180,180},speed={80,80}},
+	sparks = {tex=15269497616,col={0,153,255},size={{0,1},{1,1}},tr={{0,0},{1,0}},life={0.3,0.5},rate=100,le=-5,accel={0,20,0},flip="Grid4x4",flipMode="OneShot",fps=1,z=2,spread={360,360},dir="Front",bright=9,rot={-360,360},speed={0,5}},
+	spec2 = {tex=16878183760,col={94,124,255},size={{0,1},{0.25,0.43},{0.5,0.193},{0.75,0.0833},{1,0}},tr={{0,0},{1,0}},life={0.7,0.7},rate=18.4,le=0,drag=14,spread={-360,360},locked=true,bright=7,rot={-1e+03,1e+03},speed={15,35}},
+	vortex = {tex=2650753181,col={170,0,255},size={{0,45},{0.25,10.8},{0.5,1.41},{0.75,0.0494},{1,0}},tr={{0,1},{0.3,0.5},{1,0.5}},life={4,4},rate=50,le=0,locked=true,spin={360,360},rot={-180,180}},
+	vortexBits = {tex=1084969783,col={170,0,255},size={{0,90},{0.25,21.7},{0.5,2.82},{0.75,0.0988},{1,0}},tr={{0,1},{0.2,0.5},{1,0.5}},life={0.6,1},rate=4,le=1,locked=true,rot={-180,180}},
+	wave = {tex=6991254829,col={255,255,255},size={{0,8.27},{1,49}},tr={{0,0},{0.8,0},{1,1}},life={0.5,0.75},rate=3,le=1,accel={0,-8,0},orient="VelocityPerpendicular",locked=true,bright=3,spin={-20,20},rot={0,360},speed={1.96,1.96}},
+	wind = {tex=10176632695,col={255,255,255},size={{0,0},{0.3,15},{1,20}},tr={{0,1},{0.25,0.89},{1,1}},life={0.2,0.575},rate=0,le=0,z=3,spread={360,360},dir="Front",orient="VelocityPerpendicular",bright=5,rot={-360,360}},
+}
+
+-- build one aura emitter on a part or attachment. opts:
+--   color (Color3; default the original colour), scale (size, speed, pull and depth together), rate (multiplier),
+--   cap (most particles a second; persistent auras are capped so live games keep their frame rate), life (multiplier),
+--   burst (a number: emit that many once and stop; the emitter cleans itself up), tr (extra transparency 0..1),
+--   vis (0..1: pulls the transparency curve toward solid. These textures were made to stack 20-300 particles a
+--   second, so one burst particle alone is nearly invisible; bursts default to vis = 0.6),
+--   name, light (LightEmission override), z (extra ZOffset)
+Q.aura = function(key, parent, opts)
+	local d = Q.auraFx[key]
+	if not d or not parent then return nil end
+	opts = opts or {}
+	local k = opts.scale or 1
+	local function seq(t, mul, add, lo, hi)
+		local kp = {}
+		for _, p in ipairs(t) do
+			local v = p[2] * (mul or 1) + (add or 0)
+			if lo then v = math.clamp(v, lo, hi) end
+			table.insert(kp, NumberSequenceKeypoint.new(p[1], v))
+		end
+		return NumberSequence.new(kp)
+	end
+	local e = Instance.new("ParticleEmitter")
+	e.Name = opts.name or ("NYAura_" .. key)
+	e.Texture = "rbxassetid://" .. d.tex
+	e.Color = ColorSequence.new(opts.color or Color3.fromRGB(d.col[1], d.col[2], d.col[3]))
+	e.Size = seq(d.size, k)
+	-- transparency: fully clear keys stay clear (the fade in/out), the rest move toward solid by vis, then tr fades all
+	local vis, tr = opts.vis or (opts.burst and 0.6 or 0), opts.tr or 0
+	local kp = {}
+	for _, p in ipairs(d.tr) do
+		local v = p[2] >= 0.999 and 1 or p[2] * (1 - vis)
+		table.insert(kp, NumberSequenceKeypoint.new(p[1], math.clamp(v * (1 - tr) + tr, 0, 1)))
+	end
+	e.Transparency = NumberSequence.new(kp)
+	local lm = opts.life or 1
+	e.Lifetime = NumberRange.new(d.life[1] * lm, d.life[2] * lm)
+	e.LightEmission = opts.light or d.le
+	e.LightInfluence = 0
+	local sp = d.speed or {0, 0}
+	e.Speed = NumberRange.new(sp[1] * k, sp[2] * k)
+	if d.accel then e.Acceleration = Vector3.new(d.accel[1], d.accel[2], d.accel[3]) * k end
+	e.Drag = d.drag or 0
+	e.ZOffset = (d.z or 0) * k + (opts.z or 0)
+	if d.spread then e.SpreadAngle = Vector2.new(d.spread[1], d.spread[2]) end
+	if d.rot then e.Rotation = NumberRange.new(d.rot[1], d.rot[2]) end
+	if d.spin then e.RotSpeed = NumberRange.new(d.spin[1], d.spin[2]) end
+	if d.squash then e.Squash = seq(d.squash) end
+	e.LockedToPart = d.locked == true
+	pcall(function()
+		if d.orient then e.Orientation = Enum.ParticleOrientation[d.orient] end
+		if d.shape then e.Shape = Enum.ParticleEmitterShape[d.shape] end
+		if d.dir then e.EmissionDirection = Enum.NormalId[d.dir] end
+		if d.flip then
+			e.FlipbookLayout = Enum.ParticleFlipbookLayout[d.flip]
+			e.FlipbookMode = Enum.ParticleFlipbookMode[d.flipMode or "OneShot"]
+			e.FlipbookFramerate = NumberRange.new(d.fps or 10)
+		end
+		e.Brightness = math.min(d.bright or 1, 8)
+		e.TimeScale = d.ts or 1
+	end)
+	if opts.burst then
+		e.Rate = 0
+		e.Enabled = false
+		e.Parent = parent
+		-- Studio-checked: an Emit in the same frame its holder part was made is dropped, so wait one frame
+		-- (without holding up the move that called this)
+		local n = opts.burst
+		task.spawn(function()
+			RunService.Heartbeat:Wait()
+			if e.Parent then e:Emit(n) end
+		end)
+		Services.Debris:AddItem(e, d.life[2] * lm / (d.ts or 1) + 0.3)
+	else
+		e.Rate = math.min(d.rate * (opts.rate or 1), opts.cap or 30)
+		e.Parent = parent
+	end
+	return e
+end
+
+-- an invisible anchored holder for effects at a point. A CFrame keeps its turn (a Vector3 faces up), so the
+-- "VelocityPerpendicular" auras (rings, sigils, ripples) lie flat on the floor.
+Q.auraHolder = function(at, life)
+	local cf = typeof(at) == "CFrame" and at or CFrame.new(at)
+	local p = NeverYieldAgartha.part(Q.stage(), Vector3.new(0.2, 0.2, 0.2), cf, Color3.new(), Enum.Material.SmoothPlastic, nil,
+		{Transparency = 1, CanCollide = false, CanQuery = false, CanTouch = false, CastShadow = false})
+	if life then Services.Debris:AddItem(p, life) end
+	return p
+end
+
+-- a one-shot effect at a point: list = {{key, count, opts}, ...}; base opts (color, scale) apply to every entry
+Q.auraBurst = function(at, list, base)
+	local p = Q.auraHolder(at, 5)
+	for _, it in ipairs(list) do
+		local o = {}
+		for kk, v in pairs(base or {}) do o[kk] = v end
+		for kk, v in pairs(it[3] or {}) do o[kk] = v end
+		o.burst = it[2] or 1
+		Q.aura(it[1], p, o)
+	end
+	return p
+end
+
+-- a lasting aura on something: returns a stop function that lets the last particles finish
+Q.auraOn = function(parent, list, base)
+	local made = {}
+	for _, it in ipairs(list) do
+		local o = {}
+		for kk, v in pairs(base or {}) do o[kk] = v end
+		for kk, v in pairs(it[2] or {}) do o[kk] = v end
+		table.insert(made, Q.aura(it[1], parent, o))
+	end
+	return function(now)
+		for _, e in ipairs(made) do
+			if now then e:Destroy() else
+				e.Enabled = false
+				Services.Debris:AddItem(e, 2.5)
+			end
+		end
+	end
+end
+
+-- the palette (story bible): Vane cyan, Seris code-green, the Hollowed gray, the gates a cold blue-violet
+Q.auraCol = {vane = Color3.fromRGB(90, 230, 255), seris = Color3.fromRGB(80, 255, 140), hollow = Color3.fromRGB(150, 150, 160),
+	void = Color3.fromRGB(20, 20, 26), gate = Color3.fromRGB(120, 150, 255), toll = Color3.fromRGB(235, 245, 255)}
+
 -- [30_chapters.lua]
 -- ---------- chapters (the story scenes are added to these by the disc files) ----------
 Q.chapters = {
@@ -34307,6 +34617,9 @@ Q.say = function(token, who, text, opts)
 	if opts.stage then body.TextColor3 = Color3.fromRGB(170, 190, 230) body.Font = Enum.Font.GothamMedium end
 	local rig = opts.rig
 	if rig then Q.bubble(rig, text, nil, nil) end
+	-- whoever is talking: the others in the scene turn to them, and they talk with their hands (56_life)
+	Q.talker = rig or (who == "VANE" and Q.vane()) or (who and Q.actors and Q.actors[who]) or nil
+	Q.talking = true
 	-- typewriter; pressing during it finishes the line
 	local skip = false
 	local conn = UserInputService.InputBegan:Connect(function(input, processed)
@@ -34319,6 +34632,7 @@ Q.say = function(token, who, text, opts)
 		if n % 2 == 0 then task.wait(opts.slow and 0.035 or 0.014) end
 	end
 	body.Text = shown
+	Q.talking = false
 	conn:Disconnect()
 	task.wait(0.12)
 	local arrow = Q.text(box, {AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -14, 1, -6), Size = UDim2.new(0, 20, 0, 16), Text = "v",
@@ -34463,11 +34777,18 @@ Q.camHold = function()
 			local c = workspace.CurrentCamera
 			if not c or not Q.camCF then return end
 			if c.CameraType ~= Enum.CameraType.Scriptable then c.CameraType = Enum.CameraType.Scriptable end
+			local cf = Q.camCF
+			-- scenes: a camera operator's hands (a slow, tiny drift) and a slow push in on a held shot
+			if Q.handheld then
+				local t = tick()
+				local push = Q.camSettled and math.min(t - Q.camSettled, 12) * 0.06 or 0
+				cf = cf * CFrame.new(0, 0, -push) * CFrame.Angles(math.sin(t * 0.63) * 0.0035, math.sin(t * 0.41) * 0.005, math.sin(t * 0.29) * 0.002)
+			end
 			if Q.camShake and Q.camShake > 0 then
 				Q.camShake = math.max(0, Q.camShake - 0.06)
-				c.CFrame = Q.camCF * CFrame.new((math.random() - 0.5) * Q.camShake, (math.random() - 0.5) * Q.camShake, 0)
+				c.CFrame = cf * CFrame.new((math.random() - 0.5) * Q.camShake, (math.random() - 0.5) * Q.camShake, 0)
 			else
-				c.CFrame = Q.camCF
+				c.CFrame = cf
 			end
 		end)
 	end
@@ -34484,8 +34805,10 @@ end
 Q.camTo = function(pos, look, seconds, style)
 	Q.camHold()
 	local target = CFrame.lookAt(pos, look)
+	Q.camSettled = nil
 	if not seconds or seconds <= 0 then
 		Q.camCF = target
+		Q.camSettled = tick()
 		return
 	end
 	local from = Q.camCF
@@ -34498,7 +34821,7 @@ Q.camTo = function(pos, look, seconds, style)
 		Q.camCF = from:Lerp(target, a)
 		RunService.RenderStepped:Wait()
 	end
-	if Q.camTween == token then Q.camCF = target end
+	if Q.camTween == token then Q.camCF = target Q.camSettled = tick() end
 end
 
 -- start a camera move without waiting for it
@@ -34586,9 +34909,9 @@ Q.shotAt = function(kind, subject, other, side)
 	local p, f = Q.subject(subject)
 	local right = f:Cross(Vector3.new(0, 1, 0)).Unit * side
 	if kind == "close" then
-		return p + f * 4.6 + right * 1.4 + Vector3.new(0, 0.25, 0), p - Vector3.new(0, 0.15, 0)
+		return p + f * 6.4 + right * 1.8 + Vector3.new(0, 0.2, 0), p - Vector3.new(0, 0.35, 0)
 	elseif kind == "medium" then
-		return p + f * 8 + right * 2.6 + Vector3.new(0, 0.6, 0), p - Vector3.new(0, 0.6, 0)
+		return p + f * 9.5 + right * 3 + Vector3.new(0, 0.6, 0), p - Vector3.new(0, 0.9, 0)
 	elseif kind == "low" then
 		return p + f * 7 + right * 2 - Vector3.new(0, 2.6, 0), p + Vector3.new(0, 0.4, 0)
 	elseif kind == "ots" and other then
@@ -34596,7 +34919,7 @@ Q.shotAt = function(kind, subject, other, side)
 		local d = (q - p) * Vector3.new(1, 0, 1)
 		local u = d.Magnitude > 0.1 and d.Unit or f
 		local r = u:Cross(Vector3.new(0, 1, 0)).Unit * side
-		return p - u * 4.2 + r * 1.9 + Vector3.new(0, 0.7, 0), q - Vector3.new(0, 0.3, 0)
+		return p - u * 5 + r * 2.4 + Vector3.new(0, 0.8, 0), q - Vector3.new(0, 0.3, 0)
 	elseif kind == "two" and other then
 		local q = Q.subject(other)
 		local mid = (p + q) / 2
@@ -34612,34 +34935,26 @@ end
 
 -- kinds: "wide" (whole scene), "two" (subject + other), "medium", "close", "ots" (over subject's shoulder at other),
 -- "low" (looking up at subject). side = 1 or -1 picks which side of the line the camera stands on.
--- In tight rooms a wall can push the camera in too close: then the other side of the line is tried, and a two-shot
--- that still doesn't fit is filmed down the line from behind the nearer of the two, raised a little.
+-- The framing is a wish: Q.bestCam (41_cam) keeps it when the shot is clean and otherwise finds the nearest angle
+-- where both people are in sight and in frame, nothing covers the picture and the camera isn't in anyone's hair.
 Q.shot = function(kind, subject, other, seconds, side)
 	side = side or 1
 	local cam, look = Q.shotAt(kind, subject, other, side)
-	local want = (cam - look).Magnitude
-	local got = Q.clearShot(look, cam)
-	if (got - look).Magnitude < want * 0.6 then
+	local must, subjects = {}, {}
+	for _, s in ipairs({subject, other}) do
+		Q.camPoints(s, must)
+		if typeof(s) == "Instance" then table.insert(subjects, s) end
+	end
+	local opts = {must = must, subjects = subjects, dialog = true}
+	local got, score = Q.bestCam(look, cam, opts)
+	-- the mirror shot from the other side of the line can be cleaner
+	if score < -6 then
 		local cam2, look2 = Q.shotAt(kind, subject, other, -side)
-		local got2 = Q.clearShot(look2, cam2)
-		if (got2 - look2).Magnitude > (got - look).Magnitude then got, look = got2, look2 end
-		if (got - look).Magnitude < want * 0.6 and kind == "two" and other then
-			local p, q = Q.subject(subject), Q.subject(other)
-			local near, far = p, q
-			local here = workspace.CurrentCamera.CFrame.Position
-			if (q - here).Magnitude < (p - here).Magnitude then near, far = q, p end
-			local d = (far - near) * Vector3.new(1, 0, 1)
-			local u = d.Magnitude > 0.1 and d.Unit or Vector3.new(0, 0, -1)
-			look = (near + far) / 2 - Vector3.new(0, 0.4, 0)
-			got = Q.clearShot(look, near - u * 6 + u:Cross(Vector3.new(0, 1, 0)).Unit * 2.2 * side + Vector3.new(0, 2.6, 0))
-		end
+		local got2, score2 = Q.bestCam(look2, cam2, opts)
+		if score2 > score then got, look = got2, look2 end
 	end
-	-- an over-the-shoulder pulled in by a wall ends up inside the shoulder: frame both of them instead
-	if kind == "ots" and other and ((got - look).Magnitude < want * 0.75 or Q.bodyBlocks(got, look)) then
-		return Q.shot("two", subject, other, seconds, side)
-	end
-	cam = got
-	if seconds and seconds > 0 then Q.camGo(cam, look, seconds) else Q.camTo(cam, look, 0) end
+	Q.lastShot = {kind = kind, subject = subject, other = other}
+	if seconds and seconds > 0 then Q.camGo(got, look, seconds) else Q.camTo(got, look, 0) end
 end
 
 -- a slow push in on a shot (for long lines)
@@ -34726,6 +35041,234 @@ Q.shake = function(amount)
 	Q.camShake = math.max(Q.camShake or 0, amount or 1)
 end
 
+-- [41_cam.lua]
+-- ---------- the smart camera ----------
+-- A shot used to be checked with one sight line, from what it looks at back to the camera. That missed everything
+-- beside the camera (a stair banister filling half the frame) and everything between the camera and the OTHER
+-- people in the shot (a Hollowed hidden behind a pillar), and it let the camera sit inside Vane's hood. Now every
+-- camera position is judged by what it has to show:
+--   * it must see what it looks at (it isn't behind a wall),
+--   * everyone who must be in the shot is in sight AND in frame (above the battle HUD, under the dialogue box),
+--   * nothing solid covers the near part of the picture (a grid of rays across the frame; floors don't count),
+--   * it isn't inside or right against anyone's body (bounding boxes, so big hair and ears count),
+--   * and it stays close to the shot that was asked for.
+-- If the shot that was asked for passes, it's used as is (the choreographed angles stay); otherwise nearby angles,
+-- distances and heights are tried and the best one wins.
+
+-- see-through parts near the stage, collected once per place, so a sight line is one raycast (not a skip loop)
+Q.camScan = function(center)
+	local skip = {Q.folder, Players.LocalPlayer.Character}
+	local op = OverlapParams.new()
+	op.FilterType = Enum.RaycastFilterType.Exclude
+	op.FilterDescendantsInstances = {Q.folder, Players.LocalPlayer.Character}
+	local ok, parts = pcall(function() return workspace:GetPartBoundsInRadius(center, 70, op) end)
+	if ok then
+		for _, p in ipairs(parts) do
+			if p.Transparency > 0.6 then table.insert(skip, p) end
+		end
+	end
+	Q.camSkip, Q.camScanAt = skip, center
+end
+
+Q.camParams = function()
+	local c = (Q.anchor or CFrame.new(Q.root() and Q.root().Position or Vector3.zero)).Position
+	if not Q.camSkip or (Q.camScanAt - c).Magnitude > 25 or not Q.camSkip[1] then Q.camScan(c) end
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = Q.camSkip
+	return params
+end
+
+-- a solid hit on a ray (see-through parts the scan missed get added to the skip list as they turn up)
+Q.camRay = function(from, dir, params)
+	for _ = 1, 4 do
+		local hit = workspace:Raycast(from, dir, params)
+		if not hit or hit.Instance.Transparency <= 0.6 then return hit end
+		table.insert(Q.camSkip, hit.Instance)
+		params.FilterDescendantsInstances = Q.camSkip
+	end
+	return nil
+end
+
+-- can the camera see this point?
+Q.camSees = function(cam, pt, params)
+	local hit = Q.camRay(cam, pt - cam, params)
+	return not hit or (hit.Position - pt).Magnitude < 0.5
+end
+
+-- ray params that hit only bodies NOT in the shot (you, other rigs; accessories included), or nil if there are none
+Q.otherBodies = function(subjects)
+	local list = {}
+	local function add(m)
+		if m and m:IsA("Model") and not table.find(subjects, m) then table.insert(list, m) end
+	end
+	if not Q.selfHidden then add(Players.LocalPlayer.Character) end
+	for _, m in ipairs(Q.folder and Q.folder:GetChildren() or {}) do add(m) end
+	if #list == 0 then return nil end
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Include
+	params.FilterDescendantsInstances = list
+	return params
+end
+
+-- is one of those bodies between the camera and this point?
+Q.bodyBetween = function(cam, pt, bodies)
+	if not bodies then return false end
+	local hit = workspace:Raycast(cam, (pt - cam) * 0.92, bodies)
+	return hit ~= nil and hit.Instance.Transparency < 0.6 and hit.Instance.Name ~= "HumanoidRootPart"
+end
+
+-- how close the camera is to the nearest body (its whole bounding box: hair, ears, wings, the sword)
+Q.nearestBody = function(cam)
+	local best = math.huge
+	local rigs = Q.folder and table.clone(Q.folder:GetChildren()) or {}
+	local mine = Players.LocalPlayer.Character
+	if mine and not Q.selfHidden then table.insert(rigs, mine) end
+	for _, m in ipairs(rigs) do
+		if m:IsA("Model") and m:FindFirstChildOfClass("Humanoid") then
+			local ok, cf, size = pcall(function() return m:GetBoundingBox() end)
+			if ok then
+				local p = cf:PointToObjectSpace(cam)
+				local h = size / 2
+				local d = Vector3.new(math.max(math.abs(p.X) - h.X, 0), math.max(math.abs(p.Y) - h.Y, 0), math.max(math.abs(p.Z) - h.Z, 0)).Magnitude
+				if d < best then best = d end
+			end
+		end
+	end
+	return best
+end
+
+-- the points a rig is filmed by (head and chest), or the point itself
+Q.camPoints = function(s, into)
+	if typeof(s) == "Vector3" then table.insert(into, s) return end
+	if typeof(s) ~= "Instance" then return end
+	local head = s:FindFirstChild("Head")
+	local root = s:FindFirstChild("HumanoidRootPart")
+	if head then table.insert(into, head.Position) end
+	if root then table.insert(into, root.Position) end
+end
+
+-- rays across the frame for the clutter check (x, y in -1..1 of the screen)
+Q.camGrid = {{-0.7, -0.55}, {0, -0.55}, {0.7, -0.55}, {-0.75, 0}, {0, 0}, {0.75, 0}, {-0.7, 0.55}, {0, 0.55}, {0.7, 0.55}}
+
+-- score one camera position. opts = {must = {points}, nice = {points}, subjects = {rigs in the shot}, want = Vector3,
+-- hud = true (the battle HUD covers the bottom of the screen), dialog = true (the line box covers the top)}
+Q.camScore = function(cam, look, opts, params)
+	local score = 0
+	if not Q.camSees(cam, look, params) then return -1000 end
+	local cf = CFrame.lookAt(cam, look)
+	local c = workspace.CurrentCamera
+	local ty = math.tan(math.rad(c.FieldOfView / 2))
+	local tx = ty * c.ViewportSize.X / math.max(c.ViewportSize.Y, 1)
+	local bottom, top = opts.hud and -0.3 or -0.85, opts.dialog and 0.62 or 0.88
+	local bodies = Q.otherBodies(opts.subjects or {})
+	local function judge(pt, cost)
+		local p = cf:PointToObjectSpace(pt)
+		if p.Z > -0.5 then return cost end
+		local x, y = p.X / -p.Z / tx, p.Y / -p.Z / ty
+		local s = 0
+		if math.abs(x) > 0.86 or y < bottom or y > top then s = s + cost end
+		if not Q.camSees(cam, pt, params) then s = s + cost
+		elseif Q.bodyBetween(cam, pt, bodies) then s = s + cost * 0.5 end
+		return s
+	end
+	for _, pt in ipairs(opts.must or {}) do score = score - judge(pt, 60) end
+	for _, pt in ipairs(opts.nice or {}) do score = score - judge(pt, 5) end
+	-- clutter: something solid in the near 60% of the picture (a floor seen from above doesn't count)
+	local dist = (look - cam).Magnitude
+	for _, g in ipairs(Q.camGrid) do
+		local dir = (cf.LookVector + cf.RightVector * g[1] * tx + cf.UpVector * g[2] * ty).Unit
+		local hit = Q.camRay(cam, dir * dist * 0.6, params)
+		if hit and hit.Normal.Y < 0.7 then score = score - (1 - (hit.Position - cam).Magnitude / (dist * 0.6)) * 9 - 2 end
+		-- somebody who isn't in the shot filling the foreground (Vane's hood across a shot of Seris)
+		local b = bodies and workspace:Raycast(cam, dir * dist * 0.6, bodies)
+		if b and b.Instance.Transparency < 0.6 and b.Instance.Name ~= "HumanoidRootPart" then score = score - 7 end
+	end
+	-- right against (or inside) somebody
+	local near = Q.nearestBody(cam)
+	if near < 0.8 then score = score - 45 elseif near < 1.6 then score = score - (1.6 - near) * 8 end
+	if opts.want then score = score - (cam - opts.want).Magnitude * 0.3 end
+	return score
+end
+
+-- the best camera position for a shot: the one asked for when it's good, else the best nearby
+Q.bestCam = function(look, want, opts)
+	opts = opts or {}
+	opts.want = want
+	local params = Q.camParams()
+	local best, bestScore = want, Q.camScore(want, look, opts, params)
+	if bestScore > -6 then return best, bestScore end
+	local off = want - look
+	local flat = Vector3.new(off.X, 0, off.Z)
+	if flat.Magnitude < 1 then flat = Vector3.new(0, 0, 6) end
+	-- the old pull-in-front-of-the-wall answer is one of the candidates
+	local pulled = Q.clearShot(look, want)
+	local s = Q.camScore(pulled, look, opts, params)
+	if s > bestScore then best, bestScore = pulled, s end
+	for _, yaw in ipairs({0, 25, -25, 50, -50, 80, -80, 115, -115, 150, -150, 180}) do
+		local dir = CFrame.Angles(0, math.rad(yaw), 0):VectorToWorldSpace(flat)
+		for _, k in ipairs({1, 0.75, 1.3, 0.55}) do
+			for _, dy in ipairs({0, 2.5, -1}) do
+				local cam = look + dir * k + Vector3.new(0, math.max(off.Y + dy, 0.6), 0)
+				local sc = Q.camScore(cam, look, opts, params)
+				if sc > bestScore then best, bestScore = cam, sc end
+			end
+		end
+		-- a good angle this close to the asked-for one: stop looking
+		if bestScore > -10 then break end
+	end
+	return best, bestScore
+end
+
+-- ---------- battles ----------
+-- the camera in a fight: what it looks at must show, and so must the one acting and their target (B.focus); the
+-- rest of the field is nice to have
+Q.battleCam = function(look, want)
+	local B = Q.B
+	if not B then return Q.clearShot(look, want) end
+	local must, nice, subjects = {look}, {}, {}
+	local focus = B.focus or {}
+	for _, side in ipairs({B.party, B.enemies}) do
+		for _, u in ipairs(side) do
+			if u.rig and not u.dead then
+				table.insert(subjects, u.rig)
+				local head = u.rig:FindFirstChild("Head")
+				if head then table.insert(table.find(focus, u) and must or nice, head.Position) end
+			end
+		end
+	end
+	return (Q.bestCam(look, want, {must = must, nice = nice, subjects = subjects, hud = true}))
+end
+
+-- the "everyone" shot between turns: framed on whoever is still standing, closer when there are fewer of them;
+-- while you pick a command, the one choosing and the enemies must both show
+Q.battleWide = function(B)
+	local sum, n, spread = Vector3.zero, 0, 0
+	local pts = {}
+	for _, side in ipairs({B.party, B.enemies}) do
+		for _, u in ipairs(side) do
+			local r = Q.rootOf(u)
+			if r and not u.dead then sum = sum + r.Position n = n + 1 table.insert(pts, r.Position) end
+		end
+	end
+	if n == 0 then return end
+	local center = sum / n
+	for _, p in ipairs(pts) do spread = math.max(spread, ((p - center) * Vector3.new(1, 0, 1)).Magnitude) end
+	local a = Q.anchor or CFrame.new(center)
+	local look = center + Vector3.new(0, 0.3, 0)
+	-- behind and to the right of the party, looking down the battle line (the old fixed wide shot's direction)
+	local dir = a:VectorToWorldSpace(Vector3.new(13, 6.5, 18)).Unit
+	local want = look + dir * (spread * 1.35 + 9)
+	local focus = {}
+	if B.current then table.insert(focus, B.current) end
+	for _, e in ipairs(B.enemies) do if not e.dead then table.insert(focus, e) end end
+	local was = B.focus
+	B.focus = focus
+	local cam = Q.battleCam(look, want)
+	B.focus = was
+	Q.camGo(cam, look, 0.6)
+end
+
 -- [45_scenes.lua]
 -- ---------- the scene runner ----------
 -- Q.chapters[n].scenes = {{id, title, run = function(token) ... end}}. Progress is saved at the start of every
@@ -34785,11 +35328,14 @@ Q.sceneStart = function(spotName)
 	local me = Q.vane()
 	if me then Q.face(me, Q.pt(0, 0, 30)) end
 	Q.bars(true)
+	Q.handheld = true
 	Q.camHold()
 	Q.camCF = workspace.CurrentCamera.CFrame
 end
 
 Q.sceneEnd = function()
+	Q.handheld = nil
+	Q.talker, Q.talking = nil, false
 	Q.hideGameGui(false)
 	Q.bars(false)
 	Q.freeze(false)
@@ -34871,6 +35417,14 @@ Q.deSync = function(token, strength)
 				Services.Debris:AddItem(px, 6.5)
 				end
 			end
+			-- now and then, far off, the world's code shows through: a flicker of falling digits and a glitch sigil
+			if rng:NextNumber() < 0.05 * strength then
+				local at = a:PointToWorldSpace(Vector3.new(rng:NextNumber(-50, 50), rng:NextNumber(3, 14), -rng:NextNumber(30, 80)))
+				if (at - cam).Magnitude > 25 then
+					Q.auraBurst(CFrame.lookAt(at, cam) * CFrame.Angles(math.rad(90), 0, 0), {{"numbers", 16, {scale = 2.5}}, {"box", 8, {scale = 2}},
+						{"glitchSigil", 1, {scale = 0.5, tr = 0.4}}}, {color = colors[rng:NextInteger(1, #colors)]})
+				end
+			end
 			-- a rare, quiet crackle (kas: tone it down): one every 20-40 s, only in story scenes, never while you
 			-- explore, never over a line of dialogue
 			if tick() >= nextCrackle then
@@ -34930,19 +35484,16 @@ Q.tollGate = function(token, opts)
 	return true
 end
 
--- if a game blocks teleports out (Roblox error 773: third-party teleports are off in that game), the toll is
--- already paid and saved: copy the next game's link and leave with a message in the story's voice
+-- if a game blocks teleports out (Roblox error 773: third-party teleports are off in that game), remember it (next
+-- time the gate doesn't even try) and leave for the next world with its link copied
 TeleportService.TeleportInitFailed:Connect(function(player, result, msg)
 	local tr = Q.data and Q.data.travel
 	if player ~= Players.LocalPlayer or not tr or os.time() - (tr.at or 0) > 60 then return end
-	local place = {id = tr.place, name = tr.name or "the next world"}
-	local link = "https://www.roblox.com/games/" .. place.id
-	pcall(function() everyClipboard(link) end)
-	Q.toast("> TRANSFER BLOCKED BY THIS WORLD. ROUTING MANUALLY...", 4)
-	task.wait(3)
-	pcall(function()
-		Players.LocalPlayer:Kick("> TOLL PAID.\n> THIS WORLD WILL NOT OPEN A GATE.\n> CONTINUE IN: " .. place.name:upper() .. "\n> (the link is copied: " .. link .. ")\n\nJoin it and press Begin. Your story is saved.")
-	end)
+	Q.data.blocked = Q.data.blocked or {}
+	Q.data.blocked[tostring(game.PlaceId)] = true
+	Q.save()
+	task.wait(1)
+	Q.leaveFor({id = tr.place, name = tr.name or "the next world"})
 end)
 
 -- [50_battle.lua]
@@ -35012,12 +35563,14 @@ Q.fitArena = function(a)
 		score = score - math.abs(yaw) / 600
 		if not bestScore or score > bestScore then best, bestScore = cf, score end
 	end
-	return best
+	return best, bestScore
 end
 
 -- a battle spot (x right, z forward) that isn't inside anything: try it, then nudge it in toward the middle
 Q.freeSpot = function(x, z, faceX, faceZ)
 	local tries = {{0, 0}, {0, -3}, {-2.5, 0}, {2.5, 0}, {0, -6}, {-2.5, -3}, {2.5, -3}, {0, -9}, {-5, -3}, {5, -3}}
+	-- (enemies must be in plain sight of the party: kas fought a Hollowed standing behind a pillar)
+	local eye = (Q.anchor or Q.makeAnchor()).Position + Vector3.new(0, 2.5, 0)
 	-- (and on your floor: not up on a planter wall, a fountain or a ledge, which kas saw in the courtyard)
 	local floor = (Q.anchor or Q.makeAnchor()).Position.Y
 	local fallback
@@ -35025,7 +35578,8 @@ Q.freeSpot = function(x, z, faceX, faceZ)
 		local nz = z > 4 and math.max(z + t[2], 8) or z
 		local cf = Q.spot(x + t[1], nz, faceX + t[1], faceZ)
 		local level = math.abs(cf.Position.Y - floor) < 1.2
-		if level and not Q.blockedAt(cf) then return cf end
+		local seen = z <= 4 or Q.clearFrac(eye, cf.Position + Vector3.new(0, 2.5, 0)) > 0.97
+		if level and seen and not Q.blockedAt(cf) then return cf end
 		if level and not fallback then fallback = cf end
 	end
 	if fallback then return fallback end
@@ -35232,6 +35786,8 @@ Q.derender = function(u)
 	if root then
 		Q.emitter(root, Q.fxTex.smoke, Color3.fromRGB(150, 150, 160), {Rate = 30, Lifetime = NumberRange.new(1, 2), Speed = NumberRange.new(1, 3),
 			Size = NumberSequence.new(1.5, 3), Transparency = NumberSequence.new(0.4, 1), SpreadAngle = Vector2.new(180, 180)})
+		Q.aura("disint", root, {color = Q.auraCol.hollow, scale = 3, rate = 0.3})
+		Q.auraBurst(root.Position, {{"cubes", 14, {scale = 0.12}}, {"squares", 10, {scale = 0.4}}}, {color = Q.auraCol.hollow})
 	end
 	task.wait(1)
 	for i = 1, 30 do
@@ -35264,6 +35820,9 @@ end
 Q.act = function(B, a)
 	local u = a.actor
 	if u.dead then return end
+	-- the camera keeps the one acting and their targets in the shot
+	B.focus = {u}
+	for _, t in ipairs(a.targets or {}) do table.insert(B.focus, t) end
 	u.atb = 0
 	-- statuses tick on their owner's turn
 	for id, st in pairs(u.statuses) do
@@ -35420,7 +35979,7 @@ Q.perform = function(B, u, sk, targets, isLimit)
 		for _, t in ipairs(targets) do
 			local troot = Q.rootOf(t)
 			if troot and not t.dead then
-				Q.camGo(Q.clearShot(troot.Position, root.Position + home.RightVector * 8 + Vector3.new(0, 4, 0) - home.LookVector * 4), troot.Position, 0.3)
+				Q.camGo(Q.battleCam(troot.Position, root.Position + home.RightVector * 8 + Vector3.new(0, 4, 0) - home.LookVector * 4), troot.Position, 0.3)
 				local orb = NeverYieldAgartha.part(Q.stage(), Vector3.new(0.9, 0.9, 0.9), root.CFrame * CFrame.new(0, 1.5, -1.5), color, Enum.Material.Neon, "Ball", {CanCollide = false})
 				Q.emitter(orb, Q.fxTex.specs, color, {Rate = 60, Lifetime = NumberRange.new(0.2, 0.4), Speed = NumberRange.new(1, 3), Size = NumberSequence.new(0.4, 0), LightEmission = 1})
 				local tw = TweenService:Create(orb, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {CFrame = CFrame.new(troot.Position + Vector3.new(0, 1.2, 0))})
@@ -35639,6 +36198,8 @@ end
 
 Q.command = function(B, u)
 	-- returns an action table, or nil if the battle ended meanwhile
+	-- (the camera turns to frame whoever is choosing, with the enemies)
+	if B.wide and not B.busy then B.wide() end
 	while not B.over and Q.alive(B.token) do
 		local rows = {}
 		local limitReady = u.limit >= 100 and u.limitSkill
@@ -35786,10 +36347,15 @@ Q.fight = function(token, spec)
 	local B = {token = token, party = {}, enemies = {}, queue = {}, ready = {}, hooks = spec.hooks or {}, xp = 0, drops = {}, tutorial = spec.tutorial, spec = spec}
 	Q.B = B
 	local a = Q.anchor or Q.makeAnchor()
+	-- in a cramped spot (a hall, a stairwell) the enemies stand closer, so the fight fits and the camera can see it
+	local squeeze = 1
 	if spec.fit then
-		Q.anchor = Q.fitArena(a)
+		local fit, room = Q.fitArena(a)
+		Q.anchor = fit
 		a = Q.anchor
+		if room < 4.5 then squeeze = 0.62 elseif room < 5.6 then squeeze = 0.8 end
 	end
+	B.squeeze = squeeze
 	local spotFor = spec.fit and Q.freeSpot or Q.spot
 	-- party: you (Vane) in the middle, the others beside you
 	local ids = {}
@@ -35817,6 +36383,7 @@ Q.fight = function(token, spec)
 		for j = 1, i do if spec.enemies[j] == eid then count = count + 1 end end
 		local u = Q.unitOfEnemy(eid, (function() local n = 0 for _, x in ipairs(spec.enemies) do if x == eid then n = n + 1 end end return n end)() > 1 and count or nil)
 		local s = espots[i] or {i * 4 - 10, 20}
+		s = {s[1] * (0.5 + squeeze / 2), s[2] * squeeze}
 		u.rig = Q.cast(u.data.look or "hollowed", {name = u.name, seed = spec.seeds and spec.seeds[i]})
 		u.home = spotFor(s[1], s[2], s[1], 0)
 		if u.rig then Q.put(u.rig, u.home) end
@@ -35829,7 +36396,7 @@ Q.fight = function(token, spec)
 	Q.sound(Q.sfx.flash, 0.5, 1.2)
 	task.spawn(Q.flash, Color3.new(1, 1, 1), 0.05)
 	Q.playMusic(spec.music or "battle", 0.4)
-	local center = Q.pt(0, 2, 18)
+	local center = Q.pt(0, 2, 18 * squeeze)
 	for k = 0, 24 do
 		local ang = math.rad(-60 + k * 6)
 		Q.camTo(Q.clearShot(center, center + Vector3.new(math.sin(ang) * 14, 5 - k * 0.08, math.cos(ang) * 14)), center, 0)
@@ -35840,7 +36407,7 @@ Q.fight = function(token, spec)
 		if e.data.lines and e.data.lines.start then Q.bubble(e.rig, WackyState.pick(e.data.lines.start), 3) end
 	end
 	B.wide = function()
-		Q.camGo(Q.clearShot(Q.pt(0, 1.5, 9), Q.pt(13, 8, -9)), Q.pt(0, 1.5, 9), 0.6)
+		Q.battleWide(B)
 	end
 	B.wide()
 	if B.hooks.start then B.hooks.start(B) end
@@ -36053,7 +36620,8 @@ end
 
 Q.jointNames = {
 	R6 = {rs = "Right Shoulder", ls = "Left Shoulder", rh = "Right Hip", lh = "Left Hip", neck = "Neck", root = "RootJoint"},
-	R15 = {rs = "RightShoulder", ls = "LeftShoulder", rh = "RightHip", lh = "LeftHip", neck = "Neck", root = "Root", rk = "RightKnee", lk = "LeftKnee"},
+	R15 = {rs = "RightShoulder", ls = "LeftShoulder", rh = "RightHip", lh = "LeftHip", neck = "Neck", root = "Root", rk = "RightKnee", lk = "LeftKnee",
+		waist = "Waist", re = "RightElbow", le = "LeftElbow"},
 }
 
 -- the rig's joints by short name, with the C0 they had before any posing
@@ -36259,6 +36827,8 @@ Q.shockwave = function(pos, color, size)
 	e.Enabled = false
 	e:Emit(18)
 	Services.Debris:AddItem(dust, 1.5)
+	-- the floor cracks open in a glowing sigil (Sol's RNG crack sigil + ripple), Studio-checked
+	Q.auraBurst(at + Vector3.new(0, 0.15, 0), {{"crackSigil", 2, {scale = 0.45 * size, life = 1.6}}, {"ripple", 2, {scale = 0.5 * size}}}, {color = color})
 end
 
 -- ---------- the poses ----------
@@ -36298,14 +36868,21 @@ Q.poses = {
 
 -- sit on the ground (legs out in front, hands on the knees, body lowered to the floor), kneel, or stand back up.
 -- Used for Seris in scenes, knocked-out allies, and a Hollowed sitting down to derender.
-Q.sit = function(rig, on, kneel)
+-- The R15 kneel (kas: "the kneeling just looks awkward") is a real one-knee kneel: right knee and shin on the ground,
+-- left foot planted in front, back straight, head bowed, both hands holding the locket at her chest. Q.life (56_life)
+-- makes it breathe and sob. Standing up (seconds > 0) rises slowly through the legs instead of popping up.
+Q.poses.kneel = {rh = Q.rot(-4), rk = Q.rot(-88), lh = Q.rot(88, 0, -4), lk = Q.rot(-86), waist = Q.rot(-8), root = Q.rot(0),
+	rs = Q.rot(38, 0, -12), re = Q.rot(78, 48, 0), ls = Q.rot(38, 0, 12), le = Q.rot(78, -48, 0), neck = Q.rot(24)}
+-- halfway up: pushing off the front knee
+Q.poses.rising = {rh = Q.rot(30), rk = Q.rot(-70), lh = Q.rot(55, 0, -4), lk = Q.rot(-50), waist = Q.rot(-22), rs = Q.rot(20, 0, -6), ls = Q.rot(30, 0, 8), le = Q.rot(30), neck = Q.rot(10)}
+Q.sit = function(rig, on, kneel, seconds)
 	local hum = rig and rig:FindFirstChildOfClass("Humanoid")
 	local root = rig and rig:FindFirstChild("HumanoidRootPart")
 	if not hum or not root then return end
 	if (on and true or false) == (rig:GetAttribute("NYSitting") and true or false) then return end
 	rig:SetAttribute("NYSitting", on or nil)
 	if on then
-		-- drop the body until what touches the floor (the legs out in front, or the knees and shins when kneeling)
+		-- drop the body until what touches the floor (the legs out in front, or the knee and shin when kneeling)
 		-- lies on the real ground: measured from the joint and the limb's thickness, so it fits any body (a fixed
 		-- drop sank kas's R15 Seris into the courtyard). R6 has no knees: it kneels sitting back on its legs.
 		local j = Q.joints(rig) or {}
@@ -36323,10 +36900,10 @@ Q.sit = function(rig, on, kneel)
 			end
 		end
 		rig:SetAttribute("NYSitDrop", drop)
+		rig:SetAttribute("NYKneel", kneel and true or nil)
 		if knees then
-			-- on her knees, leaning in, both hands holding something at her chest
-			Q.pose(rig, {rk = Q.rot(-90), lk = Q.rot(-90), rh = Q.rot(-5), lh = Q.rot(-5), root = Q.rot(-8),
-				rs = Q.rot(60, 0, -22), ls = Q.rot(60, 0, 22), neck = Q.rot(-6)}, 0)
+			Q.pose(rig, Q.poses.kneel, 0)
+			if rig.Name == "Seris" or rig:GetAttribute("NYLocket") then Q.locket(rig, true) end
 		elseif kneel then
 			Q.pose(rig, {rh = Q.rot(-90, 0, 4), lh = Q.rot(-90, 0, -4), root = Q.rot(-8), rs = Q.rot(60, 0, -22), ls = Q.rot(60, 0, 22), neck = Q.rot(-6)}, 0)
 		else
@@ -36334,10 +36911,30 @@ Q.sit = function(rig, on, kneel)
 		end
 		root.CFrame = root.CFrame - Vector3.new(0, drop, 0)
 	else
-		root.CFrame = root.CFrame + Vector3.new(0, rig:GetAttribute("NYSitDrop") or 1.5, 0)
+		local up = rig:GetAttribute("NYSitDrop") or 1.5
+		local wasKneel = rig:GetAttribute("NYKneel")
 		rig:SetAttribute("NYSitDrop", nil)
-		Q.unpose(rig, 0)
-		if rig:FindFirstChild("NYSword") then Q.rest(rig, 0.15) end
+		rig:SetAttribute("NYKneel", nil)
+		if Q.locket then Q.locket(rig, false) end
+		local living = Q.lives and Q.lives[rig]
+		if seconds and seconds > 0 then
+			-- rise slowly: first onto the front foot, then all the way up
+			local half = seconds / 2
+			if wasKneel and Q.joints(rig).rk then Q.pose(rig, Q.poses.rising, half, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut) end
+			TweenService:Create(root, TweenInfo.new(seconds, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {CFrame = root.CFrame + Vector3.new(0, up, 0)}):Play()
+			task.wait(half)
+			Q.pose(rig, (Q.postures[rig]) or {}, half, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
+			task.wait(half)
+		else
+			root.CFrame = root.CFrame + Vector3.new(0, up, 0)
+		end
+		if living then
+			-- a living rig keeps its own idle (Q.life), not Roblox's
+			Q.pose(rig, Q.postures[rig] or {}, seconds and 0 or 0)
+		else
+			Q.unpose(rig, 0)
+			if rig:FindFirstChild("NYSword") then Q.rest(rig, 0.15) end
+		end
 	end
 end
 
@@ -36365,7 +36962,7 @@ end
 local function camSide(c, at, side, up, back)
 	local right = c.home.RightVector * (side or 1)
 	local look = at + Vector3.new(0, 1.6, 0)
-	Q.camGo(Q.clearShot(look, look + right * 9 + Vector3.new(0, up or 2.5, 0) - c.home.LookVector * (back or 3)), look, 0.25)
+	Q.camGo(Q.battleCam(look, look + right * 9 + Vector3.new(0, up or 2.5, 0) - c.home.LookVector * (back or 3)), look, 0.25)
 end
 local function swish(pitch) Q.sound(Q.sfx.slash, 0.55, pitch or (0.9 + math.random() * 0.2)) end
 
@@ -36419,7 +37016,7 @@ Q.moves.cleave = function(B, u, t, strike, c)
 	slide(c.root, CFrame.new(apex) * (face - face.Position), 0.28, Enum.EasingStyle.Quad, Enum.EasingDirection.Out).Completed:Wait()
 	Q.swordTrail(u, true)
 	local look = stop + Vector3.new(0, 1, 0)
-	Q.camGo(Q.clearShot(look, look - c.home.LookVector * 6 + c.home.RightVector * 6 + Vector3.new(0, 1, 0)), look + Vector3.new(0, 2, 0), 0.15)
+	Q.camGo(Q.battleCam(look, look - c.home.LookVector * 6 + c.home.RightVector * 6 + Vector3.new(0, 1, 0)), look + Vector3.new(0, 2, 0), 0.15)
 	task.wait(0.08)
 	swish(0.8)
 	Q.pose(u.rig, Q.poses.slam, 0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
@@ -36436,12 +37033,14 @@ end
 Q.moves.severance = function(B, u, t, strike, c)
 	Q.pose(u.rig, Q.poses.crouch, 0.25)
 	local look = c.root.Position + Vector3.new(0, 1.5, 0)
-	Q.camGo(Q.clearShot(look, look + c.home.LookVector * 7 + c.home.RightVector * 3), look, 0.3)
+	Q.camGo(Q.battleCam(look, look + c.home.LookVector * 7 + c.home.RightVector * 3), look, 0.3)
 	local sword = u.rig:FindFirstChild("NYSword")
 	local edge = sword and sword:FindFirstChild("NYSwordEdge")
 	if edge then TweenService:Create(edge, TweenInfo.new(0.5), {Transparency = 0.35}):Play() end
+	local gather = Q.auraOn(c.root, {{"awaken", {scale = 0.5}}, {"ltn1", {scale = 0.55, rate = 0.6}}, {"rimGround", {scale = 0.8, rate = 0.5}}}, {color = c.color, vis = 0.5})
 	Q.hitFx(c.root.Position + Vector3.new(0, 1, 0), c.color)
 	task.wait(0.6)
+	gather()
 	local dir = (c.troot.Position - c.root.Position) * Vector3.new(1, 0, 1)
 	local behind = c.troot.Position + dir.Unit * 4.5
 	behind = Vector3.new(behind.X, c.root.Position.Y, behind.Z)
@@ -36453,7 +37052,7 @@ Q.moves.severance = function(B, u, t, strike, c)
 	quit()
 	Q.pose(u.rig, Q.poses.passEnd, 0.15)
 	local tl = c.troot.Position + Vector3.new(0, 1.4, 0)
-	Q.camGo(Q.clearShot(tl, tl - dir.Unit * 8 + c.home.RightVector * 4 + Vector3.new(0, 1.5, 0)), tl, 0.2)
+	Q.camGo(Q.battleCam(tl, tl - dir.Unit * 8 + c.home.RightVector * 4 + Vector3.new(0, 1.5, 0)), tl, 0.2)
 	task.wait(0.55)
 	Q.flash(Color3.new(1, 1, 1), 0)
 	Q.hitFx(tl, c.color, true)
@@ -36479,7 +37078,7 @@ Q.moves.shattered_edge = function(B, u, t, strike, c)
 		c.root.CFrame = CFrame.lookAt(p, p + toward)
 		Q.pose(u.rig, winds[(h - 1) % 4 + 1], 0)
 		local look = center + Vector3.new(0, 1.5, 0)
-		Q.camGo(Q.clearShot(look, look + Vector3.new(math.cos(a + 1.6), 0, math.sin(a + 1.6)) * 9 + Vector3.new(0, 2 + h * 0.5, 0)), look, 0.12)
+		Q.camGo(Q.battleCam(look, look + Vector3.new(math.cos(a + 1.6), 0, math.sin(a + 1.6)) * 9 + Vector3.new(0, 2 + h * 0.5, 0)), look, 0.12)
 		task.wait(0.06)
 		swish(1 + h * 0.06)
 		Q.pose(u.rig, cuts[(h - 1) % 4 + 1], 0.08, Enum.EasingStyle.Back)
@@ -36493,8 +37092,9 @@ Q.moves.shattered_edge = function(B, u, t, strike, c)
 		Q.ghost(u.rig, c.color, 0.4)
 		c.root.CFrame = CFrame.lookAt(high - c.home.LookVector * 3 - c.home.RightVector * (c.offset or 0), high + c.home.LookVector * 3)
 		Q.pose(u.rig, Q.poses.overhead, 0)
+		Q.auraBurst(CFrame.new(center + Vector3.new(0, 0.3, 0)), {{"vortex", 6, {scale = 0.16, life = 0.4}}, {"glitchSigil", 2, {scale = 0.8}}, {"galax", 3, {scale = 0.5}}}, {color = c.color})
 		local look = center + Vector3.new(0, 1, 0)
-		Q.camGo(Q.clearShot(look, look - c.home.LookVector * 9 + c.home.RightVector * 5 + Vector3.new(0, 1, 0)), high:Lerp(look, 0.6), 0.1)
+		Q.camGo(Q.battleCam(look, look - c.home.LookVector * 9 + c.home.RightVector * 5 + Vector3.new(0, 1, 0)), high:Lerp(look, 0.6), 0.1)
 		task.wait(0.3)
 		local quit = Q.ghostTrail(u.rig, c.color, 0.02)
 		swish(0.7)
@@ -36503,6 +37103,7 @@ Q.moves.shattered_edge = function(B, u, t, strike, c)
 		slide(c.root, CFrame.lookAt(land, land + c.home.LookVector), 0.13, Enum.EasingStyle.Quad, Enum.EasingDirection.In).Completed:Wait()
 		quit()
 		Q.flash(Color3.fromRGB(200, 250, 255), 0)
+		Q.auraBurst(center + Vector3.new(0, 0.4, 0), {{"wave", 1, {scale = 0.35}}, {"swirl2", 3, {scale = 0.7}}, {"triang", 30, {scale = 1.5}}}, {color = c.color})
 		Q.shockwave(center, c.color, 1.6)
 		Q.shake(2.5)
 		strike()
@@ -36533,6 +37134,7 @@ Q.moves.grasp = function(B, u, t, strike, c)
 	task.wait(0.2)
 	slide(c.root, CFrame.lookAt(stop, Vector3.new(c.troot.Position.X, stop.Y, c.troot.Position.Z)) + Vector3.new(0, c.root.Position.Y - stop.Y, 0), 0.45, Enum.EasingStyle.Sine).Completed:Wait()
 	Q.ghost(u.rig, Color3.fromRGB(150, 150, 160), 0.6)
+	Q.auraBurst(c.troot.Position + Vector3.new(0, 1, 0), {{"darkAura", 25, {scale = 1.6}}, {"darkness", 20, {scale = 1.2, life = 0.4}}}, {color = Q.auraCol.void})
 	strike()
 	task.wait(0.35)
 end
@@ -36546,6 +37148,7 @@ Q.moves.flail = function(B, u, t, strike, c)
 		Q.pose(u.rig, i % 2 == 1 and Q.poses.flailA or Q.poses.flailB, 0.1)
 		task.wait(0.1)
 	end
+	Q.auraBurst(c.troot.Position, {{"dust2", 6, {scale = 0.25}}, {"darkAura2", 18, {scale = 1.4}}}, {color = Q.auraCol.hollow})
 	strike()
 	task.wait(0.25)
 end
@@ -36569,6 +37172,8 @@ Q.castFx = function(u, sk, up)
 		Size = NumberSequence.new(0.25, 0), LightEmission = 1, Transparency = NumberSequence.new(0, 1)})
 	e:Emit(30)
 	Services.Debris:AddItem(glyphs, 1.5)
+	Q.auraBurst(CFrame.new(root.Position.X, gy + 0.2, root.Position.Z), {{"groundRing", 1, {scale = 0.35}}, {"glow3", 1, {scale = 2.5}},
+		{"numbers", 14, {scale = 1.5}}, {"box", 10, {scale = 1.3}}}, {color = color})
 	Q.sound(Q.sfx.magic, 0.5)
 	task.wait(0.25)
 end
@@ -36877,6 +37482,12 @@ Q.hollowDress = function(rig, look)
 		end
 	end
 	Q.flicker(rig, {base = base, amp = v.amp, spike = v.spike, glitch = v.glitch, peel = v.peel})
+	-- a faint aura so they read as wrong from across the map: gray smoke curling off them, crackling static, or
+	-- (now and then) nothing at all
+	local root = rig:FindFirstChild("HumanoidRootPart")
+	local pick = rng:NextInteger(1, 3)
+	if root and pick == 1 then Q.aura("darkAura2", root, {color = Color3.fromRGB(40, 40, 46), scale = 1.6, rate = 0.08})
+	elseif root and pick == 2 then Q.aura("lightning", root, {color = Q.auraCol.hollow, scale = 1.6, rate = 0.15, light = 0.3}) end
 	-- the name tag
 	local tag = head and head:FindFirstChild("NYTag")
 	local label = tag and tag:FindFirstChildWhichIsA("TextLabel")
@@ -37000,9 +37611,13 @@ Q.limitAura = function(u, on)
 		px.SpreadAngle, px.Acceleration = Vector2.new(25, 25), Vector3.new(0, 3, 0)
 		px.Shape, px.ShapeStyle = Enum.ParticleEmitterShape.Cylinder, Enum.ParticleEmitterShapeStyle.Surface
 		px.Parent = root
-		u.aura = {light, px}
+		local col = u.color or Color3.new(1, 1, 1)
+		-- Sol's RNG swirl at the feet + Sung Jinwoo's flames + crackling lightning, in the member's colour (Studio-checked)
+		u.aura = {light, px, Q.aura("swirl", root, {color = col, scale = 0.3, rate = 1, vis = 0.6, z = -1}),
+			Q.aura("darkFlame", root, {color = col, scale = 1.4, rate = 3, light = 1}), Q.aura("ltn3", root, {color = col, scale = 0.6, rate = 1, vis = 0.3}),
+			Q.aura("awaken", root, {color = col, scale = 0.6, rate = 0.5, vis = 0.4})}
 	elseif not on and u.aura then
-		for _, x in ipairs(u.aura) do pcall(function() x:Destroy() end) end
+		for _, x in pairs(u.aura) do pcall(function() x:Destroy() end) end
 		u.aura = nil
 	end
 	if u.aura then u.aura[1].Brightness = 1.2 + math.sin(tick() * 5) * 0.8 end
@@ -37257,6 +37872,10 @@ Q.pickup = function(pos, spec)
 	l.Color, l.Range, l.Brightness = color, 10, 1.5
 	l.Parent = gem
 	Q.emitter(gem, Q.fxTex.specs, color, {Rate = 8, Lifetime = NumberRange.new(0.5, 1), Speed = NumberRange.new(0.5, 1.5), Size = NumberSequence.new(0.25, 0), LightEmission = 1, SpreadAngle = Vector2.new(180, 180)})
+	local sigil = Q.auraHolder(CFrame.new(pos + Vector3.new(0, 0.15, 0)))
+	sigil.Parent = gem
+	Q.aura("glow3", sigil, {color = color, scale = 2, rate = 1})
+	Q.aura("star", gem, {color = color, scale = 0.3, rate = 1})
 	local base = gem.CFrame
 	local t0 = tick()
 	local conn
@@ -37460,6 +38079,201 @@ Q.explore = function(token, spec)
 	WackyState.disconnect("rpg_menuKey")
 	Q.objective(nil)
 	return reached
+end
+
+-- [56_life.lua]
+-- ---------- living cutscenes: people breathe, shift, look at whoever's talking, and talk with their hands ----------
+-- kas: "make the cutscenes more living". Every scene rig given Q.life(rig, "NAME") gets a layer on Motor6D.Transform
+-- (on top of whatever pose C0 holds, like the battle idles in 54_idle): breathing, a slow weight shift, the head
+-- (and a little of the body) turning to whoever is speaking, a nod and a hand gesture while their own line types, and
+-- when kneeling, a sob that comes and goes. Q.say tells it who's talking (Q.talker). Walking pauses the layer.
+
+Q.lives = Q.lives or setmetatable({}, {__mode = "k"})
+Q.actors = Q.actors or {}
+
+-- start a rig living; name = how Q.say names them ("SERIS"); kind = "person" or "hollowed"
+Q.life = function(rig, name, kind)
+	if not rig or not Q.joints(rig) then return end
+	-- our own procedural idle replaces the Roblox idle (the two would fight over Transform)
+	if not rig:GetAttribute("NYPosed") then Q.pose(rig, {}, 0) end
+	Q.lives[rig] = {phase = math.random() * 10, yaw = 0, pitch = 0, talk = 0, sob = 0, nextSob = 1 + math.random() * 2, sobUntil = 0,
+		kind = kind or "person", joints = Q.joints(rig), name = name}
+	if name then Q.actors[name] = rig end
+	rig:SetAttribute("NYLife", true)
+	if not Q.lifeConn then
+		local t0 = tick()
+		Q.lifeConn = RunService.Stepped:Connect(function(_, dt)
+			local ok, err = pcall(Q.lifeStep, tick() - t0, math.min(dt, 0.1))
+			if not ok then warn("[Requiem] life: " .. tostring(err)) end
+		end)
+	end
+end
+
+-- where a living rig looks: whoever is talking (not themselves), else what the scene told them to watch
+Q.lifeTarget = function(rig, st)
+	local t = Q.talker
+	if typeof(t) == "Instance" and t ~= rig and t.Parent then
+		local head = t:FindFirstChild("Head")
+		if head then return head.Position end
+	end
+	return st.watch
+end
+
+Q.lifeLayer = function(rig, st, t, dt)
+	local root = rig:FindFirstChild("HumanoidRootPart")
+	if not root then return nil end
+	local ph = st.phase
+	local function ease(key, goal, speed)
+		st[key] = st[key] + (goal - st[key]) * math.min(1, dt * (speed or 4))
+		return st[key]
+	end
+	local hollow = st.kind == "hollowed"
+	local kneel = rig:GetAttribute("NYKneel")
+	-- head turns to the target (most of it in the neck, a little in the body)
+	local yawGoal, pitchGoal = 0, 0
+	local tp = Q.lifeTarget(rig, st)
+	if typeof(tp) == "Vector3" then
+		local d = root.CFrame:PointToObjectSpace(tp)
+		local flat = math.sqrt(d.X * d.X + d.Z * d.Z)
+		yawGoal = math.clamp(math.deg(math.atan2(-d.X, -d.Z)), -70, 70)
+		pitchGoal = math.clamp(math.deg(math.atan2(d.Y - 1.6, math.max(flat, 0.5))), -25, 25)
+	end
+	local yaw = ease("yaw", yawGoal, hollow and 1.2 or 3)
+	local pitch = ease("pitch", pitchGoal, 3)
+	-- talking: their own line is typing
+	local talk = ease("talk", (Q.talker == rig and Q.talking) and 1 or 0, 5)
+	-- the sob: comes in waves while kneeling
+	if kneel and t > st.nextSob then
+		st.sobUntil = t + 1.2 + math.random() * 1.2
+		st.nextSob = st.sobUntil + 2.5 + math.random() * 3
+	end
+	local sob = ease("sob", (kneel and t < st.sobUntil and talk < 0.5) and 1 or 0, 3)
+	local br = math.sin((t + ph) * (2.1 + sob * 1.5))
+	local sway = math.sin((t + ph) * 0.45)
+	local shudder = sob * math.sin(t * 15) * 1.6
+	local L = {}
+	local bodyYaw = math.clamp(yaw * 0.3, -15, 15)
+	if hollow then
+		-- the Hollowed sway like they're underwater, and the head lolls
+		L.root = CFrame.new(0, 0.04 * br, 0) * Q.rot(br * 1.2, sway * 6 + bodyYaw, math.sin((t + ph) * 0.8) * 4)
+		L.neck = Q.rot(-pitch * 0.6 + math.sin((t + ph) * 0.7) * 6, yaw - bodyYaw, math.sin((t + ph) * 0.37) * 14)
+		return L
+	end
+	if kneel then
+		-- kneeling: breathing and the sob move the chest and shoulders, the legs stay planted
+		L.waist = Q.rot(br * 1.5 + shudder - sob * 4 - pitch * 0.25, bodyYaw * 0.7, 0)
+		L.neck = Q.rot(-pitch * 0.7 + sob * 10 + shudder * 0.8, yaw - bodyYaw * 0.7, 0)
+		L.rs = Q.rot(shudder * 1.5, 0, -sob * 4)
+		L.ls = Q.rot(shudder * 1.5, 0, sob * 4)
+		return L
+	end
+	-- standing: breathe, shift weight from foot to foot, a hand moves while they talk
+	local lean = br * 1.2
+	L.root = CFrame.new(0, 0.025 * br, 0) * Q.rot(lean, sway * 2.5 + bodyYaw, sway * 1.6)
+	L.rh = Q.rot(-lean, 0, -sway * 1.6)
+	L.lh = Q.rot(-lean, 0, -sway * 1.6)
+	L.neck = Q.rot(-pitch * 0.7 + talk * (math.sin(t * 6.5) * 3 + math.sin(t * 10.3) * 1.5), yaw - bodyYaw, talk * math.sin(t * 2.2) * 4)
+	local gest = talk * (0.6 + 0.4 * math.sin(t * 1.3 + ph))
+	L.rs = Q.rot(br * 1.5 + gest * (28 + math.sin(t * 2.9) * 10), gest * 20, br * 1.2 + gest * 6)
+	L.ls = Q.rot(-br * 1.2 + gest * 6 * math.sin(t * 1.7), 0, -br * 1.2)
+	if st.joints.re then L.re = Q.rot(gest * (35 + math.sin(t * 3.7) * 12)) end
+	return L
+end
+
+Q.lifeStep = function(t, dt)
+	local any = false
+	for rig, st in pairs(Q.lives) do
+		if not rig.Parent then
+			Q.lives[rig] = nil
+		else
+			any = true
+			-- walking (Roblox's walk animation owns the joints) or a battle move: hands off
+			local hold = rig:GetAttribute("NYLifeHold")
+			local L = not hold and Q.lifeLayer(rig, st, t, dt)
+			if L then
+				Q.idleApply({idle = st}, L, math.min(1, t))
+				st.off = false
+			elseif not st.off and not hold then
+				Q.idleApply({idle = st}, nil, 0)
+				st.off = true
+			end
+		end
+	end
+	if not any and Q.lifeConn then
+		Q.lifeConn:Disconnect()
+		Q.lifeConn = nil
+	end
+end
+
+-- tell a living rig what to watch when nobody's talking (a Vector3, a rig, or nil)
+Q.watch = function(rig, target)
+	local st = rig and Q.lives[rig]
+	if not st then return end
+	if typeof(target) == "Instance" then
+		local head = target:FindFirstChild("Head") or target:FindFirstChild("HumanoidRootPart")
+		target = head and head.Position
+	end
+	st.watch = target
+end
+
+-- a short gesture (a pose held for a moment, then back), e.g. Seris looking at the writing on her arm
+Q.gestures = {
+	arm = {ls = Q.rot(75, 0, -10), le = Q.rot(70, -40, 0), rs = Q.rot(30, 20, 5), neck = Q.rot(28, 15, 0)},
+	hand = {rs = Q.rot(70, 0, 5), re = Q.rot(45), neck = Q.rot(22, -10, 0)},
+}
+Q.gesture = function(rig, name, hold)
+	if not rig then return end
+	Q.pose(rig, Q.gestures[name] or {}, 0.5, Enum.EasingStyle.Sine)
+	task.delay(hold or 2.5, function()
+		if rig.Parent then Q.pose(rig, Q.postures[rig] or {}, 0.7, Enum.EasingStyle.Sine) end
+	end)
+end
+
+-- a spot for someone in a scene with room around them: not inside a planter, a bench or a wall, and on your floor
+-- (kas saw Seris kneeling half inside the courtyard planter). room = half-width of the space they need.
+Q.crampedAt = function(cf, room)
+	local op = OverlapParams.new()
+	op.FilterType = Enum.RaycastFilterType.Exclude
+	op.FilterDescendantsInstances = {Q.folder, Players.LocalPlayer.Character}
+	local ok, parts = pcall(function()
+		return workspace:GetPartBoundsInBox(CFrame.new(cf.Position + Vector3.new(0, 2.8, 0)), Vector3.new(room * 2, 4.4, room * 2), op)
+	end)
+	if not ok then return false end
+	for _, p in ipairs(parts) do
+		if p.CanCollide and p.Transparency < 0.9 then return true end
+	end
+	return false
+end
+
+Q.sceneSpot = function(x, z, fx, fz, room)
+	local floor = (Q.anchor or Q.makeAnchor()).Position.Y
+	local first
+	for _, t in ipairs({{0, 0}, {1.5, 0}, {-1.5, 0}, {0, 1.5}, {0, -1.5}, {3, 0}, {-3, 0}, {0, 3}, {2.5, 2.5}, {-2.5, 2.5},
+		{2.5, -2.5}, {-2.5, -2.5}, {4.5, 0}, {-4.5, 0}, {0, 4.5}}) do
+		local cf = Q.spot(x + t[1], z + t[2], fx + t[1], fz + t[2])
+		local level = math.abs(cf.Position.Y - floor) < 1.2
+		if level and not first then first = cf end
+		if level and not Q.crampedAt(cf, room or 1.4) then return cf end
+	end
+	return first or Q.spot(x, z, fx, fz)
+end
+
+-- a small locket of cold light held at the chest (the bible: Seris grasping at a digital locket)
+Q.locket = function(rig, on)
+	local old = rig and rig:FindFirstChild("NYLocket", true)
+	if old then old:Destroy() end
+	if not on or not rig then return end
+	local hand = rig:FindFirstChild("RightHand") or rig:FindFirstChild("Right Arm")
+	if not hand then return end
+	local P = NeverYieldAgartha.part
+	local l = P(rig, Vector3.new(0.32, 0.4, 0.1), hand.CFrame * CFrame.new(-0.25, -hand.Size.Y / 2, 0), Color3.fromRGB(150, 225, 255), Enum.Material.Neon, nil,
+		{CanCollide = false, CanQuery = false, CanTouch = false, Massless = true, CastShadow = false})
+	l.Name = "NYLocket"
+	l.Anchored = false
+	Q.weldTo(l, hand)
+	local light = Instance.new("PointLight")
+	light.Color, light.Range, light.Brightness, light.Shadows = Color3.fromRGB(150, 225, 255), 5, 1.2, false
+	light.Parent = l
 end
 
 -- [57_menu.lua]
@@ -38172,6 +38986,8 @@ Q.enemies.hollowed_classmate = {name = "Hollowed Classmate", look = "hollowed", 
 
 local function seris(token)
 	local s = Q.cast("seris")
+	s:SetAttribute("NYLocket", true)
+	Q.life(s, "SERIS")
 	return s
 end
 
@@ -38186,8 +39002,10 @@ Q.chapters[1].scenes = {
 		Q.deSync(token, 1)
 		local me = Q.vane()
 		local s = seris(token)
-		Q.put(s, Q.spot(-2.5, 6, -2.5, 30))
+		-- on her knees with room around her (not against the planter), facing the burning library wing
+		Q.put(s, Q.sceneSpot(-2.5, 6, -2.5, 30, 1.6))
 		Q.sit(s, true, true)
+		Q.watch(s, Q.pt(-2.5, 8, 40))
 		-- high over the academy, drifting down onto Vane
 		Q.camTo(Q.clearShot(Q.pt(0, 4.5, 0), Q.pt(0, 30, -22)), Q.pt(0, 4, 26), 0)
 		Q.shot("wide", me, nil, 7)
@@ -38202,11 +39020,15 @@ Q.chapters[1].scenes = {
 		Q.shot("close", s, nil, 0.8, -1)
 		Q.say(token, "SERIS", "What if it takes the day we met? What if it takes her face?", {color = Q.members.seris.color})
 		Q.shot("close", me, nil, 1)
+		Q.watch(s, me)
 		Q.flickerHand(5)
 		Q.sound(Q.sfx.static, 0.1)
 		Q.direct(token, "Vane looks down at his own hand. It is flickering.")
 		Q.say(token, "VANE", "If we stay, it takes everything. All at once.", {color = Q.cyan})
-		Q.sit(s, false)
+		-- (the bible: "Standing slowly, tears rendering as small, perfect glass spheres")
+		Q.shot("medium", s, nil, 0.8, -1)
+		Q.sit(s, false, nil, 1.6)
+		Q.face(me, s)
 		Q.shot("two", s, me, 1.2)
 		Q.say(token, "SERIS", "Then not here. Not in the courtyard. My notes are in the archives - every name I ever wrote down. I'm not leaving them to burn.", {color = Q.members.seris.color})
 		Q.say(token, "VANE", "Then we go through the archives. And up to the tower. The Key needs open sky.", {color = Q.cyan})
@@ -38246,6 +39068,8 @@ Q.chapters[1].scenes = {
 		end
 		local student = Q.cast("hollowedStudent", {seed = "c1_student"})
 		Q.put(student, Q.spot(2, 26, 0, 0))
+		Q.life(student, nil, "hollowed")
+		Q.watch(s, student)
 		Q.playMusic(nil)
 		Q.sound(Q.sfx.weep, 0.4)
 		-- over Seris's shoulder as it comes out of the shelves (the aisle is too narrow to see both from the side)
@@ -38270,12 +39094,13 @@ Q.chapters[1].scenes = {
 		Q.sceneStart()
 		Q.playMusic("sad", 0.3)
 		s = seris(token)
-		Q.put(s, Q.spot(-3, 4, 0, 10))
+		Q.put(s, Q.sceneSpot(-3, 4, 0, 10))
+		Q.watch(s, Q.pt(0, 2, 12))
 		Q.shot("medium", s, nil, 1.5, -1)
 		Q.direct(token, "When the Hollowed falls, it doesn't die. It sits down, covers its face, and slowly derenders. Its last words hang in the air a moment after it's gone.")
 		Q.direct(token, "Seris doesn't speak for a long time after that.")
 		Q.say(token, "SERIS", "That was someone in my year. I think.", {color = Q.members.seris.color})
-		Q.animate(s, "point")
+		Q.gesture(s, "arm", 3)
 		Q.direct(token, "She checks her arm. There's nothing about it there.")
 		Q.shot("close", s, nil, 1, -1)
 		Q.say(token, "SERIS", "I should have written down more names.", {color = Q.members.seris.color})
@@ -38304,8 +39129,9 @@ Q.chapters[1].scenes = {
 		Q.keyProp(true)
 		local me = Q.vane()
 		local s = seris(token)
-		Q.put(s, Q.spot(-3, 2, 0, 8))
+		Q.put(s, Q.sceneSpot(-3, 2, 0, 8))
 		Q.face(s, me)
+		Q.watch(s, Q.pt(0, 6, 9))
 		Q.playMusic(nil)
 		Q.shot("two", s, me, 1.5)
 		Q.say(token, "SERIS", "There is a server out there, Vane. Across the void. I have to believe it's still running.", {color = Q.members.seris.color, slow = true})
@@ -38386,7 +39212,7 @@ Q.chapters[2].scenes = {
 		Q.playMusic("sad", 0.3)
 		local me = Q.vane()
 		local s = seris(token)
-		Q.put(s, Q.spot(-4, 2, 0, 0))
+		Q.put(s, Q.sceneSpot(-4, 2, 0, 0))
 		Q.sit(s, true)
 		Q.camTo(Q.pt(0, 22, 3), Q.pt(0, 0, 2), 0)
 		Q.shot("wide", me, nil, 6)
@@ -38399,7 +39225,7 @@ Q.chapters[2].scenes = {
 		Q.shot("close", me, nil, 1.2)
 		Q.say(token, "VANE", "I remember I have to find them. But... I don't remember their laughter anymore.", {color = Q.cyan, slow = true})
 		Q.say(token, "VANE", "It's completely quiet.", {color = Q.cyan, slow = true})
-		Q.sit(s, false)
+		Q.sit(s, false, nil, 1.2)
 		Q.shot("two", s, me, 1.2)
 		Q.say(token, "SERIS", "It'll be dark soon. We need somewhere to make camp.", {color = Q.members.seris.color})
 		s:Destroy()
@@ -38421,8 +39247,9 @@ Q.chapters[2].scenes = {
 		local fire = Q.campfire(Q.spot(0, 5, 0, 0))
 		WackyState.sound(9112780212, fire, 0.4, true)
 		local s = seris(token)
-		Q.put(s, Q.spot(-3.5, 5, 0, 5))
+		Q.put(s, Q.sceneSpot(-3.5, 5, 0, 5))
 		Q.sit(s, true)
+		Q.watch(s, fire.Position)
 		Q.face(me, fire.Position)
 		Q.shot("two", s, me, 1.5)
 		Q.direct(token, "That night, they make camp under a tree whose leaves have started to render one polygon at a time. Seris sits cross-legged in the firelight with a stylus between her teeth, rolling up her left sleeve.")

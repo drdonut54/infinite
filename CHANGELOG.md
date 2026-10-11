@@ -5,6 +5,7 @@ Versions before 1.11.3 were reconstructed from the Desktop `.bakN` backups (one 
 
 | Version | Date | Commands | Change |
 |---|---|---|---|
+| 1.30.16 | 10-11 | 643 | Requiem auras from Sol's RNG + Place1 (sword, attacks, limit, gate portal, Hollowed, map); smart camera; living cutscenes + kneel; LaunchExperience gate hop |
 | 1.30.15 | 10-11 | 643 | Requiem: victory orbit updates every frame (smooth); all game sounds silenced during battles (ticking) |
 | 1.30.14 | 10-11 | 643 | Requiem: your real body is fully hidden in battles (pieces welded on from outside the character too) |
 | 1.30.13 | 10-11 | 643 | Requiem: victory camera orbits until you close the window; fanfare sting + victory theme; rpgfanfare to pick the fanfare |
