@@ -1,4 +1,4 @@
--- NeverYield v1.30.8 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.30.9 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.30.8" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.30.9" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -37061,6 +37061,7 @@ Q.explore = function(token, spec)
 				local rr = r.alive and r.rig:FindFirstChild("HumanoidRootPart")
 				if rr and (rr.Position - me.Position).Magnitude < 7 then
 					r.alive = false
+					Q.exploring = false -- (no P menu from here on)
 					Q.bubble(r.rig, "!", 1)
 					Q.sound(Q.sfx.whisper, 0.5)
 					task.wait(0.4)
@@ -37376,8 +37377,10 @@ Q.pauseMenu = function(token)
 	local stack = {} -- the screen that gets the keys is the last one
 	local refreshers = {}
 	Q.freeze(true)
-
-	local back = Instance.new("Frame")
+	local back, fitConn, keyConn
+	-- everything runs inside a pcall so the cleanup below always happens (no frozen player under a dead menu)
+	local ok, err = pcall(function()
+	back = Instance.new("Frame")
 	back.Size = UDim2.new(1, 0, 1, 0)
 	back.BackgroundColor3 = Color3.new(0, 0, 0)
 	back.BackgroundTransparency = 1
@@ -37400,7 +37403,7 @@ Q.pauseMenu = function(token)
 		scale.Scale = math.min(1.25, (v.X - 32) / 960, (v.Y - 40) / 600)
 	end
 	fit()
-	local fitConn = cam:GetPropertyChangedSignal("ViewportSize"):Connect(fit)
+	fitConn = cam:GetPropertyChangedSignal("ViewportSize"):Connect(fit)
 
 	local function slide(f, dx)
 		local to = f.Position
@@ -37693,7 +37696,7 @@ Q.pauseMenu = function(token)
 		[Enum.KeyCode.Backspace] = "back", [Enum.KeyCode.X] = "back", [Enum.KeyCode.ButtonB] = "back", [Enum.KeyCode.P] = "close",
 	}
 	local opened = tick()
-	local keyConn = UserInputService.InputBegan:Connect(function(input, processed)
+	keyConn = UserInputService.InputBegan:Connect(function(input, processed)
 		if input.UserInputType == Enum.UserInputType.MouseButton2 then Q.menuPress("back") return end
 		if processed then return end
 		local k = keyMap[input.KeyCode]
@@ -37702,17 +37705,16 @@ Q.pauseMenu = function(token)
 	end)
 	Q.sound(Q.sfx.select, 0.5, 1.1)
 
-	local ok, err = pcall(function()
-		local last = 0
-		while not closed and Q.alive(token) do
-			if tick() - last > 0.25 then last = tick() refresh() end
-			task.wait()
-		end
+	local last = 0
+	while not closed and Q.alive(token) do
+		if tick() - last > 0.25 then last = tick() refresh() end
+		task.wait()
+	end
 	end)
-	keyConn:Disconnect()
-	fitConn:Disconnect()
+	if keyConn then keyConn:Disconnect() end
+	if fitConn then fitConn:Disconnect() end
 	Q.menuPress = nil
-	back:Destroy()
+	if back then back:Destroy() end
 	Q.freeze(false)
 	Q.menuGrace = tick() + 1
 	Q.sound(Q.sfx.select, 0.4, 0.9)
