@@ -1,4 +1,4 @@
--- NeverYield v1.30.6 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.30.7 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.30.6" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.30.7" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -35386,8 +35386,18 @@ Q.enemyTurn = function(B, u)
 end
 
 -- ---------- the command menu ----------
-Q.menuInput = function(B, rows, onPick, onBack, title)
-	-- rows = {{text, enabled = bool, sub = "right text"}}; returns when picked or cancelled
+Q.menuInput = function(B, rows, onPick, onBack, title, onCursor)
+	-- rows = {{text, enabled = bool, sub = "right text"}}; returns when picked or cancelled. A menu you can back out
+	-- of gets a "< Back" row at the bottom (and right-click / Backspace / X go back too), so you can never get stuck.
+	-- onCursor(i) is called when the highlighted row changes.
+	local backRow
+	if onBack then
+		local copy = {}
+		for i, r in ipairs(rows) do copy[i] = r end
+		table.insert(copy, {text = "< Back", back = true})
+		rows = copy
+		backRow = #rows
+	end
 	local h = 24 + #rows * 28
 	local f = Q.win(B.gui, UDim2.new(0.5, -470, 1, -164 - h), UDim2.new(0, 220, 0, h), 58)
 	if title then Q.text(f, {Position = UDim2.new(0, 12, 0, -24), Size = UDim2.new(1, 0, 0, 20), Text = title, TextSize = 15, Font = Enum.Font.GothamBold}) end
@@ -35418,7 +35428,7 @@ Q.menuInput = function(B, rows, onPick, onBack, title)
 			Q.text(b, {Position = UDim2.new(0, 0, 0, 0), Size = UDim2.new(1, -4, 1, 0), Text = r.sub, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 61,
 				TextColor3 = Color3.fromRGB(200, 210, 240)})
 		end
-		b.MouseEnter:Connect(function() if r.enabled ~= false then cursor = i draw() end end)
+		b.MouseEnter:Connect(function() if r.enabled ~= false then cursor = i draw() if onCursor and not r.back then onCursor(i) end end end)
 		b.MouseButton1Click:Connect(function() if r.enabled ~= false then result = i end end)
 		labels[i] = b
 	end
@@ -35433,15 +35443,17 @@ Q.menuInput = function(B, rows, onPick, onBack, title)
 			end
 			Q.sound(Q.sfx.select, 0.2, 1.5)
 			draw()
+			if onCursor and cursor ~= backRow then onCursor(cursor) end
 		elseif k == Enum.KeyCode.Return or k == Enum.KeyCode.E or k == Enum.KeyCode.Z then
 			if rows[cursor].enabled ~= false then result = cursor end
-		elseif k == Enum.KeyCode.Backspace or k == Enum.KeyCode.X or k == Enum.KeyCode.Q then
+		elseif k == Enum.KeyCode.Backspace or k == Enum.KeyCode.X or k == Enum.KeyCode.Q or input.UserInputType == Enum.UserInputType.MouseButton2 then
 			if onBack then result = 0 end
 		end
 	end)
 	while not result and not B.over and Q.alive(B.token) do task.wait() end
 	conn:Disconnect()
 	f:Destroy()
+	if result and result == backRow then result = 0 end
 	if result and result > 0 then
 		Q.sound(Q.sfx.select, 0.4)
 		return onPick(result)
@@ -35488,9 +35500,8 @@ Q.pickTarget = function(B, side, allowDead)
 		end)
 	end
 	mark(list[1])
-	local hover = RunService.RenderStepped:Connect(function() end)
-	local chosen = Q.menuInput(B, rows, function(i) return list[i] end, function() return "back" end, "Target")
-	hover:Disconnect()
+	-- the arrow follows the highlighted name
+	local chosen = Q.menuInput(B, rows, function(i) return list[i] end, function() return "back" end, "Target", function(i) if list[i] then mark(list[i]) end end)
 	if marker then marker:Destroy() end
 	return chosen
 end
