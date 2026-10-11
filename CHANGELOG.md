@@ -5,6 +5,7 @@ Versions before 1.11.3 were reconstructed from the Desktop `.bakN` backups (one 
 
 | Version | Date | Commands | Change |
 |---|---|---|---|
+| 1.28.1 | 10-10 | 639 | Requiem: Begin card after teleports (game menus first), rpgspot / rpgspots |
 | 1.28.0 | 10-10 | 637 | Requiem RPG map test: rpgmaps, rpgmap 1-7/here, unrpg (teleport to each Disc One game + test scene) |
 | 1.27.2 | 10-10 | 634 | roomreset: closes the door first, empty save instead of delfile |
 | 1.27.1 | 10-10 | 634 | House clock ambience only plays when the radio is off |

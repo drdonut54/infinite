@@ -1,4 +1,4 @@
--- NeverYield v1.28.0 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.28.1 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.28.0" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.28.1" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -5489,7 +5489,9 @@ CMDs[#CMDs + 1] = {NAME = 'statssave', DESC = 'Saves your stats now (they also s
 CMDs[#CMDs + 1] = {NAME = 'statsreset confirm', DESC = 'Starts your stats over (a backup file is kept)'}
 CMDs[#CMDs + 1] = {NAME = '--- THE NULL-BYTE REQUIEM (RPG) ---', DESC = 'A turn-based RPG that travels between real Roblox games through toll gates. In progress: the map test is ready'}
 CMDs[#CMDs + 1] = {NAME = 'rpgmaps', DESC = 'Lists the RPG worlds and the real game each one is in'}
-CMDs[#CMDs + 1] = {NAME = 'rpgmap [1-7 / here]', DESC = 'Map test: teleports you to that chapter\'s real game, NeverYield comes back and stages a test scene (Seris, a Hollowed, a toll gate to the next world). here = test the game you are in'}
+CMDs[#CMDs + 1] = {NAME = 'rpgmap [1-7 / here]', DESC = 'Map test: teleports you to that chapter\'s real game, NeverYield comes back and shows a Begin card, then stages a test scene (Seris, a Hollowed, a toll gate to the next world). here = test the game you are in'}
+CMDs[#CMDs + 1] = {NAME = 'rpgspot [name] / rpgspot del [name]', DESC = 'Marks where you stand in this game as a named spot for RPG scenes and battles (saved in NeverYield_rpg_spots.json)'}
+CMDs[#CMDs + 1] = {NAME = 'rpgspots', DESC = 'Lists the spots marked in this game and shows a blue beam on each'}
 CMDs[#CMDs + 1] = {NAME = 'unrpg', DESC = 'Stops the RPG and clears everything it put in the world'}
 -- wait()
 
@@ -32922,10 +32924,8 @@ Q.boot = function()
 	if tr.place == game.PlaceId then
 		Q.data.travel = nil
 		Q.save()
-		local char = Players.LocalPlayer.Character or Players.LocalPlayer.CharacterAdded:Wait()
-		char:WaitForChild("HumanoidRootPart", 20)
-		task.wait(4)
-		Q.run(Q.data.chapter, Q.data.scene)
+		local ch = Q.chapters[Q.data.chapter]
+		Q.ready(ch and ("Chapter " .. ch.n .. ": " .. ch.title) or "The Null-Byte Requiem", function() Q.run(Q.data.chapter, Q.data.scene) end)
 	elseif os.time() - (tr.at or 0) < 300 then
 		notify('The Null-Byte Requiem', 'You were headed to ' .. ((Q.placeOf(Q.data.chapter) or {}).name or "another game") .. ', but you are not there. Type rpg to cross again.', 10)
 	end
@@ -33340,6 +33340,75 @@ Q.tollPrompt = function(lines, canLeave)
 	return answer
 end
 
+-- After a teleport the game usually shows its own menus first (PLAY screens, uniform pickers...), so the RPG
+-- waits: a small card appears once you have a character, and the scene starts when you press Begin.
+Q.ready = function(title, fn)
+	local char = Players.LocalPlayer.Character or Players.LocalPlayer.CharacterAdded:Wait()
+	char:WaitForChild("HumanoidRootPart", 30)
+	task.wait(2)
+	local screen = Q.screen()
+	local card = Instance.new("Frame")
+	card.AnchorPoint = Vector2.new(0.5, 1)
+	card.Position = UDim2.new(0.5, 0, 1, -110)
+	card.Size = UDim2.new(0, 430, 0, 118)
+	card.BackgroundColor3 = Color3.fromRGB(6, 10, 20)
+	card.BackgroundTransparency = 0.1
+	card.BorderSizePixel = 0
+	card.ZIndex = 70
+	card.Parent = screen
+	NeverYieldPortal.corner(card, UDim.new(0, 10))
+	local stroke = Instance.new("UIStroke")
+	stroke.Color, stroke.Thickness = Color3.fromRGB(90, 190, 255), 1.5
+	stroke.Parent = card
+	NeverYieldPets.label(card, {Position = UDim2.new(0, 16, 0, 8), Size = UDim2.new(1, -32, 0, 20), Text = "THE NULL-BYTE REQUIEM", Font = Enum.Font.Code,
+		TextSize = 15, TextColor3 = Color3.fromRGB(150, 235, 255), ZIndex = 71})
+	NeverYieldPets.label(card, {Position = UDim2.new(0, 16, 0, 28), Size = UDim2.new(1, -32, 0, 20), Text = title, TextSize = 14, ZIndex = 71})
+	NeverYieldPets.label(card, {Position = UDim2.new(0, 16, 0, 48), Size = UDim2.new(1, -32, 0, 18), Text = "Finish the game's menus and stand somewhere open, then press Begin.",
+		TextSize = 11, TextWrapped = true, TextColor3 = Color3.fromRGB(190, 190, 210), ZIndex = 71})
+	local chosen
+	NeverYieldPets.button(card, "Begin", UDim2.new(0.5, -150, 1, -42), UDim2.new(0, 140, 0, 32), Color3.fromRGB(20, 70, 120), function() chosen = true end).ZIndex = 72
+	NeverYieldPets.button(card, "Later", UDim2.new(0.5, 10, 1, -42), UDim2.new(0, 140, 0, 32), Color3.fromRGB(50, 45, 70), function() chosen = false end).ZIndex = 72
+	while chosen == nil and card.Parent do task.wait(0.1) end
+	pcall(function() card:Destroy() end)
+	if chosen then
+		fn()
+	else
+		notify('The Null-Byte Requiem', 'Whenever you are ready: rpgmap here', 8)
+	end
+end
+
+-- ---------- spots: kas marks good places in each game for scenes and battles ----------
+Q.spotFile = "NeverYield_rpg_spots.json"
+Q.loadSpots = function()
+	local spots = {}
+	pcall(function()
+		if isfile(Q.spotFile) then spots = HttpService:JSONDecode(readfile(Q.spotFile)) end
+	end)
+	if type(spots) ~= "table" then spots = {} end
+	return spots
+end
+
+Q.markSpot = function(name)
+	local root = Q.root()
+	if not root then return end
+	local spots = Q.loadSpots()
+	local key = tostring(game.PlaceId)
+	spots[key] = spots[key] or {}
+	local p = root.Position
+	local look = workspace.CurrentCamera.CFrame.LookVector
+	spots[key][name] = {x = math.floor(p.X * 10) / 10, y = math.floor(Q.groundY(p, p.Y - 3) * 10) / 10, z = math.floor(p.Z * 10) / 10,
+		dir = math.floor(math.deg(math.atan2(-look.X, -look.Z))), at = os.time()}
+	pcall(writefile, Q.spotFile, HttpService:JSONEncode(spots))
+	return spots[key][name]
+end
+
+-- a marked spot as a CFrame (facing the way the camera looked when it was marked)
+Q.namedSpot = function(name)
+	local s = (Q.loadSpots()[tostring(game.PlaceId)] or {})[name]
+	if not s then return nil end
+	return CFrame.new(s.x, s.y, s.z) * CFrame.Angles(0, math.rad(s.dir or 0), 0)
+end
+
 Q.clearStage = function()
 	if Q.folder then pcall(function() Q.folder:Destroy() end) Q.folder = nil end
 end
@@ -33475,6 +33544,38 @@ addcmd('rpgmap',{'requiemmap'},function(args, speaker)
 	Q.mapTravel(n)
 end)
 
+-- rpgspot <name>: remember where you stand (and which way the camera looks) in this game, for scenes
+-- rpgspot del <name> removes one; rpgspots lists this game's spots and shows markers on them
+addcmd('rpgspot',{'markspot'},function(args, speaker)
+	if args[1] == "del" and args[2] then
+		local spots = Q.loadSpots()
+		local key = tostring(game.PlaceId)
+		if spots[key] then spots[key][args[2]] = nil end
+		pcall(writefile, Q.spotFile, HttpService:JSONEncode(spots))
+		notify('Requiem spots', 'Removed ' .. args[2])
+		return
+	end
+	local name = args[1] and table.concat(args, "_") or ("spot" .. os.time() % 100000)
+	local s = Q.markSpot(name)
+	if s then notify('Requiem spots', 'Marked "' .. name .. '" here (' .. s.x .. ', ' .. s.y .. ', ' .. s.z .. ')') end
+end)
+
+addcmd('rpgspots',{'listspots'},function(args, speaker)
+	local here = Q.loadSpots()[tostring(game.PlaceId)] or {}
+	local names = {}
+	for name, s in pairs(here) do
+		table.insert(names, name)
+		local cf = CFrame.new(s.x, s.y, s.z)
+		local beam = NeverYieldAgartha.part(Q.stage(), Vector3.new(0.4, 12, 0.4), cf * CFrame.new(0, 6, 0), Color3.fromRGB(90, 190, 255), Enum.Material.Neon, nil, {CanCollide = false, Transparency = 0.3})
+		local bb = Instance.new("BillboardGui")
+		bb.Size, bb.StudsOffset, bb.AlwaysOnTop = UDim2.new(0, 160, 0, 24), Vector3.new(0, 7, 0), true
+		bb.Parent = beam
+		NeverYieldPets.label(bb, {Size = UDim2.new(1, 0, 1, 0), Text = name, TextSize = 14, TextColor3 = Color3.fromRGB(150, 235, 255), TextStrokeTransparency = 0.3, ZIndex = 1})
+	end
+	table.sort(names)
+	notify('Requiem spots', #names == 0 and 'No spots in this game yet. Stand somewhere and type rpgspot <name>.' or (#names .. ' spots: ' .. table.concat(names, ", ") .. ' (blue beams; unrpg hides them)'), 12)
+end)
+
 addcmd('unrpg',{'stoprpg'},function(args, speaker)
 	Q.stop()
 end)
@@ -33490,10 +33591,7 @@ task.spawn(function()
 			if tr.place == game.PlaceId then
 				Q.data.travel = nil
 				Q.save()
-				local char = Players.LocalPlayer.Character or Players.LocalPlayer.CharacterAdded:Wait()
-				char:WaitForChild("HumanoidRootPart", 20)
-				task.wait(5)
-				Q.mapTest(tr.test)
+				Q.ready("Map test: Chapter " .. tr.test, function() Q.mapTest(tr.test) end)
 			end
 			return
 		end
