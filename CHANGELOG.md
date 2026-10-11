@@ -5,6 +5,19 @@ Versions before 1.11.3 were reconstructed from the Desktop `.bakN` backups (one 
 
 | Version | Date | Commands | Change |
 |---|---|---|---|
+| 1.30.17 | 10-11 | 643 | Requiem: smart positioner walks to open ground before scenes/fights; game tags + Stop Navigating stay hidden; camera avoids CanQuery-off leaves; rpgdebug guis |
+| 1.30.16 | 10-11 | 643 | Requiem auras from Sol's RNG + Place1 (sword, attacks, limit, gate portal, Hollowed, map); smart camera; living cutscenes + kneel; LaunchExperience gate hop |
+| 1.30.15 | 10-11 | 643 | Requiem: victory orbit updates every frame (smooth); all game sounds silenced during battles (ticking) |
+| 1.30.14 | 10-11 | 643 | Requiem: your real body is fully hidden in battles (pieces welded on from outside the character too) |
+| 1.30.13 | 10-11 | 643 | Requiem: victory camera orbits until you close the window; fanfare sting + victory theme; rpgfanfare to pick the fanfare |
+| 1.30.12 | 10-11 | 642 | Requiem: victory camera can't grab the camera after a battle; battle spots stay on your floor (no planters/fountains) |
+| 1.30.11 | 10-11 | 642 | Requiem: R15 fixes (Seris kneel/sit on real ground, accessories welded, camera out of Vane, no top-down victory cam), game music muted via SoundGroup (ticking), battle idles, blade-down guard |
+| 1.30.10 | 10-11 | 642 | Requiem: P menu Ledger is ??? until Ch 6 |
+| 1.30.9 | 10-11 | 642 | Requiem: P menu blocked during a roamer catch; menu cleanup always runs |
+| 1.30.8 | 10-11 | 642 | Requiem: FF7 pause menu on P (portraits, LV/HP/MP/Limit, Items, Skills, Journal, Arms, Ledger); replaces M |
+| 1.30.7 | 10-11 | 642 | Requiem: battle sub-menus get a Back row (+ right-click back); target arrow follows the highlight |
+| 1.30.6 | 10-11 | 642 | Requiem: kas's music picks (APM/DistroKid, verified) in sad/explore/boss playlists + dread list |
+| 1.30.5 | 10-11 | 642 | Requiem: every Hollowed looks different (hair/clothes/size/tint/face/posture/glitches, seeded); Avatar Joint Upgrade fix (attacks, sit, accessories); battles fit open space; roamers avoid walls; victory cam, waypoint arrow, quieter static |
 | 1.30.4 | 10-10 | 642 | Requiem review fixes: knockout pose race, follower double loop, guard stance, double drops game tags, R6 back sword measured |
 | 1.30.3 | 10-10 | 642 | Requiem: FF7 battle moves (52_moves), hits connect, blade-down glowing sword, Seris techwear, ground sit, footstep follow, game tags/beams hidden, campfire |
 | 1.30.2 | 10-10 | 642 | | 1.30.2 | 2026-10-10 | Requiem: Genovia courtyard/Library/Astronomy anchors with facing, wall-safe battle + scene cameras, draggable choice menus | |
