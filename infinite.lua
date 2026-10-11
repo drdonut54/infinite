@@ -1,4 +1,4 @@
--- NeverYield v1.30.5 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.30.6 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.30.5" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.30.6" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -32642,10 +32642,14 @@ Q.places = {
 -- music (APM / DistroKid official, checked)
 Q.music = {
 	title = {139347973925011},
-	sad = {1838577168, 1838260553, 139347973925011, 87279187741090, 123816023992616, 128518235802809, 9048627306},
+	-- (+ kas's picks from the Volt workspace audio list, 2026-10-11: Tragedy 30, Burden Of Time, Through The Eyes
+	-- Of A Child, Zen's Promises; all APMOfficial)
+	sad = {1838577168, 1838260553, 139347973925011, 87279187741090, 123816023992616, 128518235802809, 9048627306, 1840440959, 1848154297, 1843035033, 1838779733},
 	camp = {87279187741090, 119760360784584, 125299502320621, 115582700793572, 81967684783948, 89034211968541},
 	battle = {103139167777950, 113559134342233, 137856050318156, 71615305537408, 1837825570},
-	boss = {116873506692821, 137578574800255, 1837826831},
+	boss = {116873506692821, 137578574800255, 1837826831, 1842840001, 1840529722},
+	-- dread for later chapters (the Hotel, the Root): drones and bells from kas's list (APM / DistroKid)
+	dread = {1835949514, 1843053709, 1837835407, 1846999567, 140704980462451, 139967275703617},
 	lacrimosa = {1844309470},
 	hymn = {1844309360},
 	lumen = {137203505283202},
@@ -37193,7 +37197,8 @@ Q.enemies = {
 -- and climb to the Astronomy tower, where the Key can open a gate to open sky.
 -- Changed from the story file (kas gave Claude the reins): the tutorial fight and the walk happen in this world.
 
-Q.music.explore = {87279187741090, 123816023992616, 128518235802809, 1838577168}
+-- (+ Map of Stars, Room Of Knowledge, Ethereal Fantasy, Seventh Galaxy from kas's list; APMOfficial)
+Q.music.explore = {87279187741090, 123816023992616, 128518235802809, 1838577168, 1837892156, 1836722070, 1839941462, 1846384380}
 Q.enemies.hollowed_classmate = {name = "Hollowed Classmate", look = "hollowed", hp = 120, atk = 10, def = 6, mag = 5, spd = 9, xp = 28, items = {},
 	weeps = true,
 	skills = {
