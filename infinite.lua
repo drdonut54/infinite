@@ -1,4 +1,4 @@
--- NeverYield v1.30.9 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.30.10 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.30.9" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.30.10" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -37466,6 +37466,8 @@ Q.pauseMenu = function(token)
 	local cmdRows = {
 		{text = "Items"}, {text = "Skills"}, {text = "Journal"}, {text = "Arms"}, {text = "Ledger"}, {text = "Close"},
 	}
+	-- the Keeper hands over the Ledger at the Waystation (Ch 6); before that it's a locked ??? row
+	if not (Q.data.chapter >= 6 or Q.flag("ledger")) then cmdRows[5] = {text = "???", enabled = false} end
 	cmds.set(cmdRows)
 
 	local function refresh()
@@ -37662,6 +37664,7 @@ Q.pauseMenu = function(token)
 
 	local function command(i)
 		local name = cmdRows[i].text
+		if cmdRows[i].enabled == false then Q.sound(Q.sfx.select, 0.4, 0.6) return end
 		Q.sound(Q.sfx.select, 0.5)
 		if name == "Close" then closed = true
 		elseif name == "Items" then subScreen("ITEMS", itemRows)
