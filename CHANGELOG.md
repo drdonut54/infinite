@@ -5,6 +5,7 @@ Versions before 1.11.3 were reconstructed from the Desktop `.bakN` backups (one 
 
 | Version | Date | Commands | Change |
 |---|---|---|---|
+| 1.27.2 | 10-10 | 634 | roomreset: closes the door first, empty save instead of delfile |
 | 1.27.1 | 10-10 | 634 | House clock ambience only plays when the radio is off |
 | 1.27.0 | 10-10 | 634 | House music + Retro Radio (11 stations, E/F); Agartha: 22 calm piano/harp tracks with reverb; more tracks for clowns, Diamond Rush, jingles and sound effects; music never keeps playing after you leave Agartha or the house |
 | 1.26.1 | 10-10 | 634 | Light switches and other small items can be picked up in Edit mode (E-prompts hidden while decorating); Agartha pond: no more blocky terrain-water octagon, glass water with glints |

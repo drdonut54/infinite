@@ -1,4 +1,4 @@
--- NeverYield v1.27.1 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.27.2 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.27.1" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.27.2" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -26972,10 +26972,13 @@ addcmd('undoor',{'removedoor','nodoor'},function(args, speaker)
 end)
 
 addcmd('roomreset',{},function(args, speaker)
+	-- close the house first: while the door is out it keeps using the room data every frame
+	if NeverYieldDoor.state then NeverYieldDoor.close() end
 	pcall(function() if isfile(NeverYieldRoom.file) then writefile(NeverYieldRoom.file .. ".old", readfile(NeverYieldRoom.file)) end end)
-	pcall(delfile, NeverYieldRoom.file)
+	-- an empty save loads as the default house (not every executor has delfile)
+	pcall(writefile, NeverYieldRoom.file, "{}")
 	NeverYieldRoom.data = nil
-	notify('Room', 'Your room is back to the default layout (the old one is saved as NeverYield_room.json.old). Reopen the door to see it.')
+	notify('Room', 'Your house is back to the default layout (the old one is saved as NeverYield_room.json.old). Use door to see it.')
 end)
 
 table.insert(WackyState.undoList, 'undoor')
