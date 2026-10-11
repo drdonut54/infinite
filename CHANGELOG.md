@@ -5,6 +5,7 @@ Versions before 1.11.3 were reconstructed from the Desktop `.bakN` backups (one 
 
 | Version | Date | Commands | Change |
 |---|---|---|---|
+| 1.30.11 | 10-11 | 642 | Requiem: R15 fixes (Seris kneel/sit on real ground, accessories welded, camera out of Vane, no top-down victory cam), game music muted via SoundGroup (ticking), battle idles, blade-down guard |
 | 1.30.10 | 10-11 | 642 | Requiem: P menu Ledger is ??? until Ch 6 |
 | 1.30.9 | 10-11 | 642 | Requiem: P menu blocked during a roamer catch; menu cleanup always runs |
 | 1.30.8 | 10-11 | 642 | Requiem: FF7 pause menu on P (portraits, LV/HP/MP/Limit, Items, Skills, Journal, Arms, Ledger); replaces M |

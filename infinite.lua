@@ -1,4 +1,4 @@
--- NeverYield v1.30.10 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.30.11 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.30.10" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.30.11" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -33064,13 +33064,22 @@ Q.flattenAccessories = function(rig)
 					if a and a:IsA("Attachment") then a0 = a break end
 				end
 			end
-			if h and a1 and a0 and not h:FindFirstChildOfClass("WrapLayer") then
+			-- layered clothing (WrapLayer) too: kas's checker belt was skipped and flew off on its own physics.
+			-- No matching attachment: weld it to the torso where it is now.
+			local torso = rig:FindFirstChild("UpperTorso") or rig:FindFirstChild("Torso")
+			if h and h:IsA("BasePart") and (a0 or torso) then
 				for _, j in ipairs(h:GetChildren()) do
 					if j:IsA("JointInstance") or j:IsA("Constraint") then j:Destroy() end
 				end
+				h.Anchored, h.CanCollide, h.Massless = false, false, true
 				local w = Instance.new("Weld")
-				w.Part0, w.Part1 = a0.Parent, h
-				w.C0, w.C1 = a0.CFrame, a1.CFrame
+				if a0 then
+					w.Part0, w.Part1 = a0.Parent, h
+					w.C0, w.C1 = a0.CFrame, a1.CFrame
+				else
+					w.Part0, w.Part1 = torso, h
+					w.C0 = torso.CFrame:ToObjectSpace(h.CFrame)
+				end
 				w.Parent = h
 				h.Name = "NYAccessory"
 				h.Parent = rig
@@ -33562,17 +33571,27 @@ Q.muteOne = function(s)
 		return
 	end
 	if not (s.Looped or s.TimeLength >= 30) then return end
-	Q.muted[s] = s.Volume
-	s.Volume = 0
-	-- games fade their music back in or swap tracks: keep it at zero while we're muting
-	local c = s:GetPropertyChangedSignal("Volume"):Connect(function()
-		if Q.muting and Q.muted[s] ~= nil and s.Volume > 0 then
-			Q.muted[s] = s.Volume
-			s.Volume = 0
+	-- route it through a silent SoundGroup: games that fade their music back in keep writing Volume, and fighting
+	-- that every frame made the sound stutter (kas heard a ticking glitch in Genovia's battles)
+	Q.muted[s] = s.SoundGroup or false
+	s.SoundGroup = Q.silentGroup()
+	local c = s:GetPropertyChangedSignal("SoundGroup"):Connect(function()
+		if Q.muting and Q.muted[s] ~= nil and s.SoundGroup ~= Q.silent then
+			Q.muted[s] = s.SoundGroup or false
+			s.SoundGroup = Q.silentGroup()
 		end
 	end)
 	Q.muteConns = Q.muteConns or {}
 	table.insert(Q.muteConns, c)
+end
+Q.silentGroup = function()
+	if not Q.silent or not Q.silent.Parent then
+		Q.silent = Instance.new("SoundGroup")
+		Q.silent.Name = randomString()
+		Q.silent.Volume = 0
+		Q.silent.Parent = SoundService
+	end
+	return Q.silent
 end
 Q.muteGame = function(on)
 	if on and not Q.muting then
@@ -33592,8 +33611,8 @@ Q.muteGame = function(on)
 		for _, c in ipairs(Q.muteConns or {}) do pcall(function() c:Disconnect() end) end
 		Q.muteConns = {}
 		for _, name in ipairs({"Workspace", "SoundService", "PlayerGui"}) do WackyState.disconnect("rpg_mute_" .. name) end
-		for s, vol in pairs(Q.muted) do
-			pcall(function() if s.Parent then s.Volume = vol end end)
+		for s, group in pairs(Q.muted) do
+			pcall(function() if s.Parent then s.SoundGroup = group or nil end end)
 		end
 		Q.muted = setmetatable({}, {__mode = "k"})
 	end
@@ -34430,23 +34449,42 @@ end
 -- never park the camera inside one of our own rigs (Hollowed are see-through, so the wall check skips them):
 -- push it out to 3.2 studs from any rig's body
 Q.awayFromRigs = function(cam)
-	if not Q.folder then return cam end
+	-- keep the camera out of every body on stage, your own (Vane) included: R15 avatars with wings and big hair
+	-- filled the whole frame when an over-the-shoulder shot got pulled into Vane's back
+	local rigs = Q.folder and Q.folder:GetChildren() or {}
+	local mine = Players.LocalPlayer.Character
+	if mine then rigs = table.clone(rigs) table.insert(rigs, mine) end
 	for _ = 1, 3 do
 		local moved = false
-		for _, m in ipairs(Q.folder:GetChildren()) do
-			local r = m:IsA("Model") and m:FindFirstChild("HumanoidRootPart")
-			if r then
-				local off = cam - r.Position
-				if off.Magnitude < 3.2 then
-					local away = off.Magnitude > 0.05 and off.Unit or Vector3.new(0, 1, 0)
-					cam = r.Position + away * 3.2
-					moved = true
+		for _, m in ipairs(rigs) do
+			if m:IsA("Model") then
+				for _, name in ipairs({"HumanoidRootPart", "Head"}) do
+					local r = m:FindFirstChild(name)
+					if r then
+						local off = cam - r.Position
+						if off.Magnitude < 3.4 then
+							local away = off.Magnitude > 0.05 and off.Unit or Vector3.new(0, 1, 0)
+							cam = r.Position + away * 3.4
+							moved = true
+						end
+					end
 				end
 			end
 		end
 		if not moved then break end
 	end
 	return cam
+end
+-- true if a body (a stage rig or you) is between the camera and what it looks at
+Q.bodyBlocks = function(cam, look)
+	local list = {Players.LocalPlayer.Character}
+	if Q.folder then table.insert(list, Q.folder) end
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Include
+	params.FilterDescendantsInstances = list
+	local dir = look - cam
+	local hit = workspace:Raycast(cam, dir * 0.85, params)
+	return hit ~= nil and hit.Instance.Transparency < 0.6 and hit.Instance.Name ~= "HumanoidRootPart"
 end
 
 Q.clearShot = function(look, cam)
@@ -34521,6 +34559,10 @@ Q.shot = function(kind, subject, other, seconds, side)
 			look = (near + far) / 2 - Vector3.new(0, 0.4, 0)
 			got = Q.clearShot(look, near - u * 6 + u:Cross(Vector3.new(0, 1, 0)).Unit * 2.2 * side + Vector3.new(0, 2.6, 0))
 		end
+	end
+	-- an over-the-shoulder pulled in by a wall ends up inside the shoulder: frame both of them instead
+	if kind == "ots" and other and ((got - look).Magnitude < want * 0.75 or Q.bodyBlocks(got, look)) then
+		return Q.shot("two", subject, other, seconds, side)
 	end
 	cam = got
 	if seconds and seconds > 0 then Q.camGo(cam, look, seconds) else Q.camTo(cam, look, 0) end
@@ -35675,7 +35717,13 @@ Q.fight = function(token, spec)
 		u.rig = id == "vane" and Q.vaneDouble() or Q.cast(id)
 		local s = slots[i] or {i * 3, 0}
 		u.home = spotFor(s[1], s[2], s[1], 30)
-		if u.rig then Q.put(u.rig, u.home) end
+		if u.rig then
+			Q.put(u.rig, u.home)
+			if not u.rig:FindFirstChild("NYSword") then
+				u.rig:SetAttribute("NYStance", "stance")
+				Q.rest(u.rig, 0)
+			end
+		end
 		table.insert(B.party, u)
 	end
 	local espots = {{0, 17}, {-6, 19}, {6, 19}, {-3, 23}, {3, 23}}
@@ -35690,6 +35738,7 @@ Q.fight = function(token, spec)
 		table.insert(B.enemies, u)
 	end
 	Q.battleHud(B)
+	Q.idleStart(B)
 	-- the swirl into battle: white flash, then the camera sweeps around the enemies
 	Q.sound(Q.sfx.flash, 0.5, 1.2)
 	task.spawn(Q.flash, Color3.new(1, 1, 1), 0.05)
@@ -35740,11 +35789,17 @@ Q.fight = function(token, spec)
 			local act = table.remove(B.queue, 1)
 			B.busy = true
 			task.spawn(function()
+				act.actor.acting = true
 				local ok, err = pcall(Q.act, B, act)
+				act.actor.acting = nil
 				if not ok then warn("[NeverYield RPG] action: " .. tostring(err)) end
 				-- Brace counters
 				if act.actor.side == "enemy" and act.targets then
-					for _, t in ipairs(act.targets) do pcall(Q.counter, B, t, act.actor) end
+					for _, t in ipairs(act.targets) do
+						t.acting = t.statuses.braced and true or nil
+						pcall(Q.counter, B, t, act.actor)
+						t.acting = nil
+					end
 				end
 				act.actor.atb = 0
 				if not B.over then B.wide() end
@@ -35778,6 +35833,7 @@ Q.fight = function(token, spec)
 	end
 	B.over = true
 	while B.busy and Q.alive(token) do task.wait() end
+	Q.idleStop(B)
 	-- save HP/MP/limit back to the party
 	Q.data.party = Q.data.party or {}
 	for _, u in ipairs(B.party) do
@@ -35807,7 +35863,16 @@ Q.victory = function(B)
 		end
 		local last
 		for k = 0, 90 do last = last or cams[k] end
-		if not last then last = Q.clearShot(c, c + Vector3.new(0, 11, 0) + a.LookVector * 5) end
+		-- no room to orbit: the most open angle we found, kept low (never a top-down shot of the ground)
+		if not last then
+			local best, bestD = nil, 0
+			for k = 0, 11 do
+				local ang = math.rad(k * 30)
+				local cam = Q.clearShot(c, c + (a.LookVector * math.cos(ang) + a.RightVector * math.sin(ang)) * -10 + Vector3.new(0, 3, 0))
+				if (cam - c).Magnitude > bestD then best, bestD = cam, (cam - c).Magnitude end
+			end
+			last = best
+		end
 		for k = 0, 90 do
 			if not Q.alive(B.token) then return end
 			last = cams[k] or last
@@ -35838,6 +35903,7 @@ Q.victory = function(B)
 end
 
 Q.endBattle = function(B)
+	Q.idleStop(B)
 	if B.gui then B.gui:Destroy() end
 	for _, u in ipairs(B.party) do if u.rig then pcall(function() u.rig:Destroy() end) end end
 	for _, u in ipairs(B.enemies) do if u.rig then pcall(function() u.rig:Destroy() end) end end
@@ -35884,7 +35950,7 @@ end
 
 Q.jointNames = {
 	R6 = {rs = "Right Shoulder", ls = "Left Shoulder", rh = "Right Hip", lh = "Left Hip", neck = "Neck", root = "RootJoint"},
-	R15 = {rs = "RightShoulder", ls = "LeftShoulder", rh = "RightHip", lh = "LeftHip", neck = "Neck", root = "Root"},
+	R15 = {rs = "RightShoulder", ls = "LeftShoulder", rh = "RightHip", lh = "LeftHip", neck = "Neck", root = "Root", rk = "RightKnee", lk = "LeftKnee"},
 }
 
 -- the rig's joints by short name, with the C0 they had before any posing
@@ -35965,11 +36031,14 @@ Q.setPosture = function(rig, spec)
 	end
 end
 
--- at rest in a fight: sword-holders stand in their guard (blade up), everyone else goes back to idle
+-- at rest in a fight: sword-holders stand in their low guard (blade down), party members in their stance, everyone else
+-- goes back to idle
 Q.rest = function(rig, seconds)
 	if not rig then return end
 	if rig:FindFirstChild("NYSword") and not rig:GetAttribute("NYSitting") then
-		Q.pose(rig, Q.poses.ready, seconds or 0.15)
+		Q.pose(rig, Q.poses.guard, seconds or 0.15)
+	elseif rig:GetAttribute("NYStance") and not rig:GetAttribute("NYSitting") then
+		Q.pose(rig, Q.poses[rig:GetAttribute("NYStance")] or {}, seconds or 0.15)
 	else
 		Q.unpose(rig, seconds)
 	end
@@ -36092,6 +36161,9 @@ end
 -- ---------- the poses ----------
 -- right arm (sword arm): x = swing forward/up, y = sweep around the body, z = out to the side
 Q.poses = {
+	-- at rest between turns (kas: blade facing the ground): Cloud's low guard, sword arm a little back so the blade
+	-- runs forward and down across the front, tip just off the floor
+	guard = {rs = Q.rot(-12, 20, 10), ls = Q.rot(12, 0, -8), rh = Q.rot(-8), lh = Q.rot(10), root = Q.rot(-4, 10, 0)},
 	-- sword raised in front, weight forward
 	ready = {rs = Q.rot(50, 0, 10), ls = Q.rot(20, 0, -10), rh = Q.rot(-10), lh = Q.rot(15), root = Q.rot(-5)},
 	-- the run: leaning hard into it, sword up in front
@@ -36121,20 +36193,46 @@ Q.poses = {
 	hurt = {rs = Q.rot(-25, 0, 20), ls = Q.rot(-25, 0, -20), neck = Q.rot(-25), root = Q.rot(15)},
 }
 
--- sit on the ground (legs out in front, hands on the knees, body lowered to the floor), or stand back up.
+-- sit on the ground (legs out in front, hands on the knees, body lowered to the floor), kneel, or stand back up.
 -- Used for Seris in scenes, knocked-out allies, and a Hollowed sitting down to derender.
-Q.sit = function(rig, on)
+Q.sit = function(rig, on, kneel)
 	local hum = rig and rig:FindFirstChildOfClass("Humanoid")
 	local root = rig and rig:FindFirstChild("HumanoidRootPart")
 	if not hum or not root then return end
 	if (on and true or false) == (rig:GetAttribute("NYSitting") and true or false) then return end
 	rig:SetAttribute("NYSitting", on or nil)
-	local drop = hum.RigType == Enum.HumanoidRigType.R15 and math.max(hum.HipHeight - 0.1, 0.5) or 1.5 * (rig:GetAttribute("NYScale") or 1)
 	if on then
-		Q.pose(rig, {rh = Q.rot(90, 0, 4), lh = Q.rot(90, 0, -4), rs = Q.rot(35, 0, 5), ls = Q.rot(35, 0, -5), neck = Q.rot(8)}, 0)
+		-- drop the body until what touches the floor (the legs out in front, or the knees and shins when kneeling)
+		-- lies on the real ground: measured from the joint and the limb's thickness, so it fits any body (a fixed
+		-- drop sank kas's R15 Seris into the courtyard). R6 has no knees: it kneels sitting back on its legs.
+		local j = Q.joints(rig) or {}
+		local knees = kneel and j.rk and j.lk
+		local joint = knees and j.rk or j.rh
+		local drop = hum.RigType == Enum.HumanoidRigType.R15 and math.max(hum.HipHeight - 0.1, 0.5) or 1.5 * (rig:GetAttribute("NYScale") or 1)
+		if joint and joint.Part0 and joint.Part1 then
+			local params = RaycastParams.new()
+			params.FilterType = Enum.RaycastFilterType.Exclude
+			params.FilterDescendantsInstances = {Q.folder, Players.LocalPlayer.Character, rig}
+			local hit = workspace:Raycast(root.Position, Vector3.new(0, -12, 0), params)
+			if hit then
+				local pivotY = (joint.Part0.CFrame * joint.C0).Position.Y
+				drop = pivotY - (hit.Position.Y + joint.Part1.Size.Z / 2 + 0.05)
+			end
+		end
+		rig:SetAttribute("NYSitDrop", drop)
+		if knees then
+			-- on her knees, leaning in, both hands holding something at her chest
+			Q.pose(rig, {rk = Q.rot(-90), lk = Q.rot(-90), rh = Q.rot(-5), lh = Q.rot(-5), root = Q.rot(-8),
+				rs = Q.rot(60, 0, -22), ls = Q.rot(60, 0, 22), neck = Q.rot(-6)}, 0)
+		elseif kneel then
+			Q.pose(rig, {rh = Q.rot(-90, 0, 4), lh = Q.rot(-90, 0, -4), root = Q.rot(-8), rs = Q.rot(60, 0, -22), ls = Q.rot(60, 0, 22), neck = Q.rot(-6)}, 0)
+		else
+			Q.pose(rig, {rh = Q.rot(90, 0, 4), lh = Q.rot(90, 0, -4), rs = Q.rot(35, 0, 5), ls = Q.rot(35, 0, -5), neck = Q.rot(8)}, 0)
+		end
 		root.CFrame = root.CFrame - Vector3.new(0, drop, 0)
 	else
-		root.CFrame = root.CFrame + Vector3.new(0, drop, 0)
+		root.CFrame = root.CFrame + Vector3.new(0, rig:GetAttribute("NYSitDrop") or 1.5, 0)
+		rig:SetAttribute("NYSitDrop", nil)
 		Q.unpose(rig, 0)
 		if rig:FindFirstChild("NYSword") then Q.rest(rig, 0.15) end
 	end
@@ -36712,6 +36810,157 @@ Q.hollowLineup = function(count, kind)
 		end
 	end
 	return rigs
+end
+
+-- [54_idle.lua]
+-- ---------- battle idles: the party breathes, shifts its weight and watches the enemy while you pick ----------
+-- FF7 never lets the party stand frozen: they breathe, sway, glance at the enemy, hunch when they're hurt, and the
+-- one whose turn it is bounces on their toes. All of it is a layer on Motor6D.Transform, on top of whatever pose
+-- C0 holds (poses tween C0, so the two never fight; posed rigs have no Animator writing Transform). The layer is
+-- zeroed at once while that member acts (the move's contact checks measure the real blade), and when they're
+-- knocked out or the fight ends. Numbers are Q.rot degrees in the parent part's space, like Q.pose.
+
+-- Seris (and anyone without a sword) holds this between turns instead of the Roblox idle: left forearm up where
+-- the writing is, right hand ready with the stylus
+Q.poses.stance = {ls = Q.rot(40, 0, -10), rs = Q.rot(25, 15, 8), rh = Q.rot(-8), lh = Q.rot(12), root = Q.rot(-3, -15, 0)}
+
+-- the layer for one member at time t (a table of joint -> CFrame), and what it blends toward
+Q.idleLayer = function(B, u, t, dt)
+	local s = u.idle
+	local ph = s.phase
+	local hurt = u.hp / u.maxHp < 0.25
+	local mine = B.current == u
+	-- ease the states in and out so nothing snaps
+	local function ease(key, on, speed)
+		s[key] = s[key] + ((on and 1 or 0) - s[key]) * math.min(1, dt * (speed or 4))
+		return s[key]
+	end
+	local low = ease("low", hurt, 2)
+	local turn = ease("turn", mine, 6)
+	local guard = ease("guard", u.statuses.defending ~= nil, 5)
+	-- breathing: slower and heavier when hurt
+	local br = math.sin((t + ph) * (2.3 + low * 1.4))
+	local sway = math.sin((t + ph) * 0.6)
+	-- now and then, glance at another enemy (or back at the one in front)
+	if t > s.nextGlance then
+		s.nextGlance = t + 2.5 + math.random() * 3
+		local foes = Q.targetsOf(B, "enemy", true)
+		local root = Q.rootOf(u)
+		local foe = #foes > 1 and math.random() < 0.7 and foes[math.random(#foes)] or nil
+		local froot = foe and Q.rootOf(foe)
+		s.glanceTo = 0
+		if root and froot then
+			local d = root.CFrame:PointToObjectSpace(froot.Position)
+			s.glanceTo = math.clamp(math.deg(math.atan2(-d.X, -d.Z)), -35, 35)
+		end
+	end
+	s.glance = s.glance + (s.glanceTo - s.glance) * math.min(1, dt * 3)
+	-- the active member: up on their toes, leaning in
+	local bounce = math.abs(math.sin((t + ph) * 5.5)) * 0.12 * turn
+	local L = {}
+	local lean = br * (1 + low * 1.5) - low * 18 - turn * 4 + guard * 3
+	L.root = CFrame.new(0, 0.03 * br + bounce - low * 0.12, 0) * Q.rot(lean, sway * (3 - low * 2) - guard * 10, sway * 1.5)
+	-- legs stay planted under a leaning body
+	L.rh = Q.rot(-lean + turn * 5)
+	L.lh = Q.rot(-lean - turn * 3)
+	L.neck = Q.rot(low * 16 - br * 1.5 - turn * 3, s.glance, 0)
+	if u.rig:FindFirstChild("NYSword") then
+		-- the greatsword's weight: the grip rises and settles with each breath; Defend brings the blade up in front
+		L.rs = Q.rot(br * 2 - low * 4 + guard * 60 + turn * 10, guard * 15, br * 1.5)
+		L.ls = Q.rot(-br * 1.5 + guard * 20, 0, -br * 1.5)
+	else
+		-- the stylus taps the writing on her arm every few seconds
+		if t > s.nextTap then
+			s.nextTap = t + 4 + math.random() * 3
+			s.tapUntil = t + 0.9
+		end
+		local tap = ease("tap", t < s.tapUntil and low < 0.5, 8)
+		L.rs = Q.rot(br * 2 + tap * (20 + math.sin(t * 18) * 6) - low * 15 + guard * 30, tap * 30 + guard * 25, br * 2)
+		L.ls = Q.rot(-br * 1.5 + tap * 15 - low * 20 + guard * 30, tap * -10, -br * 2)
+	end
+	return L
+end
+
+-- the limit gauge is full: the member glows in their colour and gives off rising pixels
+Q.limitAura = function(u, on)
+	local root = Q.rootOf(u)
+	if on and not u.aura and root then
+		local light = Instance.new("PointLight")
+		light.Color, light.Range, light.Brightness, light.Shadows = u.color or Color3.new(1, 1, 1), 10, 0, false
+		light.Parent = root
+		local px = Instance.new("ParticleEmitter")
+		px.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+		px.Color = ColorSequence.new(u.color or Color3.new(1, 1, 1))
+		px.LightEmission, px.Rate, px.Lifetime, px.Speed = 1, 14, NumberRange.new(0.6, 1.1), NumberRange.new(2, 4)
+		px.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.35), NumberSequenceKeypoint.new(1, 0)})
+		px.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(1, 1)})
+		px.SpreadAngle, px.Acceleration = Vector2.new(25, 25), Vector3.new(0, 3, 0)
+		px.Shape, px.ShapeStyle = Enum.ParticleEmitterShape.Cylinder, Enum.ParticleEmitterShapeStyle.Surface
+		px.Parent = root
+		u.aura = {light, px}
+	elseif not on and u.aura then
+		for _, x in ipairs(u.aura) do pcall(function() x:Destroy() end) end
+		u.aura = nil
+	end
+	if u.aura then u.aura[1].Brightness = 1.2 + math.sin(tick() * 5) * 0.8 end
+end
+
+-- put a layer on a rig's joints (w = 0 puts the joints back exactly)
+Q.idleApply = function(u, L, w)
+	local j = u.idle.joints
+	for short, m in pairs(j) do
+		if m.Parent then
+			local l = L and L[short]
+			if l and w > 0 then
+				if w < 1 then l = CFrame.new():Lerp(l, w) end
+				-- Transform is applied in C0's own frame; turn the parent-space layer into it
+				local r = m.C0 - m.C0.Position
+				m.Transform = r:Inverse() * l * r
+			else
+				m.Transform = CFrame.new()
+			end
+		end
+	end
+end
+
+-- run the idles for a fight (returns nothing; Q.idleStop ends them)
+Q.idleStart = function(B)
+	for _, u in ipairs(B.party) do
+		u.idle = {phase = math.random() * 10, low = 0, turn = 0, guard = 0, tap = 0, glance = 0, glanceTo = 0,
+			nextGlance = 1 + math.random() * 2, nextTap = 2 + math.random() * 3, tapUntil = 0, joints = u.rig and Q.joints(u.rig) or {}}
+	end
+	local t0 = tick()
+	B.idleConn = RunService.Stepped:Connect(function(_, dt)
+		local ok, err = pcall(function()
+			local t = tick() - t0
+			for _, u in ipairs(B.party) do
+				local rig = u.rig
+				if rig and rig.Parent and u.idle then
+					local still = not u.dead and not u.acting and not B.over and not rig:GetAttribute("NYSitting")
+					if still then
+						Q.idleApply(u, Q.idleLayer(B, u, t, math.min(dt, 0.1)), math.min(1, t))
+						u.idle.off = false
+					elseif not u.idle.off then
+						Q.idleApply(u, nil, 0)
+						u.idle.off = true
+					end
+					Q.limitAura(u, not u.dead and not B.over and u.limit >= 100)
+				end
+			end
+		end)
+		if not ok then
+			warn("[Requiem] idle: " .. tostring(err))
+			Q.idleStop(B)
+		end
+	end)
+end
+
+Q.idleStop = function(B)
+	if B.idleConn then B.idleConn:Disconnect() B.idleConn = nil end
+	for _, u in ipairs(B.party) do
+		if u.idle then pcall(Q.idleApply, u, nil, 0) end
+		Q.limitAura(u, false)
+	end
 end
 
 -- [55_world.lua]
@@ -37835,7 +38084,7 @@ Q.chapters[1].scenes = {
 		local me = Q.vane()
 		local s = seris(token)
 		Q.put(s, Q.spot(-2.5, 6, -2.5, 30))
-		Q.sit(s, true)
+		Q.sit(s, true, true)
 		-- high over the academy, drifting down onto Vane
 		Q.camTo(Q.clearShot(Q.pt(0, 4.5, 0), Q.pt(0, 30, -22)), Q.pt(0, 4, 26), 0)
 		Q.shot("wide", me, nil, 7)
