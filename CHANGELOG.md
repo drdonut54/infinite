@@ -5,6 +5,7 @@ Versions before 1.11.3 were reconstructed from the Desktop `.bakN` backups (one 
 
 | Version | Date | Commands | Change |
 |---|---|---|---|
+| 1.30.1 | 10-10 | 642 | Requiem: RPG camera wins over game cameras (render priority); leftover pickups cleaned up |
 | 1.30.0 | 10-10 | 642 | Requiem: overworld exploring (objectives, waypoints, Seris follows, roaming Hollowed, pickups, M menu), framed cutscene shots, game UI hidden |
 | 1.29.2 | 10-10 | 642 | Requiem: sword sits diagonally on the back / angled in hand (explicit welds); game music muted while the RPG plays |
 | 1.29.1 | 10-10 | 642 | Requiem: cleaner title screen (menu on top, sized to fit, drifting pixels) |

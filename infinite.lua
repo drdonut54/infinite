@@ -1,4 +1,4 @@
--- NeverYield v1.30.0 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.30.1 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.30.0" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.30.1" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -33492,6 +33492,7 @@ Q.stop = function(keep)
 		if type(key) == "string" and key:sub(1, 4) == "rpg_" then WackyState.disconnect(key) end
 	end
 	pcall(function() workspace.CurrentCamera.CameraType = Enum.CameraType.Custom end)
+	pcall(function() RunService:UnbindFromRenderStep("NYRpgCam") end)
 	Q.camConn = nil
 	if Q.hideSelf then pcall(Q.hideSelf, false) end
 	if Q.freeze then pcall(Q.freeze, false) end
@@ -34139,9 +34140,13 @@ Q.camHold = function()
 	local cam = workspace.CurrentCamera
 	if not Q.camConn then
 		Q.camCF = cam.CFrame
-		-- some games grab the camera every frame; keep it ours while a scene or battle runs
-		Q.camConn = RunService.RenderStepped:Connect(function()
+		-- games set the camera every frame from their own scripts (Genovia High does): bind at the very last render
+		-- priority so ours is applied after theirs, and keep forcing Scriptable while a scene or battle runs
+		Q.camConn = true
+		pcall(function() RunService:UnbindFromRenderStep("NYRpgCam") end)
+		RunService:BindToRenderStep("NYRpgCam", Enum.RenderPriority.Last.Value + 50, function()
 			local c = workspace.CurrentCamera
+			if not c or not Q.camCF then return end
 			if c.CameraType ~= Enum.CameraType.Scriptable then c.CameraType = Enum.CameraType.Scriptable end
 			if Q.camShake and Q.camShake > 0 then
 				Q.camShake = math.max(0, Q.camShake - 0.06)
@@ -34150,12 +34155,12 @@ Q.camHold = function()
 				c.CFrame = Q.camCF
 			end
 		end)
-		Q.connect("cam", Q.camConn)
 	end
 end
 
 Q.camRelease = function()
-	if Q.camConn then pcall(function() Q.camConn:Disconnect() end) Q.camConn = nil end
+	pcall(function() RunService:UnbindFromRenderStep("NYRpgCam") end)
+	Q.camConn = nil
 	WackyState.disconnect("rpg_cam")
 	pcall(function() workspace.CurrentCamera.CameraType = Enum.CameraType.Custom end)
 end
@@ -35727,12 +35732,13 @@ Q.explore = function(token, spec)
 			end
 		end
 	end
+	local gems = {}
 	for _, pk in ipairs(spec.pickups or {}) do
 		if not (Q.data.picked and Q.data.picked[pk.id]) then
 			local spot = pk.pos or (target and Q.root() and Q.root().Position:Lerp(target, pk.along or 0.5))
 			if spot then
 				local p = Q.findSpot(3, 12, spot) or spot
-				Q.pickup(p, pk)
+				table.insert(gems, Q.pickup(p, pk))
 			end
 		end
 	end
@@ -35794,6 +35800,8 @@ Q.explore = function(token, spec)
 	Q.unfollow()
 	for _, f in ipairs(followers) do pcall(function() f:Destroy() end) end
 	for _, r in ipairs(roamers) do r.alive = false pcall(function() r.rig:Destroy() end) end
+	-- pickups you walked past stay in the save as not found; they come back if this part is replayed
+	for _, g in ipairs(gems) do pcall(function() g:Destroy() end) end
 	WackyState.disconnect("rpg_menuKey")
 	Q.objective(nil)
 	return reached
