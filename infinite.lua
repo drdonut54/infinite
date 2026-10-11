@@ -1,4 +1,4 @@
--- NeverYield v1.30.11 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.30.12 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.30.11" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.30.12" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -34929,7 +34929,10 @@ Q.fitArena = function(a)
 		local cf = a * CFrame.Angles(0, math.rad(yaw), 0)
 		local score = 0
 		for _, s in ipairs({{0, 17}, {-6, 19}, {6, 19}, {0, 24}, {-5, 1.5}, {5, 1.5}, {0, -6}}) do
-			score = score + Q.clearFrac(o, cf:PointToWorldSpace(Vector3.new(s[1], 2.5, -s[2])))
+			local p = cf:PointToWorldSpace(Vector3.new(s[1], 2.5, -s[2]))
+			score = score + Q.clearFrac(o, p)
+			-- a spot up on a ledge or down a step counts against this direction
+			if math.abs(Q.groundY(p, a.Position.Y) - a.Position.Y) > 1.2 then score = score - 0.6 end
 		end
 		-- keep facing the Hollowed that caught you unless somewhere else is clearly roomier
 		score = score - math.abs(yaw) / 600
@@ -34941,12 +34944,20 @@ end
 -- a battle spot (x right, z forward) that isn't inside anything: try it, then nudge it in toward the middle
 Q.freeSpot = function(x, z, faceX, faceZ)
 	local tries = {{0, 0}, {0, -3}, {-2.5, 0}, {2.5, 0}, {0, -6}, {-2.5, -3}, {2.5, -3}, {0, -9}, {-5, -3}, {5, -3}}
+	-- (and on your floor: not up on a planter wall, a fountain or a ledge, which kas saw in the courtyard)
+	local floor = (Q.anchor or Q.makeAnchor()).Position.Y
+	local fallback
 	for _, t in ipairs(tries) do
 		local nz = z > 4 and math.max(z + t[2], 8) or z
 		local cf = Q.spot(x + t[1], nz, faceX + t[1], faceZ)
-		if not Q.blockedAt(cf) then return cf end
+		local level = math.abs(cf.Position.Y - floor) < 1.2
+		if level and not Q.blockedAt(cf) then return cf end
+		if level and not fallback then fallback = cf end
 	end
-	return Q.spot(x, z, faceX, faceZ)
+	if fallback then return fallback end
+	-- nowhere level: stand at your floor height (gliding rigs don't need the ground under them)
+	local cf = Q.spot(x, z, faceX, faceZ)
+	return cf - Vector3.new(0, cf.Position.Y - floor, 0)
 end
 
 Q.unitOfMember = function(id)
@@ -35874,7 +35885,8 @@ Q.victory = function(B)
 			last = best
 		end
 		for k = 0, 90 do
-			if not Q.alive(B.token) then return end
+			-- (closing the window early ends the battle: stop, or this would grab the camera back after its release)
+			if not Q.alive(B.token) or B.ended then return end
 			last = cams[k] or last
 			Q.camTo(last, c, 0)
 			task.wait(0.03)
@@ -35903,6 +35915,7 @@ Q.victory = function(B)
 end
 
 Q.endBattle = function(B)
+	B.ended = true
 	Q.idleStop(B)
 	if B.gui then B.gui:Destroy() end
 	for _, u in ipairs(B.party) do if u.rig then pcall(function() u.rig:Destroy() end) end end
