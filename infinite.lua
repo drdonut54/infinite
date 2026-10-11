@@ -1,4 +1,4 @@
--- NeverYield v1.29.0 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.29.1 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.29.0" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.29.1" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -33958,31 +33958,39 @@ Q.say = function(token, who, text, opts)
 	if Q.journalLine then Q.journalLine(who, text) end
 end
 
--- choices: returns the index picked
-Q.choose = function(token, options, title)
+-- choices: returns the index picked. opts = {z = 62, y = 0.5 (screen fraction), width = 340}
+Q.choose = function(token, options, title, opts)
+	opts = opts or {}
 	local screen = Q.screen()
-	local h = 46 + #options * 34
-	local box = Q.win(screen, UDim2.new(0.5, -170, 0.5, -h / 2), UDim2.new(0, 340, 0, h), 62)
-	if title then Q.text(box, {Position = UDim2.new(0, 16, 0, 8), Size = UDim2.new(1, -32, 0, 22), Text = title, Font = Enum.Font.GothamBold, TextSize = 16}) end
+	local z = opts.z or 62
+	local width = opts.width or 340
+	-- grow to fit the longest option (about 11 px per character at size 20)
+	for _, o in ipairs(options) do width = math.max(width, 80 + #o * 11) end
+	local top = title and 44 or 14
+	local h = top + #options * 38 + 12
+	local box = Q.win(screen, UDim2.new(0.5, -width / 2, opts.y or 0.5, -h / 2), UDim2.new(0, width, 0, h), z)
+	if title then
+		Q.text(box, {Position = UDim2.new(0, 18, 0, 10), Size = UDim2.new(1, -36, 0, 24), Text = title, Font = Enum.Font.GothamBold, TextSize = 17, ZIndex = z + 1})
+	end
 	local picked
 	local cursor = 1
 	local rows = {}
 	local function draw()
 		for i, r in ipairs(rows) do
 			r.TextColor3 = i == cursor and Color3.fromRGB(255, 240, 150) or Color3.new(1, 1, 1)
-			r.Text = (i == cursor and "> " or "   ") .. options[i]
+			r.Text = (i == cursor and ">  " or "    ") .. options[i]
 		end
 	end
-	for i, opt in ipairs(options) do
+	for i in ipairs(options) do
 		local b = Instance.new("TextButton")
 		b.BackgroundTransparency = 1
-		b.Position = UDim2.new(0, 16, 0, 36 + (i - 1) * 34)
-		b.Size = UDim2.new(1, -32, 0, 32)
+		b.Position = UDim2.new(0, 20, 0, top + (i - 1) * 38)
+		b.Size = UDim2.new(1, -40, 0, 36)
 		b.Font = Enum.Font.GothamMedium
-		b.TextSize = 17
+		b.TextSize = 20
 		b.TextXAlignment = Enum.TextXAlignment.Left
-		b.TextStrokeTransparency = 0.55
-		b.ZIndex = 64
+		b.TextStrokeTransparency = 0.5
+		b.ZIndex = z + 2
 		b.Parent = box
 		b.MouseEnter:Connect(function() cursor = i draw() end)
 		b.MouseButton1Click:Connect(function() picked = i end)
@@ -35515,7 +35523,7 @@ Q.chapters[2].scenes = {
 Q.reader = function(token, title, lines)
 	-- a scrolling FF7 window of text lines; lines = {{t = text, color = Color3, font = Enum.Font}}
 	local screen = Q.screen()
-	local f = Q.win(screen, UDim2.new(0.5, -330, 0.5, -230), UDim2.new(0, 660, 0, 460), 75)
+	local f = Q.win(screen, UDim2.new(0.5, -330, 0.5, -230), UDim2.new(0, 660, 0, 460), 82)
 	Q.text(f, {Position = UDim2.new(0, 18, 0, 10), Size = UDim2.new(1, -36, 0, 26), Text = title, Font = Enum.Font.GothamBold, TextSize = 20})
 	local list = Instance.new("ScrollingFrame")
 	list.Position = UDim2.new(0, 14, 0, 44)
@@ -35523,18 +35531,18 @@ Q.reader = function(token, title, lines)
 	list.BackgroundTransparency = 1
 	list.BorderSizePixel = 0
 	list.ScrollBarThickness = 6
-	list.ZIndex = 76
+	list.ZIndex = 83
 	list.Parent = f
 	local y = 0
 	for _, line in ipairs(lines) do
 		local h = math.max(20, math.ceil(#line.t / 70) * 18 + 4)
 		Q.text(list, {Position = UDim2.new(0, 4, 0, y), Size = UDim2.new(1, -16, 0, h), Text = line.t, TextSize = line.size or 15, TextWrapped = true,
-			TextYAlignment = Enum.TextYAlignment.Top, Font = line.font or Enum.Font.GothamMedium, TextColor3 = line.color or Color3.new(1, 1, 1), ZIndex = 77})
+			TextYAlignment = Enum.TextYAlignment.Top, Font = line.font or Enum.Font.GothamMedium, TextColor3 = line.color or Color3.new(1, 1, 1), ZIndex = 84})
 		y = y + h + (line.gap or 2)
 	end
 	list.CanvasSize = UDim2.new(0, 0, 0, y + 10)
 	if #lines == 0 then
-		Q.text(list, {Size = UDim2.new(1, 0, 0, 30), Text = "(empty)", TextSize = 15, TextColor3 = Color3.fromRGB(160, 170, 200), ZIndex = 77})
+		Q.text(list, {Size = UDim2.new(1, 0, 0, 30), Text = "(empty)", TextSize = 15, TextColor3 = Color3.fromRGB(160, 170, 200), ZIndex = 84})
 	end
 	Q.text(f, {AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -16, 1, -10), Size = UDim2.new(0, 300, 0, 20), Text = "click / E to close", TextSize = 12,
 		TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = Color3.fromRGB(160, 170, 200)})
@@ -35594,18 +35602,56 @@ Q.title = function()
 	local bg = Instance.new("Frame")
 	bg.Size = UDim2.new(1, 0, 1, 0)
 	bg.BackgroundColor3 = Color3.new(0, 0, 0)
-	bg.BackgroundTransparency = 0.15
+	bg.BackgroundColor3 = Color3.fromRGB(2, 4, 10)
+	bg.BackgroundTransparency = 0.04
 	bg.BorderSizePixel = 0
 	bg.ZIndex = 70
 	bg.Parent = screen
-	Q.text(bg, {AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.16, 0), Size = UDim2.new(0.9, 0, 0, 60), Text = "THE NULL-BYTE REQUIEM", Font = Enum.Font.Garamond,
-		TextSize = 52, TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = Color3.fromRGB(225, 235, 255), ZIndex = 71})
-	Q.text(bg, {AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.16, 64), Size = UDim2.new(0.9, 0, 0, 24),
-		Text = "Nothing you love is ever lost. It is only ever being carried by someone else.", TextSize = 16, TextXAlignment = Enum.TextXAlignment.Center,
-		TextColor3 = Color3.fromRGB(140, 190, 255), ZIndex = 71})
+	local grad = Instance.new("UIGradient")
+	grad.Color = ColorSequence.new(Color3.fromRGB(14, 30, 64), Color3.fromRGB(0, 0, 0))
+	grad.Rotation = 90
+	grad.Parent = bg
+	-- the De-Sync, quietly: cyan pixels drifting up behind everything
+	task.spawn(function()
+		while bg.Parent do
+			local px = Instance.new("Frame")
+			local s = math.random(3, 7)
+			px.Size = UDim2.new(0, s, 0, s)
+			px.Position = UDim2.new(math.random(), 0, 1, 10)
+			px.BackgroundColor3 = math.random() < 0.8 and Q.cyan or Color3.new(1, 1, 1)
+			px.BackgroundTransparency = 0.35
+			px.BorderSizePixel = 0
+			px.ZIndex = 71
+			px.Parent = bg
+			local life = 6 + math.random() * 5
+			TweenService:Create(px, TweenInfo.new(life, Enum.EasingStyle.Linear), {Position = UDim2.new(px.Position.X.Scale + (math.random() - 0.5) * 0.08, 0, -0.05, 0),
+				BackgroundTransparency = 1}):Play()
+			Services.Debris:AddItem(px, life + 0.2)
+			task.wait(0.18)
+		end
+	end)
+	Q.text(bg, {AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.27, 0), Size = UDim2.new(0.9, 0, 0, 72), Text = "THE NULL-BYTE REQUIEM", Font = Enum.Font.Garamond,
+		TextSize = 66, TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = Color3.fromRGB(232, 240, 255), TextStrokeTransparency = 0.75, ZIndex = 73})
+	local rule = Instance.new("Frame")
+	rule.AnchorPoint = Vector2.new(0.5, 0.5)
+	rule.Position = UDim2.new(0.5, 0, 0.27, 46)
+	rule.Size = UDim2.new(0, 460, 0, 2)
+	rule.BackgroundColor3 = Q.cyan
+	rule.BorderSizePixel = 0
+	rule.ZIndex = 73
+	rule.Parent = bg
+	local rg = Instance.new("UIGradient")
+	rg.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0), NumberSequenceKeypoint.new(1, 1)})
+	rg.Parent = rule
+	Q.text(bg, {AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.27, 74), Size = UDim2.new(0.9, 0, 0, 26),
+		Text = "Nothing you love is ever lost.  It is only ever being carried by someone else.", TextSize = 19, Font = Enum.Font.Garamond,
+		TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = Color3.fromRGB(150, 195, 255), ZIndex = 73})
+	Q.text(bg, {AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -28), Size = UDim2.new(0.9, 0, 0, 20),
+		Text = "W / S  move          Enter  choose          or click", TextSize = 13, TextXAlignment = Enum.TextXAlignment.Center,
+		TextColor3 = Color3.fromRGB(110, 130, 170), ZIndex = 73})
 	if Q.data.flags.delivered then
-		Q.text(bg, {AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -20), Size = UDim2.new(0.9, 0, 0, 20), Text = "-- she snorts when she laughs. somebody remembered.",
-			TextSize = 12, Font = Enum.Font.Code, TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = Q.cyan, ZIndex = 71})
+		Q.text(bg, {AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -54), Size = UDim2.new(0.9, 0, 0, 20), Text = "-- she snorts when she laughs. somebody remembered.",
+			TextSize = 12, Font = Enum.Font.Code, TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = Q.cyan, ZIndex = 73})
 	end
 	Q.playMusic("title", 0.35)
 	while Q.alive(token) do
@@ -35620,7 +35666,7 @@ Q.title = function()
 		table.insert(options, "Arms") table.insert(ids, "arms")
 		table.insert(options, "Ledger") table.insert(ids, "ledger")
 		table.insert(options, "Close") table.insert(ids, "close")
-		local pick = ids[Q.choose(token, options)]
+		local pick = ids[Q.choose(token, options, nil, {z = 80, y = 0.64, width = 400})]
 		if pick == "close" or not pick then break end
 		if pick == "journal" then Q.reader(token, "Journal", Q.journalLines())
 		elseif pick == "arms" then Q.reader(token, "Arms", Q.armLines())
@@ -35628,7 +35674,7 @@ Q.title = function()
 		elseif pick == "new" or pick == "continue" then
 			local go = true
 			if pick == "new" and started then
-				go = Q.choose(token, {"Yes, start over", "No"}, "Erase your save? (a backup is kept)") == 1
+				go = Q.choose(token, {"Yes, start over", "No"}, "Erase your save? (a backup is kept)", {z = 85, width = 400}) == 1
 				if go then
 					pcall(function() writefile(Q.file .. ".old", readfile(Q.file)) end)
 					Q.data = Q.blank()
@@ -35643,7 +35689,7 @@ Q.title = function()
 					Q.run(n, sc)
 				else
 					local place = Q.placeOf(n)
-					if Q.choose(token, {"Cross to " .. (place and place.name or "?"), "Not now"}, "Chapter " .. n .. " is in " .. (place and place.name or "another game")) == 1 then
+					if Q.choose(token, {"Cross to " .. (place and place.name or "?"), "Not now"}, "Chapter " .. n .. " is in " .. (place and place.name or "another game"), {z = 85, width = 420}) == 1 then
 						Q.travel(n, sc)
 					else
 						Q.stop()
