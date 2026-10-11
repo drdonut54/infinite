@@ -1,4 +1,4 @@
--- NeverYield v1.31.0 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.31.1 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.31.0" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.31.1" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -40361,9 +40361,9 @@ Q.giveAp = function(ids, ap)
 				m.ap = (m.ap or 0) + ap
 				local after, mastered = Q.memLevel(m)
 				if mastered and not wasMastered then
-					table.insert(lines, Q.memoryDefs[m.id].name .. " is MASTERED! (Remember it from the menu)")
+					table.insert(lines, "MASTERED: " .. Q.memoryDefs[m.id].name .. "  (P > Memories)")
 				elseif after > before then
-					table.insert(lines, Q.memoryDefs[m.id].name .. " grew to Lv " .. after .. "!")
+					table.insert(lines, Q.memoryDefs[m.id].name .. ": Lv " .. after)
 				end
 			end
 		end
