@@ -1,4 +1,4 @@
--- NeverYield v1.29.2 - edited by kas (Infinite Yield FE v6.4.2 base)
+-- NeverYield v1.30.0 - edited by kas (Infinite Yield FE v6.4.2 base)
 -- Based on Infinite Yield by Edge, Zwolf, Moon, Toon, Peyton and ATP
 
 if IY_LOADED and not _G.IY_DEBUG then
@@ -196,7 +196,7 @@ if makefolder and isfolder and writefile and isfile then
 end
 
 currentVersion = "6.4.2"
-NeverYieldVersion = "1.29.2" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
+NeverYieldVersion = "1.30.0" -- bump every update: minor when commands are added, patch for fixes (see NeverYield_CHANGELOG.md)
 
 ScaledHolder = Instance.new("Frame")
 Scale = Instance.new("UIScale")
@@ -33065,10 +33065,12 @@ Q.rig = function(look)
 	if head and look.hair then
 		local hair = NeverYieldAgartha.part(rig, Vector3.new(head.Size.X * 1.08, head.Size.Y * 0.45, head.Size.Z * 1.08), head.CFrame * CFrame.new(0, head.Size.Y * 0.38, 0.05), look.hair, Enum.Material.SmoothPlastic)
 		hair.Anchored, hair.CanCollide = false, false
+		hair:SetAttribute("NYHair", true)
 		Q.weldTo(head, hair)
 		if look.longHair then
 			local back = NeverYieldAgartha.part(rig, Vector3.new(head.Size.X * 0.95, head.Size.Y * 1.3, head.Size.Z * 0.3), head.CFrame * CFrame.new(0, -head.Size.Y * 0.2, head.Size.Z * 0.5), look.hair, Enum.Material.SmoothPlastic)
 			back.Anchored, back.CanCollide = false, false
+			back:SetAttribute("NYHair", true)
 			Q.weldTo(head, back)
 		end
 	end
@@ -33493,6 +33495,7 @@ Q.stop = function(keep)
 	Q.camConn = nil
 	if Q.hideSelf then pcall(Q.hideSelf, false) end
 	if Q.freeze then pcall(Q.freeze, false) end
+	if Q.hideGameGui then pcall(Q.hideGameGui, false) end
 	if not keep and Q.gui then pcall(function() Q.gui:Destroy() end) Q.gui = nil end
 	if not keep then
 		Q.playMusic(nil)
@@ -33688,7 +33691,7 @@ end
 -- ---------- the cast ----------
 Q.looks = {
 	seris = {name = "Seris", skin = Color3.fromRGB(196, 140, 108), shirt = Color3.fromRGB(28, 36, 82), pants = Color3.fromRGB(38, 38, 48), sleeves = true,
-		hair = Color3.fromRGB(28, 20, 22), longHair = true, gear = {376527350, 11884330}, -- Black Ponytail, Nerd Glasses
+		hair = Color3.fromRGB(28, 20, 22), longHair = true, gear = {376527350, 11884330}, hairGear = 376527350, -- Black Ponytail, Nerd Glasses
 		props = function(rig, head)
 			Q.ink(rig, "LeftLowerArm", 7)
 			local hand = rig:FindFirstChild("RightHand") or rig:FindFirstChild("Right Arm")
@@ -33712,11 +33715,21 @@ Q.cast = function(id, extra)
 	if not rig then return nil end
 	rig:SetAttribute("NYCast", id)
 	for _, gid in ipairs(look.gear or {}) do
-		if Q.gear(rig, gid) and gid == 376527350 then
-			-- real hair loaded: drop the block hair
-			for _, p in ipairs(rig:GetChildren()) do
-				if p:IsA("BasePart") and p:GetAttribute("NYFx") and p.Size.Y < 2 and p.Color == look.hair then p:Destroy() end
-			end
+		local ok = Q.gear(rig, gid)
+		if ok and gid == look.hairGear then
+			-- only drop the stand-in hair once the real hair is welded on (some executors load it but it never attaches)
+			task.delay(1, function()
+				local attached = false
+				for _, acc in ipairs(rig:GetChildren()) do
+					local h = acc:IsA("Accessory") and acc:FindFirstChild("Handle")
+					if h and (h:FindFirstChild("AccessoryWeld") or h:FindFirstChildWhichIsA("Weld")) then attached = true end
+				end
+				if attached then
+					for _, p in ipairs(rig:GetChildren()) do
+						if p:IsA("BasePart") and p:GetAttribute("NYHair") then p:Destroy() end
+					end
+				end
+			end)
 		end
 	end
 	if look.scrambleTag then
@@ -34173,6 +34186,132 @@ Q.camGo = function(pos, look, seconds, style)
 	task.spawn(Q.camTo, pos, look, seconds, style)
 end
 
+-- ---------- shots: framed from the real characters, never inside them ----------
+-- subject = a rig (Model), your character, or a Vector3. Returns head position and facing.
+Q.subject = function(s)
+	if typeof(s) == "Vector3" then return s, (Q.anchor and Q.anchor.LookVector or Vector3.new(0, 0, -1)) end
+	local head = s and (s:FindFirstChild("Head") or s:FindFirstChild("HumanoidRootPart"))
+	local root = s and s:FindFirstChild("HumanoidRootPart")
+	if not head then return Q.pt(0, 2, 0), Vector3.new(0, 0, -1) end
+	local f = (root or head).CFrame.LookVector * Vector3.new(1, 0, 1)
+	if f.Magnitude < 0.1 then f = Vector3.new(0, 0, -1) end
+	return head.Position, f.Unit
+end
+
+-- pull the camera in front of anything solid between it and what it looks at
+Q.clearShot = function(look, cam)
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	local skip = {Q.folder, Players.LocalPlayer.Character}
+	for _ = 1, 6 do
+		params.FilterDescendantsInstances = skip
+		local dir = cam - look
+		local hit = workspace:Raycast(look, dir, params)
+		if not hit then return cam end
+		if hit.Instance.Transparency > 0.6 or not hit.Instance.CanCollide then
+			table.insert(skip, hit.Instance)
+		else
+			local d = math.max(3.2, (hit.Position - look).Magnitude - 0.6)
+			return look + dir.Unit * d
+		end
+	end
+	return cam
+end
+
+-- kinds: "wide" (whole scene), "two" (subject + other), "medium", "close", "ots" (over subject's shoulder at other),
+-- "low" (looking up at subject). side = 1 or -1 picks which side of the line the camera stands on.
+Q.shot = function(kind, subject, other, seconds, side)
+	side = side or 1
+	local p, f = Q.subject(subject)
+	local right = f:Cross(Vector3.new(0, 1, 0)).Unit * side
+	local cam, look
+	if kind == "close" then
+		cam, look = p + f * 4.6 + right * 1.4 + Vector3.new(0, 0.25, 0), p - Vector3.new(0, 0.15, 0)
+	elseif kind == "medium" then
+		cam, look = p + f * 8 + right * 2.6 + Vector3.new(0, 0.6, 0), p - Vector3.new(0, 0.6, 0)
+	elseif kind == "low" then
+		cam, look = p + f * 7 + right * 2 - Vector3.new(0, 2.6, 0), p + Vector3.new(0, 0.4, 0)
+	elseif kind == "ots" and other then
+		local q = Q.subject(other)
+		local d = (q - p) * Vector3.new(1, 0, 1)
+		local u = d.Magnitude > 0.1 and d.Unit or f
+		local r = u:Cross(Vector3.new(0, 1, 0)).Unit * side
+		cam, look = p - u * 4.2 + r * 1.9 + Vector3.new(0, 0.7, 0), q - Vector3.new(0, 0.3, 0)
+	elseif kind == "two" and other then
+		local q = Q.subject(other)
+		local mid = (p + q) / 2
+		local d = (q - p) * Vector3.new(1, 0, 1)
+		local u = d.Magnitude > 0.1 and d.Unit or right
+		local perp = u:Cross(Vector3.new(0, 1, 0)).Unit * side
+		local dist = math.max(9, d.Magnitude * 1.3 + 6)
+		cam, look = mid + perp * dist + Vector3.new(0, 1.8, 0), mid - Vector3.new(0, 0.4, 0)
+	else -- wide
+		cam, look = p + f * 18 + right * 8 + Vector3.new(0, 7, 0), p - Vector3.new(0, 1, 0)
+	end
+	cam = Q.clearShot(look, cam)
+	if seconds and seconds > 0 then Q.camGo(cam, look, seconds) else Q.camTo(cam, look, 0) end
+end
+
+-- a slow push in on a shot (for long lines)
+Q.drift = function(seconds)
+	local from = Q.camCF
+	if not from then return end
+	task.spawn(function()
+		local t0 = tick()
+		local token = {}
+		Q.camTween = token
+		while tick() - t0 < seconds and Q.camTween == token do
+			Q.camCF = from * CFrame.new(0, 0, -(tick() - t0) * 0.35)
+			RunService.RenderStepped:Wait()
+		end
+	end)
+end
+
+-- make a rig (or your character) turn to face a point or another rig
+Q.face = function(rig, target)
+	local root = rig and rig:FindFirstChild("HumanoidRootPart")
+	if not root then return end
+	local tp = typeof(target) == "Vector3" and target or (target and target:FindFirstChild("HumanoidRootPart") and target.HumanoidRootPart.Position)
+	if not tp then return end
+	local flat = Vector3.new(tp.X, root.Position.Y, tp.Z)
+	if (flat - root.Position).Magnitude < 0.1 then return end
+	if rig == Players.LocalPlayer.Character then
+		root.CFrame = CFrame.lookAt(root.Position, flat)
+	else
+		TweenService:Create(root, TweenInfo.new(0.4, Enum.EasingStyle.Sine), {CFrame = CFrame.lookAt(root.Position, flat)}):Play()
+	end
+end
+
+-- the game's own HUD (hotbars, buttons, "Stop Navigating"...) hides during scenes and battles
+Q.hideGameGui = function(on)
+	local pg = Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")
+	if on then
+		if Q.hiddenGuis then return end
+		Q.hiddenGuis = {}
+		if pg then
+			for _, g in ipairs(pg:GetChildren()) do
+				if g:IsA("ScreenGui") and g.Enabled and g ~= Q.gui then
+					g.Enabled = false
+					table.insert(Q.hiddenGuis, g)
+				end
+			end
+		end
+		Q.coreWas = {}
+		for _, t in ipairs({Enum.CoreGuiType.Backpack, Enum.CoreGuiType.Chat, Enum.CoreGuiType.PlayerList, Enum.CoreGuiType.Health}) do
+			local ok, en = pcall(function() return StarterGui:GetCoreGuiEnabled(t) end)
+			if ok and en then
+				Q.coreWas[#Q.coreWas + 1] = t
+				pcall(function() StarterGui:SetCoreGuiEnabled(t, false) end)
+			end
+		end
+	elseif Q.hiddenGuis then
+		for _, g in ipairs(Q.hiddenGuis) do pcall(function() if g.Parent then g.Enabled = true end end) end
+		Q.hiddenGuis = nil
+		for _, t in ipairs(Q.coreWas or {}) do pcall(function() StarterGui:SetCoreGuiEnabled(t, true) end) end
+		Q.coreWas = nil
+	end
+end
+
 Q.shake = function(amount)
 	Q.camShake = math.max(Q.camShake or 0, amount or 1)
 end
@@ -34234,12 +34373,17 @@ Q.sceneStart = function(spotName)
 		Q.makeAnchor()
 	end
 	Q.freeze(true)
+	Q.hideGameGui(true)
+	-- Vane faces into the scene
+	local me = Q.vane()
+	if me then Q.face(me, Q.pt(0, 0, 30)) end
 	Q.bars(true)
 	Q.camHold()
 	Q.camCF = workspace.CurrentCamera.CFrame
 end
 
 Q.sceneEnd = function()
+	Q.hideGameGui(false)
 	Q.bars(false)
 	Q.freeze(false)
 	Q.camRelease()
@@ -35134,6 +35278,7 @@ Q.fight = function(token, spec)
 	for _, id in ipairs(Q.data.active) do if Q.data.joined[id] then table.insert(ids, id) end end
 	local slots = {{0, 0}, {-5, 1.5}, {5, 1.5}}
 	Q.hideSelf(true)
+	Q.hideGameGui(true)
 	for i, id in ipairs(ids) do
 		local u = Q.unitOfMember(id)
 		u.rig = id == "vane" and Q.vaneDouble() or Q.cast(id)
@@ -35294,6 +35439,7 @@ Q.endBattle = function(B)
 	for _, u in ipairs(B.party) do if u.rig then pcall(function() u.rig:Destroy() end) end end
 	for _, u in ipairs(B.enemies) do if u.rig then pcall(function() u.rig:Destroy() end) end end
 	Q.hideSelf(false)
+	Q.hideGameGui(false)
 	Q.B = nil
 end
 
@@ -35324,6 +35470,360 @@ Q.battle = function(token, spec)
 		end
 	end
 	return false
+end
+
+-- [55_world.lua]
+-- ---------- the overworld: walk the real map, objectives, Seris following, roaming Hollowed, pickups ----------
+-- Q.explore(token, {objective, target = place name / Vector3, roamers = {...}, pickups = {...}}) lets you walk the
+-- real game until you reach the target (then returns true). Battles start where a Hollowed catches you.
+
+-- a named place in the current game: a spot kas marked (rpgspot), the map's own named area, or a reachable
+-- point picked once per chapter (cached in the save so it stays the same place)
+Q.place = function(name, minDist, maxDist)
+	local marked = Q.namedSpot(name)
+	if marked then return marked.Position end
+	local known = (Q.mapSpots[game.PlaceId] or {})[name]
+	if known then return Vector3.new(known[1], known[2], known[3]) end
+	local key = tostring(game.PlaceId) .. ":" .. name
+	Q.data.places = Q.data.places or {}
+	local cached = Q.data.places[key]
+	if cached then return Vector3.new(cached[1], cached[2], cached[3]) end
+	local p = Q.findSpot(minDist or 60, maxDist or 140)
+	if p then
+		Q.data.places[key] = {math.floor(p.X * 10) / 10, math.floor(p.Y * 10) / 10, math.floor(p.Z * 10) / 10}
+		Q.save()
+	end
+	return p
+end
+
+-- a spot you can walk to, between minDist and maxDist away (checked with Roblox pathfinding)
+Q.findSpot = function(minDist, maxDist, around)
+	local root = Q.root()
+	if not root then return nil end
+	local from = around or root.Position
+	local best
+	for _ = 1, 14 do
+		local ang = math.random() * math.pi * 2
+		local d = minDist + math.random() * (maxDist - minDist)
+		local guess = from + Vector3.new(math.cos(ang) * d, 0, math.sin(ang) * d)
+		local y = Q.groundY(guess + Vector3.new(0, 30, 0), nil)
+		if y then
+			local p = Vector3.new(guess.X, y, guess.Z)
+			local ok, path = pcall(function()
+				local path = Services.PathfindingService:CreatePath({AgentRadius = 2, AgentHeight = 5, AgentCanJump = true})
+				path:ComputeAsync(from, p)
+				return path
+			end)
+			if ok and path.Status == Enum.PathStatus.Success then return p end
+			best = best or p
+		end
+	end
+	return best
+end
+
+-- ---------- the objective window and the waypoint ----------
+Q.objective = function(text, target)
+	local screen = Q.screen()
+	if Q.objWin then Q.objWin:Destroy() Q.objWin = nil end
+	if Q.waypoint then Q.waypoint:Destroy() Q.waypoint = nil end
+	WackyState.disconnect("rpg_waypoint")
+	if not text then return end
+	local w = Q.win(screen, UDim2.new(0, 18, 0, 70), UDim2.new(0, 330, 0, 66), 44)
+	Q.text(w, {Position = UDim2.new(0, 14, 0, 6), Size = UDim2.new(1, -28, 0, 16), Text = "OBJECTIVE", Font = Enum.Font.GothamBold, TextSize = 12, TextColor3 = Color3.fromRGB(150, 200, 255)})
+	local body = Q.text(w, {Position = UDim2.new(0, 14, 0, 22), Size = UDim2.new(1, -28, 0, 40), Text = text, TextSize = 15, TextWrapped = true, TextYAlignment = Enum.TextYAlignment.Top})
+	Q.objWin = w
+	Q.sound(Q.sfx.select, 0.4, 0.8)
+	if not target then return end
+	-- a tall beam of light at the target and a distance tag on it
+	local beam = NeverYieldAgartha.part(Q.stage(), Vector3.new(0.6, 60, 0.6), CFrame.new(target + Vector3.new(0, 30, 0)), Q.cyan, Enum.Material.Neon, nil,
+		{CanCollide = false, CanQuery = false, CanTouch = false, CastShadow = false, Transparency = 0.45})
+	local ring = NeverYieldAgartha.part(Q.stage(), Vector3.new(0.1, 7, 7), CFrame.new(target + Vector3.new(0, 0.1, 0)) * CFrame.Angles(0, 0, math.rad(90)), Q.cyan, Enum.Material.Neon, "Cylinder",
+		{CanCollide = false, CanQuery = false, CanTouch = false, Transparency = 0.6})
+	ring.Parent = beam
+	local bb = Instance.new("BillboardGui")
+	bb.Size = UDim2.new(0, 160, 0, 40)
+	bb.StudsOffset = Vector3.new(0, -24, 0)
+	bb.AlwaysOnTop = true
+	bb.Parent = beam
+	local dist = NeverYieldPets.label(bb, {Size = UDim2.new(1, 0, 1, 0), Text = "", TextSize = 16, TextColor3 = Q.cyan, TextStrokeTransparency = 0.3, ZIndex = 1})
+	Q.waypoint = beam
+	-- an arrow at the edge of the screen when the target is off-screen
+	local arrow = Instance.new("Frame")
+	arrow.AnchorPoint = Vector2.new(0.5, 0.5)
+	arrow.Size = UDim2.new(0, 18, 0, 18)
+	arrow.Rotation = 45
+	arrow.BackgroundColor3 = Q.cyan
+	arrow.BorderSizePixel = 0
+	arrow.ZIndex = 44
+	arrow.Parent = w
+	Q.connect("waypoint", RunService.RenderStepped:Connect(function()
+		local root = Q.root()
+		if not root or not beam.Parent then return end
+		local d = (root.Position - target).Magnitude
+		dist.Text = math.floor(d) .. " studs"
+		local cam = workspace.CurrentCamera
+		local sp, onScreen = cam:WorldToViewportPoint(target + Vector3.new(0, 3, 0))
+		local vs = cam.ViewportSize
+		if onScreen and sp.Z > 0 then
+			arrow.Visible = false
+		else
+			arrow.Visible = true
+			local c = vs / 2
+			local dir = Vector2.new(sp.X, sp.Y) - c
+			if sp.Z < 0 then dir = -dir end
+			if dir.Magnitude < 1 then dir = Vector2.new(0, -1) end
+			dir = dir.Unit
+			local edge = c + dir * math.min(vs.X, vs.Y) * 0.42
+			arrow.Parent = Q.screen()
+			arrow.Position = UDim2.new(0, edge.X, 0, edge.Y)
+			arrow.Rotation = math.deg(math.atan2(dir.Y, dir.X)) + 45
+		end
+	end))
+end
+
+-- ---------- party members following you ----------
+Q.follow = function(rig, slot)
+	local root = rig and rig:FindFirstChild("HumanoidRootPart")
+	if not root then return end
+	local hip = root.Position.Y - Q.groundY(root.Position, root.Position.Y - 3)
+	local walking = false
+	local lastY = 0
+	Q.connect("follow_" .. (slot or 1), RunService.Heartbeat:Connect(function(dt)
+		local me = Q.root()
+		if not me or not rig.Parent then return end
+		local behind = me.CFrame * CFrame.new((slot or 1) * 2.6, 0, 4.5)
+		local goal = Vector3.new(behind.X, root.Position.Y, behind.Z)
+		local d = (goal - root.Position) * Vector3.new(1, 0, 1)
+		if d.Magnitude > 70 then
+			root.CFrame = CFrame.new(goal)
+			return
+		end
+		if d.Magnitude > 2.5 then
+			local speed = math.min(22, 8 + d.Magnitude * 1.4)
+			local step = d.Unit * math.min(d.Magnitude, speed * dt)
+			local np = root.Position + step
+			-- keep on the ground (checked a few times a second)
+			if tick() - lastY > 0.15 then
+				lastY = tick()
+				local gy = Q.groundY(np, np.Y - hip)
+				np = Vector3.new(np.X, gy + hip, np.Z)
+			end
+			root.CFrame = CFrame.lookAt(np, np + d.Unit)
+			if not walking then walking = true Q.animate(rig, "walk") end
+		elseif walking then
+			walking = false
+			Q.animate(rig, "idle")
+		end
+	end))
+end
+
+Q.unfollow = function()
+	for i = 1, 3 do WackyState.disconnect("rpg_follow_" .. i) end
+end
+
+-- ---------- pickups ----------
+-- kind = "item" (gives Q.items[id]) or "lore" (a journal entry about the world)
+Q.pickup = function(pos, spec)
+	local P = NeverYieldAgartha.part
+	local color = spec.kind == "lore" and Color3.fromRGB(255, 220, 140) or Color3.fromRGB(120, 255, 170)
+	local gem = P(Q.stage(), Vector3.new(0.9, 0.9, 0.9), CFrame.new(pos + Vector3.new(0, 1.6, 0)), color, Enum.Material.Neon, nil, {CanCollide = false, CanQuery = false, CanTouch = false})
+	local l = Instance.new("PointLight")
+	l.Color, l.Range, l.Brightness = color, 10, 1.5
+	l.Parent = gem
+	Q.emitter(gem, Q.fxTex.specs, color, {Rate = 8, Lifetime = NumberRange.new(0.5, 1), Speed = NumberRange.new(0.5, 1.5), Size = NumberSequence.new(0.25, 0), LightEmission = 1, SpreadAngle = Vector2.new(180, 180)})
+	local base = gem.CFrame
+	local t0 = tick()
+	local conn
+	conn = RunService.Heartbeat:Connect(function()
+		if not gem.Parent then conn:Disconnect() return end
+		local t = tick() - t0
+		gem.CFrame = base * CFrame.new(0, math.sin(t * 2) * 0.3, 0) * CFrame.Angles(t, t * 1.3, 0)
+		local me = Q.root()
+		if me and (me.Position - gem.Position).Magnitude < 5 then
+			conn:Disconnect()
+			gem:Destroy()
+			Q.sound(Q.sfx.heal, 0.5, 1.2)
+			if spec.kind == "item" then
+				Q.data.items[spec.item] = (Q.data.items[spec.item] or 0) + (spec.count or 1)
+				Q.toast("Found " .. Q.items[spec.item].name .. ((spec.count or 1) > 1 and (" x" .. spec.count) or ""), 4)
+			else
+				Q.journalAdd(spec.id, spec.title, spec.lines)
+				Q.toast("\u{1F4DC} " .. spec.title .. "  (added to the Journal)", 5)
+			end
+			Q.data.picked = Q.data.picked or {}
+			Q.data.picked[spec.id] = true
+			Q.save()
+		end
+	end)
+	return gem
+end
+
+-- ---------- roaming Hollowed ----------
+-- they drift between points near their home (they're ghosts: walls don't stop them); get close and you fight
+Q.roamer = function(home, enemyId, radius, B)
+	local rig = Q.cast(Q.enemies[enemyId].look or "hollowed", {name = Q.enemies[enemyId].name})
+	if not rig then return end
+	Q.put(rig, CFrame.new(home))
+	local root = rig:FindFirstChild("HumanoidRootPart")
+	local hip = root.Position.Y - home.Y
+	local r = {rig = rig, enemy = enemyId, alive = true}
+	task.spawn(function()
+		local lines = Q.enemies[enemyId].lines and Q.enemies[enemyId].lines.start or {"> i'm sorry"}
+		while r.alive and rig.Parent do
+			local ang = math.random() * math.pi * 2
+			local d = math.random() * (radius or 18)
+			local to = home + Vector3.new(math.cos(ang) * d, 0, math.sin(ang) * d)
+			to = Vector3.new(to.X, Q.groundY(to + Vector3.new(0, 10, 0), home.Y) + hip, to.Z)
+			local dist = (to - root.Position).Magnitude
+			if dist > 1 then
+				root.CFrame = CFrame.lookAt(root.Position, Vector3.new(to.X, root.Position.Y, to.Z))
+				Q.animate(rig, "walk")
+				local tw = TweenService:Create(root, TweenInfo.new(dist / 5, Enum.EasingStyle.Linear), {CFrame = CFrame.lookAt(to, to + root.CFrame.LookVector)})
+				tw:Play()
+				local t0 = tick()
+				while r.alive and tick() - t0 < dist / 5 do task.wait(0.1) end
+				tw:Cancel()
+				Q.animate(rig, "idle")
+			end
+			if math.random() < 0.35 then Q.bubble(rig, WackyState.pick(lines), 3) end
+			local t0 = tick()
+			while r.alive and tick() - t0 < 1.5 + math.random() * 2 do task.wait(0.1) end
+		end
+	end)
+	return r
+end
+
+-- ---------- exploring ----------
+Q.explore = function(token, spec)
+	local target = spec.target
+	Q.sceneEnd()
+	Q.objective(spec.objective, target)
+	Q.playMusic(spec.music or "explore", 0.3)
+	-- Seris (and later the others) walk behind you
+	local followers = {}
+	for i, id in ipairs(Q.data.active) do
+		if id ~= "vane" and Q.data.joined[id] then
+			local rig = Q.cast(id)
+			if rig then
+				local me = Q.root()
+				if me then Q.put(rig, me.CFrame * CFrame.new(i * 2.6, -3, 4.5)) end
+				Q.follow(rig, i - 1)
+				table.insert(followers, rig)
+			end
+		end
+	end
+	-- roaming Hollowed and pickups along the way
+	local roamers = {}
+	for _, rs in ipairs(spec.roamers or {}) do
+		if not (Q.data.cleared and Q.data.cleared[rs.id]) then
+			local home = rs.pos or (target and Q.root() and Q.root().Position:Lerp(target, rs.along or 0.5)) or Q.findSpot(30, 60)
+			if home and not rs.pos then
+				local p = Q.findSpot(4, 14, home)
+				home = p or home
+			end
+			if home then
+				local r = Q.roamer(home, rs.enemy, rs.radius, nil)
+				if r then r.id = rs.id r.party = rs.party table.insert(roamers, r) end
+			end
+		end
+	end
+	for _, pk in ipairs(spec.pickups or {}) do
+		if not (Q.data.picked and Q.data.picked[pk.id]) then
+			local spot = pk.pos or (target and Q.root() and Q.root().Position:Lerp(target, pk.along or 0.5))
+			if spot then
+				local p = Q.findSpot(3, 12, spot) or spot
+				Q.pickup(p, pk)
+			end
+		end
+	end
+	-- M opens the menu while exploring
+	Q.connect("menuKey", UserInputService.InputBegan:Connect(function(input, processed)
+		if not processed and input.KeyCode == Enum.KeyCode.M and not Q.inMenu then
+			Q.inMenu = true
+			task.spawn(function()
+				pcall(Q.pauseMenu, token)
+				Q.inMenu = false
+			end)
+		end
+	end))
+	local reached = false
+	while Q.alive(token) and not reached do
+		task.wait(0.15)
+		local me = Q.root()
+		if me and not Q.inMenu then
+			-- caught by a Hollowed?
+			for _, r in ipairs(roamers) do
+				local rr = r.alive and r.rig:FindFirstChild("HumanoidRootPart")
+				if rr and (rr.Position - me.Position).Magnitude < 7 then
+					r.alive = false
+					Q.bubble(r.rig, "!", 1)
+					Q.sound(Q.sfx.whisper, 0.5)
+					task.wait(0.4)
+					Q.unfollow()
+					for _, f in ipairs(followers) do f.Parent = nil end
+					r.rig:Destroy()
+					-- the fight happens right here, facing where it came from
+					local keep = Q.anchor
+					local look = (rr.Position - me.Position) * Vector3.new(1, 0, 1)
+					local gy = Q.groundY(me.Position, me.Position.Y - 3)
+					Q.anchor = CFrame.lookAt(Vector3.new(me.Position.X, gy, me.Position.Z), Vector3.new(me.Position.X, gy, me.Position.Z) + (look.Magnitude > 0.1 and look.Unit or Vector3.new(0, 0, -1)))
+					Q.objective(nil)
+					local enemies = {r.enemy}
+					for _, extra in ipairs(r.party or {}) do table.insert(enemies, extra) end
+					local won = Q.battle(token, {enemies = enemies, music = "battle"})
+					Q.anchor = keep
+					if not won then return false end
+					Q.data.cleared = Q.data.cleared or {}
+					if r.id then Q.data.cleared[r.id] = true end
+					Q.data.stats.hollowed = (Q.data.stats.hollowed or 0) + 1
+					Q.save()
+					Q.playMusic(spec.music or "explore", 0.3)
+					Q.objective(spec.objective, target)
+					for i, f in ipairs(followers) do
+						f.Parent = Q.stage()
+						local m2 = Q.root()
+						if m2 then Q.put(f, m2.CFrame * CFrame.new(i * 2.6, -3, 4.5)) end
+						Q.follow(f, i)
+					end
+					break
+				end
+			end
+			if target and (me.Position - target).Magnitude < (spec.radius or 12) then reached = true end
+		end
+	end
+	Q.unfollow()
+	for _, f in ipairs(followers) do pcall(function() f:Destroy() end) end
+	for _, r in ipairs(roamers) do r.alive = false pcall(function() r.rig:Destroy() end) end
+	WackyState.disconnect("rpg_menuKey")
+	Q.objective(nil)
+	return reached
+end
+
+-- the pause menu while exploring (M)
+Q.pauseMenu = function(token)
+	local opts = {"Items", "Journal", "Arms", "Ledger", "Party", "Back"}
+	local pick = opts[Q.choose(token, opts, "MENU", {z = 80, width = 300})]
+	if pick == "Journal" then Q.reader(token, "Journal", Q.journalLines())
+	elseif pick == "Arms" then Q.reader(token, "Arms", Q.armLines())
+	elseif pick == "Ledger" then Q.reader(token, "Ledger", Q.ledgerLines())
+	elseif pick == "Items" then
+		local lines = {}
+		for id, n in pairs(Q.data.items) do
+			if n > 0 and Q.items[id] then table.insert(lines, {t = Q.items[id].name .. "  x" .. n .. "   -   " .. (Q.items[id].desc or "")}) end
+		end
+		Q.reader(token, "Items", lines)
+	elseif pick == "Party" then
+		local lines = {}
+		for id in pairs(Q.data.joined) do
+			local m = Q.member(id)
+			local saved = Q.data.party and Q.data.party[id]
+			table.insert(lines, {t = m.name .. "   Lv " .. m.level .. "   HP " .. (saved and saved.hp or m.hp) .. "/" .. m.hp .. "   MP " .. (saved and saved.mp or m.mp) .. "/" .. m.mp, font = Enum.Font.GothamBold})
+			local names = {}
+			for _, sk in ipairs(m.skills) do table.insert(names, Q.skillName(sk)) end
+			table.insert(lines, {t = "   Skills: " .. table.concat(names, ", "), color = Color3.fromRGB(170, 190, 230), gap = 8})
+		end
+		Q.reader(token, "Party", lines)
+	end
 end
 
 -- [60_data.lua]
@@ -35399,109 +35899,174 @@ Q.enemies = {
 }
 
 -- [70_ch1.lua]
--- ---------- DISC ONE, CHAPTER 1: THE COLLAPSE OF THE ACADEMY (Genovia High, the courtyard) ----------
--- Changed from the story file (kas gave Claude the reins): the tutorial fight happens here, in the courtyard,
--- before the first gate, so Chapter 1 has its first battle in its own world. The Hollowed Student is from this
--- academy anyway. The morning-after scenes in the grass open Chapter 2.
+-- ---------- DISC ONE, CHAPTER 1: THE COLLAPSE OF THE ACADEMY (Genovia High) ----------
+-- Played on the real map: a short opening where you stand, then you walk the academy (Seris following, Hollowed
+-- drifting through the halls, things to find) to the archives (the Library), fight the Hollowed Student there,
+-- and climb to the Astronomy tower, where the Key can open a gate to open sky.
+-- Changed from the story file (kas gave Claude the reins): the tutorial fight and the walk happen in this world.
+
+Q.music.explore = {87279187741090, 123816023992616, 128518235802809, 1838577168}
+Q.enemies.hollowed_classmate = {name = "Hollowed Classmate", look = "hollowed", hp = 120, atk = 10, def = 6, mag = 5, spd = 9, xp = 28, items = {},
+	weeps = true,
+	skills = {
+		{id = "grasp", name = "Grasp for a Memory", kind = "attack", power = 1.15, status = {id = "fading", chance = 0.25, turns = 2}},
+		{id = "flail", name = "Flail", kind = "attack", power = 0.95},
+		{id = "weep", name = "i'm sorry", kind = "weep"},
+	},
+	lines = {
+		start = {"> who are you", "> is class still on", "> i'm sorry i forgot your name", "> did you see where everyone went"},
+		hurt = {"> sorry", "> i'm sorry", "> ow. it's ok"},
+		death = {"> oh. it's quiet now.", "> tell them i came to class"},
+	}}
+
+local function seris(token)
+	local s = Q.cast("seris")
+	return s
+end
 
 Q.chapters[1].scenes = {
 	{id = "c1_collapse", title = "The Collapse of the Academy", run = function(token)
 		Q.titleCard(token, {"Nothing you love is ever lost.", "It is only ever being carried by someone else."}, 3)
 		Q.titleCard(token, {"THE NULL-BYTE REQUIEM", "DISC ONE  -  WHAT IT TAKES", "CHAPTER 1  -  THE COLLAPSE OF THE ACADEMY"}, 3.5)
 		if not Q.alive(token) then return end
+		Q.anchor = nil
 		Q.sceneStart("courtyard")
 		Q.playMusic("title", 0.4)
 		Q.deSync(token, 1)
-		-- Seris on her knees, watching the archives burn into nothing
-		local seris = Q.cast("seris")
-		Q.put(seris, Q.spot(-3, 8, -3, 30))
-		Q.animate(seris, "sit")
-		local you = Q.root()
-		-- the opening shot: high above the courtyard, drifting down behind Vane
-		Q.camTo(Q.pt(0, 34, -26), Q.pt(0, 6, 30), 0)
-		Q.camGo(Q.pt(5, 6, -9), Q.pt(-2, 3, 18), 9, "linear")
+		local me = Q.vane()
+		local s = seris(token)
+		Q.put(s, Q.spot(-2.5, 6, -2.5, 30))
+		Q.animate(s, "sit")
+		-- high over the academy, drifting down onto Vane
+		Q.camTo(Q.pt(0, 30, -22), Q.pt(0, 4, 26), 0)
+		Q.shot("wide", me, nil, 7)
 		Q.direct(token, "The sky above the grand library is bleeding pixels. The marble pillars of the academy are fraying into wireframes, their textures peeling upward like burning paper that makes no sound.")
-		Q.direct(token, "Vane stands near the edge of the courtyard, the Null-Byte Key pulsing a heavy, cold blue in his hand. Seris is on her knees, watching the great archives burn into nothingness. The wind is entirely silent.")
+		Q.direct(token, "Vane stands near the edge of the courtyard, the Null-Byte Key pulsing a heavy, cold blue in his hand. Seris is on her knees, watching the great archives burn into nothingness.")
 		Q.keyProp(true)
-		Q.camGo(Q.pt(2.5, 4, 1.5), you and you.Position + Vector3.new(0, 1.5, 0) or Q.pt(0, 2, 0), 1.2)
+		Q.shot("medium", me, nil, 1.2)
 		Q.say(token, "VANE", "We are out of time, Seris. The root code is failing.", {color = Q.cyan})
-		Q.camGo(Q.pt(-6, 2.6, 4), Q.pt(-3, 2, 8), 1.2)
+		Q.face(s, me)
+		Q.shot("medium", s, nil, 1.2, -1)
 		Q.say(token, "SERIS", "If we jump now... what will it take this time? Last time it took the color of the ocean. I don't know what it looks like anymore.", {color = Q.members.seris.color})
+		Q.shot("close", s, nil, 0.8, -1)
 		Q.say(token, "SERIS", "What if it takes the day we met? What if it takes her face?", {color = Q.members.seris.color})
-		Q.camGo(Q.pt(1.6, 3, 2.2), you and you.Position + Vector3.new(0, 0.5, 0) or Q.pt(0, 1, 0), 1)
+		Q.shot("close", me, nil, 1)
 		Q.flickerHand(5)
 		Q.sound(Q.sfx.static, 0.25)
-		Q.direct(token, "Vane tightens his grip on his heavy blade. He looks down at his own hand. It is flickering.")
+		Q.direct(token, "Vane looks down at his own hand. It is flickering.")
 		Q.say(token, "VANE", "If we stay, it takes everything. All at once.", {color = Q.cyan})
-		Q.sceneEnd()
-		Q.wieldSword(Q.vane(), "back")
-		Q.seris = seris
+		Q.animate(s, "idle")
+		Q.shot("two", s, me, 1.2)
+		Q.say(token, "SERIS", "Then not here. Not in the courtyard. My notes are in the archives - every name I ever wrote down. I'm not leaving them to burn.", {color = Q.members.seris.color})
+		Q.say(token, "VANE", "Then we go through the archives. And up to the tower. The Key needs open sky.", {color = Q.cyan})
+		s:Destroy()
+		Q.join("seris")
+		Q.flag("hardcode", false)
+		Q.wieldSword(me, "back")
+	end},
+
+	{id = "c1_halls", title = "The Burning Halls", run = function(token)
+		Q.deSync(token, 1)
+		local target = Q.place("library", 60, 140)
+		Q.explore(token, {objective = "Reach the archives (the Library) before they burn away.", target = target,
+			roamers = {
+				{id = "c1_r1", enemy = "hollowed_classmate", along = 0.4, radius = 14},
+				{id = "c1_r2", enemy = "hollowed_classmate", along = 0.75, radius = 12},
+			},
+			pickups = {
+				{id = "c1_p1", kind = "item", item = "patch", along = 0.3},
+				{id = "c1_card", kind = "lore", title = "A Library Card", along = 0.6,
+					lines = {"Third floor reading room. Seat 41.", "On the back, in tiny careful letters: 'this is MY seat.  - i.'"}},
+			}})
 	end},
 
 	{id = "c1_weeping", title = "Something Weeping in the Archives", run = function(token)
-		Q.sceneStart("courtyard")
-		Q.deSync(token, 1)
-		local seris = Q.seris and Q.seris.Parent and Q.seris or Q.cast("seris")
-		Q.put(seris, Q.spot(-4, 3, 0, 20))
-		Q.animate(seris, "idle")
-		-- a figure stumbles out of the archives: a student, its face a smooth gray default, its name tag garbage
+		Q.anchor = nil
+		Q.sceneStart()
+		Q.deSync(token, 1.4)
+		local me = Q.vane()
+		local s = seris(token)
+		Q.put(s, Q.spot(-3.5, 1, 0, 20))
+		-- the archives burning into nothing: fire, ash, pixels
+		for i = -1, 1 do
+			local pad = NeverYieldAgartha.part(Q.stage(), Vector3.new(6, 0.2, 2), Q.spot(i * 7, 24, 0, 0) * CFrame.new(0, 0.1, 0), Color3.new(), nil, nil, {Transparency = 1, CanCollide = false})
+			Q.emitter(pad, "rbxasset://textures/particles/fire_main.dds", Color3.fromRGB(150, 140, 255), {Rate = 14, Lifetime = NumberRange.new(0.8, 1.6), Speed = NumberRange.new(3, 6),
+				Size = NumberSequence.new(2.2, 0), LightEmission = 0.8, EmissionDirection = Enum.NormalId.Top})
+		end
 		local student = Q.cast("hollowedStudent")
-		Q.put(student, Q.spot(2, 30, 0, 0))
+		Q.put(student, Q.spot(2, 26, 0, 0))
 		Q.playMusic(nil)
 		Q.sound(Q.sfx.weep, 0.4)
-		Q.camGo(Q.pt(-3, 3, 8), Q.pt(2, 3, 26), 1.5)
-		task.spawn(Q.walk, student, Q.spot(1, 17, 0, 0), 3)
-		Q.direct(token, "A figure stumbles out of the burning archives. An avatar in this academy's uniform, its face a smooth gray default, its name tag scrolling garbage characters.")
+		Q.shot("two", s, student, 1.5)
+		task.spawn(Q.walk, student, Q.spot(1, 15, 0, 0), 3)
+		Q.direct(token, "A figure stumbles out of the burning shelves. An avatar in this academy's uniform, its face a smooth gray default, its name tag scrolling garbage characters.")
+		Q.shot("medium", student, nil, 1)
 		Q.say(token, nil, "> i'm sorry", {rig = student})
 		Q.say(token, nil, "> i'm sorry i was going to remember you", {rig = student})
 		Q.say(token, nil, "> please can i have one. just one. i'll give it back", {rig = student})
+		Q.face(s, student)
+		Q.shot("ots", s, student, 1)
 		Q.say(token, "SERIS", "A Hollowed. It jumped too many times... there's nothing left in it to pay with.", {color = Q.members.seris.color})
 		Q.say(token, "SERIS", "It's going to try to take one from us. Vane - don't let it.", {color = Q.members.seris.color})
 		Q.sceneEnd()
 		student:Destroy()
-		seris:Destroy()
-		Q.seris = nil
-		-- Seris fights from here on
-		Q.join("seris")
-		Q.flag("hardcode", false)
+		s:Destroy()
 		local won = Q.battle(token, {enemies = {"hollowed_student"}, music = "battle", tutorial = true})
 		if not won then return end
 		Q.data.stats.hollowed = (Q.data.stats.hollowed or 0) + 1
-	end},
-
-	{id = "c1_names", title = "Names", run = function(token)
-		Q.sceneStart("courtyard")
-		Q.deSync(token, 1)
+		-- afterwards
+		Q.sceneStart()
 		Q.playMusic("sad", 0.3)
-		local seris = Q.cast("seris")
-		Q.put(seris, Q.spot(-3, 5, -3, 14))
-		Q.camGo(Q.pt(-7, 2.5, 3), Q.pt(-3, 2, 6), 1.5)
-		Q.direct(token, "When the Hollowed falls, it doesn't die. It sits down in the grass, covers its face, and slowly derenders.")
+		s = seris(token)
+		Q.put(s, Q.spot(-3, 4, 0, 10))
+		Q.shot("medium", s, nil, 1.5, -1)
+		Q.direct(token, "When the Hollowed falls, it doesn't die. It sits down, covers its face, and slowly derenders. Its last words hang in the air a moment after it's gone.")
 		Q.direct(token, "Seris doesn't speak for a long time after that.")
 		Q.say(token, "SERIS", "That was someone in my year. I think.", {color = Q.members.seris.color})
-		Q.animate(seris, "point")
+		Q.animate(s, "point")
 		Q.direct(token, "She checks her arm. There's nothing about it there.")
+		Q.shot("close", s, nil, 1, -1)
 		Q.say(token, "SERIS", "I should have written down more names.", {color = Q.members.seris.color})
-		Q.camGo(Q.pt(-1.5, 3.5, 1), Q.pt(-3, 2.6, 6), 2)
-		Q.direct(token, "She stands slowly. Her tears render as small, perfect glass spheres.")
-		Q.say(token, "SERIS", "There is a server out there, Vane. Across the void. I have to believe it's still running.", {color = Q.members.seris.color, slow = true})
-		Q.say(token, "SERIS", "I have to believe she is looking up at the same magenta sky, waiting for me.", {color = Q.members.seris.color, slow = true})
-		Q.seris = seris
+		s:Destroy()
+	end},
+
+	{id = "c1_stairs", title = "Open Sky", run = function(token)
+		Q.deSync(token, 1.4)
+		local target = Q.place("astronomy", 90, 200)
+		Q.explore(token, {objective = "Climb to the Astronomy tower. The Key needs open sky.", target = target,
+			roamers = {
+				{id = "c1_r3", enemy = "hollowed_classmate", along = 0.45, radius = 14},
+				{id = "c1_r4", enemy = "hollowed_classmate", along = 0.8, radius = 10, party = {"hollowed_classmate"}},
+			},
+			pickups = {
+				{id = "c1_p2", kind = "item", item = "ether", along = 0.5},
+				{id = "c1_note", kind = "lore", title = "A Note Under a Desk", along = 0.25,
+					lines = {"if anyone finds this: we jumped. i paid with my birthday. i don't know which one.", "it's fine. i have others. i think."}},
+			}})
 	end},
 
 	{id = "c1_toll", title = "The First Gate", run = function(token)
-		if not Q.camConn then Q.sceneStart("courtyard") end
-		Q.deSync(token, 1.4)
+		Q.anchor = nil
+		Q.sceneStart()
+		Q.deSync(token, 1.6)
 		Q.keyProp(true)
-		local seris = Q.seris and Q.seris.Parent and Q.seris or Q.cast("seris")
-		Q.put(seris, Q.spot(-3, 3, 0, 7))
+		local me = Q.vane()
+		local s = seris(token)
+		Q.put(s, Q.spot(-3, 2, 0, 8))
+		Q.face(s, me)
 		Q.playMusic(nil)
+		Q.shot("two", s, me, 1.5)
+		Q.say(token, "SERIS", "There is a server out there, Vane. Across the void. I have to believe it's still running.", {color = Q.members.seris.color, slow = true})
+		Q.shot("close", s, nil, 1, -1)
+		Q.say(token, "SERIS", "I have to believe she is looking up at the same magenta sky, waiting for me.", {color = Q.members.seris.color, slow = true})
+		Q.face(s, Q.pt(0, 0, 8))
+		Q.shot("ots", me, Q.pt(0, 4, 7), 1.2)
 		Q.direct(token, "Vane activates the Key. A jagged tear opens in the fabric of the world, revealing a lush, tragic, unfamiliar forest on the other side. The interface demands its toll.")
-		-- the journal keeps the one thing this toll will take
 		Q.journalAdd("c1_memory", "What Vane Carried", {"Two girls in a doorway, laughing at something he said.", "Their laughter, all the way up the stairs."})
 		Q.tollGate(token, {
 			to = 2,
 			before = function()
+				Q.shot("close", me, nil, 0.8)
 				Q.say(token, "VANE", "Forgive me.", {color = Q.cyan, slow = true})
 			end,
 			toll = {who = "vane", memory = "their laughter", journal = {id = "c1_memory", words = {"laugh"}}},
@@ -35514,28 +36079,42 @@ Q.chapters[1].scenes = {
 Q.chapters[2].scenes = {
 	{id = "c2_grass", title = "It's Completely Quiet", run = function(token)
 		Q.titleCard(token, {"CHAPTER 2", "THE VERDANT KINGDOM"}, 2.5)
+		Q.anchor = nil
 		Q.sceneStart("forest")
 		Q.playMusic("sad", 0.3)
-		local seris = Q.cast("seris")
-		Q.put(seris, Q.spot(-4, 2, 0, 0))
-		Q.animate(seris, "sit")
-		Q.camTo(Q.pt(0, 22, 4), Q.pt(0, 0, 2), 0)
-		Q.camGo(Q.pt(3, 4, -4), Q.pt(-1, 1, 2), 6, "linear")
+		local me = Q.vane()
+		local s = seris(token)
+		Q.put(s, Q.spot(-4, 2, 0, 0))
+		Q.animate(s, "sit")
+		Q.camTo(Q.pt(0, 22, 3), Q.pt(0, 0, 2), 0)
+		Q.shot("wide", me, nil, 6)
 		Q.direct(token, "When Vane opens his eyes, he is lying in the grass. The sky is a brilliant, mocking blue. The academy is gone. Seris is lying a few feet away, breathing heavily, but safe.")
-		Q.direct(token, "Vane reaches into his inventory. He pulls out the corrupted image file: two blurry, pixelated figures in a doorway. He feels a profound, aching numbness - a hollow space where a feeling used to be.")
-		Q.camGo(Q.pt(-6, 2.4, 4), Q.pt(-4, 1.6, 2), 1.2)
+		Q.shot("medium", me, nil, 1.2)
+		Q.direct(token, "Vane pulls out the corrupted image file: two blurry, pixelated figures in a doorway. He feels a profound, aching numbness - a hollow space where a feeling used to be.")
+		Q.face(s, me)
+		Q.shot("medium", s, nil, 1.2, -1)
 		Q.say(token, "SERIS", "Vane... what did it take?", {color = Q.members.seris.color})
-		Q.camGo(Q.pt(1.5, 2.8, 2.5), Q.pt(0, 1.8, 0), 1.2)
+		Q.shot("close", me, nil, 1.2)
 		Q.say(token, "VANE", "I remember I have to find them. But... I don't remember their laughter anymore.", {color = Q.cyan, slow = true})
 		Q.say(token, "VANE", "It's completely quiet.", {color = Q.cyan, slow = true})
-		Q.direct(token, "He stands up, the heavy sword dragging in the dirt: a man walking toward a destination he must reach, even as the reasons why slowly fade away.")
-		Q.sceneEnd()
-		seris:Destroy()
+		Q.animate(s, "idle")
+		Q.shot("two", s, me, 1.2)
+		Q.say(token, "SERIS", "It'll be dark soon. We need somewhere to make camp.", {color = Q.members.seris.color})
+		s:Destroy()
+	end},
+
+	{id = "c2_findcamp", title = "Somewhere to Rest", run = function(token)
+		local target = Q.place("camp", 50, 110)
+		Q.explore(token, {objective = "Find somewhere to make camp before dark.", target = target, music = "camp",
+			roamers = {{id = "c2_r1", enemy = "hollowed_classmate", along = 0.55, radius = 14}},
+			pickups = {{id = "c2_p1", kind = "item", item = "patch", along = 0.35}}})
 	end},
 
 	{id = "c2_campfire", title = "You're in My Cache", run = function(token)
-		Q.sceneStart("forest")
+		Q.anchor = nil
+		Q.sceneStart()
 		Q.playMusic("camp", 0.3)
+		local me = Q.vane()
 		-- a campfire
 		local fire = NeverYieldAgartha.part(Q.stage(), Vector3.new(1.6, 0.4, 1.6), Q.spot(0, 5, 0, 0) * CFrame.new(0, 0.2, 0), Color3.fromRGB(60, 40, 30), Enum.Material.Wood)
 		local flame = Instance.new("Fire")
@@ -35544,33 +36123,42 @@ Q.chapters[2].scenes = {
 		local glow = Instance.new("PointLight")
 		glow.Color, glow.Range, glow.Brightness = Color3.fromRGB(255, 170, 90), 18, 2
 		glow.Parent = fire
-		WackyState.sound(Q.sfx.fire or 9112780212, fire, 0.4, true)
-		local seris = Q.cast("seris")
-		Q.put(seris, Q.spot(-3.5, 5, 0, 5))
-		Q.animate(seris, "sit")
-		Q.camGo(Q.pt(-6, 3, 9), Q.pt(-3, 1.5, 5), 1.5)
+		WackyState.sound(9112780212, fire, 0.4, true)
+		local s = seris(token)
+		Q.put(s, Q.spot(-3.5, 5, 0, 5))
+		Q.animate(s, "sit")
+		Q.face(me, fire.Position)
+		Q.shot("two", s, me, 1.5)
 		Q.direct(token, "That night, they make camp under a tree whose leaves have started to render one polygon at a time. Seris sits cross-legged in the firelight with a stylus between her teeth, rolling up her left sleeve.")
-		Q.direct(token, "Her forearm is already written on. Neat, cramped lines in glowing cyan:")
 		for _, line in ipairs({"local ines = { eyes = \"brown, gold at the edge\", laugh = \"snorts\" }", "-- she hates cilantro. she pretends she doesn't. let her.",
 			"-- the ocean was BLUE-GREEN. you liked it. (you don't remember. fine.)", "-- mom: calls you 'Ser-IS', up at the end. like a question she already knows the answer to."}) do
 			Q.armWrite("seris", line)
 		end
+		Q.shot("close", s, nil, 1.2, -1)
 		Q.say(token, nil, "local ines = { eyes = \"brown, gold at the edge\", laugh = \"snorts\" }\n-- she hates cilantro. she pretends she doesn't. let her.\n-- the ocean was BLUE-GREEN. you liked it. (you don't remember. fine.)", {tall = true, stage = true})
 		Q.armWrite("seris", "-- vane lost their laughter today. be kind to him tomorrow.")
 		Q.direct(token, "She adds a new line, very slowly, under the last one: \"-- vane lost their laughter today. be kind to him tomorrow.\"")
+		Q.shot("medium", me, nil, 1)
 		Q.say(token, "VANE", "You're writing about me now.", {color = Q.cyan})
+		Q.shot("medium", s, nil, 0.8, -1)
 		Q.say(token, "SERIS", "You're in my cache. Might as well index you.", {color = Q.members.seris.color})
+		Q.shot("medium", me, nil, 0.8)
 		Q.say(token, "VANE", "What happens when you run out of arm?", {color = Q.cyan})
+		Q.shot("medium", s, nil, 0.8, -1)
 		Q.say(token, "SERIS", "I have two.", {color = Q.members.seris.color})
 		Q.say(token, "SERIS", "And legs. And a back, if you're ever useful enough to hold the stylus.", {color = Q.members.seris.color})
+		Q.shot("close", me, nil, 1)
 		Q.direct(token, "He almost smiles. It doesn't quite load.")
-		Q.camGo(Q.pt(2, 2.4, 2), Q.pt(0, 1.6, 0), 2)
+		Q.shot("wide", me, nil, 3)
 		Q.direct(token, "Later, when he thinks she's asleep, Vane holds the image file up to the firelight and hums. A slow, four-note tune that climbs and then falls, like someone carrying something heavy up a flight of stairs and setting it down gently at the top.")
+		Q.shot("medium", s, nil, 1, -1)
 		Q.say(token, "SERIS", "What is that?", {color = Q.members.seris.color})
+		Q.shot("medium", me, nil, 1)
 		Q.say(token, "VANE", "I don't know. It's just always been there.", {color = Q.cyan})
 		Q.armWrite("seris", "4 . 6 . 8 . 5")
 		Q.direct(token, "She writes it down. Four notes, as numbers, on the back of her hand. She doesn't know yet that she will need them.")
 		Q.sceneEnd()
+		s:Destroy()
 		Q.titleCard(token, {"TO BE CONTINUED", "The Verdant Kingdom opens in the next update."}, 3)
 		Q.save()
 	end},
